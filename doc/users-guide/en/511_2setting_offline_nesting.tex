@@ -26,23 +26,23 @@ However, the following five aspects need to be considered in the configuration.
 \begin{itemize}
  \item All variables required for the computation in the child domain have already been generated with the computation of the parent domain as history or restart output.
  \item The interval of the history or restart output is sufficiently short.
- \item The ``catalog file,'' which gives information pertaining to the parent’s calculation domain
+ \item The ``catalog file,'' which gives information pertaining to the parent's calculation domain
    to the child domain, is output.
  \item The history in the parent domain is output at the model levels if the history file is used.
  \item In case the starting time of the computation in the child domain is the same as that in the parent domain,
  history output data at $t=0$ in the parent domain is required.
 \end{itemize}
 
-In order to output the ``catalog file'', configuration file for either the preprocess, initialization or simulation run should have setting like the following:
-\editboxtwo{
-\verb|&PARAM_DOMAIN_CATALOGUE| & \\
-\verb| DOMAIN_CATALOGUE_FNAME  = "latlon_domain_catalogue_d01.txt",| & Name of catalog file\\
-\textcolor{blue}{\verb| DOMAIN_CATALOGUE_OUTPUT = .true.,|} & Output the catalog file\\
-\verb|/| \\
-}
-If the output option of the catalog file is \verb|.true.|, the file \verb|latlon_domain_catalogue_d01.txt| (in the case of this example) is output.
-In the case ``the making tool for the complete settings of the experiment'' is used, the file with the same name is generated in the directory \verb|pp|.
-In this file, the latitudes and longitudes of the four corners of the regions where each MPI manages the parent domain calculation are described.
+%In order to output the ``catalog file'', configuration file for either the preprocess, initialization or simulation run should have setting like the following:
+%\editboxtwo{
+%\verb|&PARAM_DOMAIN_CATALOGUE| & \\
+%\verb| DOMAIN_CATALOGUE_FNAME  = "latlon_domain_catalogue_d01.txt",| & Name of catalog file\\
+%\textcolor{blue}{\verb| DOMAIN_CATALOGUE_OUTPUT = .true.,|} & Output the catalog file\\
+%\verb|/| \\
+%}
+%If the output option of the catalog file is \verb|.true.|, the file \verb|latlon_domain_catalogue_d01.txt| (in the case of this example) is output.
+%In the case ``the making tool for the complete settings of the experiment'' is used, the file with the same name is generated in the directory \verb|pp|.
+%In this file, the latitudes and longitudes of the four corners of the regions where each MPI manages the parent domain calculation are described.
 
 If you want to use history file, setting like the following is required.
 \editboxtwo{
@@ -121,8 +121,8 @@ In the case that you generate the initial and boundary data using the history da
 \textcolor{blue}{\verb| OFFLINE_PARENT_BASENAME   = "history_d01",|}  & file name of the parent domain \\
 \textcolor{blue}{\verb| OFFLINE_PARENT_PRC_NUM_X  = 2,|}  & \verb|PRC_NUM_X| in the file \verb|run.d01.conf|\\
 \textcolor{blue}{\verb| OFFLINE_PARENT_PRC_NUM_Y  = 2,|}  & \verb|PRC_NUM_Y|  in the file \verb|run.d01.conf|\\
-\textcolor{blue}{\verb| LATLON_CATALOGUE_FNAME    =| \textbackslash} &\\
-\textcolor{blue}{\hspace{1cm}\verb| "latlon_domain_catalogue_d01.txt",|} & catalog file generated at the parent domain process\\
+%\textcolor{blue}{\verb| LATLON_CATALOGUE_FNAME    =| \textbackslash} &\\
+%\textcolor{blue}{\hspace{1cm}\verb| "latlon_domain_catalogue_d01.txt",|} & catalog file generated at the parent domain process\\
 \textcolor{blue}{\verb|/|} &\\
  & \\
 \verb|&PARAM_MKINIT_REAL_ATMOS| &\\
