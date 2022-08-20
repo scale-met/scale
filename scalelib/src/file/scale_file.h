@@ -46,7 +46,8 @@ extern int file_open_c(       int  *fid,   // (out)
 
 extern int file_get_dim_length_c(       int  *len,      // (out)
 				  const int   fid,      // (in)
-				  const char *dimname); // (in)
+				  const char *dimname, // (in)
+				  const bool  suppress ); // (in)
 
 extern int file_set_option_c( const int   fid,      // (in)
 			      const char *filetype, // (in)
