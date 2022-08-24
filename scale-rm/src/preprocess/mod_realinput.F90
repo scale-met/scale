@@ -551,7 +551,7 @@ contains
     character(len=H_SHORT)   :: INTRP_LAND_SFC_TEMP                         = 'off'
     character(len=H_SHORT)   :: INTRP_OCEAN_TEMP                            = 'off'
     character(len=H_SHORT)   :: INTRP_OCEAN_SFC_TEMP                        = 'off'
-    integer                  :: INTRP_ITER_MAX                              = 100
+    integer                  :: INTRP_ITER_MAX                              = 5
     character(len=H_SHORT)   :: SOILWATER_DS2VC                             = 'limit'
     logical                  :: soilwater_DS2VC_flag                                  ! true: 'critical', false: 'limit'
     logical                  :: elevation_correction                        = .true.
