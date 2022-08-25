@@ -18,7 +18,7 @@
 子領域の境界値データとして用いる親領域のデータを準備するために、いくつか必要な設定がある。
 親領域の計算に対する設定ファイルは、「\makeconftool」(第\ref{sec:basic_makeconf}節を参照)で作成する。
 サンプルファイル\verb|${Tutorial_dir}/real/sample/USER.offline-nesting-parent.sh|を
-\verb|USER.sh|に名前を変更し、 \verb|make|を実行する。
+\verb|USER.sh|に名前を変更し、編集後 \verb|make|を実行する。
 
 親領域の時間積分はシングルドメインの場合と同じ方法で実行するが、
 設定に関して次の5点に注意する必要がある。
@@ -26,23 +26,8 @@
 \begin{itemize}
  \item 子領域の計算に必要な変数全てが、親領域の計算によってヒストリ/リスタート出力として作成されている。
  \item ヒストリ/リスタート出力の間隔が十分に短い。
-% \item 親領域の計算領域の情報を子領域に与える「カタログファイル」を出力する。
- \item ヒストリファイルを用いる場合は、親領域のヒストリデータはモデル面で出力させる。
  \item 子領域の計算開始時刻が親領域と同じ場合は、 親領域におけるt=0のヒストリ出力データが必要である。
 \end{itemize}
-
-%「カタログファイル」を出力するためには、前処理・初期化・計算実行のいずれかの設定ファイルが、
-%以下のよう設定されていなければならない。
-%\editboxtwo{
-%\verb|&PARAM_DOMAIN_CATALOGUE| & \\
-%\verb| DOMAIN_CATALOGUE_FNAME  = "latlon_domain_catalogue_d01.txt",| & カタログファイルのファイル名\\
-%\textcolor{blue}{\verb| DOMAIN_CATALOGUE_OUTPUT = .true.,|} & カタログファイルを出力。\\
-%\verb|/| &\\
-%}
-%カタログファイルの出力が\verb|.true.|であれば、 (この例の場合には)
-%\verb|latlon_domain_catalogue_d01.txt|が出力される。
-%「\makeconftool」を用いる場合は、これと同じ名前のファイルがディレクトリ \verb|pp|の中に生成される。
-%このファイルの中には、親領域の計算で各MPIプロセスが担当する計算領域の四隅の緯度経度が記述されている。
 
 ヒストリファイルを用いたければ、次のような設定が必要である。
 \editboxtwo{
@@ -52,7 +37,6 @@
 \verb| FILE_HISTORY_DEFAULT_TUNIT     = "SEC",|   & \verb| FILE_HISTORY_DEFAULT_TINTERVAL|の単位。\\
 \verb| FILE_HISTORY_DEFAULT_TAVERAGE  = .false.,| & \\
 \verb| FILE_HISTORY_DEFAULT_DATATYPE  = "REAL4",| & \\
-\textcolor{blue}{\verb| FILE_HISTORY_DEFAULT_ZCOORD   = "model",|}  & モデル面データを出力。\\
 \textcolor{blue}{\verb| FILE_HISTORY_OUTPUT_STEP0      = .true.,|}  & t=0の値を出力に含める。 \\
 \verb|/| \\
 }
@@ -85,7 +69,7 @@
 オフライン・ネスティングに必要な変数は子領域の計算設定に依存し、
 標準的な現実大気の計算における変数は以下である。
 \begin{alltt}
-  T2, MSLP, DENS, MOMZ, MOMX, MOMY, RHOT, QV
+  DENS, W (もしくは MOMZ), Umet (もしくは U か MOMX), Vmet (もしくは V か MOMY), PT (もしくは RHOT か T), QV
   LAND_SFC_TEMP, URBAN_SFC_TEMP, OCEAN_SFC_TEMP
   OCEAN_SFC_ALB_IR_dir OCEAN_SFC_ALB_IR_dif,
   OCEAN_SFC_ALB_NIR_dir OCEAN_SFC_ALB_NIR_dif,
@@ -102,64 +86,41 @@
 \end{alltt}
 設定が完了したら、\verb|scale-rm|を実行して親領域の時間積分を行う。
 
-一般的に、親計算の最下層よりも低い層にある変数は外挿によって計算される。
-外挿は非現実的な値を生じさせる可能性があり、
-特に親計算の最下層が子計算の最下層よりも遥かに高い場合に問題となるだろう。
-この問題を避けるために、ヒストリファイルを用いる場合は、
-これらの変数を計算するために平均海面圧力と 2-m 温度を用いる。
-一方で、リスタートファイルを用いる場合にはそういった量がファイルに含まれない。
-したがって、親の最下層よりも低い層の変数は、最下層の変数の単なるコピーである。
-
 %-------------------------------------------------------------
 \subsubsection{子領域に対する初期値/境界値データの作成}
 
 子領域の計算用の設定ファイルは、「\makeconftool」(第\ref{sec:basic_makeconf}節を参照)を用いることで作成できる。
-サンプルスクリプト\verb|${Tutorial_dir}/real/sample/USER.offline-nesting-child.sh|を USER.sh に名前を変更し、 \verb|make| を実行する、
+サンプルスクリプト\verb|${Tutorial_dir}/real/sample/USER.offline-nesting-child.sh|を USER.sh に名前を変更し、編集後 \verb|make| を実行する、
 
 親領域の計算で得られたヒストリデータを用いて初期値/境界値データを作成する場合は、
 \initconf を以下のように設定する。
 \editboxtwo{
-\textcolor{blue}{\verb|&PARAM_COMM_CARTESC_NEST|} & \\
-\textcolor{blue}{\verb| OFFLINE_PARENT_BASENAME   = "history_d01",|}  & 親領域のファイル名 \\
-\textcolor{blue}{\verb| OFFLINE_PARENT_PRC_NUM_X  = 2,|}  & \verb|run.d01.conf|の\verb|PRC_NUM_X|\\
-\textcolor{blue}{\verb| OFFLINE_PARENT_PRC_NUM_Y  = 2,|}  & \verb|run.d01.conf|の\verb|PRC_NUM_Y|\\
-%\textcolor{blue}{\verb| LATLON_CATALOGUE_FNAME    =| \textbackslash} &\\
-%\textcolor{blue}{\hspace{1cm}\verb| "latlon_domain_catalogue_d01.txt",|} & 親領域を実行した時に作成したカタログファイル \\
- & \\
 \verb|&PARAM_MKINIT_REAL_ATMOS| &\\
-\textcolor{blue}{\verb| NUMBER_OF_TSTEPS    = 25,|}         & historyファイル内の時間ステップ数\\
 \verb| NUMBER_OF_FILES     = 1,| & \\
-\verb| FILETYPE_ORG        = "SCALE-RM",| & \\
+\verb| FILETYPE_ORG        = "NetCDF",| & \\
 \verb| BASENAME_ORG        = "history_d01",|  & \verb|run.d01.conf|の\verb|HISTORY_DEFAULT_BASENAME|\\
 \verb| BASENAME_BOUNDARY   = "boundary_d01",| &\\
 \textcolor{blue}{\verb| BOUNDARY_UPDATE_DT  = 900.D0,|}     & historyファイルの出力時間間隔（単位は\verb|"SEC"|）\\
 \verb|/| &\\
  & \\
 \verb|&PARAM_MKINIT_REAL_OCEAN| &\\
-\textcolor{blue}{\verb| NUMBER_OF_TSTEPS    = 25,|}         & historyファイル内の時間ステップ数\\
 \verb| BASENAME_ORG        = "history_d01",|  & \verb|run.d01.conf|の\verb|HISTORY_DEFAULT_BASENAME|\\
 \verb| NUMBER_OF_FILES     = 1,| & \\
-\verb| FILETYPE_ORG        = "SCALE-RM",| & \\
+\verb| FILETYPE_ORG        = "NetCDF",| & \\
 \textcolor{blue}{\verb| BOUNDARY_UPDATE_DT  = 900.D0,|}     & historyファイルの出力時間間隔（単位は\verb|"SEC"|）\\
 \verb|/| &\\
  & \\
 \verb|&PARAM_MKINIT_REAL_LAND| &\\
-\textcolor{blue}{\verb| NUMBER_OF_TSTEPS    = 25,|}         & historyファイル内の時間ステップ数\\
 \verb| NUMBER_OF_FILES     = 1,| & \\
 \verb| BASENAME_ORG        = "history_d01",|  & \verb|run.d01.conf|の\verb|HISTORY_DEFAULT_BASENAME|\\
-\verb| FILETYPE_ORG        = "SCALE-RM",| & \\
+\verb| FILETYPE_ORG        = "NetCDF",| & \\
 \textcolor{blue}{\verb| BOUNDARY_UPDATE_DT  = 900.D0,|}     & historyファイルの出力時間間隔（単位は\verb|"SEC"|）\\
 \verb|/| &\\
 }
 \scalerm 形式の出力データから初期値/境界値データを作成する場合は、
-\nmitem{FILETYPE_ORG}に\verb|"SCALE-RM"|を指定する。
+\nmitem{FILETYPE_ORG}に\verb|"NetCDF"|を指定する。
 基本的に、\nmitem{BOUNDARY_UPDATE_DT}は親領域の設定ファイル(\verb|run.d01.conf|)の\\
 \nmitem{FILE_HISTORY_DEFAULT_TINTERVAL}と同じ値を設定する。
-%
-\namelist{PARAM_COMM_CAETESC_NEST}の項目は、ネスティング実験のための設定項目である。
-オフライン・ネスティングでは、\nmitem{OFFLINE_PARENT_BASENAME}に親領域データのファイル名を指定する。
-また、\nmitem{OFFLINE_PARENT_PRC_NUM_*} に親領域のプロセス数を設定する。
-これらは、親領域の設定ファイル(\verb|run.d01.conf|) を参照して適切にの設定されたい。
 
 
 設定ファイルを編集し終えたら、\verb|scale-rm_init|を実行し、子領域の初期値/境界値を作成する。
