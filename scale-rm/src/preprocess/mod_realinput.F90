@@ -13,6 +13,7 @@ module mod_realinput
   !
   !++ used modules
   !
+  use mpi
   use scale_precision
   use scale_io
   use scale_prof
@@ -1114,6 +1115,9 @@ contains
        dims,                &
        timelen,             &
        qtrc_flag            )
+    use scale_comm_cartesC, only: &
+       COMM_world, &
+       COMM_datatype
     use scale_atmos_hydrometeor, only: &
        N_HYD
     use scale_mapprojection, only: &
@@ -1121,6 +1125,9 @@ contains
        mappinginfo, &
        MAPPROJECTION_rotcoef, &
        MAPPROJECTION_get_param
+    use scale_atmos_grid_cartesC_real, only: &
+       ATMOS_GRID_CARTESC_REAL_LON, &
+       ATMOS_GRID_CARTESC_REAL_LAT
     use mod_realinput_netcdf, only: &
        ParentAtmosSetupNetCDF
     use mod_realinput_grads, only: &
@@ -1141,9 +1148,13 @@ contains
     real(RP), pointer :: LON_all(:,:)
     real(RP), pointer :: LAT_all(:,:)
 
+    real(RP) :: LON_min, LON_max
+    real(RP) :: LAT_min, LAT_max
+
     type(mappingparam) :: mapping_param
     type(mappinginfo)  :: mapping_info
 
+    integer :: ierr
     integer :: i, j
     !---------------------------------------------------------------------------
 
@@ -1194,6 +1205,11 @@ contains
 
     end select
 
+    LON_min = minval( ATMOS_GRID_CARTESC_REAL_LON(:,:) )
+    LON_max = maxval( ATMOS_GRID_CARTESC_REAL_LON(:,:) )
+    LAT_min = minval( ATMOS_GRID_CARTESC_REAL_LAT(:,:) )
+    LAT_max = maxval( ATMOS_GRID_CARTESC_REAL_LAT(:,:) )
+
     if ( serial_atmos ) then
        call COMM_bcast( 6, dims(:) )
        call COMM_bcast( timelen )
@@ -1210,11 +1226,6 @@ contains
        call COMM_bcast( 2, mapping_info%standard_parallel )
        call COMM_bcast( mapping_info%rotation )
 
-       IS_org = 1
-       IE_org = dims(2)
-       JS_org = 1
-       JE_org = dims(3)
-
        if ( .not. do_read_atmos ) then
           allocate( LON_all(dims(2), dims(3)) )
           allocate( LAT_all(dims(2), dims(3)) )
@@ -1222,12 +1233,16 @@ contains
        call COMM_bcast( dims(2), dims(3), LON_all )
        call COMM_bcast( dims(2), dims(3), LAT_all )
 
-    else
-       call get_IJrange( IS_org, IE_org, JS_org, JE_org, & ! [OUT]
-                         dims(2), dims(3),               & ! [IN]
-                         LON_all, LAT_all                ) ! [IN]
+       call MPI_AllReduce( MPI_IN_PLACE, LON_min, 1, COMM_datatype, MPI_MIN, COMM_WORLD, ierr )
+       call MPI_AllReduce( MPI_IN_PLACE, LON_max, 1, COMM_datatype, MPI_MAX, COMM_WORLD, ierr )
+       call MPI_ALLReduce( MPI_IN_PLACE, LAT_min, 1, COMM_datatype, MPI_MIN, COMM_WORLD, ierr )
+       call MPI_ALLReduce( MPI_IN_PLACE, LAT_max, 1, COMM_datatype, MPI_MAX, COMM_WORLD, ierr )
     endif
 
+    call get_IJrange( IS_org, IE_org, JS_org, JE_org,     & ! [OUT]
+                      dims(2), dims(3),                   & ! [IN]
+                      LON_min, LON_max, LAT_min, LAT_max, & ! [IN]
+                      LON_all, LAT_all                    ) ! [IN]
     KA_org = dims(1) + 2
     KS_org = 1
     KE_org = KA_org
@@ -2711,6 +2726,12 @@ contains
        intrp_land_sfc_temp, &
        intrp_ocean_temp,    &
        intrp_ocean_sfc_temp )
+    use scale_comm_cartesC, only: &
+       COMM_world, &
+       COMM_datatype
+    use scale_atmos_grid_cartesC_real, only: &
+       ATMOS_GRID_CARTESC_REAL_LON, &
+       ATMOS_GRID_CARTESC_REAL_LAT
     use mod_realinput_netcdf, only: &
          ParentLandSetupNetCDF, &
          ParentOceanSetupNetCDF
@@ -2741,6 +2762,10 @@ contains
     real(RP), pointer :: lon_all(:,:)
     real(RP), pointer :: lat_all(:,:)
 
+    real(RP) :: LON_min, LON_max
+    real(RP) :: LAT_min, LAT_max
+
+    integer :: ierr
     integer :: i, j
     !---------------------------------------------------------------------------
 
@@ -2793,14 +2818,14 @@ contains
 
     endselect
 
+    LON_min = minval( ATMOS_GRID_CARTESC_REAL_LON(:,:) )
+    LON_max = maxval( ATMOS_GRID_CARTESC_REAL_LON(:,:) )
+    LAT_min = minval( ATMOS_GRID_CARTESC_REAL_LAT(:,:) )
+    LAT_max = maxval( ATMOS_GRID_CARTESC_REAL_LAT(:,:) )
+
     if ( serial_land ) then
        call COMM_bcast( 3, ldims(:) )
        call COMM_bcast( timelen )
-
-       lIS_org = 1
-       lIE_org = ldims(2)
-       lJS_org = 1
-       lJE_org = ldims(3)
 
        if ( .not. do_read_land ) then
           allocate( LON_all(ldims(2), ldims(3)) )
@@ -2809,15 +2834,20 @@ contains
        call COMM_bcast( ldims(2), ldims(3), LON_all )
        call COMM_bcast( ldims(2), ldims(3), LAT_all )
 
-    else
-       call get_IJrange( lIS_org, lIE_org, lJS_org, lJE_org, & ! [OUT]
-                         ldims(2), ldims(3),                 & ! [IN]
-                         LON_all, LAT_all                    ) ! [IN]
-       lIS_org = max( lIS_org - INTRP_ITER_MAX, 1 )
-       lIE_org = min( lIE_org + INTRP_ITER_MAX, ldims(2) )
-       lJS_org = max( lJS_org - INTRP_ITER_MAX, 1 )
-       lJE_org = min( lJE_org + INTRP_ITER_MAX, ldims(3) )
+       call MPI_AllReduce( MPI_IN_PLACE, LON_min, 1, COMM_datatype, MPI_MIN, COMM_WORLD, ierr )
+       call MPI_AllReduce( MPI_IN_PLACE, LON_max, 1, COMM_datatype, MPI_MAX, COMM_WORLD, ierr )
+       call MPI_ALLReduce( MPI_IN_PLACE, LAT_min, 1, COMM_datatype, MPI_MIN, COMM_WORLD, ierr )
+       call MPI_ALLReduce( MPI_IN_PLACE, LAT_max, 1, COMM_datatype, MPI_MAX, COMM_WORLD, ierr )
     endif
+
+    call get_IJrange( lIS_org, lIE_org, lJS_org, lJE_org, & ! [OUT]
+                      ldims(2), ldims(3),                 & ! [IN]
+                      LON_min, LON_max, LAT_min, LAT_max, & ! [IN]
+                      LON_all, LAT_all                    ) ! [IN]
+    lIS_org = max( lIS_org - INTRP_ITER_MAX, 1 )
+    lIE_org = min( lIE_org + INTRP_ITER_MAX, ldims(2) )
+    lJS_org = max( lJS_org - INTRP_ITER_MAX, 1 )
+    lJE_org = min( lJE_org + INTRP_ITER_MAX, ldims(3) )
 
     lKS_org = 1
     lKE_org = ldims(1)
@@ -2915,14 +2945,14 @@ contains
 
     endselect
 
+    LON_min = minval( ATMOS_GRID_CARTESC_REAL_LON(:,:) )
+    LON_max = maxval( ATMOS_GRID_CARTESC_REAL_LON(:,:) )
+    LAT_min = minval( ATMOS_GRID_CARTESC_REAL_LAT(:,:) )
+    LAT_max = maxval( ATMOS_GRID_CARTESC_REAL_LAT(:,:) )
+
     if ( serial_ocean ) then
        call COMM_bcast( 2, odims(:) )
        call COMM_bcast( timelen )
-
-       oIS_org = 1
-       oIE_org = odims(1)
-       oJS_org = 1
-       oJE_org = odims(2)
 
        if ( .not. do_read_ocean ) then
           allocate( LON_all(odims(1), odims(2)) )
@@ -2931,15 +2961,20 @@ contains
        call COMM_bcast( odims(1), odims(2), LON_all )
        call COMM_bcast( odims(1), odims(2), LAT_all )
 
-    else
-       call get_IJrange( oIS_org, oIE_org, oJS_org, oJE_org, & ! [OUT]
-                         odims(1), odims(2),                 & ! [IN]
-                         LON_all, LAT_all                    ) ! [IN]
-       oIS_org = max( oIS_org - INTRP_ITER_MAX, 1 )
-       oIE_org = min( oIE_org + INTRP_ITER_MAX, odims(1) )
-       oJS_org = max( oJS_org - INTRP_ITER_MAX, 1 )
-       oJE_org = min( oJE_org + INTRP_ITER_MAX, odims(2) )
+       call MPI_AllReduce( MPI_IN_PLACE, LON_min, 1, COMM_datatype, MPI_MIN, COMM_WORLD, ierr )
+       call MPI_AllReduce( MPI_IN_PLACE, LON_max, 1, COMM_datatype, MPI_MAX, COMM_WORLD, ierr )
+       call MPI_ALLReduce( MPI_IN_PLACE, LAT_min, 1, COMM_datatype, MPI_MIN, COMM_WORLD, ierr )
+       call MPI_ALLReduce( MPI_IN_PLACE, LAT_max, 1, COMM_datatype, MPI_MAX, COMM_WORLD, ierr )
     endif
+
+    call get_IJrange( oIS_org, oIE_org, oJS_org, oJE_org, & ! [OUT]
+                      odims(1), odims(2),                 & ! [IN]
+                      LON_min, LON_max, LAT_min, LAT_max, & ! [IN]
+                      LON_all, LAT_all                    ) ! [IN]
+    oIS_org = max( oIS_org - INTRP_ITER_MAX, 1 )
+    oIE_org = min( oIE_org + INTRP_ITER_MAX, odims(1) )
+    oJS_org = max( oJS_org - INTRP_ITER_MAX, 1 )
+    oJE_org = min( oJE_org + INTRP_ITER_MAX, odims(2) )
 
     oIA_org = oIE_org - oIS_org + 1
     oJA_org = oJE_org - oJS_org + 1
@@ -4882,9 +4917,10 @@ contains
   end subroutine replace_misval_map
 
   subroutine get_IJrange( &
-       IS_org, IE_org, JS_org, JE_org, & ! [OUT]
-       IA_org, JA_org,                 & ! [IN]
-       LON_all, LAT_all                ) ! [IN]
+       IS_org, IE_org, JS_org, JE_org,      &
+       IA_org, JA_org,                     &
+       LON_min, LON_max, LAT_min, LAT_max, &
+       LON_all, LAT_all                    )
     use scale_const, only: &
        EPS => CONST_EPS
     use scale_atmos_grid_cartesC_real, only: &
@@ -4897,27 +4933,26 @@ contains
 
     integer,  intent(in) :: IA_org
     integer,  intent(in) :: JA_org
+    real(RP), intent(in) :: LON_min, LON_max
+    real(RP), intent(in) :: LAT_min, LAT_max
     real(RP), intent(in) :: LON_all(IA_org,JA_org)
     real(RP), intent(in) :: LAT_all(IA_org,JA_org)
 
-    real(RP) :: LON_min, LON_max
-    real(RP) :: LAT_min, LAT_max
+    real(RP) :: min, max
 
     logical :: LON_mask(IA_org)
     logical :: LAT_mask(JA_org)
 
     integer :: i, j
 
-    LON_min = minval( ATMOS_GRID_CARTESC_REAL_LON(:,:) )
-    LON_max = maxval( ATMOS_GRID_CARTESC_REAL_LON(:,:) )
     if ( LON_min < minval( LON_all ) .or. LON_max > maxval( LON_all ) ) then
        ! probably global (cyclic) data
        IS_org = 1
        IE_org = IA_org
     else
-       LON_min = maxval( minval( LON_all(:,:), dim=2 ), mask=all( LON_all(:,:) < LON_min, dim=2 ) )
-       LON_max = minval( maxval( LON_all(:,:), dim=2 ), mask=all( LON_all(:,:) > LON_max, dim=2 ) )
-       LON_mask(:) = any( LON_all(:,:) - LON_min > -EPS, dim=2 ) .AND. any( LON_all(:,:) - LON_max < EPS, dim=2 )
+       min = maxval( minval( LON_all(:,:), dim=2 ), mask=all( LON_all(:,:) < LON_min, dim=2 ) )
+       max = minval( maxval( LON_all(:,:), dim=2 ), mask=all( LON_all(:,:) > LON_max, dim=2 ) )
+       LON_mask(:) = any( LON_all(:,:) - min > -EPS, dim=2 ) .AND. any( LON_all(:,:) - max < EPS, dim=2 )
        do i = 1, IA_org
           if( LON_mask(i) ) then
              IS_org = i
@@ -4932,17 +4967,15 @@ contains
        end do
     end if
 
-    LAT_min = minval( ATMOS_GRID_CARTESC_REAL_LAT(:,:) )
-    LAT_max = maxval( ATMOS_GRID_CARTESC_REAL_LAT(:,:) )
     if ( LAT_min < minval( LAT_all ) .or. LAT_max > maxval( LAT_all ) ) then
        ! unexpected
        ! INTERP_domain_compatibility should been called
        LOG_ERROR("get_IJrange",*) "unexpected error", LAT_min, LAT_max, minval( LAT_all ), maxval( LAT_all )
        call PRC_abort
     end if
-    LAT_min = maxval( minval( LAT_all(:,:), dim=1 ), mask=all( LAT_all(:,:) < LAT_min, dim=1 ) )
-    LAT_max = minval( maxval( LAT_all(:,:), dim=1 ), mask=all( LAT_all(:,:) > LAT_max, dim=1 ) )
-    LAT_mask(:) = any( LAT_all(:,:) - LAT_min > -EPS, dim=1 ) .AND. any( LAT_all(:,:) - LAT_max < EPS, dim=1 )
+    min = maxval( minval( LAT_all(:,:), dim=1 ), mask=all( LAT_all(:,:) < LAT_min, dim=1 ) )
+    max = minval( maxval( LAT_all(:,:), dim=1 ), mask=all( LAT_all(:,:) > LAT_max, dim=1 ) )
+    LAT_mask(:) = any( LAT_all(:,:) - min > -EPS, dim=1 ) .AND. any( LAT_all(:,:) - max < EPS, dim=1 )
     do j = 1, JA_org
        if( LAT_mask(j) ) then
           JS_org = j
