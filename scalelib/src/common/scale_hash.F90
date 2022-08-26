@@ -14,6 +14,7 @@ module scale_hash
   !++ used modules
   !
   use scale_precision
+  use scale_io
 
   use scale_prc, only: &
      myrank => PRC_myrank,  &
@@ -34,6 +35,22 @@ module scale_hash
   !
   !++ Public parameters & variables
   !
+  type :: hash_entry
+#if defined(__GFORTRAN__) && __GNUC__ < 7
+     character(len=128), pointer :: key
+#else
+     character(len=:), pointer :: key
+#endif
+     class(*), pointer :: val
+     integer :: cnt = 0
+     integer :: hash
+     type(hash_entry), pointer :: next => null()
+  end type hash_entry
+
+  type :: hash_entry_ptr
+     type(hash_entry), pointer :: ptr => null()
+  end type hash_entry_ptr
+
   type, public :: hash_table
      type(hash_entry_ptr), allocatable :: table(:)
      integer :: size
@@ -60,18 +77,6 @@ module scale_hash
   integer, parameter :: HASH_P = 19
   integer, parameter :: HASH_MAX = 124901413
   integer, parameter :: SIZE_MAX = 2**26 ! 26 = floor(log_2(HASH_MAX))
-
-  type :: hash_entry
-     character(len=:), pointer :: key
-     class(*), pointer :: val
-     integer :: cnt = 0
-     integer :: hash
-     type(hash_entry), pointer :: next => null()
-  end type hash_entry
-
-  type :: hash_entry_ptr
-     type(hash_entry), pointer :: ptr => null()
-  end type hash_entry_ptr
 
 contains
 
@@ -341,8 +346,13 @@ contains
     ! new entry
     allocate( e_new )
     key_len = len_trim(key)
-    allocate( character(len=key_len) :: e_new%key )
-    e_new%key = key
+#if defined(__GFORTRAN__) && __GNUC__ < 7
+    if ( key_len > 128 ) then
+      LOG_ERROR("new_entry",*) 'length of the key must be <=128: ', key_len
+      call PRC_abort
+    endif
+#endif
+    allocate( e_new%key, source=key )
     allocate( e_new%val, source=val )
     e_new%cnt = 1
     e_new%hash = hash
