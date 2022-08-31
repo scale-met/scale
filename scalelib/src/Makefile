@@ -273,10 +273,11 @@ OBJS_FOR_SDM = \
 	$(BUILD_DIR)/scale_gridtrans.o	\
 	$(BUILD_DIR)/scale_rm_process.o
 
-MODS = $(shell echo $(patsubst $(BUILD_DIR)/%.o,$(BUILD_DIR)/%.mod, \
+MODS = $(addprefix $(BUILD_DIR)/, \
+	$(shell echo $(patsubst $(BUILD_DIR)/%.o,%.mod, \
 	$(filter-out $(BUILD_DIR)/scale_sys_sigvars.o, \
 	$(filter-out $(BUILD_DIR)/scale_file_netcdf.o, \
-	$(OBJS)))) | tr A-Z a-z)
+	$(OBJS)))) | tr A-Z a-z) )
 
 all:
 	$(MAKE) build
