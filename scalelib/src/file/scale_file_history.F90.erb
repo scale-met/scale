@@ -404,7 +404,11 @@ contains
     LOG_INFO("FILE_HISTORY_Setup",*) 'Setup'
 
     ! setup
-    FILE_HISTORY_myrank      = myrank
+    if ( present(myrank) ) then
+       FILE_HISTORY_myrank = myrank
+    else
+       FILE_HISTORY_myrank = 0
+    end if
 
     FILE_HISTORY_STARTDAYSEC = time_start
     FILE_HISTORY_DTSEC       = time_interval
