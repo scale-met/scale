@@ -1083,6 +1083,7 @@ contains
     type(mappinginfo),  intent(in)  :: info
     type(mappingparam), intent(out) :: param
 
+    real(DP), parameter :: EPS = 1D-16
     real(DP) :: LC_lat1, LC_lat2
     real(DP) :: basepoint_lat
     real(DP) :: basepoint_x, basepoint_y
@@ -1098,8 +1099,8 @@ contains
     basepoint_x   = info%false_easting
     basepoint_y   = info%false_northing
 
-    if ( LC_lat1 >= LC_lat2 ) then
-       LOG_ERROR("MAPPROJECTION_get_param_LambertConformal",*) 'Please set LC_lat1 < LC_lat2 in degree. STOP'
+    if ( LC_lat1 > LC_lat2 ) then
+       LOG_ERROR("MAPPROJECTION_get_param_LambertConformal",*) 'Please set LC_lat1 <= LC_lat2 in degree. STOP'
        call PRC_abort
     endif
 
@@ -1108,11 +1109,13 @@ contains
 
     lat1rot = 0.5_DP*PI - param%hemisphere * LC_lat1 * D2R
     lat2rot = 0.5_DP*PI - param%hemisphere * LC_lat2 * D2R
-
-    ! calc conformal factor c
-    param%c = ( log( sin(lat1rot)        ) - log( sin(lat2rot)        ) ) &
-            / ( log( tan(0.5_DP*lat1rot) ) - log( tan(0.5_DP*lat2rot) ) )
-
+    if ( LC_lat2 - LC_lat1 > EPS ) then
+       ! calc conformal factor c
+       param%c = ( log( sin(lat1rot)        ) - log( sin(lat2rot)        ) ) &
+               / ( log( tan(0.5_DP*lat1rot) ) - log( tan(0.5_DP*lat2rot) ) )
+    else
+       param%c = cos(lat1rot)
+    end if
     ! pre-calc factor
     param%fact = sin(lat1rot) / param%c / tan(0.5_DP*lat1rot)**param%c
 

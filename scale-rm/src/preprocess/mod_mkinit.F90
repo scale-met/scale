@@ -380,7 +380,7 @@ contains
   !> Driver
   subroutine MKINIT( output )
     use scale_const, only: &
-       CONST_UNDEF8
+       UNDEF => CONST_UNDEF
     use scale_atmos_hydrometeor, only: &
        ATMOS_HYDROMETEOR_dry, &
        N_HYD, &
@@ -399,7 +399,7 @@ contains
     real(RP) :: QNUM(KA,IA,JA,N_HYD)
 
     logical :: convert_qtrc
-    integer :: iq
+    integer :: k, i, j, iq
     !---------------------------------------------------------------------------
 
     if ( MKINIT_TYPE == I_IGNORE ) then
@@ -411,20 +411,21 @@ contains
       LOG_PROGRESS(*) 'start making initial data'
 
       !--- Initialize variables
-      pres(:,:,:) = CONST_UNDEF8
-      temp(:,:,:) = CONST_UNDEF8
-      pott(:,:,:) = CONST_UNDEF8
-      qsat(:,:,:) = CONST_UNDEF8
-      velx(:,:,:) = CONST_UNDEF8
-      vely(:,:,:) = CONST_UNDEF8
+      !$omp workshare
+      pres(:,:,:) = UNDEF
+      temp(:,:,:) = UNDEF
+      pott(:,:,:) = UNDEF
+      qsat(:,:,:) = UNDEF
+      velx(:,:,:) = UNDEF
+      vely(:,:,:) = UNDEF
 
-      rndm  (:,:,:) = CONST_UNDEF8
+      rndm  (:,:,:) = UNDEF
 
-      pres_sfc(:,:) = CONST_UNDEF8
-      temp_sfc(:,:) = CONST_UNDEF8
-      pott_sfc(:,:) = CONST_UNDEF8
-      psat_sfc(:,:) = CONST_UNDEF8
-      qsat_sfc(:,:) = CONST_UNDEF8
+      pres_sfc(:,:) = UNDEF
+      temp_sfc(:,:) = UNDEF
+      pott_sfc(:,:) = UNDEF
+      psat_sfc(:,:) = UNDEF
+      qsat_sfc(:,:) = UNDEF
 
       qv    (:,:,:) = 0.0_RP
       qc    (:,:,:) = 0.0_RP
@@ -432,14 +433,15 @@ contains
       qv_sfc(:,:) = 0.0_RP
       qc_sfc(:,:) = 0.0_RP
 
-      ptrc(:,:,:) = CONST_UNDEF8
+      ptrc(:,:,:) = UNDEF
 
 !OCL XFILL
-      QTRC(:,:,:,:) = 0.0_RP
+      QTRC(:,:,:,:) = UNDEF
 !OCL XFILL
       QHYD(:,:,:,:) = 0.0_RP
 !OCL XFILL
       QNUM(:,:,:,:) = 0.0_RP
+      !$omp end workshare
 
       call PROF_rapstart('_MkInit_main',3)
 
@@ -545,6 +547,19 @@ contains
       ! passive tracer
       call TRACER_inq_id( "PTracer", iq)
       if ( iq > 0 ) QTRC(:,:,:,iq) = ptrc(:,:,:)
+
+      !$omp parallel do collapse(3)
+      do iq = 1, QA
+      do j = 1, JA
+      do i = 1, iA
+      do k = 1, KA
+         if ( QTRC(k,i,j,iq) == UNDEF ) then
+            QTRC(k,i,j,iq) = 0.0_RP
+         end if
+      end do
+      end do
+      end do
+      end do
 
       call PROF_rapend  ('_MkInit_main',3)
 
@@ -856,8 +871,6 @@ contains
 
     logical, intent(inout) :: convert_qtrc
 
-    real(RP), allocatable :: xabnd(:), xactr(:)
-
     integer :: iq, i, j, k
     !---------------------------------------------------------------------------
 
@@ -883,9 +896,6 @@ contains
        enddo
        enddo
        enddo
-
-       deallocate( xactr )
-       deallocate( xabnd )
     endif
 
     convert_qtrc = .false.
@@ -1225,7 +1235,8 @@ contains
   !> TKE setup
   subroutine tke_setup
     use scale_const, only: &
-       EPS => CONST_EPS
+       EPS   => CONST_EPS, &
+       UNDEF => CONST_UNDEF
     use mod_atmos_phy_tb_vars, only: &
        I_TKE
     use mod_atmos_phy_bl_vars, only: &
@@ -1241,7 +1252,7 @@ contains
        TKE_CONST, &
        Zi_CONST
 
-    integer :: k, i, j
+    integer :: k, i, j, iq
     integer :: ierr
     !---------------------------------------------------------------------------
 
@@ -1260,20 +1271,30 @@ contains
     LOG_NML(PARAM_MKINIT_TKE)
 
     if ( I_TKE > 0 ) then
+       !$omp parallel do collapse(2)
        do j = 1, JA
        do i = 1, IA
        do k = 1, KA
-          QTRC(k,i,j,I_TKE) = TKE_CONST
+          if ( QTRC(k,i,j,I_TKE) == UNDEF ) then
+             QTRC(k,i,j,I_TKE) = TKE_CONST
+          end if
        enddo
        enddo
        enddo
     end if
     if ( QS_BL > 0 ) then
+       !$omp parallel do collapse(2)
        do j = 1, JA
        do i = 1, IA
        do k = 1, KA
-          QTRC(k,i,j,QS_BL) = TKE_CONST
-          QTRC(k,i,j,QS_BL+1:QE_BL) = 0.0_RP
+          if ( QTRC(k,i,j,QS_BL) == UNDEF ) then
+             QTRC(k,i,j,QS_BL) = TKE_CONST
+          end if
+          do iq = QS_BL+1, QE_BL
+             if ( QTRC(k,i,j,iq) == UNDEF ) then
+                QTRC(k,i,j,iq) = 0.0_RP
+             end if
+          end do
        enddo
        enddo
        enddo

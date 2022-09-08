@@ -7,9 +7,8 @@
 \caption{External input data supported in \scalelib}
 \begin{tabularx}{150mm}{l|l|X} \hline
  \rowcolor[gray]{0.9} Data type   & \verb|FILETYPE_ORG|  & Note \\ \hline
- SCALE format   & \verb|SCALE-RM|     & History and restart files are supported. \\ \hline
- Binary format  & \verb|GrADS|        & Another namelist for data input is required.    \\ \hline
-% WRF format     & \verb|WRF-ARW|      & Both ``wrfout''  and``wrfrst'' are supported.\\ \hline
+ NetCDF format   & \verb|NetCDF|     & NetCDF file format. \\ \hline
+ Binary format  & \verb|GrADS|      & Another namelist for data input is required.    \\ \hline
 \end{tabularx}
 \label{tab:inputdata_format}
 \end{center}
@@ -19,31 +18,29 @@ The program \verb|scale-rm_init| converts external data into boundary and initia
 It can treat various types of external data as shown in Table \ref{tab:inputdata_format}.
 The format of input data is specified by \nmitem{FILETYPE_ORG} in \namelist{PARAM_MKINIT_REAL_(ATMOS|OCEAN|LAND)}.
 
-The ``SCALE format'' is mainly used for offline nesting experiments (Sec. \ref{subsec:nest_offline}).
+The ``NetCDF format'' is mainly used for offline nesting experiments (Sec. \ref{subsec:nest_offline}).
+Other netCDF formatted data, such as WRF data, is also available.
 
 The ``Binary format'' is defined as binary format with single-precision floating point values that FORTRAN can directly access.
 The example of practical usage of binary format data is described in Sec. \ref{sec:tutorial_real_data}.
-
-%The ``WRF data format'' is available; WRF model output data can be read directly.
-%Note that the file should contain all data required to generate the boundary data for \scalerm.
 
 Other format data, such as GRIB/GRIB2 data, can be read in \scale by converting the data to the binary format data.
 Note that the format of output files in the latest version is different from that in the version 5.3 or older.
 Therefore, the init/boundary files which are made in the version 5.3 or older can't be used in the current version (\scalelib \version).
 
 %%%---------------------------------------------------------------------------------%%%%
-\subsubsection{Settings common to SCALE format and Binary format} \label{sec:datainput_common_setting}
+\subsubsection{Settings common to NetCDF format and Binary format} \label{sec:datainput_common_setting}
 %%
 The base name of the initial file to be output is set by \nmitem{RESTART_OUT_BASENAME} in \namelist{PARAM_RESTART} as follows:
 %%
 \editbox{
 \verb|&PARAM_RESTART|\\
-\verb| RESTART_OUTPUT       = .false.,|  ; whether initial (or restart) files is output. \\
-\verb| RESTART_OUT_BASENAME = "",|       ; base name of initial (or restart) files \\
+\verb| RESTART_OUTPUT       = .true.,|  ; whether initial (or restart) files is output. \\
+\verb| RESTART_OUT_BASENAME = "init",|  ; base name of initial (or restart) files \\
 \verb|/|\\
 }
-To generate initial file, \nmitem{RESTART_OUTPUT} is set to \verb|.true.|. 
-The base name of initial file is specified by \nmitem{RESTART_OUT_BASENAME}. 
+To generate initial file, \nmitem{RESTART_OUTPUT} is set to \verb|.true.|.
+The base name of initial file is specified by \nmitem{RESTART_OUT_BASENAME}.
 For example, in the tutorial described in Sec. \ref{sec:tutorial_real_intro}, \nmitem{RESTART_OUT_BASENAME} = ``\verb|init_d01|''.
 These settings are used when you want to output restart files in executing \scalerm (see Sec. \ref{sec:restart} for details).
 The structure of generated restart files is same as that of initial files.
@@ -53,7 +50,7 @@ The settings for input data and boundary files are specified by \namelist{PARAM_
 \editboxtwo{
 \verb|&PARAM_MKINIT_REAL_ATMOS|                                      & \\
 \verb| NUMBER_OF_FILES            = 1, |                             & ; Number of input files \\
-\verb| NUMBER_OF_TSTEPS           = 1, |                             & ; Number of time step for each input files \\
+\verb| NUMBER_OF_TSTEPS           = 1, |                             & ; Number of time step for each input files for Binary format \\
 \verb| FILETYPE_ORG               = '',|                             & ; Select from Table\ref{tab:inputdata_format}\\
 \verb| BASENAME_ORG               = '',|                             & ; Information about input files \\
                                                                      & ~~~ (the specified value depends on \verb|FILETYPE_ORG|)\\
@@ -61,16 +58,19 @@ The settings for input data and boundary files are specified by \namelist{PARAM_
 \verb| BASENAME_BOUNDARY          = '',|                             & ; Base name of boundary files \\
 \verb| BOUNDARY_UPDATE_DT         = 0.0,|                            & ; Time interval for input data [s]\\
 \verb| USE_FILE_DENSITY           = .false.,|                        & ; Switch to use data of density stored in input files \\
+\verb| PT_dry                     = .true.,|                         & ; If the potential temperature is defined associated with dry air \\
 \verb| USE_NONHYDRO_DENS_BOUNDARY = .false.,|                        & ; Switch to use nonhydrostatic density as boundary data \\
 \verb| USE_SFC_DIAGNOSES          = .false.,|                        & ; Switch to use diagnostic variables at surface in parent model \\
 \verb| USE_DATA_UNDER_SFC         = .true.,|                         & ; Switch to use values below the surface in parent model \\
 \verb| SAME_MP_TYPE               = .false.,|                        & ; (For SCALE format) Whether the microphysics scheme is same as that used in parent model \\
-\verb| INTRP_TYPE                 = 'LINEAR',|                       & ; Type of horizontal interpolation ("\verb|LINEAR|", "\verb|DIST-WEIGHT|") \\
+\verb| UPPER_QV_TYPE              = 'ZERO',|                         & ; How to fill the QV value when it is missing at upper layers (``\verb|ZERO|'' , ``\verb|COPY|'') \\
+\verb| INTRP_TYPE                 = 'LINEAR',|                       & ; Type of horizontal interpolation (``\verb|LINEAR|'', ``\verb|DIST-WEIGHT|'') \\
 \verb| SERIAL_PROC_READ = .true.,|                                   & ; Whether only the master process read input data? \\
+\verb| SKIP_VERTICAL_RANGE_CHECK = .false.,|                          & ; Turn it to true when the top layer-height of the file data is lower than the model level\\
 \verb|/| & \\
 \verb|&PARAM_MKINIT_REAL_OCEAN| & \\
 \verb| NUMBER_OF_FILES            = 1, |                             & ; Number of input files\\
-\verb| NUMBER_OF_TSTEPS           = 1, |                             & ; Number of time steps for each input files\\
+\verb| NUMBER_OF_TSTEPS           = 1, |                             & ; Number of time steps for each input files for Binary format\\
 \verb| FILETYPE_ORG               = '',|                             & ; Select from Table\ref{tab:inputdata_format}\\
 \verb| BASENAME_ORG               = '',|                             & ; Information about input file\\
                                                                      & ~~~ (the specified value depends on \verb|FILETYPE_ORG|)\\
@@ -80,7 +80,7 @@ The settings for input data and boundary files are specified by \namelist{PARAM_
 \verb|/| & \\
 \verb|&PARAM_MKINIT_REAL_LAND| & \\
 \verb| NUMBER_OF_FILES            = 1, |                             & ; Number of input files\\
-\verb| NUMBER_OF_TSTEPS           = 1, |                             & ; Number of time steps for each input files\\
+\verb| NUMBER_OF_TSTEPS           = 1, |                             & ; Number of time steps for each input files for Binary format\\
 \verb| FILETYPE_ORG               = '',|                             & ; Select from Table\ref{tab:inputdata_format}\\
 \verb| BASENAME_ORG               = '',|                             & ; Information about input file\\
                                                                      &  ~~~ (the specified value depends on \verb|FILETYPE_ORG|)\\
@@ -93,17 +93,18 @@ The settings for input data and boundary files are specified by \namelist{PARAM_
 \verb|/| & \\
 }
 
-\nmitem{NUMBER_OF_FILES} is the number of input files. 
-The program \verb|scale-rm_init| reads these files enumerated from \verb|00000| to the given number \nmitem{NUMBER_OF_FILES}-1. 
-For the case of \nmitem{NUMBER_OF_FILES}=1 where the enumeration is not automatically performed, you should set \nmitem{BASENAME_ADD_NUM}=\verb|.true.| to enumerate the files.  
+\nmitem{NUMBER_OF_FILES} is the number of input files.
+The program \verb|scale-rm_init| reads these files enumerated from \verb|00000| to the given number \nmitem{NUMBER_OF_FILES}-1.
+For the case of \nmitem{NUMBER_OF_FILES}=1 where the enumeration is not automatically performed, you should set \nmitem{BASENAME_ADD_NUM}=\verb|.true.| to enumerate the files.
 \nmitem{NUMBER_OF_TSTEPS} is the number of time steps stored in each input file.
+It is ignored when \nmitem{FILETYPE_ORG} is ``\verb|NetCDF|''.
 
 \nmitem{BOUNDARY_UPDATE_DT} is the time interval of input data; the time interval of boundary data is the same as that of the input data.
 \nmitem{BASENAME_BOUNDARY} is the base name of the output boundary files.
 If \nmitem{BASENAME_BOUNDARY} is not specified, no boundary files are output.
 For example, in the above case, the boundary file(s) are created only for the atmospheric variables; the initial file is prepared for all atmospheric, ocean, and land variables.
-In order to perform model integrations, the boundary data for atmospheric variables must have two time steps at least.  
-On the other hands, whether boundary data for variables of ocean and land is necessary depends on schemes employed in executing models. 
+In order to perform model integration, the boundary data for atmospheric variables must have two time steps at least.
+On the other hands, whether boundary data for variables of ocean and land is necessary depends on schemes employed in executing models.
 
 \nmitem{INTRP_TYPE} is the type of horizontal interpolation;
 ``\verb|LINEAR|'' and ``\verb|DIST-WEIGHT|'' are available.
@@ -112,30 +113,35 @@ This type can not be used when the total number of horizontal gird cells in eith
 If ``\verb|DIST-WEIGHT|'' is selected, distance-weighted mean of the nearest $N$-neighbors is used.
 In the case of distance-weighted mean, the number of the neighbors is set by \nmitem{COMM_CARTESC_NEST_INTERP_LEVEL} in \namelist{PARAM_COMM_CARTESC_NEST}.
 
+\nmitem{upper_qv_type} is the type how to fill the missing value in qv data at the upper layers.
+For \nmitem{upper_qv_type}='\verb|ZERO|', the value of QV is set to zero.
+For \nmitem{upper_qv_type}='\verb|COPY|', the value at the highest layer where input data exists is copied.
+The default value of \verb|upper_qv_type| is "ZERO".
 
-In \scalerm, only the master process reads input data, and then broadcasts the data to each node.
+
+In \scalerm, as default, only the master process reads input data, and then broadcasts the data to each node.
 At this time, the algorithm may cause insufficient memory error when reading large input data, especially on a high-performance computing system.
 By setting \nmitem{SERIAL_PROC_READ} to \verb|.false.|, each node accesses by itself to only the data it needs, resulting in the reduction of memory usage.
 Note that, the computational performance may deteriorate due to locking file access because the algorithm places a load on file I/O.
 
 
-The above configurations except for \nmitem{BASENAME_BOUNDARY} can be shared between \verb|ATMOS| and \verb|OCEAN| (or \verb|LAND|); 
+The above configurations except for \nmitem{BASENAME_BOUNDARY} can be shared between \verb|ATMOS| and \verb|OCEAN| (or \verb|LAND|);
 namely, if the items of namelist are not specified in \namelist{PARAM_MKINIT_REAL_(OCEAN|LAND)},
 the values same as that in \namelist{PARAM_MKINIT_REAL_ATMOS} are used.
 \\
 
 \noindent\textbf{\underline{Settings for \texttt{PARAM\_MKINIT\_REAL\_ATMOS}}}
 
-The method to calculate density is specified by \nmitem{USE_FILE_DENSITY} and \nmitem{USE_NONHYDRO_DENS_BOUNDARY}. 
+The method to calculate density is specified by \nmitem{USE_FILE_DENSITY} and \nmitem{USE_NONHYDRO_DENS_BOUNDARY}.
 For the default setting where both of values are \verb|.false.|, the density in initial and boundary data is calculated with hydrostatic balance, i.e., $\frac{dp}{dz}=-\rho g$ from the input data of temperature and humidity.
-If \nmitem{USE_FILE_DENSITY} = \verb|.true.|, the density read from the input file(s) is used as well as the other variables. 
+If \nmitem{USE_FILE_DENSITY} = \verb|.true.|, the density read from the input file(s) is used as well as the other variables.
 Regardless of the \nmitem{USE_FILE_DENS}, if \nmitem{USE_NONHYDRO_DENS_BOUNDARY} = \verb|.true.|,
 the density of boundary data is calculated using the equation of state, i.e., $\rho = p/RT$ and the input temperature, pressure, and humidity data (the initial data is not affected).
-This density is generally consistent with that in the parent model. 
+This density is generally consistent with that in the parent model.
 % The densities in the initial and boundary data become different if \nmitem{USE_FILE_DENSITY}=\verb|.false.| and \nmitem{USE_NONHYDRO_DENS_BOUNDARY} = \verb|.true.|.
 The reason why the option for density boundary data is provided is the following.
 In most cases, the density satisfying the hydrostatic balance is preferred for the initial data to reduce initial shock in the simulation.
-Therefore, \nmitem{USE_FILE_DENSITY}=\verb|.false.| is recommended. 
+Therefore, \nmitem{USE_FILE_DENSITY}=\verb|.false.| is recommended.
 On the other hand, since the density constructed with the hydrostatic balance could differ from that in the parent model (or realistic value), this may cause a significant mass bias in the simulation.
 In such cases, in terms of representation of the simulation such as pressure field, it could be better to use consistent density with the parent's one using \nmitem{USE_NONHYDRO_DENS_BOUNDARY}=\verb|.true.|.
 The vertical acceleration or waves due to the use of hydrostatically inbalanced density as the boundary data is expected to be quickly dumped by the lateral nudging.
@@ -153,7 +159,7 @@ Otherwise, constant potential temperature and hydrostatic balance are assumed.
 The soil water is configured by \nmitem{USE_FILE_LANDWATER} of \namelist{PARAM_MKINIT_REAL_LAND} in \verb|init.conf|.
 There are two options in preparation of soil moisture: i) the data provided from the input file (\nmitem{USE_FILE_LANDWATER} = \verb|.true.|) and ii) a constant value in the entire region (\nmitem{USE_FILE_LANDWATER} = \verb|.false.|).
 In the case of the option i), either fraction of volume of soil moisture (\verb|SMOISVC|) or saturation ratio (\verb|SMOISDS|) is required as the 3D soil moisture data.
-Here, the fraction of volume of soil moisture is the ratio of water volume ($V_w$) to soil volume ($V$), i.e., $V_w / V$, 
+Here, the fraction of volume of soil moisture is the ratio of water volume ($V_w$) to soil volume ($V$), i.e., $V_w / V$,
 and the saturation ratio is the ratio of water volume ($V_w$) to void spaces in $V$ ($V_v$), i.e., $V_w / V_v$.
 %
 In the case of the option ii), the saturation ratio is specified by \nmitem{INIT_LANDWATER_RATIO} whose default value is 0.5.
@@ -180,13 +186,13 @@ where $\Gamma$ is lapse rate of the international standard atmosphere (ISA): $\G
 The default value is \nmitem{ELEVATION_CORRECTION} = \verb|.true.|.
 
 %%%---------------------------------------------------------------------------------%%%%
-\subsubsection{Input from SCALE format data} \label{sec:datainput_scale}
+\subsubsection{Input from NetCDF format data} \label{sec:datainput_scale}
 
-An example of configurations in \namelist{PARAM_MKINIT_REAL_(ATMOS|OCEAN|LAND)} for the SCALE foramt data is as follows:
+An example of configurations in \namelist{PARAM_MKINIT_REAL_(ATMOS|OCEAN|LAND)} for the NetCDF format data is as follows:
 \editbox{
 \verb|&PARAM_MKINIT_REAL_ATMOS|\\
 \verb| NUMBER_OF_FILES            = 2, |             \\
-\verb| FILETYPE_ORG               = "SCALE-RM",|     \\
+\verb| FILETYPE_ORG               = "NetCDF",|     \\
 \verb| BASENAME_ORG               = "history_d01",|  \\
 \verb| BASENAME_ADD_NUM           = .true.,|         \\
 \verb| BASENAME_BOUNDARY          = 'boundary_d01',| \\
@@ -194,31 +200,180 @@ An example of configurations in \namelist{PARAM_MKINIT_REAL_(ATMOS|OCEAN|LAND)} 
 ... \\
 \verb|/|\\
 \verb|&PARAM_MKINIT_REAL_OCEAN|\\
-\verb| FILETYPE_ORG               = "SCALE-RM",|     \\
+\verb| FILETYPE_ORG               = "NetCDF",|     \\
 \verb| BASENAME_ORG               = "history_d01",|  \\
 ... \\
 \verb|/|\\
 \verb|&PARAM_MKINIT_REAL_LAND|\\
-\verb| FILETYPE_ORG               = "SCALE-RM",|     \\
+\verb| FILETYPE_ORG               = "NetCDF",|     \\
 \verb| BASENAME_ORG               = "history_d01",|  \\
 ... \\
 \verb|/|\\
 }
 
 
-\nmitem{FILETYPE_ORG} is set to \verb|"SCALE-RM"|. 
-The base name of input files is specified by \nmitem{BASENAME_ORG}.  
-Given \verb|BASENAME_ORG="history_d01"|, the input file should be named \verb|history_d01.nc| when the number of input file is 1. 
-When the number of input files is larger than 1 or \nmitem{BASENAME_ADD_NUM} = \verb|.true.| in \namelist{PARAM_RESTART}, 
-the name of the input files should be numbered as \verb|"history_d01_XXXXX.nc"|. 
+\nmitem{FILETYPE_ORG} is set to \verb|"NetCDF"|.
+The base name of input files is specified by \nmitem{BASENAME_ORG}.
+Given \verb|BASENAME_ORG="history_d01"|, the input file should be named \verb|history_d01.peYYYYYY.nc| or \verb|history_d01.nc| when the number of input file is 1.
+When the number of input files is larger than 1 or \nmitem{BASENAME_ADD_NUM} = \verb|.true.| in \namelist{PARAM_RESTART},
+the name of the input files should be numbered as \verb|"history_d01_XXXXX.peYYYYYY.nc"| or \verb|"history_d01_XXXXX.nc"|.
 
-If cloud microphysical scheme used is same as that in the parent model, specify \nmitem{SAME_MP_TYPE}. 
+If cloud microphysical scheme used is same as that in the parent model, specify \nmitem{SAME_MP_TYPE}.
+
+For the output files of SCALE or WRF, necessary information is automatically determined internally.
+For other files, namelist providing such information is required.\\
+In the \namelist{PARAM_MKINIT_REAL_(ATMOS|LAND|OCEAN)_NetCDF}, file type is specified by \nmitem{FILE_TYPE}.
+It should be ``\verb|SCALE-RM|'', ``\verb|WRFARW|'', ``\verb|NAMELIST|'', or ``\verb|AUTO|''.
+If it is ``\verb|AUTO|'', the type is detected automatically.
+The namelist file is specified by \nmitem{NM_FILE} of \namelist{PARAM_MKINIT_REAL_(ATMOS|LAND|OCEAN)_NetCDF} as follows:
+\editbox{
+\verb|&PARAM_MKINIT_REAL_ATMOS_NetCDF|\\
+\verb| FILE_TYPE    = "NAMELIST",| ; ``SCALE-RM'', ``WRFARW'', ``NAMELIST'' or ``AUTO''\\
+\verb| NM_FILE      = "namelist_netcdf.nml",| ; namelist file name\\
+\verb| MIXING_RATIO = .false.,| \\
+\verb|/|\\
+\verb|&PARAM_MKINIT_REAL_LAND_NetCDF|\\
+\verb| FILE_TYPE    = "NAMELIST",|\\
+\verb| NM_FILE = "namelist_netcdf.nml",|\\
+\verb|/|\\
+\verb|&PARAM_MKINIT_REAL_OCEAN_NetCDF|\\
+\verb| FILE_TYPE    = "NAMELIST",|\\
+\verb| NM_FILE = "namelist_netcdf.nml",|\\
+\verb|/|\\
+}
+
+Definition of the magnitude of the water contents in the file is specified by \nmitem{MIXING_RATION}.
+It is ``\verb|.true.|'' when it is mixing ratio, that is ratio to the dry air mass, otherwise ratio to the total air mass.
+
+
+In the namelist file, the information is specified as follows:
+\editbox{
+\verb|&NetCDF_MAPPROJECTION| ; settings for map projecton\\
+\verb| mapping_name                   = "lambert_conformal_conic",|\\
+\verb| longitude_of_central_meridian  = 135.0, |\\
+\verb| longitude_of_projection_origin = 135.0, |\\
+\verb| latitude_of_projection_origin  = 34.5, |\\
+\verb| standard_parallel              = 30.0, 40.0, |\\
+\verb| rotation                       = 0.0D0 |\\
+\verb|/|\\
+\verb|&NetCDF_DIMS|\\
+\verb| zname  =  "z",|    ; name of the coordinate in the z dimension\\
+\verb| zhname =  "zh",|   ; name of the coordinate in the z dimension for the staggered grid\\
+\verb| xname  =  "x",|    ; name of the coordinate in the x dimension\\
+\verb| xhname =  "xh",|   ; name of the coordinate in the x dimension for the staggered grid\\
+\verb| yname  =  "y",|    ; name of the coordinate in the y dimension\\
+\verb| yhname =  "yh",|   ; name of the coordinate in the y dimension for the staged grid\\
+\verb| tname  =  "time",| ; name of the coordinate in the time dimension\\
+\verb|/|\\
+\verb|&NetCDF_ITEM item="Umet", name="u", xstg=.true. /|\\
+\verb|&NetCDF_ITEM item="Vmet", name="v", ystg=.true. /|\\
+\verb|&NetCDF_ITEM item="T",    name="t", offset=273.0 /|\\
+... \\
+}
+
+The correspondence of the names of coordinates are specified by the \namelist{NetCDF_DIMS}.
+The names for the staggered grid is required only for atmosphere.
+
+The correspondence of variable names are specified with the \namelist{NetCDF_ITEM}.
+The explanations of \namelist{NetCDF_ITEM} is described in Table \ref{tbl:namelist_netcdf_item}.
+The list of the \nmitem{item} is in the table \ref{tab:netcdf_item}.
+Note that other item is available for tracer variables which depending on experimental configuration.
+
+{\small
+\begin{table}[tbh]
+\begin{center}
+\caption{Variables of \namelist{NetCDF_ITEM}}
+\label{tab:namelist_netcdf_item}
+\begin{tabularx}{150mm}{llX} \hline
+\rowcolor[gray]{0.9}
+item of \verb|NetCDF_ITEM| & Explanation    & Note \\ \hline
+item                      & Variable name  & Select from Table \ref{tab:netcdf_item}   \\ \hline
+name                      & Variable name in the netCDF file & \\ \hline
+zstg                      & If the variable is at the staggered point in the z-direction & (optional) \\ \hline
+xstg                      & If the variable is at the staggered point in the x-direction & (optional) \\ \hline
+ystg                      & If the variable is at the staggered point in the y-direction & (optional) \\ \hline
+offset                    & Offset value & (optional) \\ \hline
+factor                    & Factor value & (optional) \\ \hline
+\end{tabularx}
+\end{center}
+\end{table}
+}
+
+{\small
+\begin{table}[tbh]
+\begin{center}
+\caption{Item names for \nmitem{item} in \namelist{NetCDF_ITEM}}
+\label{tab:netcdf_item}
+\begin{tabularx}{150mm}{llX} \hline
+\rowcolor[gray]{0.9}
+Item name \nmitem{item} & Explanation    & Note \\ \hline
+\verb|lon| & longitude & \\ \hline
+\verb|lat| & latitude & \\ \hline
+\verb|height| & height & \\ \hline
+\verb|pressure| & pressure & \\ \hline
+\verb|DENS| & air density & \\ \hline
+\verb|W| & vertical wind speed & \\ \hline
+\verb|MOMZ| & vertical moment & \\ \hline
+\verb|Umet| & eastward wind speed & \\ \hline
+\verb|U| & wind speed in the x-direction & \\ \hline
+\verb|MOMX| & moment in x-direction & \\ \hline
+\verb|Vmet| & northward wind speed & \\ \hline
+\verb|V| & wind speed in the y-direction & \\ \hline
+\verb|MOMY| & moment in y-direction & \\ \hline
+\verb|PT| & potential temperature & c.f. \nmitem{PT_dry} in \namelist{PARAM_MKINIT_REAL_ATMOS} \\ \hline
+\verb|RHOT| & density weighted potential temperature & c.f. \nmitem{PT_dry} in \namelist{PARAM_MKINIT_REAL_ATMOS} \\ \hline
+\verb|T| & temperature & \\ \hline
+\verb|QV| & vapor mass & c.f. \nmitem{mixing_ratio} in \namelist{PARAM_MKINIT_REAL_ATMOS_NETCDF} \\ \hline
+\verb|RH| & relative humidity & \\ \hline
+\verb|QC| & ratio of cloud water mass & c.f. \nmitem{mixing_ratio} in \namelist{PARAM_MKINIT_REAL_ATMOS_NETCDF} \\ \hline
+\verb|QR| & ratio of rain water mass & c.f. \nmitem{mixing_ratio} in \namelist{PARAM_MKINIT_REAL_ATMOS_NETCDF} \\ \hline
+\verb|QI| & ratio of cloud ice mass & c.f. \nmitem{mixing_ratio} in \namelist{PARAM_MKINIT_REAL_ATMOS_NETCDF} \\ \hline
+\verb|QS| & ratio of snow mass & c.f. \nmitem{mixing_ratio} in \namelist{PARAM_MKINIT_REAL_ATMOS_NETCDF} \\ \hline
+\verb|QG| & ratio of graupel mass & c.f. \nmitem{mixing_ratio} in \namelist{PARAM_MKINIT_REAL_ATMOS_NETCDF} \\ \hline
+\verb|MSLP| & mean sea level pressure & \\ \hline
+\verb|SFC_PRES| & surface pressure & \\ \hline
+\verb|Umet10| & eastward 10m wind speed & \\ \hline
+\verb|U10| & 10m wind speed in the x-direction & \\ \hline
+\verb|Vmet10| & northward 10m wind speed & \\ \hline
+\verb|V10| & 10m wind speed in the y-direction & \\ \hline
+\verb|T2| & 2m temperatuer & \\ \hline
+\verb|Q2| & 2m vapor mass & \\ \hline
+\verb|RH2| & 2m relative humidity & \\ \hline
+\verb|lz| & soil depth & \\ \hline
+\verb|topo| & surface elevation & \\ \hline
+\verb|lsmask| & land mask & \\ \hline
+\verb|LAND_TEMP| & soil temperature & \\ \hline
+\verb|LANS_WATER| & soil water & \\ \hline
+\verb|LAND_SFC_TEMP| & land surface temperature & \\ \hline
+\verb|LAND_SFC_ALB_IR_dir|  & land albedo for IR (direct)   & \\ \hline
+\verb|LAND_SFC_ALB_IR_dif|  & land albedo for IR (diffused) & \\ \hline
+\verb|LAND_SFC_ALB_NIR_dir| & land albedo for NIR (direct)  & \\ \hline
+\verb|LAND_SFC_ALB_NIR_dif| & land albedo for NIR (diffued) & \\ \hline
+\verb|LAND_SFC_ALB_VIS_dir| & land albedo for VIS (direct)  & \\ \hline
+\verb|LAND_SFC_ALB_VIS_dif| & land albedo for VIS (diffued) & \\ \hline
+\verb|LAND_SFC_EMIS_IR_dif| & land emissivity for IR (diffued) & \\ \hline
+\verb|URBAN_SFC_TEMP| & urban surface temperature & \\ \hline
+\verb|OCEAN_TEMP| & sea temperature & \\ \hline
+\verb|OCEAN_SFC_TEMP| & sea surface temperature & \\ \hline
+\verb|OCEAN_SFC_Z0M| & sea surface roughness & \\ \hline
+\verb|OCEAN_SFC_ALB_IR_dir|  & ocean albedo for IR (direct)   & \\ \hline
+\verb|OCEAN_SFC_ALB_IR_dif|  & ocean albedo for IR (diffused) & \\ \hline
+\verb|OCEAN_SFC_ALB_NIR_dir| & ocean albedo for NIR (direct)  & \\ \hline
+\verb|OCEAN_SFC_ALB_NIR_dif| & ocean albedo for NIR (diffued) & \\ \hline
+\verb|OCEAN_SFC_ALB_VIS_dir| & ocean albedo for VIS (direct)  & \\ \hline
+\verb|OCEAN_SFC_ALB_VIS_dif| & ocean albedo for VIS (diffued) & \\ \hline
+\verb|OCEAN_SFC_EMIS_IR_dif| & ocean emissivity for IR (diffued) & \\ \hline
+\end{tabularx}
+\end{center}
+\end{table}
+}
+
 
 
 %%%---------------------------------------------------------------------------------%%%%
 \subsubsection{Input from binary format data} \label{sec:datainput_grads}
 
-If the binary data is used as input files, 
+If the binary data is used as input files,
 you need to prepare data according to the format used in \grads.
 For the details, see \url{http://cola.gmu.edu/grads/gadoc/aboutgriddeddata.html#structure} .
 
@@ -249,7 +404,7 @@ An example of configurations in \namelist{PARAM_MKINIT_REAL_(ATMOS|OCEAN|LAND)} 
 \verb|/|\\
 }
 
-\nmitem{FILETYPE_ORG} is set to \verb|"GrADS"|. 
+\nmitem{FILETYPE_ORG} is set to \verb|"GrADS"|.
 In \scalerm, the file name and the data structure of the \grads formatted binary data are specified in the namelist file specified by \nmitem{BASENAME_ORG} instead of the ``ctl'' file.
 The namelist file needs to be prepared beforehand by users.
 
@@ -268,29 +423,29 @@ The following is an example of the namelist file \verb|namelist.grads_boundary*|
 \verb|#              |  \\
 \verb|# Variables    |  \\
 \verb|#              |  \\
-\verb|&GrADS_ITEM  name='lon',     dtype='linear',  swpoint=0.0d0,   dd=1.0d0 /  |  \\
-\verb|&GrADS_ITEM  name='lat',     dtype='linear',  swpoint=90.0d0,  dd=-1.0d0 / |  \\
-\verb|&GrADS_ITEM  name='plev',    dtype='levels',  lnum=26,| \\
+\verb|&GrADS_ITEM  name='lon',        dtype='linear',  swpoint=0.0d0,   dd=1.0d0 /  |  \\
+\verb|&GrADS_ITEM  name='lat',        dtype='linear',  swpoint=90.0d0,  dd=-1.0d0 / |  \\
+\verb|&GrADS_ITEM  name='pressure',   dtype='levels',  lnum=26,| \\
 ~~~\verb|      lvars=100000,97500,.........,2000,1000, /     |  \\
-\verb|&GrADS_ITEM  name='HGT',     dtype='map',     fname='FNLatm', startrec=1,  totalrec=125 / |  \\
-\verb|&GrADS_ITEM  name='U',       dtype='map',     fname='FNLatm', startrec=27, totalrec=125 / |  \\
-\verb|&GrADS_ITEM  name='V',       dtype='map',     fname='FNLatm', startrec=53, totalrec=125 / |  \\
-\verb|&GrADS_ITEM  name='T',       dtype='map',     fname='FNLatm', startrec=79, totalrec=125 / |  \\
-\verb|&GrADS_ITEM  name='RH',      dtype='map',     fname='FNLatm', startrec=105,totalrec=125, nz=21 /  |  \\
-\verb|&GrADS_ITEM  name='MSLP',    dtype='map',     fname='FNLsfc', startrec=1,  totalrec=9   / |  \\
-\verb|&GrADS_ITEM  name='PSFC',    dtype='map',     fname='FNLsfc', startrec=2,  totalrec=9   / |  \\
-\verb|&GrADS_ITEM  name='SKINT',   dtype='map',     fname='FNLsfc', startrec=3,  totalrec=9   / |  \\
-\verb|&GrADS_ITEM  name='topo',    dtype='map',     fname='FNLsfc', startrec=4,  totalrec=9   / |  \\
-\verb|&GrADS_ITEM  name='lsmask',  dtype='map',     fname='FNLsfc', startrec=5,  totalrec=9  /  |  \\
-\verb|&GrADS_ITEM  name='U10',     dtype='map',     fname='FNLsfc', startrec=6,  totalrec=9   / |  \\
-\verb|&GrADS_ITEM  name='V10',     dtype='map',     fname='FNLsfc', startrec=7,  totalrec=9   / |  \\
-\verb|&GrADS_ITEM  name='T2',      dtype='map',     fname='FNLsfc', startrec=8,  totalrec=9   / |  \\
-\verb|&GrADS_ITEM  name='RH2',     dtype='map',     fname='FNLsfc', startrec=9,  totalrec=9   / |  \\
-\verb|&GrADS_ITEM  name='llev',    dtype='levels',  lnum=4, lvars=0.05,0.25,0.70,1.50, /        |  \\
+\verb|&GrADS_ITEM  name='height',     dtype='map',     fname='FNLatm', startrec=1,  totalrec=125 / |  \\
+\verb|&GrADS_ITEM  name='U',          dtype='map',     fname='FNLatm', startrec=27, totalrec=125 / |  \\
+\verb|&GrADS_ITEM  name='V',          dtype='map',     fname='FNLatm', startrec=53, totalrec=125 / |  \\
+\verb|&GrADS_ITEM  name='T',          dtype='map',     fname='FNLatm', startrec=79, totalrec=125 / |  \\
+\verb|&GrADS_ITEM  name='RH',         dtype='map',     fname='FNLatm', startrec=105,totalrec=125, nz=21 /  |  \\
+\verb|&GrADS_ITEM  name='MSLP',       dtype='map',     fname='FNLsfc', startrec=1,  totalrec=9   / |  \\
+\verb|&GrADS_ITEM  name='SFC_PRES',   dtype='map',     fname='FNLsfc', startrec=2,  totalrec=9   / |  \\
+\verb|&GrADS_ITEM  name='SFC_TEMP',   dtype='map',     fname='FNLsfc', startrec=3,  totalrec=9   / |  \\
+\verb|&GrADS_ITEM  name='topo',       dtype='map',     fname='FNLsfc', startrec=4,  totalrec=9   / |  \\
+\verb|&GrADS_ITEM  name='lsmask',     dtype='map',     fname='FNLsfc', startrec=5,  totalrec=9  /  |  \\
+\verb|&GrADS_ITEM  name='U10',        dtype='map',     fname='FNLsfc', startrec=6,  totalrec=9   / |  \\
+\verb|&GrADS_ITEM  name='V10',        dtype='map',     fname='FNLsfc', startrec=7,  totalrec=9   / |  \\
+\verb|&GrADS_ITEM  name='T2',         dtype='map',     fname='FNLsfc', startrec=8,  totalrec=9   / |  \\
+\verb|&GrADS_ITEM  name='RH2',        dtype='map',     fname='FNLsfc', startrec=9,  totalrec=9   / |  \\
+\verb|&GrADS_ITEM  name='llev',       dtype='levels',  lnum=4, lvars=0.05,0.25,0.70,1.50, /        |  \\
 ~~~~~~~~\verb| missval=9.999e+20 /|  \\
-\verb|&GrADS_ITEM  name='STEMP',   dtype='map',     fname='FNLland', nz=4, startrec=1, totalrec=8,|\\
+\verb|&GrADS_ITEM  name='LAND_TEMP',  dtype='map',     fname='FNLland', nz=4, startrec=1, totalrec=8,|\\
 ~~~~~~~~\verb| missval=9.999e+20 /|  \\
-\verb|&GrADS_ITEM  name='SMOISVC', dtype='map',     fname='FNLland', nz=4, startrec=5, totalrec=8,|\\
+\verb|&GrADS_ITEM  name='LAND_WATER', dtype='map',     fname='FNLland', nz=4, startrec=5, totalrec=8,|\\
 ~~~~~~~~\verb| missval=9.999e+20 /|  \\
 }
 
@@ -300,23 +455,12 @@ The explanations of \namelist{GrADS_ITEM} is described in Table \ref{tab:namelis
 
 The base name of input files is set as \verb|fname| in the \namelist{GrADS_ITEM}.
 Given the base name is set as \verb|fname="filename"|, the input binary data file should be named  \verb|filename.grd| in the case that the number of the input binary file is one (\nmitem{NUMBER_OF_FILES} = 1).
-In the case that there is more than one input files or \nmitem{BASENAME_ADD_NUM} = \verb|.true.| in \namelist{PARAM_RESTART}, 
+In the case that there is more than one input files or \nmitem{BASENAME_ADD_NUM} = \verb|.true.| in \namelist{PARAM_RESTART},
 prepare the files numbered as \verb|"filename_XXXXX.grd"|.
 
 If the number of grids for a variable is different from the default value, the value is specified by \verb|nx, ny, nz| of \namelist{GrADS_ITEM}.
 For example, specific humidity (\verb|QV|) and relative humidity (\verb|RH|) in upper levels are not always available.
 In such case, the number of layers where the data exist is specified as \verb|nz|.
-
-The method to give the values of QV at layers higher than \verb|nz| is specified by \nmitem{upper_qv_type} in \namelist{PARAM_MKINIT_REAL_GrADS}. 
-For \nmitem{upper_qv_type}='\verb|ZERO|', the value of QV is set to zero. 
-For \nmitem{upper_qv_type}='\verb|COPY|', the value of RH at layers higher than \verb|nz| is set to that at the top layer where input humidity data exists; it determine the value of QV.
-The default value of \verb|upper_qv_type| is "ZERO".
-\editboxtwo{
-\verb|&PARAM_MKINIT_REAL_GrADS|  & \\
-\verb| upper_qv_type = "ZERO"|   & ; Method to give QV at layers higher than \verb|nz|\\
-                                 & ~~~("\verb|ZERO|", "\verb|COPY|")\\
-\verb|/|\\
-}
 
 
 
@@ -364,8 +508,8 @@ yrev     & If the data is stored from the north to south, set \verb|.true.| & (o
  \rowcolor[gray]{0.9} & Variable name \nmitem{name} & Explanation & Unit & Data type \nmitem{dtype} \\ \hline
            &\verb|lon|     & longitude data                   & [deg.]         & \verb|linear, map| \\
            &\verb|lat|     & latitude data                    & [deg.]         & \verb|linear, map| \\
-           &\verb|plev|    & pressure data                    & [Pa]           & \verb|levels, map| \\
-           &\verb|HGT|     & geopotential height data         & [m]            & \verb|map|         \\
+           &\verb|pressure|, \verb|plev| & pressure data                    & [Pa]           & \verb|levels, map| \\
+           &\verb|height|, \verb|HGT| & geopotential height data         & [m]            & \verb|map|         \\
     $\ast$ &\verb|DENS|    & air density                      & [kg/m3]        & \verb|map|         \\
            &\verb|U|       & eastward wind speed              & [m/s]          & \verb|map|         \\
            &\verb|V|       & northward wind speed             & [m/s]          & \verb|map|         \\
@@ -381,7 +525,7 @@ $\ast\ast$ &\verb|QI|      & ratio of cloud ice mass          & [kg/kg]        &
 $\ast\ast$ &\verb|QS|      & ratio of snow mass               & [kg/kg]        & \verb|map|         \\
 $\ast\ast$ &\verb|QG|      & ratio of graupel mass            & [kg/kg]        & \verb|map|         \\
 $\ast\ast$ &\verb|MSLP|    & sea level pressure               & [Pa]           & \verb|map|         \\
-$\ast\ast$ &\verb|PSFC|    & surface pressure                 & [Pa]           & \verb|map|         \\
+$\ast\ast$ &\verb|SFC_PRES|, \verb|PSFC| & surface pressure                 & [Pa]           & \verb|map|         \\
 $\ast\ast$ &\verb|U10|     & eastward 10m wind speed          & [m/s]          & \verb|map|         \\
 $\ast\ast$ &\verb|V10|     & northward 10m wind speed         & [m/s]          & \verb|map|         \\
 $\ast\ast$ &\verb|T2|      & 2m temperature                   & [K]            & \verb|map|         \\
@@ -391,14 +535,14 @@ $\ast\ast$ &\verb|Q2|      & 2m specific humidity             & [kg/kg]        &
            &               & (optional if RH2 is given)       &                &                    \\
     $\ast$ &\verb|TOPO|    & topography of GCM                & [m]            & \verb|map|         \\
     $\ast$ &\verb|lsmask|  & ocean--land distribution of GCM  & 0:ocean,1:land & \verb|map|         \\
-           &\verb|SKINT|   & surface temperature              & [K]            & \verb|map|         \\
+           &\verb|LAND_SFC_TEMP|, \verb|SFC_TEMP|, \verb|SKINT|   & surface temperature              & [K]            & \verb|map|         \\
            &\verb|llev|    & soil depth                       & [m]            & \verb|levels|      \\
-           &\verb|STEMP|   & soil temperature                 & [K]            & \verb|map|         \\
-           &\verb|SMOISVC| & soil moisture (volume fraction)  & [-]            & \verb|map|         \\
+           &\verb|LAND_TEMP|, \verb|STEMP| & soil temperature                 & [K]            & \verb|map|         \\
+           &\verb|LAND_WATER|, \verb|SMOISVC| & soil moisture (volume fraction)  & [-]            & \verb|map|         \\
            &               & (optional if SMOISDS is given)   &                &                    \\
            &\verb|SMOISDS| & soil moisture (saturation ratio) & [-]            & \verb|map|         \\
            &               & (optional if SMOISVC is given)   &                &                    \\
-           &\verb|SST|     & sea surface temperature          & [K]            & \verb|map|         \\
+           &\verb|OCEAN_SFC_TEMP|, \verb|SST|     & sea surface temperature          & [K]            & \verb|map|         \\
            &               & (optional if SKINT is given)     &                &                    \\\hline
 \end{tabularx}
 \end{center}

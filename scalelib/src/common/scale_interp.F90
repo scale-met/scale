@@ -266,6 +266,7 @@ contains
 
     logical,  intent(in), optional :: flag_extrap          ! when true, extrapolation will be executed (just copy)
 
+    integer :: idx(KA_ref), kmax
     logical :: flag_extrap_
 
     integer  :: k, kk
@@ -277,13 +278,22 @@ contains
        flag_extrap_ = .true.
     end if
 
+    ! search valid levels
+    kmax = 0
+    do k = KS_ref, KE_ref
+       if ( hgt_ref(k) > UNDEF ) then
+          kmax = kmax + 1
+          idx(kmax) = k
+       end if
+    end do
+
     do k = KS, KE
        idx_k(k,1) = -1
        idx_k(k,2) = -1
 
-       if    ( hgt(k) <  hgt_ref(KS_ref) - EPS ) then
+       if    ( hgt(k) <  hgt_ref(idx(1)) - EPS ) then
           if ( flag_extrap_ ) then
-             idx_k(k,1) = KS_ref
+             idx_k(k,1) = idx(1)
              idx_k(k,2) = -1
              vfact(k) = 1.0_RP
           else
@@ -291,13 +301,13 @@ contains
              idx_k(k,2) = -1
              vfact(k) = UNDEF
           end if
-       elseif( hgt(k) < hgt_ref(KS_ref) ) then
-          idx_k(k,1) = KS_ref
+       elseif( hgt(k) < hgt_ref(idx(1)) ) then
+          idx_k(k,1) = idx(1)
           idx_k(k,2) = -1
           vfact(k) = 1.0_RP
-       elseif( hgt(k) > hgt_ref(KE_ref) + EPS ) then
+       elseif( hgt(k) > hgt_ref(idx(kmax)) + EPS ) then
           if ( flag_extrap_ ) then
-             idx_k(k,1) = KE_ref
+             idx_k(k,1) = idx(kmax)
              idx_k(k,2) = -1
              vfact(k) = 1.0_RP
           else
@@ -305,18 +315,18 @@ contains
              idx_k(k,2) = -1
              vfact(k) = UNDEF
           end if
-       elseif( hgt(k) >= hgt_ref(KE_ref) ) then
-          idx_k(k,1) = KE_ref
+       elseif( hgt(k) >= hgt_ref(idx(kmax)) ) then
+          idx_k(k,1) = idx(kmax)
           idx_k(k,2) = -1
           vfact(k) = 1.0_RP
        else
-          do kk = KS_ref, KE_ref-1
-             if (       hgt(k) >= hgt_ref(kk  ) &
-                  .AND. hgt(k) <  hgt_ref(kk+1) ) then
-                idx_k(k,1) = kk
-                idx_k(k,2) = kk + 1
-                vfact(k) = ( hgt_ref(kk+1) - hgt    (k)  ) &
-                         / ( hgt_ref(kk+1) - hgt_ref(kk) )
+          do kk = 1, kmax-1
+             if (       hgt(k) >= hgt_ref(idx(kk)  ) &
+                  .AND. hgt(k) <  hgt_ref(idx(kk+1)) ) then
+                idx_k(k,1) = idx(kk)
+                idx_k(k,2) = idx(kk+1)
+                vfact(k) = ( hgt_ref(idx(kk+1)) - hgt    (k)       ) &
+                         / ( hgt_ref(idx(kk+1)) - hgt_ref(idx(kk)) )
 
                 exit
              endif
@@ -2186,7 +2196,7 @@ contains
        idx(1) = -999
        kmax = 1
        do k = KS_ref, KE_ref-1
-          if ( abs( val_ref(k) - UNDEF ) > EPS ) then
+          if ( hgt_ref(k) > UNDEF .and. abs( val_ref(k) - UNDEF ) > EPS ) then
              idx(1) = k
              idx_r(k) = 1
              exit
@@ -2195,16 +2205,18 @@ contains
        if ( idx(1) == -999 ) return ! UNDEF (use linear interpolation)
        FDZ(1) = 1e10 ! dummy
        do k = idx(1)+1, KE_ref
-          dz = hgt_ref(k) - hgt_ref(idx(kmax))
-          if ( abs( val_ref(k) - UNDEF ) > EPS .and. dz > EPS ) then
-             do while ( kmax > 1 .and. FDZ(kmax) < dz * 0.1_RP )
-                kmax = kmax - 1 ! marge
-             end do
-             kmax = kmax + 1
-             idx(kmax) = k
-             if ( idx(kmax-1)+1 <= k-1 ) idx_r(idx(kmax-1)+1:k-1) = kmax-1
-             idx_r(k) = kmax
-             FDZ(kmax) = hgt_ref(k) - hgt_ref(idx(kmax-1))
+          if ( hgt_ref(k) > UNDEF ) then
+             dz = hgt_ref(k) - hgt_ref(idx(kmax))
+             if ( abs( val_ref(k) - UNDEF ) > EPS .and. dz > EPS ) then
+                do while ( kmax > 1 .and. FDZ(kmax) < dz * 0.1_RP )
+                   kmax = kmax - 1 ! marge
+                end do
+                kmax = kmax + 1
+                idx(kmax) = k
+                if ( idx(kmax-1)+1 <= k-1 ) idx_r(idx(kmax-1)+1:k-1) = kmax-1
+                idx_r(k) = kmax
+                FDZ(kmax) = hgt_ref(k) - hgt_ref(idx(kmax-1))
+             end if
           end if
        end do
 
