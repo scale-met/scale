@@ -257,10 +257,12 @@ int file_open_c(       int  *fid,      // (out)
 
 int file_get_dim_length_c(       int  *len,     // (out)
 			   const int   fid,     // (in)
-			   const char *dimname) // (in)
-			       
+                           const char *dimname, // (in)
+			   const bool  suppress)// (in)
 {
   int ncid, dimid;
+
+  ERROR_SUPPRESS = suppress;
 
   if ( files[fid] == NULL ) return ALREADY_CLOSED_CODE;
   ncid = files[fid]->ncid;
@@ -276,6 +278,8 @@ int file_get_dim_length_c(       int  *len,     // (out)
     CHECK_ERROR( nc_inq_dimlen(ncid, dimid, &l) )
     *len = l;
   }
+
+  ERROR_SUPPRESS = 0;
 
   return SUCCESS_CODE;
 }

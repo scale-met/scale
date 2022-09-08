@@ -119,7 +119,7 @@ case ${TIME_DURATION_UNIT} in
 esac
 INT_DURATION=`expr ${TIME_DURATION%%.*} \* ${TIME_DURATION_UNIT_SEC}`
 INT_BOUNDARY_DT=`echo ${TIME_DT_BOUNDARY%%.*}`
-if [ ${FILETYPE_ORG} = "SCALE-RM" ]; then
+if [ ${FILETYPE_ORG} = "NetCDF" ]; then
   NUMBER_OF_FILES=1
   NUMBER_OF_TSTEPS=`expr ${INT_DURATION} / ${INT_BOUNDARY_DT} + 1`
   if [ ${NUMBER_OF_TSTEPS} -le 1 ]; then
@@ -199,11 +199,9 @@ do
 
   # set filenames for each domain
   PP_IO_LOG_BASENAME="pp_LOG_d${FNUM}"
-  DOMAIN_CATALOGUE_FNAME="latlon_domain_catalogue_d${FNUM}.txt"
   TOPOGRAPHY_OUT_BASENAME="topo_d${FNUM}"
   COPYTOPO_IN_BASENAME="topo_d${PFNUM}"
   LANDUSE_OUT_BASENAME="landuse_d${FNUM}"
-  LATLON_CATALOGUE_FNAME="latlon_domain_catalogue_d${PFNUM}.txt"
 
   TOPO_IN_DIR="${TOPODIR}/${TOPOTYPE[$D]}/Products"
   TOPO_IN_CATALOGUE="${TOPOTYPE[$D]}_catalogue.txt"
@@ -261,7 +259,7 @@ do
 
   source ${PP_CONF}
 
-  if [ ${FILETYPE_ORG} = "SCALE-RM" ]; then
+  if [ ${FILETYPE_ORG} = "NetCDF" ]; then
     PARENT_BASENAME="${BASENAME_ORG}"
   else
     PARENT_BASENAME=""
@@ -332,9 +330,9 @@ else
   RUN_CONF_FILE=run.launch.conf
 fi
 
-if [ ${FILETYPE_ORG} = "SCALE-RM" ]; then
-  eval 'NP=`expr ${PARENT_PRC_NUM_X} + ${PARENT_PRC_NUM_Y}`'
-  DATPARAM="\" [../../data/${LATLON_CATALOGUE} ${LATLON_CATALOGUE}] \""
+if [ ${FILETYPE_ORG} = "NetCDF" ]; then
+  eval 'NP=`expr ${PARENT_PRC_NUM_X} "*" ${PARENT_PRC_NUM_Y}`'
+  DATPARAM="\"\""
   DATDISTS="\" [${NP} ../../data/${BASENAME_ORG} ${BASENAME_ORG}] \""
 else
   DATPARAM="\" [../../data/${BASENAME_ORG} ${BASENAME_ORG}] \""

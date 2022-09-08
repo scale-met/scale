@@ -73,6 +73,7 @@ OBJS = \
 	$(BUILD_DIR)/scale_coriolis.o	\
 	$(BUILD_DIR)/scale_matrix.o	\
 	$(BUILD_DIR)/scale_sort.o	\
+	$(BUILD_DIR)/scale_hash.o	\
 	$(BUILD_DIR)/scale_filter.o	\
 	$(BUILD_DIR)/scale_prc.o	\
 	$(BUILD_DIR)/scale_prc_cartesC.o	\

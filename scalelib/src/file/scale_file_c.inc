@@ -9,11 +9,12 @@
        integer(c_int)                        :: error
      end function file_open_c
 
-     function file_get_dim_length_c(len, fid, dimname) result(error) BIND(C)
-       import c_int, c_char
+     function file_get_dim_length_c(len, fid, dimname, suppress) result(error) BIND(C)
+       import c_int, c_char, c_bool
        integer(c_int),           intent(out) :: len
        integer(c_int),    VALUE, intent(in)  :: fid
        character(c_char),        intent(in)  :: dimname(*)
+       logical(c_bool),   VALUE, intent(in)  :: suppress
        integer(c_int)                        :: error
      end function file_get_dim_length_c
 

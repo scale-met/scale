@@ -579,6 +579,7 @@ contains
 
     logical, intent(out), optional :: error
 
+    logical(c_bool) :: suppress
     integer :: ierror
 
 
@@ -587,9 +588,16 @@ contains
        call PRC_abort
     end if
 
+    if ( present(error) ) then
+       suppress = .true.
+    else
+       suppress = .false.
+    end if
+
     ierror = file_get_dim_length_c( len,                 & ! (out)
                                     FILE_files(fid)%fid, & ! (in)
-                                    cstr(dimname)        ) ! (in)
+                                    cstr(dimname),       & ! (in)
+                                    suppress             ) ! (in)
     if ( ierror /= FILE_SUCCESS_CODE .and. ierror /= FILE_ALREADY_EXISTED_CODE ) then
        if ( present(error) ) then
           error = .true.
@@ -2397,7 +2405,7 @@ contains
     !---------------------------------------------------------------------------
 
     if ( .not. FILE_opened(fid) ) then
-       LOG_ERROR("FILE_",*) 'File is not opened. fid = ', fid
+       LOG_ERROR("FILE_read_var_real<%=rp%>_<%=d%>D",*) 'File is not opened. fid = ', fid
        call PRC_abort
     end if
 
@@ -2417,6 +2425,13 @@ contains
        missing_value_ = missing_value
     else
        missing_value_ = 0.0_<%=rp%>
+    end if
+
+    if ( present(count) ) then
+       if ( <%=(1..d).map{|i| "count(#{i}).ne.size(var,#{i})"}.join(" .or. ")%> ) then
+          LOG_ERROR("FILE_read_var_real<%=rp%>_<%=d%>D",*) 'size is different: ', count(:), shape(var)
+          call PRC_abort
+       end if
     end if
 
     !--- get data information

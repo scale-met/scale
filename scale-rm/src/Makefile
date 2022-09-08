@@ -93,12 +93,10 @@ SUB_OBJS =	\
 	mod_cnvuser.o             \
 	mod_convert.o             \
 	mod_mktopo.o              \
-	mod_realinput_scale.o     \
-	mod_realinput_wrfarw.o    \
+	mod_realinput_netcdf.o     \
 	mod_realinput_grads.o     \
 	mod_realinput.o           \
 	mod_mkinit.o
-#	mod_realinput_nicam.o     \
 
 MAIN_OBJS =	\
 	mod_launcher.o            \

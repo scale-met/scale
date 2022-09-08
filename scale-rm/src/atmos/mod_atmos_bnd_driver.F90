@@ -145,7 +145,8 @@ module mod_atmos_bnd_driver
   real(RP),              private, allocatable :: VELY_ref(:,:,:)
   real(RP),              private, allocatable :: POTT_ref(:,:,:)
   real(RP),              private, allocatable, target :: QTRC_ref(:,:,:,:)
-  real(RP),              private, allocatable, target :: Q_WORK(:,:,:,:) ! QV + Qe
+  real(RP),              private, allocatable, target :: Q_SEND_WORK(:,:,:,:) ! QV + Qe
+  real(RP),              private, allocatable, target :: Q_RECV_WORK(:,:,:,:) ! QV + Qe
 
 
   integer,               private :: now_step
@@ -185,13 +186,14 @@ contains
        FILE_AGGREGATE
     use scale_comm_cartesC_nest, only: &
        ONLINE_USE_VELZ, &
-       ONLINE_BOUNDARY_DIAGQHYD, &
        ONLINE_BOUNDARY_USE_QHYD, &
        USE_NESTING,         &
-       OFFLINE,             &
        ONLINE_IAM_PARENT,   &
        ONLINE_IAM_DAUGHTER, &
-       NESTQA => COMM_CARTESC_NEST_BND_QA
+       ONLINE_SEND_DIAGQHYD, &
+       ONLINE_RECV_DIAGQHYD, &
+       ONLINE_SEND_QA,      &
+       ONLINE_RECV_QA
     use scale_atmos_hydrometeor, only: &
        ATMOS_HYDROMETEOR_dry, &
        I_QV
@@ -289,11 +291,7 @@ contains
     if( .NOT. USE_NESTING ) then
        ATMOS_BOUNDARY_ONLINE = .false.
     else
-       if( OFFLINE ) then
-          ATMOS_BOUNDARY_ONLINE = .false.
-       else
-          ATMOS_BOUNDARY_ONLINE = .true.
-       endif
+       ATMOS_BOUNDARY_ONLINE = .true.
     endif
     do_parent_process   = .false.
     do_daughter_process = .false.
@@ -524,8 +522,11 @@ contains
        LOG_INFO_CONT(*) 'Density relaxation time                        : ', ATMOS_BOUNDARY_DENS_ADJUST_tau
     end if
 
-    if ( ONLINE_BOUNDARY_DIAGQHYD ) then
-       allocate( Q_WORK(KA,IA,JA,NESTQA) )
+    if ( ONLINE_SEND_DIAGQHYD ) then
+       allocate( Q_SEND_WORK(KA,IA,JA,ONLINE_SEND_QA) )
+    end if
+    if ( ONLINE_RECV_DIAGQHYD ) then
+       allocate( Q_RECV_WORK(KA,IA,JA,ONLINE_RECV_QA) )
     end if
 
     return
@@ -1344,37 +1345,34 @@ contains
     use scale_prc, only: &
        PRC_abort
     use scale_comm_cartesC_nest, only: &
-       COMM_CARTESC_NEST_recvwait_issue, &
-       PARENT_DTSEC,                     &
-       PARENT_NSTEP,                     &
-       NESTQA => COMM_CARTESC_NEST_BND_QA
+       COMM_CARTESC_NEST_recvwait_issue_recv, &
+       ONLINE_PARENT_DTSEC,                   &
+       ONLINE_PARENT_NSTEP,                   &
+       ONLINE_RECV_QA
     use scale_time, only: &
        TIME_DTSEC,     &
        TIME_NSTEP
     implicit none
 
-    ! parameters
-    integer, parameter  :: handle = 2
-
-    UPDATE_DT = PARENT_DTSEC(handle)
+    UPDATE_DT = ONLINE_PARENT_DTSEC
     UPDATE_NSTEP = nint( UPDATE_DT / TIME_DTSEC )
     if ( UPDATE_NSTEP * TIME_DTSEC /= UPDATE_DT ) then
        LOG_ERROR("ATMOS_BOUNDARY_initialize_online",*) 'DT of the parent is not multiple of the DT'
        call PRC_abort
     end if
-    if ( UPDATE_NSTEP * PARENT_NSTEP(handle) /= TIME_NSTEP ) then
+    if ( UPDATE_NSTEP * ONLINE_PARENT_NSTEP /= TIME_NSTEP ) then
        LOG_ERROR("ATMOS_BOUNDARY_initialize_online",*) 'DURATION must be the same as that of the parent'
        call PRC_abort
     end if
 
-    if ( NESTQA > BND_QA ) then
-       LOG_ERROR("ATMOS_BOUNDARY_initialize_online",*) 'NEST_BND_QA exceeds BND_QA'
+    if ( ONLINE_RECV_QA > BND_QA ) then
+       LOG_ERROR("ATMOS_BOUNDARY_initialize_online",*) 'ONLINE_RECV_QA exceeds BND_QA'
        LOG_ERROR_CONT(*) 'This must not be occur.'
        LOG_ERROR_CONT(*) 'Please send your configuration file to SCALE develop member.'
        call PRC_abort
     end if
 
-    call COMM_CARTESC_NEST_recvwait_issue( handle, NESTQA )
+    call COMM_CARTESC_NEST_recvwait_issue_recv
 
     return
   end subroutine ATMOS_BOUNDARY_initialize_online
@@ -1386,14 +1384,12 @@ contains
     use scale_time, only: &
        TIME_NOWDAYSEC
     use scale_comm_cartesC_nest, only: &
-       PARENT_DTSEC, &
-       PARENT_NSTEP
+       PARENT_DTSEC => ONLINE_PARENT_DTSEC, &
+       PARENT_NSTEP => ONLINE_PARENT_NSTEP
     use scale_file_external_input, only: &
        FILE_EXTERNAL_INPUT_regist
     implicit none
     real(DP), intent(in) :: time
-
-    integer, parameter  :: handle = 2
 
     integer :: nstep
     integer :: iq, iqb
@@ -1402,54 +1398,54 @@ contains
     ! import data from parent domain
     call ATMOS_BOUNDARY_update_online_daughter( time, .true., .true. )
 
-    nstep = PARENT_NSTEP(handle) + 1
+    nstep = PARENT_NSTEP + 1
 
-    call FILE_EXTERNAL_INPUT_regist( 'DENS',               & ! [IN]
-                                     DENS_ref(:,:,:),      & ! [IN]
-                                     'ZXY',                & ! [IN]
-                                     nstep,                & ! [IN]
-                                     time,                 & ! [IN]
-                                     PARENT_DTSEC(handle)  ) ! [IN]
+    call FILE_EXTERNAL_INPUT_regist( 'DENS',          & ! [IN]
+                                     DENS_ref(:,:,:), & ! [IN]
+                                     'ZXY',           & ! [IN]
+                                     nstep,           & ! [IN]
+                                     time,            & ! [IN]
+                                     PARENT_DTSEC     ) ! [IN]
 
-    call FILE_EXTERNAL_INPUT_regist( 'VELX',               & ! [IN]
-                                     VELX_ref(:,:,:),      & ! [IN]
-                                     'ZXY',                & ! [IN]
-                                     nstep,                & ! [IN]
-                                     time,                 & ! [IN]
-                                     PARENT_DTSEC(handle)  ) ! [IN]
+    call FILE_EXTERNAL_INPUT_regist( 'VELX',          & ! [IN]
+                                     VELX_ref(:,:,:), & ! [IN]
+                                     'ZXY',           & ! [IN]
+                                     nstep,           & ! [IN]
+                                     time,            & ! [IN]
+                                     PARENT_DTSEC     ) ! [IN]
 
-    call FILE_EXTERNAL_INPUT_regist( 'VELY',               & ! [IN]
-                                     VELY_ref(:,:,:),      & ! [IN]
-                                     'ZXY',                & ! [IN]
-                                     nstep,                & ! [IN]
-                                     time,                 & ! [IN]
-                                     PARENT_DTSEC(handle)  ) ! [IN]
+    call FILE_EXTERNAL_INPUT_regist( 'VELY',          & ! [IN]
+                                     VELY_ref(:,:,:), & ! [IN]
+                                     'ZXY',           & ! [IN]
+                                     nstep,           & ! [IN]
+                                     time,            & ! [IN]
+                                     PARENT_DTSEC     ) ! [IN]
 
-    call FILE_EXTERNAL_INPUT_regist( 'PT',                 & ! [IN]
-                                     POTT_ref(:,:,:),      & ! [IN]
-                                     'ZXY',                & ! [IN]
-                                     nstep,                & ! [IN]
-                                     time,                 & ! [IN]
-                                     PARENT_DTSEC(handle)  ) ! [IN]
+    call FILE_EXTERNAL_INPUT_regist( 'PT',            & ! [IN]
+                                     POTT_ref(:,:,:), & ! [IN]
+                                     'ZXY',           & ! [IN]
+                                     nstep,           & ! [IN]
+                                     time,            & ! [IN]
+                                     PARENT_DTSEC     ) ! [IN]
 
     do iq = 1, QA
        iqb = BND_IQ(iq)
        if ( iqb > 0 ) &
-            call FILE_EXTERNAL_INPUT_regist( TRACER_NAME(iq),      & ! [IN]
-                                             QTRC_ref(:,:,:,iqb),  & ! [IN]
-                                             'ZXY',                & ! [IN]
-                                             nstep,                & ! [IN]
-                                             time,                 & ! [IN]
-                                             PARENT_DTSEC(handle)  ) ! [IN]
+            call FILE_EXTERNAL_INPUT_regist( TRACER_NAME(iq),     & ! [IN]
+                                             QTRC_ref(:,:,:,iqb), & ! [IN]
+                                             'ZXY',               & ! [IN]
+                                             nstep,               & ! [IN]
+                                             time,                & ! [IN]
+                                             PARENT_DTSEC         ) ! [IN]
     end do
 
     if ( ATMOS_BOUNDARY_USE_VELZ ) then
-       call FILE_EXTERNAL_INPUT_regist( 'VELZ',               & ! [IN]
-                                        VELZ_ref(:,:,:),      & ! [IN]
-                                        'ZXY',                & ! [IN]
-                                        nstep,                & ! [IN]
-                                        time,                 & ! [IN]
-                                        PARENT_DTSEC(handle)  ) ! [IN]
+       call FILE_EXTERNAL_INPUT_regist( 'VELZ',          & ! [IN]
+                                        VELZ_ref(:,:,:), & ! [IN]
+                                        'ZXY',           & ! [IN]
+                                        nstep,           & ! [IN]
+                                        time,            & ! [IN]
+                                        PARENT_DTSEC     ) ! [IN]
 
     end if
 
@@ -1492,26 +1488,20 @@ contains
   !> Finalize boundary value
   subroutine ATMOS_BOUNDARY_driver_finalize
     use scale_comm_cartesC_nest, only: &
-       COMM_CARTESC_NEST_recvwait_issue, &
-       COMM_CARTESC_NEST_recv_cancel,    &
-       ONLINE_BOUNDARY_DIAGQHYD,         &
-       NESTQA => COMM_CARTESC_NEST_BND_QA
+       COMM_CARTESC_NEST_recvwait_issue_send, &
+       COMM_CARTESC_NEST_recv_cancel_recv
     use scale_file_cartesC, only: &
        FILE_CARTESC_close
     implicit none
 
-    ! works
-    integer :: handle
     !---------------------------------------------------------------------------
 
     if ( do_parent_process ) then !online [parent]
-       handle = 1
-       call COMM_CARTESC_NEST_recvwait_issue( handle, NESTQA )
+       call COMM_CARTESC_NEST_recvwait_issue_send
     endif
 
     if ( do_daughter_process ) then !online [daughter]
-       handle = 2
-       call COMM_CARTESC_NEST_recv_cancel( handle )
+       call COMM_CARTESC_NEST_recv_cancel_recv
     endif
 
     deallocate( BND_IQ )
@@ -1551,9 +1541,8 @@ contains
        end if
     end if
 
-    if ( ONLINE_BOUNDARY_DIAGQHYD ) then
-       deallocate( Q_WORK )
-    end if
+    if ( allocated( Q_SEND_WORK ) ) deallocate( Q_SEND_WORK )
+    if ( allocated( Q_RECV_WORK ) ) deallocate( Q_RECV_WORK )
 
 
     return
@@ -1568,11 +1557,10 @@ contains
     use mod_atmos_phy_mp_vars, only: &
        QS_MP
     use scale_comm_cartesC_nest, only: &
-       COMM_CARTESC_NEST_test
+       COMM_CARTESC_NEST_test_recv
     implicit none
     real(DP), intent(in) :: time
 
-    integer :: handle
     !---------------------------------------------------------------------------
 
     if ( l_bnd ) then
@@ -1601,8 +1589,7 @@ contains
 
     ! To be enable to do asynchronous communicaton
     if ( do_daughter_process ) then !online [daughter]
-       handle = 2
-       call COMM_CARTESC_NEST_test( handle )
+       call COMM_CARTESC_NEST_test_recv
     endif
 
     return
@@ -1612,7 +1599,7 @@ contains
   !> Send data to child domain
   subroutine ATMOS_BOUNDARY_driver_send
     use scale_comm_cartesC_nest, only: &
-       COMM_CARTESC_NEST_test
+       COMM_CARTESC_NEST_test_send
     use mod_atmos_vars, only: &
        DENS, &
        MOMZ, &
@@ -1627,7 +1614,6 @@ contains
        QE_MP
     implicit none
 
-    integer :: handle
     !---------------------------------------------------------------------------
 
     if ( do_parent_process ) then !online [parent]
@@ -1635,8 +1621,7 @@ contains
        call ATMOS_BOUNDARY_update_online_parent( DENS,MOMZ,MOMX,MOMY,RHOT,QTRC(:,:,:,QS_MP:QE_MP), QV, Qe )
 
        ! To be enable to do asynchronous communicaton
-       handle = 1
-       call COMM_CARTESC_NEST_test( handle )
+       call COMM_CARTESC_NEST_test_send
     endif
 
     return
@@ -1742,8 +1727,7 @@ contains
        QV,   & ! [in]
        Qe    ) ! [in]
     use scale_comm_cartesC_nest, only: &
-       COMM_CARTESC_NEST_recvwait_issue, &
-       NESTQA => COMM_CARTESC_NEST_BND_QA
+       COMM_CARTESC_NEST_recvwait_issue_send
     use scale_atmos_hydrometeor, only: &
        N_HYD
     use mod_atmos_phy_mp_vars, only: &
@@ -1760,13 +1744,12 @@ contains
     real(RP), intent(in) :: QV  (KA,IA,JA)
     real(RP), intent(in) :: Qe  (KA,IA,JA,N_HYD)
 
-    integer, parameter :: handle = 1
     !---------------------------------------------------------------------------
 
     LOG_INFO("ATMOS_BOUNDARY_update_online_parent",*)"ATMOS BOUNDARY update online: PARENT"
 
     ! issue wait
-    call COMM_CARTESC_NEST_recvwait_issue( handle, NESTQA )
+    call COMM_CARTESC_NEST_recvwait_issue_send
 
     ! issue send
     call ATMOS_BOUNDARY_send( DENS, MOMZ, MOMX, MOMY, RHOT, QTRC, QV, Qe )
@@ -1781,8 +1764,7 @@ contains
        init, &
        force )
     use scale_comm_cartesC_nest, only: &
-       COMM_CARTESC_NEST_recvwait_issue, &
-       NESTQA => COMM_CARTESC_NEST_BND_QA
+       COMM_CARTESC_NEST_recvwait_issue_recv
     use scale_file_external_input, only: &
        FILE_EXTERNAL_INPUT_query, &
        FILE_EXTERNAL_INPUT_put_ref
@@ -1790,8 +1772,6 @@ contains
     real(DP), intent(in) :: time
     logical,  intent(in) :: init
     logical,  intent(in) :: force
-
-    integer, parameter :: handle = 2
 
     logical  :: do_read
     logical  :: error
@@ -1813,7 +1793,7 @@ contains
        call ATMOS_BOUNDARY_recv
 
        ! issue receive
-       call COMM_CARTESC_NEST_recvwait_issue( handle, NESTQA )
+       call COMM_CARTESC_NEST_recvwait_issue_recv
 
        if ( ATMOS_BOUNDARY_DENS_ADJUST ) then
           call calc_mass
@@ -1850,20 +1830,14 @@ contains
   subroutine ATMOS_BOUNDARY_send( &
        DENS, MOMZ, MOMX, MOMY, RHOT, QTRC, QV, Qe )
     use scale_comm_cartesC_nest, only: &
-       ONLINE_BOUNDARY_DIAGQHYD,   &
-       COMM_CARTESC_NEST_nestdown,    &
-       DAUGHTER_KA,           &
-       DAUGHTER_IA,           &
-       DAUGHTER_JA,           &
-       NESTQA => COMM_CARTESC_NEST_BND_QA
+       ONLINE_SEND_DIAGQHYD, &
+       ONLINE_SEND_QA,       &
+       COMM_CARTESC_NEST_nestdown_send
     use scale_atmos_hydrometeor, only: &
        N_HYD
     use mod_atmos_phy_mp_vars, only: &
        QA_MP
     implicit none
-
-    ! parameters
-    integer, parameter  :: handle = 1
 
     ! arguments
     real(RP), intent(in) :: DENS(KA,IA,JA)
@@ -1877,35 +1851,26 @@ contains
 
     ! works
     real(RP), pointer :: Q(:,:,:,:)
-    real(RP) :: dummy_d( DAUGHTER_KA(handle), DAUGHTER_IA(handle), DAUGHTER_JA(handle), NESTQA )
 
     integer :: iq
     !---------------------------------------------------------------------------
 
-    if ( ONLINE_BOUNDARY_DIAGQHYD ) then
-       Q => Q_WORK
+    if ( ONLINE_SEND_DIAGQHYD ) then
+       Q => Q_SEND_WORK
        Q(:,:,:,1) = QV(:,:,:)
-       do iq = 2, NESTQA
+       do iq = 2, ONLINE_SEND_QA
           Q(:,:,:,iq) = Qe(:,:,:,iq-1)
        end do
     else
        Q => QTRC
     end if
 
-    call COMM_CARTESC_NEST_nestdown( handle,           &
-                                     NESTQA,           &
-                                     DENS(:,:,:),      &  !(KA,IA,JA)
-                                     MOMZ(:,:,:),      &  !(KA,IA,JA)
-                                     MOMX(:,:,:),      &  !(KA,IA,JA)
-                                     MOMY(:,:,:),      &  !(KA,IA,JA)
-                                     RHOT(:,:,:),      &  !(KA,IA,JA)
-                                     Q   (:,:,:,:),    &  !(KA,IA,JA,NESTQA)
-                                     dummy_d(:,:,:,1), &  !(KA,IA,JA)
-                                     dummy_d(:,:,:,1), &  !(KA,IA,JA)
-                                     dummy_d(:,:,:,1), &  !(KA,IA,JA)
-                                     dummy_d(:,:,:,1), &  !(KA,IA,JA)
-                                     dummy_d(:,:,:,1), &  !(KA,IA,JA)
-                                     dummy_d(:,:,:,:)  )  !(KA,IA,JA,NESTQA)
+    call COMM_CARTESC_NEST_nestdown_send( DENS(:,:,:),      &  !(KA,IA,JA)
+                                          MOMZ(:,:,:),      &  !(KA,IA,JA)
+                                          MOMX(:,:,:),      &  !(KA,IA,JA)
+                                          MOMY(:,:,:),      &  !(KA,IA,JA)
+                                          RHOT(:,:,:),      &  !(KA,IA,JA)
+                                          Q   (:,:,:,:)     )  !(KA,IA,JA,NESTQA)
 
     return
   end subroutine ATMOS_BOUNDARY_send
@@ -1916,49 +1881,31 @@ contains
     use scale_prc, only: &
        PRC_abort
     use scale_comm_cartesC_nest, only: &
-       ONLINE_BOUNDARY_DIAGQHYD,   &
-       COMM_CARTESC_NEST_nestdown, &
-       PARENT_KA,                  &
-       PARENT_IA,                  &
-       PARENT_JA,                  &
-       NESTQA => COMM_CARTESC_NEST_BND_QA
+       ONLINE_RECV_DIAGQHYD, &
+       ONLINE_RECV_QA,       &
+       COMM_CARTESC_NEST_nestdown_recv
     use mod_atmos_phy_mp_driver, only: &
        ATMOS_PHY_MP_driver_qhyd2qtrc
     implicit none
 
-    ! parameters
-    integer, parameter  :: handle = 2
-
     ! works
     real(RP), pointer :: Q(:,:,:,:)
-    real(RP) :: dummy_p( PARENT_KA(handle), PARENT_IA(handle), PARENT_JA(handle), NESTQA )
     !---------------------------------------------------------------------------
 
-!OCL XFILL
-    dummy_p(:,:,:,:) = 0.0_RP
-
-    if ( ONLINE_BOUNDARY_DIAGQHYD ) then
-       Q => Q_WORK
+    if ( ONLINE_RECV_DIAGQHYD ) then
+       Q => Q_RECV_WORK
     else
-       Q => QTRC_ref(:,:,:,1:NESTQA)
+       Q => QTRC_ref(:,:,:,1:ONLINE_RECV_QA)
     end if
 
-    call COMM_CARTESC_NEST_nestdown( handle,                  &
-                                     NESTQA,                  &
-                                     dummy_p(:,:,:,1),        & !(KA,IA,JA)
-                                     dummy_p(:,:,:,1),        & !(KA,IA,JA)
-                                     dummy_p(:,:,:,1),        & !(KA,IA,JA)
-                                     dummy_p(:,:,:,1),        & !(KA,IA,JA)
-                                     dummy_p(:,:,:,1),        & !(KA,IA,JA)
-                                     dummy_p(:,:,:,1:NESTQA), & !(KA,IA,JA,NESTQA)
-                                     DENS_ref(:,:,:),         & !(KA,IA,JA)
-                                     VELZ_ref(:,:,:),         & !(KA,IA,JA)
-                                     VELX_ref(:,:,:),         & !(KA,IA,JA)
-                                     VELY_ref(:,:,:),         & !(KA,IA,JA)
-                                     POTT_ref(:,:,:),         & !(KA,IA,JA)
-                                     Q(:,:,:,:)               ) !(KA,IA,JA,NESTQA)
+    call COMM_CARTESC_NEST_nestdown_recv( DENS_ref(:,:,:),         & !(KA,IA,JA)
+                                          VELZ_ref(:,:,:),         & !(KA,IA,JA)
+                                          VELX_ref(:,:,:),         & !(KA,IA,JA)
+                                          VELY_ref(:,:,:),         & !(KA,IA,JA)
+                                          POTT_ref(:,:,:),         & !(KA,IA,JA)
+                                          Q(:,:,:,:)               ) !(KA,IA,JA,NESTQA)
 
-    if ( ONLINE_BOUNDARY_DIAGQHYD ) then
+    if ( ONLINE_RECV_DIAGQHYD ) then
        call ATMOS_PHY_MP_driver_qhyd2qtrc( KA, KS, KE, IA, 1, IA, JA, 1, JA, &
                                            Q(:,:,:,1), Q(:,:,:,2:), & ! (in)
                                            QTRC_ref(:,:,:,:)        ) ! (out)

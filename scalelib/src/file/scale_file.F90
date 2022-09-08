@@ -591,6 +591,7 @@ contains
 
     logical, intent(out), optional :: error
 
+    logical(c_bool) :: suppress
     integer :: ierror
 
 
@@ -599,9 +600,16 @@ contains
        call PRC_abort
     end if
 
+    if ( present(error) ) then
+       suppress = .true.
+    else
+       suppress = .false.
+    end if
+
     ierror = file_get_dim_length_c( len,                 & ! (out)
                                     FILE_files(fid)%fid, & ! (in)
-                                    cstr(dimname)        ) ! (in)
+                                    cstr(dimname),       & ! (in)
+                                    suppress             ) ! (in)
     if ( ierror /= FILE_SUCCESS_CODE .and. ierror /= FILE_ALREADY_EXISTED_CODE ) then
        if ( present(error) ) then
           error = .true.
@@ -3699,7 +3707,7 @@ contains
     !---------------------------------------------------------------------------
 
     if ( .not. FILE_opened(fid) ) then
-       LOG_ERROR("FILE_",*) 'File is not opened. fid = ', fid
+       LOG_ERROR("FILE_read_var_realSP_1D",*) 'File is not opened. fid = ', fid
        call PRC_abort
     end if
 
@@ -3719,6 +3727,13 @@ contains
        missing_value_ = missing_value
     else
        missing_value_ = 0.0_SP
+    end if
+
+    if ( present(count) ) then
+       if ( count(1).ne.size(var,1) ) then
+          LOG_ERROR("FILE_read_var_realSP_1D",*) 'size is different: ', count(:), shape(var)
+          call PRC_abort
+       end if
     end if
 
     !--- get data information
@@ -3819,7 +3834,7 @@ contains
     !---------------------------------------------------------------------------
 
     if ( .not. FILE_opened(fid) ) then
-       LOG_ERROR("FILE_",*) 'File is not opened. fid = ', fid
+       LOG_ERROR("FILE_read_var_realDP_1D",*) 'File is not opened. fid = ', fid
        call PRC_abort
     end if
 
@@ -3839,6 +3854,13 @@ contains
        missing_value_ = missing_value
     else
        missing_value_ = 0.0_DP
+    end if
+
+    if ( present(count) ) then
+       if ( count(1).ne.size(var,1) ) then
+          LOG_ERROR("FILE_read_var_realDP_1D",*) 'size is different: ', count(:), shape(var)
+          call PRC_abort
+       end if
     end if
 
     !--- get data information
@@ -3939,7 +3961,7 @@ contains
     !---------------------------------------------------------------------------
 
     if ( .not. FILE_opened(fid) ) then
-       LOG_ERROR("FILE_",*) 'File is not opened. fid = ', fid
+       LOG_ERROR("FILE_read_var_realSP_2D",*) 'File is not opened. fid = ', fid
        call PRC_abort
     end if
 
@@ -3959,6 +3981,13 @@ contains
        missing_value_ = missing_value
     else
        missing_value_ = 0.0_SP
+    end if
+
+    if ( present(count) ) then
+       if ( count(1).ne.size(var,1) .or. count(2).ne.size(var,2) ) then
+          LOG_ERROR("FILE_read_var_realSP_2D",*) 'size is different: ', count(:), shape(var)
+          call PRC_abort
+       end if
     end if
 
     !--- get data information
@@ -4059,7 +4088,7 @@ contains
     !---------------------------------------------------------------------------
 
     if ( .not. FILE_opened(fid) ) then
-       LOG_ERROR("FILE_",*) 'File is not opened. fid = ', fid
+       LOG_ERROR("FILE_read_var_realDP_2D",*) 'File is not opened. fid = ', fid
        call PRC_abort
     end if
 
@@ -4079,6 +4108,13 @@ contains
        missing_value_ = missing_value
     else
        missing_value_ = 0.0_DP
+    end if
+
+    if ( present(count) ) then
+       if ( count(1).ne.size(var,1) .or. count(2).ne.size(var,2) ) then
+          LOG_ERROR("FILE_read_var_realDP_2D",*) 'size is different: ', count(:), shape(var)
+          call PRC_abort
+       end if
     end if
 
     !--- get data information
@@ -4179,7 +4215,7 @@ contains
     !---------------------------------------------------------------------------
 
     if ( .not. FILE_opened(fid) ) then
-       LOG_ERROR("FILE_",*) 'File is not opened. fid = ', fid
+       LOG_ERROR("FILE_read_var_realSP_3D",*) 'File is not opened. fid = ', fid
        call PRC_abort
     end if
 
@@ -4199,6 +4235,13 @@ contains
        missing_value_ = missing_value
     else
        missing_value_ = 0.0_SP
+    end if
+
+    if ( present(count) ) then
+       if ( count(1).ne.size(var,1) .or. count(2).ne.size(var,2) .or. count(3).ne.size(var,3) ) then
+          LOG_ERROR("FILE_read_var_realSP_3D",*) 'size is different: ', count(:), shape(var)
+          call PRC_abort
+       end if
     end if
 
     !--- get data information
@@ -4299,7 +4342,7 @@ contains
     !---------------------------------------------------------------------------
 
     if ( .not. FILE_opened(fid) ) then
-       LOG_ERROR("FILE_",*) 'File is not opened. fid = ', fid
+       LOG_ERROR("FILE_read_var_realDP_3D",*) 'File is not opened. fid = ', fid
        call PRC_abort
     end if
 
@@ -4319,6 +4362,13 @@ contains
        missing_value_ = missing_value
     else
        missing_value_ = 0.0_DP
+    end if
+
+    if ( present(count) ) then
+       if ( count(1).ne.size(var,1) .or. count(2).ne.size(var,2) .or. count(3).ne.size(var,3) ) then
+          LOG_ERROR("FILE_read_var_realDP_3D",*) 'size is different: ', count(:), shape(var)
+          call PRC_abort
+       end if
     end if
 
     !--- get data information
@@ -4419,7 +4469,7 @@ contains
     !---------------------------------------------------------------------------
 
     if ( .not. FILE_opened(fid) ) then
-       LOG_ERROR("FILE_",*) 'File is not opened. fid = ', fid
+       LOG_ERROR("FILE_read_var_realSP_4D",*) 'File is not opened. fid = ', fid
        call PRC_abort
     end if
 
@@ -4439,6 +4489,13 @@ contains
        missing_value_ = missing_value
     else
        missing_value_ = 0.0_SP
+    end if
+
+    if ( present(count) ) then
+       if ( count(1).ne.size(var,1) .or. count(2).ne.size(var,2) .or. count(3).ne.size(var,3) .or. count(4).ne.size(var,4) ) then
+          LOG_ERROR("FILE_read_var_realSP_4D",*) 'size is different: ', count(:), shape(var)
+          call PRC_abort
+       end if
     end if
 
     !--- get data information
@@ -4539,7 +4596,7 @@ contains
     !---------------------------------------------------------------------------
 
     if ( .not. FILE_opened(fid) ) then
-       LOG_ERROR("FILE_",*) 'File is not opened. fid = ', fid
+       LOG_ERROR("FILE_read_var_realDP_4D",*) 'File is not opened. fid = ', fid
        call PRC_abort
     end if
 
@@ -4559,6 +4616,13 @@ contains
        missing_value_ = missing_value
     else
        missing_value_ = 0.0_DP
+    end if
+
+    if ( present(count) ) then
+       if ( count(1).ne.size(var,1) .or. count(2).ne.size(var,2) .or. count(3).ne.size(var,3) .or. count(4).ne.size(var,4) ) then
+          LOG_ERROR("FILE_read_var_realDP_4D",*) 'size is different: ', count(:), shape(var)
+          call PRC_abort
+       end if
     end if
 
     !--- get data information

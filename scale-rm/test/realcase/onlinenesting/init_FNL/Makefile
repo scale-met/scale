@@ -25,12 +25,11 @@ TPROC       = 9
 
 # required data (parameters,distributed files)
 DATPARAM    = " [${DATADIR}/land/param.bucket.conf param.bucket.conf ] \
-                [${TESTDIR}/tutorial/real/data/namelist.grads_boundary.FNL.2005053112-2016051106 namelist.grads_boundary.FNL.2005053112-2016051106] "
+                [${TESTDIR}/tutorial/real/data/namelist.grads_boundary.FNL.2005053112-2015011400 namelist.grads_boundary.FNL.2005053112-2015011400] "
 DATDISTS    = " [3 $(PREPDIR)/topo_d01    topo_d01   ] \
                 [6 $(PREPDIR)/topo_d02    topo_d02   ] \
                 [3 $(PREPDIR)/landuse_d01 landuse_d01] \
                 [6 $(PREPDIR)/landuse_d02 landuse_d02] "
-
 
 
 # build, makedir, run, jobshell, allclean, clean is inside of common Makefile
