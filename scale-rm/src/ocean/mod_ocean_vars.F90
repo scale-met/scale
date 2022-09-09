@@ -522,12 +522,14 @@ contains
     call MONITOR_reg( 'OCN_TEMP',          'sea water temperature',            'K m3', & ! (in)
                       MONIT_id(IM_O_TEMP),                                             & ! (out)
                       dim_type='OXY', is_tendency=.false.                              ) ! (in)
-    call MONITOR_reg( 'OCN_ICE_TEMP',      'sea ice temperature',              'K m3', & ! (in)
-                      MONIT_id(IM_I_TEMP),                                             & ! (out)
-                      dim_type='XY',  is_tendency=.false.                              ) ! (in)
-    call MONITOR_reg( 'OCN_ICE_MASS',      'sea ice mass',                     'kg',   & ! (in)
-                      MONIT_id(IM_I_MASS),                                             & ! (out)
-                      dim_type='XY',  is_tendency=.false.                              ) ! (in)
+    if ( ICE_flag ) then
+       call MONITOR_reg( 'OCN_ICE_TEMP',      'sea ice temperature',              'K m3', & ! (in)
+                         MONIT_id(IM_I_TEMP),                                             & ! (out)
+                         dim_type='XY',  is_tendency=.false.                              ) ! (in)
+       call MONITOR_reg( 'OCN_ICE_MASS',      'sea ice mass',                     'kg',   & ! (in)
+                         MONIT_id(IM_I_MASS),                                             & ! (out)
+                         dim_type='XY',  is_tendency=.false.                              ) ! (in)
+    end if
     call MONITOR_reg( 'OCN_MASFLX_TOP',    'SFC mass flux',                    'kg',   & ! (in)
                       MONIT_id(IM_SFC),                                                & ! (out)
                       dim_type='XY',  is_tendency=.true.                               ) ! (in)
@@ -543,15 +545,19 @@ contains
     call MONITOR_reg( 'OCN_WTR_MASCNV',    'sea water mass convergence',       'kg',   & ! (in)
                       MONIT_id(IM_O_MASFLX),                                           & ! (out)
                       dim_type='XY',  is_tendency=.true.                               ) ! (in)
-    call MONITOR_reg( 'OCN_ICE_MASCNV',    'sea ice mass convergence',         'kg',   & ! (in)
-                      MONIT_id(IM_I_MASFLX),                                           & ! (out)
-                      dim_type='XY',  is_tendency=.true.                               ) ! (in)
+    if ( ICE_flag ) then
+       call MONITOR_reg( 'OCN_ICE_MASCNV',    'sea ice mass convergence',         'kg',   & ! (in)
+                          MONIT_id(IM_I_MASFLX),                                           & ! (out)
+                          dim_type='XY',  is_tendency=.true.                               ) ! (in)
+    end if
     call MONITOR_reg( 'OCN_WTR_ENGI',      'sea water internal energy',        'J',    & ! (in)
-                      MONIT_id(IM_O_ENGI),                                             & ! (out)
-                      dim_type='OXY', is_tendency=.false.                              ) ! (in)
-    call MONITOR_reg( 'OCN_ICE_ENGI',      'sea ice internal energy',          'J',    & ! (in)
-                      MONIT_id(IM_I_ENGI),                                             & ! (out)
-                      dim_type='XY',  is_tendency=.false.                              ) ! (in)
+                       MONIT_id(IM_O_ENGI),                                             & ! (out)
+                       dim_type='OXY', is_tendency=.false.                              ) ! (in)
+    if ( ICE_flag ) then
+       call MONITOR_reg( 'OCN_ICE_ENGI',      'sea ice internal energy',          'J',    & ! (in)
+                          MONIT_id(IM_I_ENGI),                                             & ! (out)
+                          dim_type='XY',  is_tendency=.false.                              ) ! (in)
+    end if
     call MONITOR_reg( 'OCN_GHFLX_TOP',     'SFC ground heat flux',             'J',    & ! (in)
                       MONIT_id(IM_ENGSFC_GH),                                          & ! (out)
                       dim_type='XY',  is_tendency=.true.                               ) ! (in)
@@ -573,9 +579,11 @@ contains
     call MONITOR_reg( 'OCN_WTR_ENGICNV',   'sea water internal energy convergence', 'J',    & ! (in)
                       MONIT_id(IM_O_ENGFLX),                                           & ! (out)
                       dim_type='XY',  is_tendency=.true.                               ) ! (in)
-    call MONITOR_reg( 'OCN_ICE_ENGICNV',   'sea ice internal energy convergence',   'J',    & ! (in)
-                      MONIT_id(IM_I_ENGFLX),                                           & ! (out)
-                      dim_type='XY',  is_tendency=.true.                               ) ! (in)
+    if ( ICE_flag ) then
+       call MONITOR_reg( 'OCN_ICE_ENGICNV',   'sea ice internal energy convergence',   'J',    & ! (in)
+                         MONIT_id(IM_I_ENGFLX),                                           & ! (out)
+                         dim_type='XY',  is_tendency=.true.                               ) ! (in)
+    end if
 
     return
   end subroutine OCEAN_vars_setup
@@ -1149,8 +1157,10 @@ contains
     !---------------------------------------------------------------------------
 
     call MONITOR_put( MONIT_id(IM_O_TEMP), OCEAN_TEMP    (:,:,:) )
-    call MONITOR_put( MONIT_id(IM_I_TEMP), OCEAN_ICE_TEMP(:,:) )
-    call MONITOR_put( MONIT_id(IM_I_MASS), OCEAN_ICE_MASS(:,:) )
+    if ( ICE_flag ) then
+       call MONITOR_put( MONIT_id(IM_I_TEMP), OCEAN_ICE_TEMP(:,:) )
+       call MONITOR_put( MONIT_id(IM_I_MASS), OCEAN_ICE_MASS(:,:) )
+    end if
 
 
     ! mass budget
@@ -1175,7 +1185,7 @@ contains
        end do
        call MONITOR_put( MONIT_id(IM_O_MASFLX), WORK2D(:,:) )
     end if
-    if ( MONIT_id(IM_I_MASFLX) > 0 ) then
+    if ( ICE_flag .and. MONIT_id(IM_I_MASFLX) > 0 ) then
        !$omp parallel do
        do j = OJS, OJE
        do i = OIS, OIE
@@ -1198,7 +1208,7 @@ contains
        end do
        call MONITOR_put( MONIT_id(IM_O_ENGI), WORK3D(:,:,:) )
     end if
-    if ( MONIT_id(IM_I_ENGI) > 0 ) then
+    if ( ICE_flag .and. MONIT_id(IM_I_ENGI) > 0 ) then
        !$omp parallel do
        do j = OJS, OJE
        do i = OIS, OIE

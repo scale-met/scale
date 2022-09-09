@@ -213,6 +213,8 @@ contains
 
     endif
 
+    last_updated = 0.0_DP
+
     return
   end subroutine ATMOS_REFSTATE_setup
 
