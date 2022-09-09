@@ -731,7 +731,8 @@ contains
     character(len=*),  intent(in)  :: fstr
     integer :: i, j
     integer :: l
-    l = min( len(fstr), size(cstr) )
+    l = min( len(fstr), size(cstr)-1 )
+    cstr(l+1) = c_null_char
     do i = l, 1, -1
        if ( fstr(i:i) == " " ) then
           cstr(i) = c_null_char
