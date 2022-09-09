@@ -199,7 +199,8 @@ contains
        MASS_SUPL,     &
        ENGI_SUPL      )
     use scale_const, only: &
-       DWATR => CONST_DWATR
+       DWATR => CONST_DWATR, &
+       EPS   => CONST_EPS
     use scale_atmos_hydrometeor, only: &
        CV_WATER, &
        CV_ICE,   &
@@ -244,13 +245,21 @@ contains
           ICE_MASS_frz = ICE_MASS(i,j) - ICE_MASS_prev
 
           ! update ice temperature
-          ICE_TEMP(i,j) = ICE_TEMP(i,j) &
-                        + ( OCEAN_PHY_ICE_freezetemp - ICE_TEMP(i,j) ) * ICE_MASS_frz / ICE_MASS(i,j)
+          if ( ICE_MASS(i,j) > EPS ) then
+             ICE_TEMP(i,j) = ICE_TEMP(i,j) &
+                  + ( OCEAN_PHY_ICE_freezetemp - ICE_TEMP(i,j) ) * ICE_MASS_frz / ICE_MASS(i,j)
+          else ! all ice melt
+             ICE_TEMP(i,j) = OCEAN_PHY_ICE_freezetemp ! dummy
+          end if
 
           ! update ocean temperature
-          OCEAN_TEMP(i,j) = OCEAN_TEMP(i,j) &
-                          + ( CV_WATER * OCEAN_TEMP(i,j) - CV_ICE * OCEAN_PHY_ICE_freezetemp + LHF ) * ICE_MASS_frz &
-                          / ( C_w - CV_WATER * ICE_MASS_frz )
+          if ( C_w - CV_WATER * ICE_MASS_frz > EPS ) then
+             OCEAN_TEMP(i,j) = OCEAN_TEMP(i,j) &
+                  + ( CV_WATER * OCEAN_TEMP(i,j) - CV_ICE * OCEAN_PHY_ICE_freezetemp + LHF ) * ICE_MASS_frz &
+                  / ( C_w - CV_WATER * ICE_MASS_frz )
+          else ! all water freeze
+             OCEAN_TEMP(i,j) = OCEAN_PHY_ICE_freezetemp
+          end if
 
           MASS_FLUX(i,j) = ICE_MASS_frz
           ENGI_FLUX(i,j) = ( CV_ICE * OCEAN_PHY_ICE_freezetemp - LHF ) * ICE_MASS_frz
