@@ -26,10 +26,13 @@ module scale_hash
   !
   !++ Public procedure
   !
+#ifdef NVIDIA
+  public :: table_new
+#else
   interface hash_table
      module procedure :: table_new
   end interface hash_table
-  public :: table_new
+#endif
 
   !-----------------------------------------------------------------------------
   !
@@ -82,14 +85,23 @@ contains
 
   !-----------------------------------------------------------------------------
   !> Constructor
+#ifdef NVIDIA
+  subroutine table_new(tbl)
+    type(hash_table), intent(out) :: tbl
+#else
   type(hash_table) function table_new() result(tbl)
+#endif
     allocate( tbl%table(INIT_SIZE) )
     tbl%size = INIT_SIZE
     tbl%len = 0
     tbl%max_len = 0
 
     return
+#ifdef NVIDIA
+  end subroutine table_new
+#else
   end function table_new
+#endif
 
   !-----------------------------------------------------------------------------
   !> Destructor
