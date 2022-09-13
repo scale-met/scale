@@ -54,7 +54,7 @@ ifeq ($(origin BINNAME), undefined)
 endif
 
 ifeq ($(origin SNONAME), undefined)
-   SNONAME = sno
+   SNONAME = sno$(POSTFIX)
 endif
 
 ifeq ($(origin PPCONF), undefined)

@@ -35,17 +35,17 @@ all:
 
 build:
 	mkdir -p $(BUILD_DIR)
-	$(MAKE) $(BUILD_DIR)/$(BINNAME)
+	$(MAKE) $(BUILD_DIR)/$(BINNAME)$(POSTFIX)
 
 install:
 	mkdir -p $(BINDIR)
-	$(INSTALL) $(BUILD_DIR)/$(BINNAME) $(BINDIR)/$(BINNAME)
+	$(INSTALL) $(BUILD_DIR)/$(BINNAME)$(POSTFIX) $(BINDIR)/$(BINNAME)$(POSTFIX)
 
 $(OBJECT): $(MODS)
 	$(FC) $(FFLAGS) -o $@ $^ $(LIBS)
 	@mv *.mod inc/; mv *.o inc/;
 
-$(BUILD_DIR)/$(BINNAME) : $(BUILD_DIR)/prg_$(BINNAME).o  $(patsubst %,$(BUILD_DIR)/%,$(OBJS))
+$(BUILD_DIR)/$(BINNAME)$(POSTFIX) : $(BUILD_DIR)/prg_$(BINNAME).o  $(patsubst %,$(BUILD_DIR)/%,$(OBJS))
 	$(LD) $(LDFLAGS) $(ADDITIONAL_FFLAGS) -o $@ $^ $(LIBS) $(SCALE_NETCDF_LIBS) $(SCALE_MATHLIB_LIBS) $(SCALE_PAPI_LIBS) $(CONTRIB_LIBS)
 
 $(BUILD_DIR)/prg_$(BINNAME).o : prg_$(BINNAME).F90 $(patsubst %,$(BUILD_DIR)/%,$(OBJS))
@@ -65,7 +65,7 @@ $(BUILD_DIR)/mod_snoplugin_vgridope.o : mod_snoplugin_vgridope.F90 $(BUILD_DIR)/
 
 
 distclean: clean
-	rm -f $(BINDIR)/$(BINNAME)
+	rm -f $(BINDIR)/$(BINNAME)$(POSTFIX)
 
 clean:
 	rm -rf $(BUILD_DIR)
