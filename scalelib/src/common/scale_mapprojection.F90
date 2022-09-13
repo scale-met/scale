@@ -142,8 +142,8 @@ module scale_mapprojection
   real(DP), private :: MAPPROJECTION_LC_lat1  = 30.0_DP ! standard latitude1 for L.C. projection [deg]
   real(DP), private :: MAPPROJECTION_LC_lat2  = 60.0_DP ! standard latitude2 for L.C. projection [deg]
   real(DP), private :: MAPPROJECTION_PS_lat             ! standard latitude1 for P.S. projection [deg]
-  real(DP), private :: MAPPROJECTION_M_lat    =  0.0_DP ! standard latitude1 for Mer. projection [deg]
-  real(DP), private :: MAPPROJECTION_EC_lat   =  0.0_DP ! standard latitude1 for E.C. projection [deg]
+  real(DP), private :: MAPPROJECTION_M_lat              ! standard latitude1 for Mer. projection [deg]
+  real(DP), private :: MAPPROJECTION_EC_lat             ! standard latitude1 for E.C. projection [deg]
 
   type(mappingparam), private :: MAPPROJECTION_mappingparam
 
@@ -231,6 +231,8 @@ contains
     MAPPROJECTION_basepoint_x = DOMAIN_CENTER_X
     MAPPROJECTION_basepoint_y = DOMAIN_CENTER_Y
     MAPPROJECTION_PS_lat      = UNDEF
+    MAPPROJECTION_M_lat       = UNDEF
+    MAPPROJECTION_EC_lat      = UNDEF
 
 
     !--- read namelist
@@ -299,6 +301,7 @@ contains
        rotcoef   => MAPPROJECTION_rotcoef_PolarStereographic
     case('MER')
        LOG_INFO_CONT(*) '=> Mercator projection'
+       if( MAPPROJECTION_M_lat == UNDEF ) MAPPROJECTION_M_lat = MAPPROJECTION_basepoint_lat
        MAPPROJECTION_mappinginfo%mapping_name = "mercator"
        MAPPROJECTION_mappinginfo%standard_parallel(1) = MAPPROJECTION_M_lat
 
@@ -308,6 +311,7 @@ contains
        rotcoef   => MAPPROJECTION_rotcoef_Mercator
     case('EC')
        LOG_INFO_CONT(*) '=> Equidistant Cylindrical projection'
+       if( MAPPROJECTION_EC_lat == UNDEF ) MAPPROJECTION_EC_lat = MAPPROJECTION_basepoint_lat
        MAPPROJECTION_mappinginfo%mapping_name = "equirectangular"
        MAPPROJECTION_mappinginfo%standard_parallel(1) = MAPPROJECTION_EC_lat
        MAPPROJECTION_mappinginfo%longitude_of_central_meridian = MAPPROJECTION_basepoint_lon
