@@ -392,7 +392,7 @@ contains
                                                                      jmax/2,                                               &
                                                                      dx/1000.0_RP,                                         &
                                                                      dy/1000.0_RP,                                         &
-                                                                     sign(1.0_RP,hinfo%minfo_standard_parallel(1))
+                                                                     sign(1.0_DP,hinfo%minfo_standard_parallel(1))
        endif
 
        !--- VARS
