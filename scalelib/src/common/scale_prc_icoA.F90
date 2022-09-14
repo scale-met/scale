@@ -485,7 +485,7 @@ contains
     integer,          intent(in) :: rall               !< number of regular region (global total)
     integer,          intent(in) :: lall               !< number of regular region (local)
     integer,          intent(in) :: edge_tab(2,4,rall) !< region link information (for 4 edges)
-    integer,          intent(in) :: lp2r(lall,pall)    !< l,prc => region
+    integer,          intent(in) :: lp2r(lall,0:pall-1)!< l,prc => region
 
     integer :: num_of_rgn !< number of region
 
