@@ -1554,7 +1554,7 @@ int file_add_variable_c(       int    *vid,     // (out)
 			 const int     ndims,   // (in)
 			 const int     dtype,   // (in)
 			 const double  tint,    // (in)
-			 const bool    tavg)    // (in)
+			 const char   *tstats)  // (in)
 {
   int ncid, varid, acid, *acdimids;
   int dimids[NC_MAX_DIMS], dimid;
@@ -1772,8 +1772,8 @@ int file_add_variable_c(       int    *vid,     // (out)
   }
 
 
-  if ( tavg ) {
-    sprintf(buf, "%s: mean", vars[nvar]->t->name);
+  if ( strcmp(tstats,"none") != 0 ) {
+    sprintf(buf, "%s: %s", vars[nvar]->t->name, tstats);
     if ( files[fid]->shared_mode )
       CHECK_PNC_ERROR( ncmpi_put_att_text(ncid, varid, "cell_methods", strlen(buf), buf) )
     else

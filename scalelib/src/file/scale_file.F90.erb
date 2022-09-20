@@ -926,7 +926,7 @@ contains
        standard_name,        &
        dims, dtype,          &
        vid,                  &
-       time_avg              )
+       time_stats            )
     integer,          intent( in) :: fid
     character(len=*), intent( in) :: varname
     character(len=*), intent( in) :: desc
@@ -935,7 +935,7 @@ contains
     character(len=*), intent( in) :: dims(:)
     integer,          intent( in) :: dtype
     integer,          intent(out) :: vid
-    logical,          intent( in), optional :: time_avg
+    character(len=*), intent( in), optional :: time_stats
 
     if ( .not. FILE_opened(fid) ) then
        LOG_ERROR("FILE_add_variable_no_time",*) 'File is not opened. fid = ', fid
@@ -946,7 +946,7 @@ contains
          varname, desc, units, standard_name, & ! (in)
          dims, dtype, -1.0_DP,                & ! (in)
          vid,                                 & ! (out)
-         time_avg = time_avg                  ) ! (in)
+         time_stats = time_stats              ) ! (in)
 
     return
   end subroutine FILE_add_variable_no_time
@@ -959,7 +959,7 @@ contains
        dims, dtype,          &
        time_int,             &
        vid,                  &
-       time_avg              )
+       time_stats            )
     implicit none
     integer,          intent(in)  :: fid
     character(len=*), intent(in)  :: varname
@@ -972,13 +972,13 @@ contains
 
     integer,          intent(out) :: vid
 
-    logical,          intent(in), optional :: time_avg
+    character(len=*), intent(in), optional :: time_stats
 
     type(c_ptr) :: dims_(size(dims))
     !character(:,c_char), allocatable, target :: cptr(:)
     character(len=H_SHORT), allocatable, target :: cptr(:)
 
-    logical(c_bool) :: itavg
+    character(len=4) :: ctstats
 
     integer  :: cvid
     integer  :: ndims
@@ -1004,10 +1004,10 @@ contains
     if ( vid < 0 ) then ! variable registration
 
        ndims = size(dims)
-       itavg = .false.
 
-       if ( present(time_avg) ) then
-          if( time_avg ) itavg = .true.
+       ctstats = "none"
+       if ( present(time_stats) ) then
+          ctstats = time_stats
        endif
 
        !allocate( character(len=len(dims)+1) :: cptr(ndims) )
@@ -1017,11 +1017,12 @@ contains
           dims_(n) = c_loc(cptr(n))
        end do
     
-       error = file_add_variable_c( cvid,                                & ! [OUT]
-                                    FILE_files(fid)%fid,                 & ! [IN]
-                                    cstr(varname), cstr(desc),           & ! [IN]
-                                    cstr(units), cstr(standard_name),    & ! [IN]
-                                    dims_, ndims, dtype, time_int, itavg ) ! [IN]
+       error = file_add_variable_c( cvid,                             & ! [OUT]
+                                    FILE_files(fid)%fid,              & ! [IN]
+                                    cstr(varname), cstr(desc),        & ! [IN]
+                                    cstr(units), cstr(standard_name), & ! [IN]
+                                    dims_, ndims, dtype,              & ! [IN]
+                                    time_int, cstr(ctstats)           ) ! [IN]
 
        if ( error /= FILE_SUCCESS_CODE ) then
           LOG_ERROR("FILE_add_variable_with_time",*) 'failed to add variable: '//trim(varname)
@@ -1048,7 +1049,7 @@ contains
        ndims, dims,          &
        dtype,                &
        vid,                  &
-       time_int, time_avg,   &
+       time_int, time_stats, &
        existed               )
     integer,          intent( in) :: fid
     character(len=*), intent( in) :: varname
@@ -1060,14 +1061,14 @@ contains
     integer,          intent( in) :: dtype
     integer,          intent(out) :: vid
     real(DP),         intent( in), optional :: time_int
-    logical,          intent( in), optional :: time_avg
+    character(len=*), intent( in), optional :: time_stats
     logical,          intent(out), optional :: existed
 
     type(c_ptr) :: dims_(size(dims))
     !character(:,c_char), allocatable, target :: cptr(:)
     character(len=H_SHORT), allocatable, target :: cptr(:)
 
-    logical(c_bool) :: itavg
+    character(len=4) :: ctstats
 
     real(DP) :: tint_
     integer  :: cvid
@@ -1096,11 +1097,9 @@ contains
           tint_ = -1.0_DP
        endif
 
-       itavg = .false.
-       if ( present(time_avg) ) then
-          if ( time_avg ) then
-             itavg = .true.
-          end if
+       ctstats = "none"
+       if ( present(time_stats) ) then
+          ctstats = time_stats
        end if
 
        !allocate( character(len=len(dims)+1) :: cptr(ndims) )
@@ -1110,11 +1109,11 @@ contains
           dims_(n) = c_loc(cptr(n))
        end do
 
-       error = file_add_variable_c( cvid,                             & ! [OUT]
-                                    FILE_files(fid)%fid,              & ! [IN]
-                                    cstr(varname), cstr(desc),        & ! [IN]
-                                    cstr(units), cstr(standard_name), & ! [IN]
-                                    dims_, ndims, dtype, tint_, itavg ) ! [IN]
+       error = file_add_variable_c( cvid,                                     & ! [OUT]
+                                    FILE_files(fid)%fid,                      & ! [IN]
+                                    cstr(varname), cstr(desc),                & ! [IN]
+                                    cstr(units), cstr(standard_name),         & ! [IN]
+                                    dims_, ndims, dtype, tint_, cstr(ctstats) ) ! [IN]
 
        if ( error /= FILE_SUCCESS_CODE ) then
           LOG_ERROR("FILE_def_variable",*) 'failed to add variable: '//trim(varname)

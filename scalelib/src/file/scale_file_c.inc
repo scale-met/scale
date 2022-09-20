@@ -249,7 +249,7 @@
        integer(c_int)                       :: error
      end function file_write_associatedcoordinate_c
 
-     function file_add_variable_c(vid, fid, varname, desc, units, stdname, dims, ndims, dtype, tint, tave) result(error) BIND(C)
+     function file_add_variable_c(vid, fid, varname, desc, units, stdname, dims, ndims, dtype, tint, tstats) result(error) BIND(C)
        import c_int, c_char, c_ptr, c_double, c_bool
        integer(c_int),           intent(out) :: vid
        integer(c_int),    VALUE, intent(in)  :: fid
@@ -261,7 +261,7 @@
        integer(c_int),    VALUE, intent(in)  :: ndims
        integer(c_int),    VALUE, intent(in)  :: dtype
        real(c_double),    VALUE, intent(in)  :: tint
-       logical(c_bool),   VALUE, intent(in)  :: tave
+       character(c_char),        intent(in)  :: tstats
        integer(c_int)                        :: error
      end function file_add_variable_c
 

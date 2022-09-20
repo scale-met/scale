@@ -158,6 +158,8 @@ module scale_file_history
   !++ Private parameters & variables
   !
 
+  integer, parameter :: I_NONE = 0, I_MEAN = 1, I_MIN = 2, I_MAX = 3
+  character(len=4), parameter :: OP_NAME(0:3) = (/"none", "mean", "min ", "max "/)
   type request
      character(len=H_SHORT) :: name              !> Name of variable (in the code)
      character(len=H_SHORT) :: outname           !> Name of variable (for output)
@@ -165,7 +167,7 @@ module scale_file_history
      logical                :: postfix_timelabel !> Add time label to basename?
      character(len=H_SHORT) :: zcoord            !> Z-coordinate
      integer                :: dstep             !> Time unit
-     logical                :: taverage          !> Apply time average?
+     integer                :: tstats_op         !> Statistical operation: none:0, mean:1, min:2, max:3
      integer                :: dtype             !> Data type
      character(len=H_SHORT) :: cell_measures     !> Cell measures
      logical                :: registered        !> This item is registered?
@@ -179,7 +181,7 @@ module scale_file_history
      character(len=H_SHORT) :: zcoord            !> Z-coordinate
      integer                :: zid               !> Z-coordinate index
      integer                :: dstep             !> Time unit
-     logical                :: taverage          !> Apply time average?
+     integer                :: tstats_op         !> Statistical operation: none:0, mean:1, min:2, max:3
      integer                :: dtype             !> Data type
 
      integer                :: fid               !> FILE id of the file
@@ -337,6 +339,7 @@ contains
        default_tinterval,                &
        default_tunit,                    &
        default_taverage,                 &
+       default_tstats_op,                &
        default_datatype,                 &
        myrank                            )
     use scale_file_h, only: &
@@ -363,6 +366,7 @@ contains
     real(DP),         intent(in), optional :: default_tinterval
     character(len=*), intent(in), optional :: default_tunit
     logical,          intent(in), optional :: default_taverage
+    character(len=*), intent(in), optional :: default_tstats_op
     character(len=*), intent(in), optional :: default_datatype
     integer,          intent(in), optional :: myrank
 
@@ -371,8 +375,9 @@ contains
     character(len=H_SHORT) :: FILE_HISTORY_DEFAULT_ZCOORD            !> Default z-coordinate
     real(DP)               :: FILE_HISTORY_DEFAULT_TINTERVAL         !> Time interval
     character(len=H_SHORT) :: FILE_HISTORY_DEFAULT_TUNIT             !> Time unit
-    logical                :: FILE_HISTORY_DEFAULT_TAVERAGE          !> Apply time average?
-    character(len=H_SHORT) :: FILE_HISTORY_DEFAULT_DATATYPE          !> Data type
+    logical                :: FILE_HISTORY_DEFAULT_TAVERAGE          !> Apply time average? (obsolete)
+    character(len=4)       :: FILE_HISTORY_DEFAULT_TSTATS_OP         !> Statistics operation: none, mean, min, max
+    character(len=5)       :: FILE_HISTORY_DEFAULT_DATATYPE          !> Data type: REAL4, REAL8
                                                                      !> REAL4 : single precision
                                                                      !> REAL8 : double precision
     real(DP)               :: FILE_HISTORY_OUTPUT_WAIT               !> Time length to suppress output
@@ -391,6 +396,7 @@ contains
        FILE_HISTORY_DEFAULT_TINTERVAL,         &
        FILE_HISTORY_DEFAULT_TUNIT,             &
        FILE_HISTORY_DEFAULT_TAVERAGE,          &
+       FILE_HISTORY_DEFAULT_TSTATS_OP,         &
        FILE_HISTORY_DEFAULT_DATATYPE,          &
        FILE_HISTORY_OUTPUT_STEP0,              &
        FILE_HISTORY_OUTPUT_WAIT,               &
@@ -409,8 +415,9 @@ contains
     character(len=H_SHORT) :: ZCOORD            !> z-coordinate
     real(DP)               :: TINTERVAL         !> time interval
     character(len=H_SHORT) :: TUNIT             !> time unit
-    logical                :: TAVERAGE          !> apply time average?
-    character(len=H_SHORT) :: DATATYPE          !> data type
+    logical                :: TAVERAGE          !> apply time average? (obsolete)
+    character(len=4)       :: TSTATS_OP         !> statistics operation: none, mean, min, max
+    character(len=5)       :: DATATYPE          !> data type: REAL4, REAL8
 
     namelist / HISTORY_ITEM / &
        NAME,              &
@@ -421,6 +428,7 @@ contains
        TINTERVAL,         &
        TUNIT,             &
        TAVERAGE,          &
+       TSTATS_OP,         &
        DATATYPE
 
 
@@ -464,7 +472,8 @@ contains
     FILE_HISTORY_DEFAULT_ZCOORD            = ''        !> Default z-coordinate
     FILE_HISTORY_DEFAULT_TINTERVAL         = -1.0_DP   !> Time interval
     FILE_HISTORY_DEFAULT_TUNIT             = 'SEC'     !> Time unit
-    FILE_HISTORY_DEFAULT_TAVERAGE          = .false.   !> Apply time average?
+    FILE_HISTORY_DEFAULT_TAVERAGE          = .false.   !> Apply time average? (obsolete)
+    FILE_HISTORY_DEFAULT_TSTATS_OP         = "none"    !> Statistics operation
     FILE_HISTORY_DEFAULT_DATATYPE          = 'REAL4'   !> Data type
     FILE_HISTORY_OUTPUT_WAIT               =  0.0_DP   !> Time length to suppress output
     FILE_HISTORY_OUTPUT_WAIT_TUNIT         = 'SEC'     !> Time unit
@@ -484,6 +493,7 @@ contains
     if( present(default_tinterval)         ) FILE_HISTORY_DEFAULT_TINTERVAL         = default_tinterval
     if( present(default_tunit)             ) FILE_HISTORY_DEFAULT_TUNIT             = default_tunit
     if( present(default_taverage)          ) FILE_HISTORY_DEFAULT_TAVERAGE          = default_taverage
+    if( present(default_tstats_op)         ) FILE_HISTORY_DEFAULT_TSTATS_OP         = default_tstats_op
     if( present(default_datatype)          ) FILE_HISTORY_DEFAULT_DATATYPE          = default_datatype
 
     !--- read namelist
@@ -554,6 +564,7 @@ contains
        TINTERVAL         = FILE_HISTORY_DEFAULT_TINTERVAL
        TUNIT             = FILE_HISTORY_DEFAULT_TUNIT
        TAVERAGE          = FILE_HISTORY_DEFAULT_TAVERAGE
+       TSTATS_OP         = FILE_HISTORY_DEFAULT_TSTATS_OP
        DATATYPE          = FILE_HISTORY_DEFAULT_DATATYPE
 
        read(IO_FID_CONF,nml=HISTORY_ITEM,iostat=ierr)
@@ -584,7 +595,26 @@ contains
        FILE_HISTORY_req(reqid)%postfix_timelabel = POSTFIX_TIMELABEL
        if( FILE_HISTORY_OUTPUT_SWITCH_STEP >= 0 ) FILE_HISTORY_req(reqid)%postfix_timelabel = .true. ! force true
        FILE_HISTORY_req(reqid)%zcoord            = ZCOORD
-       FILE_HISTORY_req(reqid)%taverage          = TAVERAGE
+       select case ( TSTATS_OP )
+       case ( "none", "NONE", "" )
+          FILE_HISTORY_req(reqid)%tstats_op = I_NONE
+       case ( "mean", "MEAN", "average", "AVERAGE" )
+          FILE_HISTORY_req(reqid)%tstats_op = I_MEAN
+       case ( "min", "MIN" )
+          FILE_HISTORY_req(reqid)%tstats_op = I_MIN
+       case ( "max", "MAX" )
+          FILE_HISTORY_req(reqid)%tstats_op = I_MAX
+       case default
+          LOG_ERROR("FILE_HISTORY_Setup",*) 'TSTATS_OP is invalid (none, mean, min, or max) ,', trim(TSTATS_OP)
+          call PRC_abort
+       end select
+       if ( TAVERAGE ) then
+          LOG_WARN("FILE_HISTORY_Setup",*) 'TAVERAGE is obsolete. Use TSTATS_OP instead'
+          if ( FILE_HISTORY_req(reqid)%tstats_op > 1 ) then
+             LOG_ERROR("FILE_HISTORY_Setup",*) 'TSTATS_OP and TAVERAGE are conflicted'
+             call PRC_abort
+          end if
+       end if
 
        call CALENDAR_unit2sec( dtsec, TINTERVAL, TUNIT )
        dstep = int( dtsec / FILE_HISTORY_DTSEC )
@@ -819,7 +849,8 @@ contains
        RMISS => FILE_RMISS
     use scale_const, only: &
        UNDEF => CONST_UNDEF, &
-       EPS   => CONST_EPS
+       EPS   => CONST_EPS,   &
+       HUGE  => CONST_HUGE
     implicit none
 
     integer,  intent(in) :: itemid
@@ -849,22 +880,40 @@ contains
 
        dt = ( FILE_HISTORY_NOWSTEP - FILE_HISTORY_vars(id)%laststep_put ) * FILE_HISTORY_DTSEC
 
-       if ( dt < eps .AND. ( .NOT. FILE_HISTORY_vars(id)%taverage ) ) then
-          LOG_ERROR("FILE_HISTORY_Put_0D",*) 'variable was put two times before output!: ', &
+       if ( dt < eps .AND. FILE_HISTORY_vars(id)%tstats_op == 0 ) then
+          if ( FILE_HISTORY_var_inputs(itemid)%nvariants == 1 ) then
+             LOG_ERROR("FILE_HISTORY_Put_0D",*) 'variable was put two times before output!: ', &
                      trim(FILE_HISTORY_vars(id)%name), FILE_HISTORY_NOWSTEP, FILE_HISTORY_vars(id)%laststep_put
-          call PRC_abort
+             call PRC_abort
+          else
+             cycle
+          end if
        endif
 
        if ( FILE_HISTORY_vars(id)%flag_clear ) then ! time to purge
           FILE_HISTORY_vars(id)%timesum    = 0.0_DP
-          if ( FILE_HISTORY_vars(id)%taverage ) FILE_HISTORY_vars(id)%varsum(:)  = 0.0_DP
+          select case ( FILE_HISTORY_vars(id)%tstats_op )
+          case ( I_MEAN )
+             FILE_HISTORY_vars(id)%varsum(:)  = 0.0_DP
+          case ( I_MIN )
+             FILE_HISTORY_vars(id)%varsum(:)  = HUGE
+          case ( I_MAX )
+             FILE_HISTORY_vars(id)%varsum(:)  = - HUGE
+          end select
        endif
 
        dimid = FILE_HISTORY_vars(id)%dimid
-       if ( FILE_HISTORY_vars(id)%taverage ) then
+       if ( FILE_HISTORY_vars(id)%tstats_op > I_NONE ) then
          if ( FILE_HISTORY_vars(id)%varsum(1) /= RMISS ) then
             if ( var /= UNDEF ) then
-               FILE_HISTORY_vars(id)%varsum(1) = FILE_HISTORY_vars(id)%varsum(1) + var * dt
+               select case ( FILE_HISTORY_vars(id)%tstats_op )
+               case ( I_MEAN )
+                  FILE_HISTORY_vars(id)%varsum(1) = FILE_HISTORY_vars(id)%varsum(1) + var * dt
+               case ( I_MIN )
+                  if ( var < FILE_HISTORY_vars(id)%varsum(1) ) FILE_HISTORY_vars(id)%varsum(1) = var
+               case ( I_MAX )
+                  if ( var > FILE_HISTORY_vars(id)%varsum(1) ) FILE_HISTORY_vars(id)%varsum(1) = var
+               end select
             else
                FILE_HISTORY_vars(id)%varsum(1) = RMISS
             end if
@@ -938,7 +987,8 @@ contains
        RMISS => FILE_RMISS
     use scale_const, only: &
        UNDEF => CONST_UNDEF, &
-       EPS   => CONST_EPS
+       EPS   => CONST_EPS,   &
+       HUGE  => CONST_HUGE
     implicit none
 
     integer,  intent(in) :: itemid
@@ -968,34 +1018,71 @@ contains
 
        dt = ( FILE_HISTORY_NOWSTEP - FILE_HISTORY_vars(id)%laststep_put ) * FILE_HISTORY_DTSEC
 
-       if ( dt < eps .AND. ( .NOT. FILE_HISTORY_vars(id)%taverage ) ) then
-          LOG_ERROR("FILE_HISTORY_Put_1D",*) 'variable was put two times before output!: ', &
+       if ( dt < eps .AND. FILE_HISTORY_vars(id)%tstats_op == 0 ) then
+          if ( FILE_HISTORY_var_inputs(itemid)%nvariants == 1 ) then
+             LOG_ERROR("FILE_HISTORY_Put_1D",*) 'variable was put two times before output!: ', &
                      trim(FILE_HISTORY_vars(id)%name), FILE_HISTORY_NOWSTEP, FILE_HISTORY_vars(id)%laststep_put
-          call PRC_abort
+             call PRC_abort
+          else
+             cycle
+          end if
        endif
 
        if ( FILE_HISTORY_vars(id)%flag_clear ) then ! time to purge
           FILE_HISTORY_vars(id)%timesum    = 0.0_DP
-          if ( FILE_HISTORY_vars(id)%taverage ) FILE_HISTORY_vars(id)%varsum(:)  = 0.0_DP
+          select case ( FILE_HISTORY_vars(id)%tstats_op )
+          case ( I_MEAN )
+             FILE_HISTORY_vars(id)%varsum(:)  = 0.0_DP
+          case ( I_MIN )
+             FILE_HISTORY_vars(id)%varsum(:)  = HUGE
+          case ( I_MAX )
+             FILE_HISTORY_vars(id)%varsum(:)  = - HUGE
+          end select
        endif
 
        dimid = FILE_HISTORY_vars(id)%dimid
-       if ( FILE_HISTORY_vars(id)%taverage ) then
+       if ( FILE_HISTORY_vars(id)%tstats_op > I_NONE ) then
          allocate( buffer( FILE_HISTORY_vars(id)%size ) )
          call FILE_HISTORY_truncate_1D( var(:),               & ! (in)
                                         FILE_HISTORY_dims(dimid)%name,   & ! (in)
                                         FILE_HISTORY_vars(id)%zcoord,    & ! (in)
                                         FILE_HISTORY_vars(id)%fill_halo, & ! (in)
                                         buffer(:)                        ) ! (out)
-         do idx = 1, FILE_HISTORY_vars(id)%size
-            if ( FILE_HISTORY_vars(id)%varsum(idx) /= RMISS ) then
-               if ( buffer(idx) /= UNDEF ) then
-                  FILE_HISTORY_vars(id)%varsum(idx) = FILE_HISTORY_vars(id)%varsum(idx) + buffer(idx) * dt
-               else
-                  FILE_HISTORY_vars(id)%varsum(idx) = RMISS
+         select case ( FILE_HISTORY_vars(id)%tstats_op )
+         case ( I_MEAN )
+            !$omp parallel do
+            do idx = 1, FILE_HISTORY_vars(id)%size
+               if ( FILE_HISTORY_vars(id)%varsum(idx) /= RMISS ) then
+                  if ( buffer(idx) /= UNDEF ) then
+                     FILE_HISTORY_vars(id)%varsum(idx) = FILE_HISTORY_vars(id)%varsum(idx) + buffer(idx) * dt
+                  else
+                     FILE_HISTORY_vars(id)%varsum(idx) = RMISS
+                  end if
                end if
-            end if
-         enddo
+            enddo
+         case ( I_MIN )
+            !$omp parallel do
+            do idx = 1, FILE_HISTORY_vars(id)%size
+               if ( FILE_HISTORY_vars(id)%varsum(idx) /= RMISS ) then
+                  if ( buffer(idx) /= UNDEF ) then
+                     if ( buffer(idx) < FILE_HISTORY_vars(id)%varsum(idx) ) FILE_HISTORY_vars(id)%varsum(idx) = buffer(idx)
+                  else
+                     FILE_HISTORY_vars(id)%varsum(idx) = RMISS
+                  end if
+               end if
+            enddo
+         case ( I_MAX )
+            !$omp parallel do
+            do idx = 1, FILE_HISTORY_vars(id)%size
+               if ( FILE_HISTORY_vars(id)%varsum(idx) /= RMISS ) then
+                  if ( buffer(idx) /= UNDEF ) then
+                     if ( buffer(idx) > FILE_HISTORY_vars(id)%varsum(idx) ) FILE_HISTORY_vars(id)%varsum(idx) = buffer(idx)
+                  else
+                     FILE_HISTORY_vars(id)%varsum(idx) = RMISS
+                  end if
+               end if
+            enddo
+         end select
          deallocate( buffer )
          FILE_HISTORY_vars(id)%timesum = FILE_HISTORY_vars(id)%timesum + dt
       else
@@ -1070,7 +1157,8 @@ contains
        RMISS => FILE_RMISS
     use scale_const, only: &
        UNDEF => CONST_UNDEF, &
-       EPS   => CONST_EPS
+       EPS   => CONST_EPS,   &
+       HUGE  => CONST_HUGE
     implicit none
 
     integer,  intent(in) :: itemid
@@ -1100,34 +1188,71 @@ contains
 
        dt = ( FILE_HISTORY_NOWSTEP - FILE_HISTORY_vars(id)%laststep_put ) * FILE_HISTORY_DTSEC
 
-       if ( dt < eps .AND. ( .NOT. FILE_HISTORY_vars(id)%taverage ) ) then
-          LOG_ERROR("FILE_HISTORY_Put_2D",*) 'variable was put two times before output!: ', &
+       if ( dt < eps .AND. FILE_HISTORY_vars(id)%tstats_op == 0 ) then
+          if ( FILE_HISTORY_var_inputs(itemid)%nvariants == 1 ) then
+             LOG_ERROR("FILE_HISTORY_Put_2D",*) 'variable was put two times before output!: ', &
                      trim(FILE_HISTORY_vars(id)%name), FILE_HISTORY_NOWSTEP, FILE_HISTORY_vars(id)%laststep_put
-          call PRC_abort
+             call PRC_abort
+          else
+             cycle
+          end if
        endif
 
        if ( FILE_HISTORY_vars(id)%flag_clear ) then ! time to purge
           FILE_HISTORY_vars(id)%timesum    = 0.0_DP
-          if ( FILE_HISTORY_vars(id)%taverage ) FILE_HISTORY_vars(id)%varsum(:)  = 0.0_DP
+          select case ( FILE_HISTORY_vars(id)%tstats_op )
+          case ( I_MEAN )
+             FILE_HISTORY_vars(id)%varsum(:)  = 0.0_DP
+          case ( I_MIN )
+             FILE_HISTORY_vars(id)%varsum(:)  = HUGE
+          case ( I_MAX )
+             FILE_HISTORY_vars(id)%varsum(:)  = - HUGE
+          end select
        endif
 
        dimid = FILE_HISTORY_vars(id)%dimid
-       if ( FILE_HISTORY_vars(id)%taverage ) then
+       if ( FILE_HISTORY_vars(id)%tstats_op > I_NONE ) then
          allocate( buffer( FILE_HISTORY_vars(id)%size ) )
          call FILE_HISTORY_truncate_2D( var(:,:),               & ! (in)
                                         FILE_HISTORY_dims(dimid)%name,   & ! (in)
                                         FILE_HISTORY_vars(id)%zcoord,    & ! (in)
                                         FILE_HISTORY_vars(id)%fill_halo, & ! (in)
                                         buffer(:)                        ) ! (out)
-         do idx = 1, FILE_HISTORY_vars(id)%size
-            if ( FILE_HISTORY_vars(id)%varsum(idx) /= RMISS ) then
-               if ( buffer(idx) /= UNDEF ) then
-                  FILE_HISTORY_vars(id)%varsum(idx) = FILE_HISTORY_vars(id)%varsum(idx) + buffer(idx) * dt
-               else
-                  FILE_HISTORY_vars(id)%varsum(idx) = RMISS
+         select case ( FILE_HISTORY_vars(id)%tstats_op )
+         case ( I_MEAN )
+            !$omp parallel do
+            do idx = 1, FILE_HISTORY_vars(id)%size
+               if ( FILE_HISTORY_vars(id)%varsum(idx) /= RMISS ) then
+                  if ( buffer(idx) /= UNDEF ) then
+                     FILE_HISTORY_vars(id)%varsum(idx) = FILE_HISTORY_vars(id)%varsum(idx) + buffer(idx) * dt
+                  else
+                     FILE_HISTORY_vars(id)%varsum(idx) = RMISS
+                  end if
                end if
-            end if
-         enddo
+            enddo
+         case ( I_MIN )
+            !$omp parallel do
+            do idx = 1, FILE_HISTORY_vars(id)%size
+               if ( FILE_HISTORY_vars(id)%varsum(idx) /= RMISS ) then
+                  if ( buffer(idx) /= UNDEF ) then
+                     if ( buffer(idx) < FILE_HISTORY_vars(id)%varsum(idx) ) FILE_HISTORY_vars(id)%varsum(idx) = buffer(idx)
+                  else
+                     FILE_HISTORY_vars(id)%varsum(idx) = RMISS
+                  end if
+               end if
+            enddo
+         case ( I_MAX )
+            !$omp parallel do
+            do idx = 1, FILE_HISTORY_vars(id)%size
+               if ( FILE_HISTORY_vars(id)%varsum(idx) /= RMISS ) then
+                  if ( buffer(idx) /= UNDEF ) then
+                     if ( buffer(idx) > FILE_HISTORY_vars(id)%varsum(idx) ) FILE_HISTORY_vars(id)%varsum(idx) = buffer(idx)
+                  else
+                     FILE_HISTORY_vars(id)%varsum(idx) = RMISS
+                  end if
+               end if
+            enddo
+         end select
          deallocate( buffer )
          FILE_HISTORY_vars(id)%timesum = FILE_HISTORY_vars(id)%timesum + dt
       else
@@ -1202,7 +1327,8 @@ contains
        RMISS => FILE_RMISS
     use scale_const, only: &
        UNDEF => CONST_UNDEF, &
-       EPS   => CONST_EPS
+       EPS   => CONST_EPS,   &
+       HUGE  => CONST_HUGE
     implicit none
 
     integer,  intent(in) :: itemid
@@ -1232,34 +1358,71 @@ contains
 
        dt = ( FILE_HISTORY_NOWSTEP - FILE_HISTORY_vars(id)%laststep_put ) * FILE_HISTORY_DTSEC
 
-       if ( dt < eps .AND. ( .NOT. FILE_HISTORY_vars(id)%taverage ) ) then
-          LOG_ERROR("FILE_HISTORY_Put_3D",*) 'variable was put two times before output!: ', &
+       if ( dt < eps .AND. FILE_HISTORY_vars(id)%tstats_op == 0 ) then
+          if ( FILE_HISTORY_var_inputs(itemid)%nvariants == 1 ) then
+             LOG_ERROR("FILE_HISTORY_Put_3D",*) 'variable was put two times before output!: ', &
                      trim(FILE_HISTORY_vars(id)%name), FILE_HISTORY_NOWSTEP, FILE_HISTORY_vars(id)%laststep_put
-          call PRC_abort
+             call PRC_abort
+          else
+             cycle
+          end if
        endif
 
        if ( FILE_HISTORY_vars(id)%flag_clear ) then ! time to purge
           FILE_HISTORY_vars(id)%timesum    = 0.0_DP
-          if ( FILE_HISTORY_vars(id)%taverage ) FILE_HISTORY_vars(id)%varsum(:)  = 0.0_DP
+          select case ( FILE_HISTORY_vars(id)%tstats_op )
+          case ( I_MEAN )
+             FILE_HISTORY_vars(id)%varsum(:)  = 0.0_DP
+          case ( I_MIN )
+             FILE_HISTORY_vars(id)%varsum(:)  = HUGE
+          case ( I_MAX )
+             FILE_HISTORY_vars(id)%varsum(:)  = - HUGE
+          end select
        endif
 
        dimid = FILE_HISTORY_vars(id)%dimid
-       if ( FILE_HISTORY_vars(id)%taverage ) then
+       if ( FILE_HISTORY_vars(id)%tstats_op > I_NONE ) then
          allocate( buffer( FILE_HISTORY_vars(id)%size ) )
          call FILE_HISTORY_truncate_3D( var(:,:,:),               & ! (in)
                                         FILE_HISTORY_dims(dimid)%name,   & ! (in)
                                         FILE_HISTORY_vars(id)%zcoord,    & ! (in)
                                         FILE_HISTORY_vars(id)%fill_halo, & ! (in)
                                         buffer(:)                        ) ! (out)
-         do idx = 1, FILE_HISTORY_vars(id)%size
-            if ( FILE_HISTORY_vars(id)%varsum(idx) /= RMISS ) then
-               if ( buffer(idx) /= UNDEF ) then
-                  FILE_HISTORY_vars(id)%varsum(idx) = FILE_HISTORY_vars(id)%varsum(idx) + buffer(idx) * dt
-               else
-                  FILE_HISTORY_vars(id)%varsum(idx) = RMISS
+         select case ( FILE_HISTORY_vars(id)%tstats_op )
+         case ( I_MEAN )
+            !$omp parallel do
+            do idx = 1, FILE_HISTORY_vars(id)%size
+               if ( FILE_HISTORY_vars(id)%varsum(idx) /= RMISS ) then
+                  if ( buffer(idx) /= UNDEF ) then
+                     FILE_HISTORY_vars(id)%varsum(idx) = FILE_HISTORY_vars(id)%varsum(idx) + buffer(idx) * dt
+                  else
+                     FILE_HISTORY_vars(id)%varsum(idx) = RMISS
+                  end if
                end if
-            end if
-         enddo
+            enddo
+         case ( I_MIN )
+            !$omp parallel do
+            do idx = 1, FILE_HISTORY_vars(id)%size
+               if ( FILE_HISTORY_vars(id)%varsum(idx) /= RMISS ) then
+                  if ( buffer(idx) /= UNDEF ) then
+                     if ( buffer(idx) < FILE_HISTORY_vars(id)%varsum(idx) ) FILE_HISTORY_vars(id)%varsum(idx) = buffer(idx)
+                  else
+                     FILE_HISTORY_vars(id)%varsum(idx) = RMISS
+                  end if
+               end if
+            enddo
+         case ( I_MAX )
+            !$omp parallel do
+            do idx = 1, FILE_HISTORY_vars(id)%size
+               if ( FILE_HISTORY_vars(id)%varsum(idx) /= RMISS ) then
+                  if ( buffer(idx) /= UNDEF ) then
+                     if ( buffer(idx) > FILE_HISTORY_vars(id)%varsum(idx) ) FILE_HISTORY_vars(id)%varsum(idx) = buffer(idx)
+                  else
+                     FILE_HISTORY_vars(id)%varsum(idx) = RMISS
+                  end if
+               end if
+            enddo
+         end select
          deallocate( buffer )
          FILE_HISTORY_vars(id)%timesum = FILE_HISTORY_vars(id)%timesum + dt
       else
@@ -1334,7 +1497,8 @@ contains
        RMISS => FILE_RMISS
     use scale_const, only: &
        UNDEF => CONST_UNDEF, &
-       EPS   => CONST_EPS
+       EPS   => CONST_EPS,   &
+       HUGE  => CONST_HUGE
     implicit none
 
     integer,  intent(in) :: itemid
@@ -1364,34 +1528,71 @@ contains
 
        dt = ( FILE_HISTORY_NOWSTEP - FILE_HISTORY_vars(id)%laststep_put ) * FILE_HISTORY_DTSEC
 
-       if ( dt < eps .AND. ( .NOT. FILE_HISTORY_vars(id)%taverage ) ) then
-          LOG_ERROR("FILE_HISTORY_Put_4D",*) 'variable was put two times before output!: ', &
+       if ( dt < eps .AND. FILE_HISTORY_vars(id)%tstats_op == 0 ) then
+          if ( FILE_HISTORY_var_inputs(itemid)%nvariants == 1 ) then
+             LOG_ERROR("FILE_HISTORY_Put_4D",*) 'variable was put two times before output!: ', &
                      trim(FILE_HISTORY_vars(id)%name), FILE_HISTORY_NOWSTEP, FILE_HISTORY_vars(id)%laststep_put
-          call PRC_abort
+             call PRC_abort
+          else
+             cycle
+          end if
        endif
 
        if ( FILE_HISTORY_vars(id)%flag_clear ) then ! time to purge
           FILE_HISTORY_vars(id)%timesum    = 0.0_DP
-          if ( FILE_HISTORY_vars(id)%taverage ) FILE_HISTORY_vars(id)%varsum(:)  = 0.0_DP
+          select case ( FILE_HISTORY_vars(id)%tstats_op )
+          case ( I_MEAN )
+             FILE_HISTORY_vars(id)%varsum(:)  = 0.0_DP
+          case ( I_MIN )
+             FILE_HISTORY_vars(id)%varsum(:)  = HUGE
+          case ( I_MAX )
+             FILE_HISTORY_vars(id)%varsum(:)  = - HUGE
+          end select
        endif
 
        dimid = FILE_HISTORY_vars(id)%dimid
-       if ( FILE_HISTORY_vars(id)%taverage ) then
+       if ( FILE_HISTORY_vars(id)%tstats_op > I_NONE ) then
          allocate( buffer( FILE_HISTORY_vars(id)%size ) )
          call FILE_HISTORY_truncate_4D( var(:,:,:,:),               & ! (in)
                                         FILE_HISTORY_dims(dimid)%name,   & ! (in)
                                         FILE_HISTORY_vars(id)%zcoord,    & ! (in)
                                         FILE_HISTORY_vars(id)%fill_halo, & ! (in)
                                         buffer(:)                        ) ! (out)
-         do idx = 1, FILE_HISTORY_vars(id)%size
-            if ( FILE_HISTORY_vars(id)%varsum(idx) /= RMISS ) then
-               if ( buffer(idx) /= UNDEF ) then
-                  FILE_HISTORY_vars(id)%varsum(idx) = FILE_HISTORY_vars(id)%varsum(idx) + buffer(idx) * dt
-               else
-                  FILE_HISTORY_vars(id)%varsum(idx) = RMISS
+         select case ( FILE_HISTORY_vars(id)%tstats_op )
+         case ( I_MEAN )
+            !$omp parallel do
+            do idx = 1, FILE_HISTORY_vars(id)%size
+               if ( FILE_HISTORY_vars(id)%varsum(idx) /= RMISS ) then
+                  if ( buffer(idx) /= UNDEF ) then
+                     FILE_HISTORY_vars(id)%varsum(idx) = FILE_HISTORY_vars(id)%varsum(idx) + buffer(idx) * dt
+                  else
+                     FILE_HISTORY_vars(id)%varsum(idx) = RMISS
+                  end if
                end if
-            end if
-         enddo
+            enddo
+         case ( I_MIN )
+            !$omp parallel do
+            do idx = 1, FILE_HISTORY_vars(id)%size
+               if ( FILE_HISTORY_vars(id)%varsum(idx) /= RMISS ) then
+                  if ( buffer(idx) /= UNDEF ) then
+                     if ( buffer(idx) < FILE_HISTORY_vars(id)%varsum(idx) ) FILE_HISTORY_vars(id)%varsum(idx) = buffer(idx)
+                  else
+                     FILE_HISTORY_vars(id)%varsum(idx) = RMISS
+                  end if
+               end if
+            enddo
+         case ( I_MAX )
+            !$omp parallel do
+            do idx = 1, FILE_HISTORY_vars(id)%size
+               if ( FILE_HISTORY_vars(id)%varsum(idx) /= RMISS ) then
+                  if ( buffer(idx) /= UNDEF ) then
+                     if ( buffer(idx) > FILE_HISTORY_vars(id)%varsum(idx) ) FILE_HISTORY_vars(id)%varsum(idx) = buffer(idx)
+                  else
+                     FILE_HISTORY_vars(id)%varsum(idx) = RMISS
+                  end if
+               end if
+            enddo
+         end select
          deallocate( buffer )
          FILE_HISTORY_vars(id)%timesum = FILE_HISTORY_vars(id)%timesum + dt
       else
@@ -1866,7 +2067,7 @@ contains
           FILE_HISTORY_vars(id)%postfix_timelabel = FILE_HISTORY_req(reqid)%postfix_timelabel
           FILE_HISTORY_vars(id)%zcoord            = zcoord
           FILE_HISTORY_vars(id)%dstep             = FILE_HISTORY_req(reqid)%dstep
-          FILE_HISTORY_vars(id)%taverage          = FILE_HISTORY_req(reqid)%taverage
+          FILE_HISTORY_vars(id)%tstats_op         = FILE_HISTORY_req(reqid)%tstats_op
           FILE_HISTORY_vars(id)%dtype             = FILE_HISTORY_req(reqid)%dtype
 
           FILE_HISTORY_vars(id)%zid               = -1
@@ -1921,7 +2122,7 @@ contains
              LOG_INFO_CONT(*) 'Add timelabel to the filename? : ', FILE_HISTORY_vars(id)%postfix_timelabel
              LOG_INFO_CONT(*) 'Zcoord                         : ', trim(FILE_HISTORY_vars(id)%zcoord)
              LOG_INFO_CONT(*) 'Interval [step]                : ', FILE_HISTORY_vars(id)%dstep
-             LOG_INFO_CONT(*) 'Time Average?                  : ', FILE_HISTORY_vars(id)%taverage
+             LOG_INFO_CONT(*) 'Time Statistics operator       : ', OP_NAME(FILE_HISTORY_vars(id)%tstats_op)
              LOG_INFO_CONT(*) 'Datatype                       : ', trim(FILE_dtypelist(FILE_HISTORY_vars(id)%dtype))
              LOG_INFO_CONT(*) 'axis name                      : ', ( trim(FILE_HISTORY_dims(dimid)%dims(n,zid))//" ", n=1, FILE_HISTORY_dims(dimid)%ndims )
           endif
@@ -2144,16 +2345,16 @@ contains
           zid   = FILE_HISTORY_vars(m)%zid
           ndims = FILE_HISTORY_dims(dimid)%ndims
           dims(1:ndims) = FILE_HISTORY_dims(dimid)%dims(1:ndims,zid)
-          call FILE_Add_Variable( FILE_HISTORY_vars(m)%fid,              & ! [IN]
-                                  FILE_HISTORY_vars(m)%outname,          & ! [IN]
-                                  FILE_HISTORY_vars(m)%desc,             & ! [IN]
-                                  FILE_HISTORY_vars(m)%units,            & ! [IN]
-                                  FILE_HISTORY_vars(m)%standard_name,    & ! [IN]
-                                  dims(1:ndims),                         & ! [IN]
-                                  FILE_HISTORY_vars(m)%dtype,            & ! [IN]
-                                  dtsec,                                 & ! [IN]
-                                  FILE_HISTORY_vars(m)%vid,              & ! [OUT]
-                                  time_avg=FILE_HISTORY_vars(m)%taverage ) ! [IN]
+          call FILE_Add_Variable( FILE_HISTORY_vars(m)%fid,                          & ! [IN]
+                                  FILE_HISTORY_vars(m)%outname,                      & ! [IN]
+                                  FILE_HISTORY_vars(m)%desc,                         & ! [IN]
+                                  FILE_HISTORY_vars(m)%units,                        & ! [IN]
+                                  FILE_HISTORY_vars(m)%standard_name,                & ! [IN]
+                                  dims(1:ndims),                                     & ! [IN]
+                                  FILE_HISTORY_vars(m)%dtype,                        & ! [IN]
+                                  dtsec,                                             & ! [IN]
+                                  FILE_HISTORY_vars(m)%vid,                          & ! [OUT]
+                                  time_stats=OP_NAME(FILE_HISTORY_vars(m)%tstats_op) ) ! [IN]
           if (       FILE_HISTORY_dims(dimid)%mapping /= "" ) then
              call FILE_Set_Attribute( FILE_HISTORY_vars(m)%fid, FILE_HISTORY_vars(m)%outname, & ! [IN]
                                       'grid_mapping', FILE_HISTORY_dims(dimid)%mapping         ) ! [IN]
@@ -2748,7 +2949,7 @@ contains
 
     do i = 1, FILE_HISTORY_var_inputs(itemid)%nvariants
        id = FILE_HISTORY_var_inputs(itemid)%variants(i)
-       if ( FILE_HISTORY_vars(id)%taverage ) then
+       if ( FILE_HISTORY_vars(id)%tstats_op > I_NONE ) then
           answer = .true.
           return
        else if ( FILE_HISTORY_NOWSTEP >= FILE_HISTORY_vars(id)%laststep_write + FILE_HISTORY_vars(id)%dstep ) then
@@ -2890,7 +3091,7 @@ contains
        endif
     endif
 
-    if ( .NOT. FILE_HISTORY_vars(id)%flag_clear .AND. FILE_HISTORY_vars(id)%taverage ) then
+    if ( .NOT. FILE_HISTORY_vars(id)%flag_clear .AND. FILE_HISTORY_vars(id)%tstats_op == I_MEAN ) then
        do i = 1, FILE_HISTORY_vars(id)%size
           if ( FILE_HISTORY_vars(id)%varsum(i) /= RMISS ) then
              FILE_HISTORY_vars(id)%varsum(i) = FILE_HISTORY_vars(id)%varsum(i) / FILE_HISTORY_vars(id)%timesum
@@ -2983,7 +3184,7 @@ contains
     LOG_INFO("FILE_HISTORY_Output_List",*)           '[HISTORY] Output item list '
     LOG_INFO_CONT('(1x,A,I4)') 'Number of history item :', FILE_HISTORY_nreqs
     LOG_INFO_CONT(*)           'ITEM                    :OUTNAME                 ', &
-                  ':    size:interval[sec]:    step:timeavg?:zcoord'
+                  ':    size:interval[sec]:    step:stats_op:zcoord'
     LOG_INFO_CONT(*)           '=================================================', &
                                '================================================='
 
@@ -2991,13 +3192,13 @@ contains
     do id = 1, FILE_HISTORY_nitems
        dtsec = real(FILE_HISTORY_vars(id)%dstep,kind=DP) * FILE_HISTORY_DTSEC
 
-       LOG_INFO_CONT('(1x,A24,1x,A24,1x,I8,1x,F13.3,1x,I8,1x,L8,1x,A8)') &
-            FILE_HISTORY_vars(id)%name,     &
-            FILE_HISTORY_vars(id)%outname,  &
-            FILE_HISTORY_vars(id)%size,     &
-            dtsec,                          &
-            FILE_HISTORY_vars(id)%dstep,    &
-            FILE_HISTORY_vars(id)%taverage, &
+       LOG_INFO_CONT('(1x,A24,1x,A24,1x,I8,1x,F13.3,1x,I8,1x,A8,1x,A8)') &
+            FILE_HISTORY_vars(id)%name,               &
+            FILE_HISTORY_vars(id)%outname,            &
+            FILE_HISTORY_vars(id)%size,               &
+            dtsec,                                    &
+            FILE_HISTORY_vars(id)%dstep,              &
+            OP_NAME(FILE_HISTORY_vars(id)%tstats_op), &
             FILE_HISTORY_vars(id)%zcoord
     enddo
 
