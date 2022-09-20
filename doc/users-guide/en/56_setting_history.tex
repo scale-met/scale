@@ -28,7 +28,7 @@ The default format of the history file is configured at \namelist{PARAM_FILE_HIS
 \verb| FILE_HISTORY_DEFAULT_ZCOORD            = "model",       | & ; Type of vertical coordinate \\
 \verb| FILE_HISTORY_DEFAULT_TINTERVAL         = 3600.D0,       | & ; Time interval of history output \\
 \verb| FILE_HISTORY_DEFAULT_TUNIT             = "SEC",         | & ; Unit of \verb|DEFAULT_TINTERVAL| \\
-\verb| FILE_HISTORY_DEFAULT_TAVERAGE          = .false.,       | & ; Average the value during the interval? \\
+\verb| FILE_HISTORY_DEFAULT_TSTATS_OP         = "none",        | & ; Statistics operation \\
 \verb| FILE_HISTORY_DEFAULT_DATATYPE          = "REAL4",       | & ; Output data type: \verb|REAL4| or \verb|REAL8| \\
 \verb| FILE_HISTORY_OUTPUT_STEP0              = .true.,        | & ; Output data at initial time (t=0)? \\
 \verb| FILE_HISTORY_OUTPUT_WAIT               = 0.D0,          | & ; Time to suppress output \\
@@ -49,8 +49,9 @@ Please refer to Section \ref{sec:netcdf}
 The unit can be selected from\\
 \verb|"MSEC", "msec", "SEC", "sec", "s", "MIN", "min", "HOUR", "hour", "h", "DAY", "day"|.\\
 %
-When the average value output is selected as \nmitem{FILE_HISTORY_DEFAULT_TAVERAGE} to \verb|= .true.|,
+When the average value output is selected as \nmitem{FILE_HISTORY_DEFAULT_TSTATS_OP} to \verb|= "mean"|,
 the history data averaged over the last period, given as \nmitem{FILE_HISTORY_DEFAULT_TINTERVAL}, is output.
+As the same way, when \verb|"min"| or \verb|"max"| is set to \nmitem{FILE_HISTORY_DEFAULT_TSTATS_OP}, the minimam or maximam value over the last period is output, respectively.
 
 The time interval of history output must be the equal to or a multiple of the time interval of its related scheme.
 When you want to disable checking this consistency,\\
@@ -87,11 +88,11 @@ By adding namelists with ``(OPTION)'', the format for a specific variable can be
 \verb| NAME              = "RAIN",     | &  Variable name. List of variables is in the reference manual (See Section \ref{sec:reference_manual}) \\
 \verb| OUTNAME           = "",         | &  (OPTION) same as \verb|NAME| \\
 \verb| BASENAME          = "rain_d01", | &  (OPTION) same as \verb|FILE_HISTORY_DEFAULT_BASENAME| \\
-\verb| POSTFIX_TIMELABEL = .false.,    | &  (OPTION) same as \verb|FILE_HISTORY_DEFAULT_TAVERAGE| \\
+\verb| POSTFIX_TIMELABEL = .false.,    | &  (OPTION) same as \verb|FILE_HISTORY_DEFAULT_POSTFIX_TIMELABEL| \\
 \verb| ZCOORD            = "model",    | &  (OPTION) same as \verb|FILE_HISTORY_DEFAULT_ZCOORD| \\
 \verb| TINTERVAL         = 600.D0,     | &  (OPTION) same as \verb|FILE_HISTORY_DEFAULT_TINTERVAL| \\
-\verb| TUNIT             = "SEC",      | &  (OPTION) same as \verb|FILE_HISTORY_DEFAULT_TINTERVAL| \\
-\verb| TAVERAGE          = .true.,     | &  (OPTION) same as \verb|FILE_HISTORY_DEFAULT_TAVERAGE| \\
+\verb| TUNIT             = "SEC",      | &  (OPTION) same as \verb|FILE_HISTORY_DEFAULT_TUNIT| \\
+\verb| TSTATS_OP         = "mean",     | &  (OPTION) same as \verb|FILE_HISTORY_DEFAULT_TSTATS_OP| \\
 \verb| DATATYPE          = "REAL4",    | &  (OPTION) same as \verb|FILE_HISTORY_DEFAULT_DATATYPE| \\
 \verb|/                                | & \\
 }
@@ -105,7 +106,7 @@ Namelists with ``(OPTION)'' are applied only to the variable \nmitem{NAME}. If t
 \verb|&HISTORY_ITEM  NAME="T" /|\\
 \verb|&HISTORY_ITEM  NAME="U" /|\\
 \verb|&HISTORY_ITEM  NAME="V" /|\\
-\verb|&HISTORY_ITEM  NAME="RAIN", TINTERVAL=600.D0, TAVERAGE=.true. /|\\
+\verb|&HISTORY_ITEM  NAME="RAIN", TINTERVAL=600.D0, TSTATS_OP="mean" /|\\
 \verb|&HISTORY_ITEM  NAME="T", OUTNAME="T_pres", ZCOORD="pressure" /|\\
 }
 

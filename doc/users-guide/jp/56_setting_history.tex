@@ -28,7 +28,7 @@
 \verb| FILE_HISTORY_DEFAULT_ZCOORD            = "model",       | & ; 鉛直座標の種類 \\
 \verb| FILE_HISTORY_DEFAULT_TINTERVAL         = 3600.D0,       | & ; ヒストリ出力の時間間隔 \\
 \verb| FILE_HISTORY_DEFAULT_TUNIT             = "SEC",         | & ; \verb|DEFAULT_TINTERVAL|の単位 \\
-\verb| FILE_HISTORY_DEFAULT_TAVERAGE          = .false.,       | & ; 出力の時間間隔中の値を平均するか? \\
+\verb| FILE_HISTORY_DEFAULT_TSTATS_OP         = "none",        | & ; 時間統計量操作 \\
 \verb| FILE_HISTORY_DEFAULT_DATATYPE          = "REAL4",       | & ; 出力データの種類: \verb|REAL4| or \verb|REAL8| \\
 \verb| FILE_HISTORY_OUTPUT_STEP0              = .true.,        | & ; 初期時刻(t=0)のデータを出力するか? \\
 \verb| FILE_HISTORY_OUTPUT_WAIT               = 0.D0,          | & ; 出力を抑制する時間 \\
@@ -49,8 +49,9 @@
 \nmitem{FILE_HISTORY_DEFAULT_TUNIT}によって定義される。単位は、\\
 \verb|"MSEC", "msec", "SEC", "sec", "s", "MIN", "min", "HOUR", "hour", "h", "DAY", "day"|から選択できる。
 %
-\nmitem{FILE_HISTORY_DEFAULT_TAVERAGE}を\verb|.true.|として平均値の出力を設定した場合は、
+\nmitem{FILE_HISTORY_DEFAULT_TSTATS_OP}を\verb|"mean"|として平均値の出力を設定した場合は、
 \nmitem{FILE_HISTORY_DEFAULT_TINTERVAL}に指定した直近の期間に渡って平均されたヒストリデータを出力する。
+同様に、\verb|"min"|, \verb|"max"| を設定した場合は、それぞれ期間における最小値および最大値を出力する。
 
 ヒストリ出力の時間間隔は、それと関係したスキームの時間間隔と等しいか倍数でなければならない。
 この整合性の確認を無効にしたい場合には、\nmitem{FILE_HISTORY_ERROR_PUTMISS}を\verb|.false.|に設定すれば良い.
@@ -97,8 +98,8 @@
 \verb| POSTFIX_TIMELABEL = .false.,    | &  (オプション) \verb|FILE_HISTORY_DEFAULT_POSTFIX_TIMELABEL|と同じ \\
 \verb| ZCOORD            = "model",    | &  (オプション) \verb|FILE_HISTORY_DEFAULT_ZCOORD|と同じ \\
 \verb| TINTERVAL         = 600.D0,     | &  (オプション) \verb|FILE_HISTORY_DEFAULT_TINTERVAL|と同じ \\
-\verb| TUNIT             = "SEC",      | &  (オプション) \verb|FILE_HISTORY_DEFAULT_TINTERVAL|と同じ \\
-\verb| TAVERAGE          = .true.,     | &  (オプション) \verb|FILE_HISTORY_DEFAULT_TAVERAGE|と同じ \\
+\verb| TUNIT             = "SEC",      | &  (オプション) \verb|FILE_HISTORY_DEFAULT_TUNITS|と同じ \\
+\verb| TSTATS_OP         = "mean",     | &  (オプション) \verb|FILE_HISTORY_DEFAULT_TSTATS_OP|と同じ \\
 \verb| DATATYPE          = "REAL4",    | &  (オプション) \verb|FILE_HISTORY_DEFAULT_DATATYPE|と同じ \\
 \verb|/                                | & \\
 }
@@ -119,7 +120,7 @@
 \verb|&HISTORY_ITEM  NAME="T" /|\\
 \verb|&HISTORY_ITEM  NAME="U" /|\\
 \verb|&HISTORY_ITEM  NAME="V" /|\\
-\verb|&HISTORY_ITEM  NAME="RAIN", TINTERVAL=600.D0, TAVERAGE=.true. /|\\
+\verb|&HISTORY_ITEM  NAME="RAIN", TINTERVAL=600.D0, TSTATS_OP="mean" /|\\
 \verb|&HISTORY_ITEM  NAME="T", OUTNAME="T_pres", ZCOORD="pressure" /|\\
 }
 

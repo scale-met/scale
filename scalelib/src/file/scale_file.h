@@ -202,7 +202,7 @@ extern int file_add_variable_c(       int    *vid,     // (out)
 				const int     ndims,   // (in)
 				const int     dtype,   // (in)
 				const double  tint,    // (in)
-				const bool    tavg);   // (in)
+				const char   *tstats); // (in)
 
 extern int file_write_data_c( const int     fid,       // (in)
 			      const int     vid,       // (in)
