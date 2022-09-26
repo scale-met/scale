@@ -171,22 +171,33 @@ module scale_atmos_phy_mp_tomita08
   real(RP), private, parameter   :: coef_b10 = -0.003577_RP
 
   !---< Wainwright et al. (2014) >---
-  logical,  private              :: enable_WDXZ2014 = .false. !< use scheme by Wainwright et al. (2014)
+  logical, private :: enable_WDXZ2014 = .false. !< use scheme by Wainwright et al. (2014)
+
+  !---< Heymsfield et al. (2007) >---
+  logical,           private :: enable_HZDFHI2007 = .false. ! use scheme by Heymsfield et al. (2007)
+  character(len=12), private :: cloud_type        = "synoptic" ! "synoptic" or "crystal_face"
+  real(RP),          private :: coef_a0
+  real(RP),          private :: coef_a1
+  real(RP),          private :: coef_b0
+  real(RP),          private :: coef_b1
+
+  !---< Thornberry et al. (2017) >---
+  logical, private :: enable_TRAWLBG2017 = .false. ! use scheme by Thornberry et al. (2017)
 
   ! Accretion parameter
-  real(RP), private              :: Eiw         = 1.0_RP      !< collection efficiency of cloud ice for cloud water
-  real(RP), private              :: Erw         = 1.0_RP      !< collection efficiency of rain    for cloud water
-  real(RP), private              :: Esw         = 1.0_RP      !< collection efficiency of snow    for cloud water
-  real(RP), private              :: Egw         = 1.0_RP      !< collection efficiency of graupel for cloud water
-  real(RP), private              :: Eri         = 1.0_RP      !< collection efficiency of rain    for cloud ice
-  real(RP), private              :: Esi         = 1.0_RP      !< collection efficiency of snow    for cloud ice
-  real(RP), private              :: Egi         = 0.1_RP      !< collection efficiency of graupel for cloud ice
-  real(RP), private              :: Esr         = 1.0_RP      !< collection efficiency of snow    for rain
-  real(RP), private              :: Egr         = 1.0_RP      !< collection efficiency of graupel for rain
-  real(RP), private              :: Egs         = 1.0_RP      !< collection efficiency of graupel for snow
-  real(RP), private              :: gamma_sacr  = 25.E-3_RP   !< effect of low temperature for Esi
-  real(RP), private              :: gamma_gacs  = 90.E-3_RP   !< effect of low temperature for Egs
-  real(RP), private              :: mi          = 4.19E-13_RP !< mass of one cloud ice crystal [kg]
+  real(RP), private :: Eiw        = 1.0_RP      !< collection efficiency of cloud ice for cloud water
+  real(RP), private :: Erw        = 1.0_RP      !< collection efficiency of rain    for cloud water
+  real(RP), private :: Esw        = 1.0_RP      !< collection efficiency of snow    for cloud water
+  real(RP), private :: Egw        = 1.0_RP      !< collection efficiency of graupel for cloud water
+  real(RP), private :: Eri        = 1.0_RP      !< collection efficiency of rain    for cloud ice
+  real(RP), private :: Esi        = 1.0_RP      !< collection efficiency of snow    for cloud ice
+  real(RP), private :: Egi        = 0.1_RP      !< collection efficiency of graupel for cloud ice
+  real(RP), private :: Esr        = 1.0_RP      !< collection efficiency of snow    for rain
+  real(RP), private :: Egr        = 1.0_RP      !< collection efficiency of graupel for rain
+  real(RP), private :: Egs        = 1.0_RP      !< collection efficiency of graupel for snow
+  real(RP), private :: gamma_sacr = 25.E-3_RP   !< effect of low temperature for Esi
+  real(RP), private :: gamma_gacs = 90.E-3_RP   !< effect of low temperature for Egs
+  real(RP), private :: mi         = 4.19E-13_RP !< mass of one cloud ice crystal [kg]
 
   ! Auto-conversion parameter
   real(RP), private, parameter   :: Nc_lnd      = 2000.0_RP   !< number concentration of cloud water (land)  [1/cc]
@@ -376,48 +387,51 @@ contains
     real(RP) :: autoconv_nc     = Nc_ocn  !< number concentration of cloud water [1/cc]
 
     namelist / PARAM_ATMOS_PHY_MP_TOMITA08 / &
-       do_couple_aerosol, &
+       do_couple_aerosol,  &
        do_explicit_icegen, &
-       autoconv_nc,     &
-       enable_KK2000,   &
-       enable_RS2014,   &
-       enable_WDXZ2014, &
-       N0r_def,         &
-       N0s_def,         &
-       N0g_def,         &
-       dens_s,          &
-       dens_g,          &
-       re_qc,           &
-       re_qi,           &
-       drag_g,          &
-       Cr,              &
-       Cs,              &
-       Eiw,             &
-       Erw,             &
-       Esw,             &
-       Egw,             &
-       Eri,             &
-       Esi,             &
-       Egi,             &
-       Esr,             &
-       Egr,             &
-       Egs,             &
-       gamma_sacr,      &
-       gamma_gacs,      &
-       mi,              &
-       beta_saut,       &
-       gamma_saut,      &
-       qicrt_saut,      &
-       beta_gaut,       &
-       gamma_gaut,      &
-       qscrt_gaut,      &
-       fixed_re,        &
-       const_rec,       &
-       nofall_qr,       &
-       nofall_qi,       &
-       nofall_qs,       &
-       nofall_qg,       &
-       Ecoal_GI,        &
+       autoconv_nc,        &
+       enable_KK2000,      &
+       enable_RS2014,      &
+       enable_WDXZ2014,    &
+       enable_HZDFHI2007,  &
+       cloud_type,         &
+       enable_TRAWLBG2017, &
+       N0r_def,            &
+       N0s_def,            &
+       N0g_def,            &
+       dens_s,             &
+       dens_g,             &
+       re_qc,              &
+       re_qi,              &
+       drag_g,             &
+       Cr,                 &
+       Cs,                 &
+       Eiw,                &
+       Erw,                &
+       Esw,                &
+       Egw,                &
+       Eri,                &
+       Esi,                &
+       Egi,                &
+       Esr,                &
+       Egr,                &
+       Egs,                &
+       gamma_sacr,         &
+       gamma_gacs,         &
+       mi,                 &
+       beta_saut,          &
+       gamma_saut,         &
+       qicrt_saut,         &
+       beta_gaut,          &
+       gamma_gaut,         &
+       qscrt_gaut,         &
+       fixed_re,           &
+       const_rec,          &
+       nofall_qr,          &
+       nofall_qi,          &
+       nofall_qs,          &
+       nofall_qg,          &
+       Ecoal_GI,           &
        Ecoal_GS
 
     real(RP), parameter :: max_term_vel = 10.0_RP  !-- terminal velocity for calculate dt of sedimentation
@@ -458,6 +472,8 @@ contains
     LOG_INFO("ATMOS_PHY_MP_tomita08_setup",*) 'Use k-k  scheme?               : ', enable_KK2000
     LOG_INFO("ATMOS_PHY_MP_tomita08_setup",*) 'Use Roh  scheme?               : ', enable_RS2014
     LOG_INFO("ATMOS_PHY_MP_tomita08_setup",*) 'Use WDXZ scheme?               : ', enable_WDXZ2014
+    LOG_INFO("ATMOS_PHY_MP_tomita08_setup",*) 'Use HZDFHI scheme?             : ', enable_HZDFHI2007
+    LOG_INFO("ATMOS_PHY_MP_tomita08_setup",*) 'Use TRAWLBG scheme?            : ', enable_TRAWLBG2017
     LOG_NEWLINE
     LOG_INFO("ATMOS_PHY_MP_tomita08_setup",*) 'Use effective radius of ice for snow and graupel,'
     LOG_INFO("ATMOS_PHY_MP_tomita08_setup",*) '    and set rain transparent?          : ', fixed_re
@@ -501,6 +517,24 @@ contains
        Egi       = 0.0_RP
        Egs       = 0.0_RP
     endif
+
+    if ( enable_HZDFHI2007 ) then
+       select case( cloud_type )
+       case ( "synoptic" )
+          coef_a0 = 120.4_RP
+          coef_a1 = 2.21_RP
+          coef_b0 = 0.0487_RP
+          coef_b1 = 4.57E-4_RP
+       case ("crystal_face")
+          coef_a0 = 135.3_RP
+          coef_a1 = 1.93_RP
+          coef_b0 = 0.0058_RP
+          coef_b1 = -0.0024539_RP
+       case default
+          LOG_ERROR("ATMOS_PHY_MP_tomita08_setup",*) 'cloud_type is invalid: ', trim(cloud_type)
+          call PRC_abort
+       end select
+    end if
 
     if ( do_explicit_icegen ) then
        only_liquid = .true.
@@ -919,7 +953,7 @@ contains
     !$omp        DENS0,TEMP0,PRES0,QTRC0,CCN,CPtot0,CVtot0,dt, &
     !$omp        RHOE_t, &
     !$omp        UNDEF,EPS,PRE00,LHV,LHF,LHF0,CP_VAPOR,CP_WATER,CP_ICE,CV_VAPOR,CV_WATER,CV_ICE,ln10, &
-    !$omp        do_couple_aerosol,sw_expice,enable_WDXZ2014,enable_RS2014,enable_KK2000, &
+    !$omp        do_couple_aerosol,sw_expice,enable_WDXZ2014,enable_RS2014,enable_KK2000,enable_HZDFHI2007,enable_TRAWLBG2017, &
     !$omp        Nc_def,N0r_def,N0s_def,N0g_def, &
     !$omp        Cr,Cs,Cg,Erw,Eri,Eiw,Esw,Esr,Esi,Egw,Egr,Egi,Egs,Ar,As,Ag, &
     !$omp        gamma_sacr,gamma_gacs,gamma_saut,gamma_gaut,beta_saut,beta_gaut,qicrt_saut,qscrt_gaut,mi, &
@@ -936,6 +970,7 @@ contains
     !$omp         RLMDg_dg,RLMDg_3dg,RLMDg_5dg,RLMDr_7,RLMDr_6dr, &
     !$omp         tems,Xs2,MOMs_0,MOMs_1,MOMs_2,MOMs_0bs,MOMs_1bs,MOMs_2bs,MOMs_2ds,MOMs_5ds_h,RMOMs_Vt, &
     !$omp         coef_at,coef_bt,loga_,b_,nm, &
+    !$omp         coef_a0,coef_a1,coef_b0,coef_b1, &
     !$omp         Vti,Vtr,Vts,Vtg,Esi_mod,Egs_mod,rhoqc,Nc, &
     !$omp         Pracw_orig,Pracw_kk,Praut_berry,Praut_kk,Dc,betai,betas,Da,Kd,Nu, &
     !$omp         Glv,Giv,Gil,ventr,vents,ventg,net,fac,fac_sw,zerosw,tmp, &
@@ -1193,9 +1228,21 @@ contains
        end do
 
        !---< terminal velocity >
+       if ( enable_HZDFHI2007 ) then
+          do k = KS, KE
+             zerosw = 0.5_RP - sign(0.5_RP, qi(k) - 1.E-8_RP )
+             Vti(k) = min( 0.0_RP, &
+                  - ( coef_a0 + coef_a1 * temc(k) ) &
+                  * exp( log( dens(k)*qi(k)*1000.0_RP+zerosw ) * ( coef_b0 + coef_b1 * temc(k) ) ) &
+                  * 1E-2_RP * ( 1.0_RP-zerosw ) )
+          end do
+       else
+          do k = KS, KE
+             zerosw = 0.5_RP - sign(0.5_RP, qi(k) - 1.E-8_RP )
+             Vti(k) = -3.29_RP * exp( log( dens(k)*qi(k)+zerosw )*0.16_RP ) * ( 1.0_RP-zerosw )
+          end do
+       end if
        do k = KS, KE
-          zerosw = 0.5_RP - sign(0.5_RP, qi(k) - 1.E-8_RP )
-          Vti(k) = -3.29_RP * exp( log( dens(k)*qi(k)+zerosw )*0.16_RP ) * ( 1.0_RP-zerosw )
           Vtr(k) = -Cr * rho_fact(k) * GAM_1brdr / GAM_1br * RLMDr_dr(k)
           Vts(k) = -Cs * rho_fact(k) * RMOMs_Vt(k)
           Vtg(k) = -Cg * rho_fact(k) * GAM_1bgdg / GAM_1bg * RLMDg_dg(k)
@@ -2122,12 +2169,21 @@ contains
        end do
     end if
 
-
-    do k = KS, KE
-       !---< terminal velocity >
-       zerosw = 0.5_RP - sign(0.5_RP, qi(k) - 1.E-8_RP )
-       vterm(k,I_hyd_QI) = -3.29_RP * exp( log( dens(k)*qi(k)+zerosw )*0.16_RP ) * ( 1.0_RP-zerosw )
-    end do
+    !---< terminal velocity >
+    if ( enable_HZDFHI2007 ) then
+       do k = KS, KE
+          zerosw = 0.5_RP - sign(0.5_RP, qi(k) - 1.E-8_RP )
+          vterm(k,I_hyd_QI) = min( 0.0_RP, &
+               - ( coef_a0 + coef_a1 * temc(k) ) &
+               * exp( log( dens(k)*qi(k)*1000.0_RP+zerosw ) * ( coef_b0 + coef_b1 * temc(k) ) ) &
+               * 1E-2_RP * ( 1.0_RP-zerosw ) )
+       end do
+    else
+       do k = KS, KE
+          zerosw = 0.5_RP - sign(0.5_RP, qi(k) - 1.E-8_RP )
+          vterm(k,I_hyd_QI) = -3.29_RP * exp( log( dens(k)*qi(k)+zerosw )*0.16_RP ) * ( 1.0_RP-zerosw )
+       end do
+    end if
 
 
     do k = KS, KE
@@ -2300,25 +2356,40 @@ contains
     real(RP) :: N0r(KA), N0s(KA), N0g(KA)
     real(RP) :: RLMDr, RLMDs, RLMDg
 
-    real(RP), parameter :: um2cm = 100.0_RP
+    real(RP), parameter :: m2cm = 100.0_RP
 
     !---< Roh and Satoh (2014) >---
     real(RP) :: tems, Xs2
     real(RP) :: coef_at(4), coef_bt(4)
     real(RP) :: loga_, b_, nm
 
-    real(RP) :: zerosw
+    real(RP) :: zerosw, sw
     integer  :: k, i, j, ih
     !---------------------------------------------------------------------------
 
-    !$omp parallel do OMP_SCHEDULE_
-    do j = JS, JE
-    do i = IS, IE
-    do k = KS, KE
-       Re(k,i,j,I_HI) =  re_qi * um2cm
-    end do
-    end do
-    end do
+    if ( enable_TRAWLBG2017 ) then
+       !$omp parallel do OMP_SCHEDULE_ &
+       !$omp private(sw)
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          sw = 0.5_RP + sign(0.5_RP, TEMP0(k,i,j) - 192.0_RP)
+          Re(k,i,j,I_HI) = ( ( 40.0_RP + 0.53_RP * ( TEMP0(k,i,j) - 192.0_RP ) ) * sw &
+                         +   ( 12.0_RP + 28.0_RP * exp( 0.65_RP * ( TEMP0(k,i,j) - 192.0_RP ) ) ) * ( 1.0_RP-sw ) &
+                           ) * 1.0E-6_RP * m2cm
+       end do
+       end do
+       end do
+    else
+       !$omp parallel do OMP_SCHEDULE_
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          Re(k,i,j,I_HI) =  re_qi * m2cm
+       end do
+       end do
+       end do
+    end if
     !$omp parallel do OMP_SCHEDULE_
     do ih = I_HG+1, N_HYD
     do j = JS, JE
@@ -2336,7 +2407,7 @@ contains
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
-          Re(k,i,j,I_HC) = re_qc * um2cm
+          Re(k,i,j,I_HC) = re_qc * m2cm
        end do
        end do
        end do
@@ -2361,7 +2432,7 @@ contains
           do k  = KS, KE
              Re(k,i,j,I_HC) = 1.1_RP &
                             * ( DENS0(k,i,j) * QTRC0(k,i,j,I_hyd_QC) / Nc(k) / ( 4.0_RP / 3.0_RP * PI * dens_w ) )**(1.0_RP/3.0_RP)
-             Re(k,i,j,I_HC) = min( 1.E-3_RP, max( 1.E-6_RP, Re(k,i,j,I_HC) ) ) * um2cm
+             Re(k,i,j,I_HC) = min( 1.E-3_RP, max( 1.E-6_RP, Re(k,i,j,I_HC) ) ) * m2cm
           enddo
        enddo
        enddo
@@ -2374,7 +2445,7 @@ contains
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
-          Re(k,i,j,I_HR) =  10000.E-6_RP * um2cm
+          Re(k,i,j,I_HR) =  10000.E-6_RP * m2cm
        end do
        end do
        end do
@@ -2382,7 +2453,7 @@ contains
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
-          Re(k,i,j,I_HS) =  re_qi * um2cm
+          Re(k,i,j,I_HS) =  re_qi * m2cm
        end do
        end do
        end do
@@ -2390,7 +2461,7 @@ contains
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
-       Re(k,i,j,I_HG) =  re_qi * um2cm
+       Re(k,i,j,I_HG) =  re_qi * m2cm
        end do
        end do
        end do
@@ -2443,7 +2514,7 @@ contains
              zerosw = 0.5_RP - sign(0.5_RP, qr(k) - 1.E-12_RP )
              RLMDr = sqrt(sqrt( dens(k) * qr(k) / ( Ar * N0r(k) * GAM_1br ) + zerosw )) * ( 1.0_RP-zerosw )
              ! Effective radius is defined by r3m/r2m = 1.5/lambda
-             Re(k,i,j,I_HR) = 1.5_RP * RLMDr * um2cm
+             Re(k,i,j,I_HR) = 1.5_RP * RLMDr * m2cm
           end do
 
           if ( enable_RS2014 ) then
@@ -2468,22 +2539,22 @@ contains
                 loga_  = coef_at(1) + nm * ( coef_at(2) + nm * ( coef_at(3) + nm * coef_at(4) ) )
                    b_  = coef_bt(1) + nm * ( coef_bt(2) + nm * ( coef_bt(3) + nm * coef_bt(4) ) )
 
-                Re(k,i,j,I_HS) = 0.5_RP * exp( ln10 * loga_ + log(Xs2+zerosw) * b_ ) * ( 1.0_RP-zerosw ) / ( Xs2+zerosw ) * um2cm
+                Re(k,i,j,I_HS) = 0.5_RP * exp( ln10 * loga_ + log(Xs2+zerosw) * b_ ) * ( 1.0_RP-zerosw ) / ( Xs2+zerosw ) * m2cm
              end do
           else
              do k = KS, KE
                 zerosw = 0.5_RP - sign(0.5_RP, qs(k) - 1.E-12_RP )
                 RLMDs = sqrt(sqrt( dens(k) * qs(k) / ( As * N0s(k) * GAM_1bs ) + zerosw )) * ( 1.0_RP-zerosw )
-                Re(k,i,j,I_HS) = 1.5_RP * RLMDs * um2cm
-                ! Re(k,i,j,I_HS) = dens * qs / N0s / ( 2.0_RP / 3.0_RP * PI * dens_i ) / RLMDs**3 * um2cm
+                Re(k,i,j,I_HS) = 1.5_RP * RLMDs * m2cm
+                ! Re(k,i,j,I_HS) = dens * qs / N0s / ( 2.0_RP / 3.0_RP * PI * dens_i ) / RLMDs**3 * m2cm
              end do
           end if
 
           do k = KS, KE
              zerosw = 0.5_RP - sign(0.5_RP, qg(k) - 1.E-12_RP )
              RLMDg = sqrt(sqrt( dens(k) * qg(k) / ( Ag * N0g(k) * GAM_1bg ) + zerosw )) * ( 1.0_RP-zerosw )
-             Re(k,i,j,I_HG) = 1.5_RP * RLMDg * um2cm
-             ! Re(k,i,j,I_HG) = dens * qg / N0g / ( 2.0_RP / 3.0_RP * PI * dens_i ) / RLMDg**3 * um2cm
+             Re(k,i,j,I_HG) = 1.5_RP * RLMDg * m2cm
+             ! Re(k,i,j,I_HG) = dens * qg / N0g / ( 2.0_RP / 3.0_RP * PI * dens_i ) / RLMDg**3 * m2cm
           enddo
 
        enddo
