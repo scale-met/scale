@@ -2035,13 +2035,16 @@ contains
   
    Z(:,:,:)=0.0_RP
 
-   !$omp parallel private(i, j, k, myid)
-
    flgomp = 0
+
+   !$omp parallel private(i, j, k, myid, jst, jen, jinc)
+
+   !$omp single
    !$ flgomp = 1  !---for openmp
+   !$ nth = omp_get_num_threads()
+   !$omp end single
 
    !$ myid = omp_get_thread_num()
-   !$ nth = omp_get_num_threads()
 
    if( flgomp == 0 ) then
      jst = JE
@@ -2176,13 +2179,16 @@ contains
 
    Z(:,:,:) = 0.0_RP
 
-   !$omp parallel private(i, j, k, myid)
-
    flgomp = 0
+
+   !$omp parallel private(i, j, k, myid, jst, jen, jinc)
+
+   !$omp single
    !$ flgomp = 1  !---for openmp
+   !$ nth = omp_get_num_threads()
+   !$omp end single
 
    !$ myid =  omp_get_thread_num()
-   !$ nth = omp_get_num_threads()
    if( flgomp == 0 ) then
       jst = JS
       jen = JE
