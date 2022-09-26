@@ -614,6 +614,7 @@ contains
              LOG_ERROR("FILE_HISTORY_Setup",*) 'TSTATS_OP and TAVERAGE are conflicted'
              call PRC_abort
           end if
+          FILE_HISTORY_req(reqid)%tstats_op = I_MEAN
        end if
 
        call CALENDAR_unit2sec( dtsec, TINTERVAL, TUNIT )
