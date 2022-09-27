@@ -2546,6 +2546,22 @@ contains
                    end do
                 end if
                 deallocate( buf3d )
+                if ( var%xstg .and. cxs==2 .and. IS_org==1 ) then ! tentative
+                   !$omp parallel do
+                   do j = j0, pye-pys-j1
+                   do k = KS_org, KE_org
+                      work(k,1,cys+j-JS_org+1) = work(k,2,cys+j-JS_org+1)
+                   end do
+                   end do
+                end if
+                if ( var%ystg .and. cys==2 .and. JS_org==1 ) then ! tentative
+                   !$omp parallel do
+                   do i = i0, pxe-pxs-i1
+                   do k = KS_org, KE_org
+                      work(k,cxs+i-IS_org+1,1) = work(k,cxs+i-IS_org+1,2)
+                   end do
+                   end do
+                end if
              else
                 allocate( buf3d(KS_org:KE_org+kst,pxs+i0:pxe-i1,pys+j0:pye-j1) )
                 call FILE_read( fids(n), var%name, buf3d(:,:,:), &
@@ -2814,6 +2830,18 @@ contains
              end do
              end do
              deallocate( buf2d )
+             if ( var%xstg .and. cxs==2 .and. IS_org==1 ) then ! tentative
+                !$omp parallel do
+                do j = j0, pye-pys-j1
+                   work(1,cys+j-JS_org+1) = work(2,cys+j-JS_org+1)
+                end do
+             end if
+             if ( var%ystg .and. cys==2 .and. JS_org==1 ) then ! tentative
+                !$omp parallel do
+                do i = i0, pxe-pxs-i1
+                   work(cxs+i-IS_org+1,1) = work(cxs+i-IS_org+1,2)
+                end do
+             end if
           end do
           if ( var%xstg ) then
              !$omp parallel do
