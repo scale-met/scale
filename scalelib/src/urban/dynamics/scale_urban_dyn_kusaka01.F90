@@ -1617,7 +1617,8 @@ contains
     else if ( STRG == 0.0_RP ) then ! not consider evapolation from urban
        BET = 0.0_RP
     else
-       BET = min ( WATER / STRG, 1.0_RP )
+       BET = max( min( WATER / STRG, 1.0_RP ), &
+                  1.0E-10_RP ) ! When WATER < STRG/1e10, fix the beta value so that tiny amoumts of water do not coninue to remain
     endif
 
     return
