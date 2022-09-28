@@ -216,6 +216,7 @@ contains
     character(len=32) :: items(vars_max)
     integer :: nvars
     type(vinfo), pointer :: var_info
+    class(*), pointer :: v
 
     character(len=FILE_HLONG) :: basename
     character(len=FILE_HLONG) :: fname
@@ -273,12 +274,7 @@ contains
        standard_parallel = (/ 0.0D0, 0.0D0 /)
        rotation = 0.0D0
 
-#ifdef NVIDIA
-       ! avoid error: NVFORTRAN-F-0155-Empty structure constructor()
-       call table_new(vars_atmos)
-#else
        vars_atmos = hash_table()
-#endif
 
        select case( FILE_TYPE )
        case ( "SCALE-RM" )
@@ -498,7 +494,8 @@ contains
              ! set default
              if ( vars_atmos%has_key(items(n)) ) then
                 item = items(n)
-                select type( v => vars_atmos%get(item) )
+                v => vars_atmos%get(item)
+                select type( v )
                 type is (vinfo)
                    var_info => v
                 end select
@@ -1383,6 +1380,7 @@ contains
     character(len=32) :: items(vars_max)
     integer :: nvars
     type(vinfo), pointer :: var_info
+    class(*), pointer :: v
 
     logical :: error, exist
     integer :: n, i
@@ -1425,12 +1423,7 @@ contains
     end if
 
     if ( do_read ) then
-#ifdef NVIDIA
-       ! avoid error: NVFORTRAN-F-0155-Empty structure constructor()
-       call table_new(vars_land)
-#else
        vars_land = hash_table()
-#endif
 
        select case( FILE_TYPE )
        case ( "SCALE-RM" )
@@ -1538,7 +1531,8 @@ contains
              ! set default
              if ( vars_land%has_key(items(n)) ) then
                 item = items(n)
-                select type(v=>vars_land%get(item))
+                v => vars_land%get(item)
+                select type(v)
                 type is (vinfo)
                    var_info => v
                 end select
@@ -1906,6 +1900,7 @@ contains
     character(len=32) :: items(vars_max)
     integer :: nvars
     type(vinfo), pointer :: var_info
+    class(*), pointer :: v
 
     integer :: n, i
     integer :: ierr
@@ -1949,12 +1944,7 @@ contains
 
 
     if ( do_read ) then
-#ifdef NVIDIA
-       ! avoid error: NVFORTRAN-F-0155-Empty structure constructor()
-       call table_new(vars_ocean)
-#else
        vars_ocean = hash_table()
-#endif
 
        select case( FILE_TYPE )
        case ( "SCALE-RM" )
@@ -2047,7 +2037,8 @@ contains
              ! set default
              if ( vars_ocean%has_key(items(n)) ) then
                 item = items(n)
-                select type(v=>vars_ocean%get(item))
+                v => vars_ocean%get(item)
+                select type(v)
                 type is (vinfo)
                    var_info => v
                 end select

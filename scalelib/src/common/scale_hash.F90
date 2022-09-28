@@ -26,18 +26,6 @@ module scale_hash
   !
   !++ Public procedure
   !
-#ifdef NVIDIA
-  public :: table_new
-#else
-  interface hash_table
-     module procedure :: table_new
-  end interface hash_table
-#endif
-
-  !-----------------------------------------------------------------------------
-  !
-  !++ Public parameters & variables
-  !
   type :: hash_entry
 #if defined(__GFORTRAN__) && __GNUC__ < 7
      character(len=128), pointer :: key
@@ -72,6 +60,14 @@ module scale_hash
      procedure :: debug => debug
   end type hash_table
 
+  interface hash_table
+     module procedure :: table_new
+  end interface hash_table
+
+  !-----------------------------------------------------------------------------
+  !
+  !++ Public parameters & variables
+  !
   !-----------------------------------------------------------------------------
   !
   !++ Private parameters & variables
@@ -85,23 +81,14 @@ contains
 
   !-----------------------------------------------------------------------------
   !> Constructor
-#ifdef NVIDIA
-  subroutine table_new(tbl)
-    type(hash_table), intent(out) :: tbl
-#else
   type(hash_table) function table_new() result(tbl)
-#endif
     allocate( tbl%table(INIT_SIZE) )
     tbl%size = INIT_SIZE
     tbl%len = 0
     tbl%max_len = 0
 
     return
-#ifdef NVIDIA
-  end subroutine table_new
-#else
   end function table_new
-#endif
 
   !-----------------------------------------------------------------------------
   !> Destructor
@@ -256,8 +243,6 @@ contains
     class(*), intent(in) :: val
 
     type(hash_entry), pointer :: e
-    integer :: ival
-    real(RP) :: rval
     integer :: hash
     integer :: idx
 
