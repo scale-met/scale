@@ -921,6 +921,7 @@ contains
     real(RP) :: DTS_MAX_onestep = 0.0_RP   ! DTS_MAX * dt
     real(RP) :: resi1,resi2     ! residual
     real(RP) :: resi1p,resi2p     ! residual
+    real(RP) :: fact1, fact2
     real(RP) :: G0RP,G0BP,G0GP
 
     real(RP) :: XXX, XXX2, XXX10
@@ -1046,6 +1047,7 @@ contains
      G0RP = 0.0_RP
      XXXR = 0.0_RP
      resi1p = 0.0_RP
+     fact1 = 1.0_RP
      do iteration = 1, 100
 
       THS   = TR / EXN ! potential temp
@@ -1069,8 +1071,6 @@ contains
       ELER  = EVPR * LHV
 
       G0R   = SR + RR - HR - ELER
-      RAINR = max( RAINRP - EVPR * dt, 0.0_RP )
-
     !--- calculate temperature in roof
     !  if ( STRGR /= 0.0_RP ) then
     !    CAPL1 = CAP_water * (RAINR / (DZR(1) + RAINR)) + CAPR * (DZR(1) / (DZR(1) + RAINR))
@@ -1095,11 +1095,15 @@ contains
       endif
 
       if ( resi1*resi1p < 0.0_RP ) then
-        TR = (TR + TRL(1)) * 0.5_RP
+         fact1 = max( fact1 * 0.5_RP, 1.0E-10_RP )
       else
-        TR = TRL(1)
+         fact1 = min( fact1 * 2.0_RP, 1.0_RP )
       endif
+
+      TR = TRL(1) * fact1 + TR * ( 1.0_RP - fact1 )
       TR = max( TRP - DTS_MAX_onestep, min( TRP + DTS_MAX_onestep, TR ) )
+
+      RAINR = max( ( RAINRP - EVPR * dt ) * fact1 + RAINR * ( 1.0_RP - fact1 ), 0.0_RP )
 
       resi1p = resi1
 
@@ -1199,7 +1203,8 @@ contains
      XXXC = 0.0_RP
      resi1p = 0.0_RP
      resi2p = 0.0_RP
-
+     fact1 = 1.0_RP
+     fact2 = 1.0_RP
      do iteration = 1, 200
 
       THS1   = TB / EXN
@@ -1257,7 +1262,6 @@ contains
 
 !      G0B   = SB + RB - HB - ELEB + EFLX
       G0B   = SB + RB - HB - ELEB
-      RAINB = max( RAINBP - EVPB * dt, 0.0_RP )
 
       HG    = RHOO * CPdry * CHG * UC * (THS2-THC) * EXN
       EVPG  = min( RHOO * CHG * UC * BETG * (QS0G-QC), real(RAING/dt,RP) )
@@ -1265,7 +1269,6 @@ contains
 
 !      G0G   = SG + RG - HG - ELEG + EFLX
       G0G   = SG + RG - HG - ELEG
-      RAING = max( RAINGP - EVPG * dt, 0.0_RP )
 
       TBL = TBLP
       call multi_layer(UKE,BOUND,G0B,CAPB,AKSB,TBL,DZB,dt,TBLEND)
@@ -1299,17 +1302,23 @@ contains
       endif
 
       if ( resi1*resi1p < 0.0_RP ) then
-         TB = (TB + TBL(1)) * 0.5_RP
+         fact1 = max( fact1 * 0.5_RP, 1.0E-10_RP )
       else
-         TB = TBL(1)
+         fact1 = min( fact1 * 2.0_RP, 1.0_RP )
       endif
       if ( resi2*resi2p < 0.0_RP ) then
-         TG = (TG + TGL(1)) * 0.5_RP
+         fact2 = max( fact2 * 0.5_RP, 1.0E-10_RP )
       else
-         TG = TGL(1)
+         fact2 = min( fact2 * 2.0_RP, 1.0_RP )
       endif
+
+      TB = TBL(1) * fact1 + TB * ( 1.0_RP - fact1 )
       TB = max( TBP - DTS_MAX_onestep, min( TBP + DTS_MAX_onestep, TB ) )
+      TG = TGL(1) * fact2 + TG * ( 1.0_RP - fact2 )
       TG = max( TGP - DTS_MAX_onestep, min( TGP + DTS_MAX_onestep, TG ) )
+
+      RAINB = max( ( RAINBP - EVPB * dt ) * fact1 + RAINB * ( 1.0_RP - fact1 ), 0.0_RP )
+      RAING = max( ( RAINGP - EVPG * dt ) * fact2 + RAING * ( 1.0_RP - fact2 ), 0.0_RP )
 
       resi1p = resi1
       resi2p = resi2
