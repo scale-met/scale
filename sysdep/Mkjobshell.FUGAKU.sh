@@ -91,6 +91,9 @@ cat << EOF1 > ./run.sh
 # ------ For FUGAKU
 #
 ################################################################################
+#PJM -g xxxxxxx
+#PJM -L freq=2200
+#PJM -L eco_state=2
 #PJM -L rscgrp="small"
 #PJM -L node=$(((TPROC+3)/4))
 #PJM -L elapse=01:00:00
@@ -113,7 +116,14 @@ spack load --first netcdf-c%fj
 spack load --first netcdf-fortran%fj
 spack load --first parallel-netcdf%fj
 
-export LD_LIBRARY_PATH=/lib64:/usr/lib64:/opt/FJSVxtclanga/tcsds-latest/lib64:/opt/FJSVxtclanga/tcsds-latest/lib:\$LD_LIBRARY_PATH
+/home/system/tool/sort_libp -s
+if [ $? -eq 0 ]; then
+    :
+else
+    echo "[ERROR] Error in sort_libp."
+    exit 1
+fi
+export LD_LIBRARY_PATH=`/home/system/tool/sort_libp`
 
 EOF1
 
@@ -179,8 +189,7 @@ cat << EOF2 >> ./run.sh
 
 llio_transfer ${FILES_LLIO}
 
-DIRS_LLIO=\`echo \$LD_LIBRARY_PATH | sed -e 's/:/\n/g' | grep '^/vol0004/apps/oss/spack' | sort -u\`
-echo \${DIRS_LLIO} | xargs /home/system/tool/dir_transfer
+# /home/system/tool/dir_transfer data_dir
 
 #run
 
@@ -189,10 +198,6 @@ ${RUN_INIT}
 ${RUN_MAIN}
 ${RUN_N2G}
 
-# clean up
-
-llio_transfer --purge ${FILES_LLIO}
-echo \${DIRS_LLIO} | xargs /home/system/tool/dir_transfer -p
 
 ################################################################################
 EOF2
