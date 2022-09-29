@@ -1253,14 +1253,13 @@ contains
     real(RP) :: xq, log_xq ! average mass of 1 particle( mass/number )
 
     real(RP) :: rhofac   ! density factor for terminal velocity
-    real(RP) :: rhofac_q(KA), log_rhofac_q(KA)
+    real(RP) :: rhofac_q(KA), log_rhofac_q
 
     real(RP) :: rlambdar(KA) ! work for diagnosis of Rain DSD ( Seifert, 2008 )
     real(RP) :: mud_r
     real(RP) :: dq, log_dq   ! weigthed diameter.   Improved Rogers etal. (1993) formula by T.Mitsui
 
-
-    real(RP) :: weight, weightk(KA) ! weighting coefficient for 2-branches is determined by ratio between 0.745mm and weighted diameter.  SB06 Table.1
+    real(RP) :: weight ! weighting coefficient for 2-branches is determined by ratio between 0.745mm and weighted diameter.  SB06 Table.1
     real(RP) :: velq_s ! terminal velocity for small branch of Rogers formula
     real(RP) :: velq_l ! terminal velocity for large branch of Rogers formula
 
@@ -1272,16 +1271,12 @@ contains
     do k = KS, KE
        rhofac = rho_0 / max( DENS(k), rho_min )
 
-!       rhofac_q(k) = rhofac ** gamma_v(I_mp_QC)
-!       xq = max( xqmin(I_mp_QC), min( xqmax(I_mp_QC), rhoq(k,I_QC) / ( rhoq(k,I_NC) + nqmin(I_mp_QC) ) ) )
-       log_rhofac_q(k) = log(rhofac) * gamma_v(I_mp_QC)
+       log_rhofac_q = log(rhofac) * gamma_v(I_mp_QC)
        log_xq = log( max( xqmin(I_mp_QC), min( xqmax(I_mp_QC), rhoq(k,I_QC) / ( rhoq(k,I_NC) + nqmin(I_mp_QC) ) ) ) )
 
-!       vterm(k,I_mp_QC) = -rhofac_q(k) * coef_vt1(I_mp_QC,1) * xq**beta_v(I_mp_QC,1)
-       vterm(k,I_mp_QC) = - exp( log_rhofac_q(k) + log_coef_vt1(I_mp_QC,1) + log_xq * beta_v(I_mp_QC,1) )
+       vterm(k,I_mp_QC) = - exp( log_rhofac_q + log_coef_vt1(I_mp_QC,1) + log_xq * beta_v(I_mp_QC,1) )
 
-!       vterm(k,I_mp_NC) = -rhofac_q(k) * coef_vt0(I_mp_QC,1) * xq**beta_vn(I_mp_QC,1)
-       vterm(k,I_mp_NC) = - exp( log_rhofac_q(k) + log_coef_vt0(I_mp_QC,1) + log_xq * beta_vn(I_mp_QC,1) )
+       vterm(k,I_mp_NC) = - exp( log_rhofac_q + log_coef_vt0(I_mp_QC,1) + log_xq * beta_vn(I_mp_QC,1) )
     end do
 
     ! QR, NR
@@ -1296,39 +1291,36 @@ contains
        rlambdar(k) = a_m(I_mp_QR) * xq**b_m(I_mp_QR) &
                    * ( (mud_r+3.0_RP) * (mud_r+2.0_RP) * (mud_r+1.0_RP) )**(-0.333333333_RP)
     end do
+!OCL LOOP_FISSION_TARGET(LS)
     do k = KS, KE
        dq = ( 4.0_RP + mud_r ) * rlambdar(k) ! D^(3)+mu weighted mean diameter
-       weightk(k) = 0.5_RP * ( 1.0_RP + tanh( PI * log( dq/d_vtr_branch ) ) )
-    end do
-    do k = KS, KE
-       dq = ( 4.0_RP + mud_r ) * rlambdar(k)
+       weight = min( 1.0_RP, max( 0.0_RP, 0.5_RP * ( 1.0_RP + tanh( PI * log( dq/d_vtr_branch ) ) ) ) )
        velq_s = coef_vtr_ar2 * dq &
               * ( 1.0_RP - ( 1.0_RP + coef_vtr_br2*rlambdar(k) )**(-5.0_RP-mud_r) )
        velq_l = coef_vtr_ar1 &
               - coef_vtr_br1 * ( 1.0_RP + coef_vtr_cr1*rlambdar(k) )**(-4.0_RP-mud_r)
-       weight = min( 1.0_RP, max( 0.0_RP, weightk(k) ) )
        vterm(k,I_mp_QR) = -rhofac_q(k) * ( velq_l * (          weight ) &
                                          + velq_s * ( 1.0_RP - weight ) )
     end do
+!OCL LOOP_FISSION_TARGET(LS)
     do k = KS, KE
        dq = ( 1.0_RP + mud_r ) * rlambdar(k) ! D^(0)+mu weighted mean diameter
-       weightk(k) = 0.5_RP * ( 1.0_RP + tanh( PI * log( dq/d_vtr_branch ) ) )
-    end do
-    do k = KS, KE
-       dq = ( 1.0_RP + mud_r ) * rlambdar(k)
+       weight = min( 1.0_RP, max( 0.0_RP, 0.5_RP * ( 1.0_RP + tanh( PI * log( dq/d_vtr_branch ) ) ) ) )
        velq_s = coef_vtr_ar2 * dq &
               * ( 1.0_RP - ( 1.0_RP + coef_vtr_br2*rlambdar(k) )**(-2.0_RP-mud_r) )
-       velq_l = coef_vtr_ar1 - coef_vtr_br1 &
-              * ( 1.0_RP + coef_vtr_cr1*rlambdar(k) )**(-1.0_RP-mud_r)
-       weight = min( 1.0_RP, max( 0.0_RP, weightk(k) ) )
+       velq_l = coef_vtr_ar1 &
+              - coef_vtr_br1 * ( 1.0_RP + coef_vtr_cr1*rlambdar(k) )**(-1.0_RP-mud_r)
        vterm(k,I_mp_NR) = -rhofac_q(k) * ( velq_l * (          weight ) &
                                          + velq_s * ( 1.0_RP - weight ) )
+    end do
+
+    do k = KS, KE
+       rhofac_q(k) = exp( log( PRES(k)/pre0_vt ) * a_pre0_vt + log( TEMP(k)/tem0_vt ) * a_tem0_vt )
     end do
 
     ! QI, NI
 !OCL LOOP_FISSION_TARGET(LS)
     do k = KS, KE
-       rhofac_q(k) = exp( log( PRES(k)/pre0_vt ) * a_pre0_vt + log( TEMP(k)/tem0_vt ) * a_tem0_vt )
        log_xq = log( max( xqmin(I_mp_QI), min( xqmax(I_mp_QI), rhoq(k,I_QI) / ( rhoq(k,I_NI) + nqmin(I_mp_QI) ) ) ) )
 
        tmp = log_a_m(I_mp_QI) + log_xq * b_m(I_mp_QI)
@@ -1350,6 +1342,7 @@ contains
     end do
 
     ! QS, NS
+!OCL LOOP_FISSION_TARGET(LS)
     do k = KS, KE
        log_xq = log( max( xqmin(I_mp_QS), min( xqmax(I_mp_QS), rhoq(k,I_QS) / ( rhoq(k,I_NS) + nqmin(I_mp_QS) ) ) ) )
 
@@ -1372,6 +1365,7 @@ contains
     end do
 
     ! QG, NG
+!OCL LOOP_FISSION_TARGET(LS)
     do k = KS, KE
        log_xq = log( max( xqmin(I_mp_QG), min( xqmax(I_mp_QG), rhoq(k,I_QG) / ( rhoq(k,I_NG) + nqmin(I_mp_QG) ) ) ) )
 
@@ -1810,16 +1804,15 @@ contains
           w4(iw) = gammafunc( (nu(iw) + 2.0_RP)/mu(iw) )
           ! coefficient of terminal velocity for number
           coef_vt0(iw,ia) = alpha_vn(iw,ia) * w1(iw) / w2(iw) * ( w3(iw) / w4(iw) )**beta_vn(iw,ia)
-          log_coef_vt0(iw,ia) = log( alpha_vn(iw,ia) * w1(iw) / w2(iw) ) + log( w3(iw) / w4(iw) ) * beta_vn(iw,ia)
+          log_coef_vt0(iw,ia) = log( coef_vt0(iw,ia) )
           n = 1
           w1(iw) = gammafunc( (beta_v(iw,ia) + nu(iw) + 1.0_RP + n)/mu(iw) )
           w2(iw) = gammafunc( (                nu(iw) + 1.0_RP + n)/mu(iw) )
           ! coefficient of terminal velocity for mass
           coef_vt1(iw,ia) = alpha_v(iw,ia) * w1(iw) / w2(iw) * ( w3(iw) / w4(iw) )**beta_v(iw,ia)
-          log_coef_vt1(iw,ia) = log( alpha_v(iw,ia) * w1(iw) / w2(iw) ) + log( w3(iw) / w4(iw) ) * beta_v(iw,ia)
+          log_coef_vt1(iw,ia) = log( coef_vt1(iw,ia) )
        end do
     end do
-
     ! coefficient for weighted diameter used in calculation of terminal velocity
     do iw=1, HYDRO_MAX
        w1(iw) = gammafunc( (         b_m(iw) + nu(iw) + 1.0_RP)/mu(iw) )
@@ -1828,8 +1821,8 @@ contains
        w4(iw) = gammafunc( (nu(iw) + 2.0_RP)/mu(iw) )
        coef_dave_N(iw) = ( w1(iw) / w3(iw) ) * ( w3(iw) / w4(iw) )**(       b_m(iw))
        coef_dave_L(iw) = ( w2(iw) / w3(iw) ) * ( w3(iw) / w4(iw) )**(1.0_RP+b_m(iw))
-       log_coef_dave_N(iw) = log( w1(iw) / w3(iw) ) + log( w3(iw) / w4(iw) ) * (       b_m(iw))
-       log_coef_dave_L(iw) = log( w2(iw) / w3(iw) ) + log( w3(iw) / w4(iw) ) * (1.0_RP+b_m(iw))
+       log_coef_dave_N(iw) = log( coef_dave_N(iw) )
+       log_coef_dave_L(iw) = log( coef_dave_L(iw) )
     end do
     !-------------------------------------------------------
     !
@@ -2308,9 +2301,9 @@ contains
     real(RP) :: Pcrg2(KA,Pcrg_MAX)
     real(RP) :: rhoq_crg(KA,I_QC:I_QG)
     real(RP) :: rhoq2_crg(KA,I_QC:I_QG)
+    real(RP) :: RHOQcrg0_t(KA,I_QC:I_QG)
     real(RP) :: QTRC0(KA,QA_MP)
     real(RP) :: Crs(KA,HYDRO_MAX)
-    real(RP),allocatable :: RHOQcrg0_t(:,:,:,:)
 
     real(RP) :: crg_split_s
     real(RP) :: crg_split_g
@@ -2382,8 +2375,6 @@ contains
        RHOQcrg_t_mp(:,:,:,:) = 0.0_RP
        !$omp end workshare
 
-       allocate(RHOQcrg0_t(KA,IA,JA,HYDRO_MAX))
-
 !      if( MP_doice_graupel_collection ) then
 !        flg_igcol = 1.0_RP
 !      else
@@ -2401,7 +2392,7 @@ contains
     !$omp        cz,fz,dt, &
     !$omp        RHOQ_t,RHOE_t,CPtot_t,CVtot_t,EVAPORATE, &
     !$omp        c_ccn,gamma_v,nc_uplim_d,a_m,b_m,alpha_v,beta_v,a_rea,b_rea,ntmax_phase_change, &
-    !$omp        QTRC_crg,QSPLT_in,RHOQcrg_t_mp,RHOQcrg0_t,Sarea, &
+    !$omp        QTRC_crg,QSPLT_in,RHOQcrg_t_mp,Sarea, &
     !$omp        d0_crg_l,v0_crg_l,beta_crg,dqcrg,flg_lt_l) &
     !$omp private (pres,temp,rrho,rhoe,rhoq,rhoq2,cva,cpa,rhoq0_t,rhoe0_t,cptot0_t,cvtot0_t, &
     !$omp          xq,dq_xa,vt_xa,wtemp,esw,esi,rho_fac,rho_fac_q, &
@@ -2412,7 +2403,7 @@ contains
     !$omp          ii_dqi,ii_dni,is_dqi,is_dni,ss_dns,gs_dqs,gs_dns,gg_dng, &
     !$omp          clp_dqc,clp_dnc,clm_dqc,clm_dnc,clp_dqr,clp_dnr,clm_dqr,clm_dnr, &
     !$omp          clp_dqi,clp_dni,clm_dqi,clm_dni,clp_dqs,clp_dns,clm_dqs,clm_dns,clp_dqg,clp_dng,clm_dqg,clm_dng, &
-    !$omp          rhoq_crg,rhoq2_crg,Pcrg1,Pcrg2, &
+    !$omp          rhoq_crg,rhoq2_crg,RHOQcrg0_t,Pcrg1,Pcrg2, &
     !$omp          drhoqcrg_c,drhoqcrg_r,drhoqcrg_i,drhoqcrg_s,drhoqcrg_g, &
     !$omp          crg_split_s,crg_split_g,crg_split_i,wrm_dnc_crg,wrm_dnr_crg,QTRC0,crs, &
     !$omp          gc_dnc_crg,sc_dnc_crg,ic_dnc_crg,rg_dng_crg,rg_dnr_crg,rs_dnr_crg,rs_dns_crg,ri_dnr_crg,ri_dni_crg, &
@@ -2648,11 +2639,11 @@ contains
        rhoq_crg(:,:) = 0.0_RP
        rhoq2_crg(:,:) = 0.0_RP
        if (flg_lt_l) then
+          do iq = I_QC, I_QG
           do k = KS, KE
-             do iq = I_QC, I_QG
-                rhoq_crg(k,iq) = DENS(k,i,j) * QTRC_crg(k,i,j,iq-1)
-                rhoq2_crg(k,iq) = rhoq_crg(k,iq)
-             enddo
+             rhoq_crg(k,iq) = DENS(k,i,j) * QTRC_crg(k,i,j,iq-1)
+             rhoq2_crg(k,iq) = rhoq_crg(k,iq)
+          enddo
           enddo
        end if
 
@@ -2693,8 +2684,8 @@ contains
                RHOQ0_t(:,:), RHOE0_t(:),        & ! (out)
                CPtot0_t(:), CVtot0_t(:),        & ! (out)
                EVAPORATE(:,i,j),                & ! (out)
-               rhoq2_crg(:,I_QC:I_QG),          & ! (in:optional)
-               RHOQcrg0_t(:,i,j,:)              ) ! (inout:optional)
+               rhoq2_crg(:,:),                  & ! (in:optional)
+               RHOQcrg0_t(:,:)                  ) ! (out:optional)
        else
           call update_by_phase_change( &
                KA, KS, KE, &
@@ -2739,7 +2730,7 @@ contains
        if (flg_lt_l) then
           do iq = I_QC, I_QG
           do k = KS, KE
-             rhoq_crg(k,iq) = rhoq_crg(k,iq) + RHOQcrg0_t(k,i,j,iq-1)*dt  ! need limiter?
+             rhoq_crg(k,iq) = rhoq_crg(k,iq) + RHOQcrg0_t(k,iq) * dt  ! need limiter?
           enddo
           enddo
        end if
@@ -3184,11 +3175,11 @@ contains
           RHOQ0_t(k,I_NG) = drhong / dt
 
           if (flg_lt_l) then
-             RHOQcrg0_t(k,i,j,I_QC-1) = drhoqcrg_c / dt
-             RHOQcrg0_t(k,i,j,I_QR-1) = drhoqcrg_r / dt
-             RHOQcrg0_t(k,i,j,I_QI-1) = drhoqcrg_i / dt
-             RHOQcrg0_t(k,i,j,I_QS-1) = drhoqcrg_s / dt
-             RHOQcrg0_t(k,i,j,I_QG-1) = drhoqcrg_g / dt
+             RHOQcrg0_t(k,I_QC) = drhoqcrg_c / dt
+             RHOQcrg0_t(k,I_QR) = drhoqcrg_r / dt
+             RHOQcrg0_t(k,I_QI) = drhoqcrg_i / dt
+             RHOQcrg0_t(k,I_QS) = drhoqcrg_s / dt
+             RHOQcrg0_t(k,I_QG) = drhoqcrg_g / dt
           end if
 
           RHOE0_t(k) = LHF * ( drhoqi + drhoqs + drhoqg ) / dt
@@ -3224,7 +3215,7 @@ contains
        if (flg_lt_l) then
           do iq = I_QC, I_QG
           do k = KS, KE
-             rhoq_crg(k,iq) = rhoq_crg(k,iq) + RHOQcrg0_t(k,i,j,iq-1)*dt  !-- need limiter?
+             rhoq_crg(k,iq) = rhoq_crg(k,iq) + RHOQcrg0_t(k,iq) * dt  !-- need limiter?
           enddo
           enddo
 
@@ -3944,6 +3935,11 @@ contains
        vrvs(k) = vt_xave(k,I_mp_QR,2) * vt_xave(k,I_mp_QS,2)
     end do
 
+    do k = KS, KE
+       ave_di(k) = coef_d(I_mp_QI)*xq(k,I_mp_QI)**b_m(I_mp_QI)
+       ave_ds(k) = coef_d(I_mp_QS)*xq(k,I_mp_QS)**b_m(I_mp_QS)
+    end do
+
     !------------------------------------------------------------------------
     !
     !+++ pattern 1: a + b => a  (a>b)
@@ -3953,15 +3949,11 @@ contains
     ! cloud-ice => ice
     ! reduction term of cloud
     do k = KS, KE
-       ave_di(k) = coef_d(I_mp_QI)*xq(k,I_mp_QI)**b_m(I_mp_QI)
-
+       dcdi = dq_xave(k,I_mp_QC)   * dq_xave(k,I_mp_QI)
+       vcvi = vt_xave(k,I_mp_QC,2) * vt_xave(k,I_mp_QI,2)
        sw = 0.5_RP - sign(0.5_RP, di0-ave_di(k)) ! if(ave_di>di0)then sw=1
        E_i = E_im * sw
        E_ic = E_i*E_c(k)
-
-       dcdi = dq_xave(k,I_mp_QC) * dq_xave(k,I_mp_QI)
-       vcvi = vt_xave(k,I_mp_QC,2) * vt_xave(k,I_mp_QI,2)
-
        coef_acc_LCI = &
               ( delta_b1(I_mp_QC)*dcdc(k) + delta_ab1(I_mp_QI,I_mp_QC)*dcdi + delta_b0(I_mp_QI)*didi(k) ) &
         * sqrt( theta_b1(I_mp_QC)*vcvc(k) - theta_ab1(I_mp_QI,I_mp_QC)*vcvi + theta_b0(I_mp_QI)*vivi(k) &
@@ -3977,14 +3969,11 @@ contains
     ! cloud-snow => snow
     ! reduction term of cloud
     do k = KS, KE
-       ave_ds(k) = coef_d(I_mp_QS)*xq(k,I_mp_QS)**b_m(I_mp_QS)
+       dcds = dq_xave(k,I_mp_QC)   * dq_xave(k,I_mp_QS)
+       vcvs = vt_xave(k,I_mp_QC,2) * vt_xave(k,I_mp_QS,2)
        sw = 0.5_RP - sign(0.5_RP, ds0-ave_ds(k)) ! if(ave_ds>ds0)then sw=1
        E_s = E_sm * sw
        E_sc = E_s*E_c(k)
-
-       dcds = dq_xave(k,I_mp_QC) * dq_xave(k,I_mp_QS)
-       vcvs = vt_xave(k,I_mp_QC,2) * vt_xave(k,I_mp_QS,2)
-
        coef_acc_LCS = &
               ( delta_b1(I_mp_QC)*dcdc(k) + delta_ab1(I_mp_QS,I_mp_QC)*dcds + delta_b0(I_mp_QS)*dsds(k) ) &
         * sqrt( theta_b1(I_mp_QC)*vcvc(k) - theta_ab1(I_mp_QS,I_mp_QC)*vcvs + theta_b0(I_mp_QS)*vsvs(k) &
@@ -4000,14 +3989,12 @@ contains
     ! cloud-graupel => graupel
     ! reduction term of cloud
     do k = KS, KE
+       dcdg = dq_xave(k,I_mp_QC)   * dq_xave(k,I_mp_QG)
+       vcvg = vt_xave(k,I_mp_QC,2) * vt_xave(k,I_mp_QG,2)
        ave_dg = coef_d(I_mp_QG)*xq(k,I_mp_QG)**b_m(I_mp_QG)
        sw = 0.5_RP - sign(0.5_RP, dg0-ave_dg) ! if(ave_dg>dg0)then sw=1
        E_g = E_gm * sw
        E_gc = E_g*E_c(k)
-
-       dcdg = dq_xave(k,I_mp_QC) * dq_xave(k,I_mp_QG)
-       vcvg = vt_xave(k,I_mp_QC,2) * vt_xave(k,I_mp_QG,2)
-
        coef_acc_LCG = &
               ( delta_b1(I_mp_QC)*dcdc(k) + delta_ab1(I_mp_QG,I_mp_QC)*dcdg + delta_b0(I_mp_QG)*dgdg(k) ) &
         * sqrt( theta_b1(I_mp_QC)*vcvc(k) - theta_ab1(I_mp_QG,I_mp_QC)*vcvg + theta_b0(I_mp_QG)*vgvg(k) &
@@ -4465,6 +4452,7 @@ contains
     coef_aut0 =  -kcc*coef_nuc0
     coef_aut1 =  -kcc/x_sep/20._RP*coef_nuc1
     !
+!OCL LOOP_FISSION_TARGET(LS)
     do k = KS, KE
        lwc = rhoq(k,I_QR) + rhoq(k,I_QC)
        if( lwc > xc_min )then
@@ -4935,7 +4923,7 @@ contains
     !--- for lightning component
     logical, intent(in)   :: flg_lt ! false -> without lightning, true-> with lightning
     real(RP), intent(in), optional  :: rhoq2_crg(KA,I_QC:I_QG)
-    real(RP), intent(inout), optional :: RHOQcrg_t(KA,HYDRO_MAX)
+    real(RP), intent(out), optional :: RHOQcrg_t(KA,I_QC:I_QG)
 
     real(RP) :: xi               ! mean mass of ice particles
     real(RP) :: rrho             ! 1/rho
@@ -5428,33 +5416,27 @@ contains
        if (flg_lt) then
           sw2 = 0.5_RP - sign( 0.5_RP, rhoq2(k,I_NI)-SMALL ) !--- if NI is small,  ignore charge transfer   ! I -> C
           mlt_dni_crg = mlt_dni*( 1.0_RP-sw2 ) / ( rhoq2(k,I_NI)+sw2 ) * rhoq2_crg(k,I_QI)
-          !--- limiter (|rhoq2(NC)| is already reduced by deposition (dep_dni_crg and -frz_dnc_crg) )
-          !-- Charge abs(frz_dnc_crg) is already moved from cloud to ice
-          sw2 = min( abs(rhoq2_crg(k,I_QI)+dep_dni_crg-frz_dnc_crg),abs(mlt_dni_crg) )
-          mlt_dni_crg = sign( sw2, mlt_dni_crg )
-
-          drhoqcrg_c(k) = drhoqcrg_c(k) - mlt_dni_crg * (1.0_RP-sw)
-          drhoqcrg_r(k) = drhoqcrg_r(k) - mlt_dni_crg * sw
-          drhoqcrg_i(k) = drhoqcrg_i(k) + mlt_dni_crg
-
 
           sw2 = 0.5_RP - sign( 0.5_RP, rhoq2(k,I_NS)-SMALL ) !--- if NS is small,  ignore charge transfer   ! S -> C
           mlt_dns_crg = mlt_dns*( 1.0_RP-sw2 ) / ( rhoq2(k,I_NS)+sw2 ) * rhoq2_crg(k,I_QS)
 
-          sw2 = min( abs(rhoq2_crg(k,I_QS)+dep_dns_crg            ),abs(mlt_dns_crg) )
-          mlt_dns_crg = sign( sw2, mlt_dns_crg )
-
-          drhoqcrg_r(k) = drhoqcrg_r(k) - mlt_dns_crg
-          drhoqcrg_s(k) = drhoqcrg_s(k) + mlt_dns_crg
-
-
           sw2 = 0.5_RP - sign( 0.5_RP, rhoq2(k,I_NG)-SMALL ) !--- if NG is small,  ignore charge transfer   ! G -> C
           mlt_dng_crg = mlt_dng*( 1.0_RP-sw2 ) / ( rhoq2(k,I_NG)+sw2 ) * rhoq2_crg(k,I_QG)
-          sw2 = min( abs(rhoq2_crg(k,I_QG)+dep_dng_crg            ),abs(mlt_dng_crg) )
+
+          !--- limiter (|rhoq2(NC)| is already reduced by deposition (dep_dni_crg and -frz_dnc_crg) )
+          !-- Charge abs(frz_dnc_crg) is already moved from cloud to ice
+          sw2 = min( abs(rhoq2_crg(k,I_QI)+drhoqcrg_i(k)),abs(mlt_dni_crg) )
+          mlt_dni_crg = sign( sw2, mlt_dni_crg )
+          sw2 = min( abs(rhoq2_crg(k,I_QS)+drhoqcrg_s(k)),abs(mlt_dns_crg) )
+          mlt_dns_crg = sign( sw2, mlt_dns_crg )
+          sw2 = min( abs(rhoq2_crg(k,I_QG)+drhoqcrg_g(k)),abs(mlt_dng_crg) )
           mlt_dng_crg = sign( sw2, mlt_dng_crg )
 
-          drhoqcrg_r(k) = drhoqcrg_r(k) - mlt_dng_crg
-          drhoqcrg_g(k) = drhoqcrg_g(k) + mlt_dng_crg
+          drhoqcrg_c(k) = drhoqcrg_c(k) - mlt_dni_crg * (1.0_RP-sw)
+          drhoqcrg_r(k) = drhoqcrg_r(k) - mlt_dni_crg * sw          - mlt_dns_crg - mlt_dng_crg
+          drhoqcrg_i(k) = drhoqcrg_i(k) + mlt_dni_crg
+          drhoqcrg_s(k) = drhoqcrg_s(k)                             + mlt_dns_crg
+          drhoqcrg_g(k) = drhoqcrg_g(k)                                           + mlt_dng_crg
        end if
     end do
 
@@ -5557,21 +5539,19 @@ contains
 
        CVtot_t(k) = dcv/dt
        CPtot_t(k) = dcp/dt
-
     end do
 
     ! tendency of charge density
     if (flg_lt) then
        do k = KS, KE
-          RHOQcrg_t(k,I_mp_QC) = drhoqcrg_c(k) / dt
-          RHOQcrg_t(k,I_mp_QR) = drhoqcrg_r(k) / dt
-          RHOQcrg_t(k,I_mp_QI) = drhoqcrg_i(k) / dt
-          RHOQcrg_t(k,I_mp_QS) = drhoqcrg_s(k) / dt
-          RHOQcrg_t(k,I_mp_QG) = drhoqcrg_g(k) / dt
+          RHOQcrg_t(k,I_QC) = drhoqcrg_c(k) / dt
+          RHOQcrg_t(k,I_QR) = drhoqcrg_r(k) / dt
+          RHOQcrg_t(k,I_QI) = drhoqcrg_i(k) / dt
+          RHOQcrg_t(k,I_QS) = drhoqcrg_s(k) / dt
+          RHOQcrg_t(k,I_QG) = drhoqcrg_g(k) / dt
        end do
 
     end if
-
 
     return
   end subroutine update_by_phase_change
