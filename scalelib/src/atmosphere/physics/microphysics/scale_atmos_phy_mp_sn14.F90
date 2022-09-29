@@ -3007,9 +3007,9 @@ contains
              ss_dns_crg  = 0.0_RP                              ! S + S -> S (No charge transfer)
              gg_dng_crg  = 0.0_RP                              ! G + G -> G (No charge transfer)
              !--- limiter
-             sw1 = min( abs(rhoq2_crg(k,I_QS)-sc_dnc_crg-ii_dni-is_dni_crg),           abs(rs_dns_crg) )
+             sw1 = min( abs(rhoq2_crg(k,I_QS)-sc_dnc_crg-ii_dni_crg-is_dni_crg),           abs(rs_dns_crg) )
              rs_dns_crg = sign( sw1,rs_dns_crg )
-             sw1 = min( abs(rhoq2_crg(k,I_QS)-sc_dnc_crg-ii_dni-is_dni_crg+rs_dns_crg),abs(gs_dns_crg) )
+             sw1 = min( abs(rhoq2_crg(k,I_QS)-sc_dnc_crg-ii_dni_crg-is_dni_crg+rs_dns_crg),abs(gs_dns_crg) )
              gs_dns_crg = sign( sw1,gs_dns_crg )
              !--- Charge split
              sw1 = sign(0.5_RP, abs( Pcrg2(k,I_CGNGacNS2NG) )-EPS ) + 0.5_RP ! if abs Pcrg2 is smaller than EPS, sw=1, else sw=0
@@ -4377,13 +4377,13 @@ contains
        !--- I + C -> G (decrease from ice charge)
        do k = KS, KE
           sw1 = 0.5_RP - sign( 0.5_RP, rhoq(k,I_NI)-SMALL ) !--- if NI is small,  ignore charge transfer
-          Pcrg1(k,I_NIcon) = i_iconv2g * PQ(k,I_NIcon)*(1.0_RP-sw) / (rhoq(k,I_NI)+sw1)*rhoq_crg(k,I_QI)
+          Pcrg1(k,I_NIcon) = i_iconv2g * PQ(k,I_NIcon)*(1.0_RP-sw1) / (rhoq(k,I_NI)+sw1) * rhoq_crg(k,I_QI)
        end do
 
        !--- S + C -> G (decrease from snow charge)
        do k = KS, KE
           sw1 = 0.5_RP - sign( 0.5_RP, rhoq(k,I_NS)-SMALL ) !--- if NS is small,  ignore charge transfer
-          Pcrg1(k,I_NScon) = i_sconv2g * PQ(k,I_NScon)*(1.0_RP-sw) / (rhoq(k,I_NS)+sw1)*rhoq_crg(k,I_QS)
+          Pcrg1(k,I_NScon) = i_sconv2g * PQ(k,I_NScon)*(1.0_RP-sw1) / (rhoq(k,I_NS)+sw1) * rhoq_crg(k,I_QS)
        end do
 
        do k = KS, KE
@@ -4407,8 +4407,8 @@ contains
           Pcrg1(k,I_NIacm) = PQ(k,I_NIacm)*(1.0_RP-sw1) / (rhoq(k,I_NI)+sw1)*rhoq_crg(k,I_QI)
        end do
        do k = KS, KE
-          sw1 = 0.5_RP - sign( 0.5_RP, rhoq(k,I_NR)-SMALL ) !--- if NG is small,  ignore charge transfer
-          Pcrg1(k,I_NIarm) = PQ(k,I_NIarm)*(1.0_RP-sw1) / (rhoq(k,I_NR)+sw1)*rhoq_crg(k,I_QI)
+          sw1 = 0.5_RP - sign( 0.5_RP, rhoq(k,I_NI)-SMALL ) !--- if NI is small,  ignore charge transfer
+          Pcrg1(k,I_NIarm) = PQ(k,I_NIarm)*(1.0_RP-sw1) / (rhoq(k,I_NI)+sw1) * rhoq_crg(k,I_QI)
        end do
     end if
 
