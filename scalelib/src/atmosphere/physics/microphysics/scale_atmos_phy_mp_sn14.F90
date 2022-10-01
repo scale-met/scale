@@ -2237,7 +2237,7 @@ contains
     real(RP) :: clp_dqi, clp_dni, clm_dqi, clm_dni
     real(RP) :: clp_dqs, clp_dns, clm_dqs, clm_dns
     real(RP) :: clp_dqg, clp_dng, clm_dqg, clm_dng
-    real(RP) :: fac1, fac3, fac4, fac6, fac7, fac9, fac10
+    real(RP) :: fac1, fac3, fac4(KA), fac6(KA), fac7, fac9(KA)
 
     ! production rate of partial conversion(ice, snow => graupel)
     real(RP) :: pco_dqi, pco_dni
@@ -2277,7 +2277,7 @@ contains
 
     ! for limitter
     real(RP) :: di2l, dtem
-    real(RP) :: fact
+    real(RP) :: fact(KA)
 
     real(RP) :: sw
 
@@ -2410,13 +2410,13 @@ contains
     !$omp          ii_dni_crg,is_dni_crg,ss_dns_crg,gs_dns_crg,gi_dni_crg,gg_dng_crg, &
     !$omp          clp_dnc_crg,clm_dnc_crg,clp_dnr_crg,clm_dnr_crg,clp_dni_crg,clm_dni_crg,clp_dns_crg,clm_dns_crg,clp_dng_crg,clm_dng_crg, &
     !$omp          pco_dni_crg,pco_dns_crg,pco_dng_crg,eml_dnc_crg,eml_dnr_crg,eml_dni_crg,eml_dns_crg,eml_dng_crg,spl_dni_crg,spl_dns_crg,spl_dng_crg, &
-    !$omp          fac1,fac3,fac4,fac6,fac7,fac9,fac10, &
+    !$omp          fac1,fac3,fac4,fac6,fac7,fac9, &
     !$omp          pco_dqi,pco_dni,pco_dqs,pco_dns,pco_dqg,pco_dng, &
     !$omp          eml_dqc,eml_dnc,eml_dqr,eml_dnr,eml_dqi,eml_dni,eml_dqs,eml_dns,eml_dqg,eml_dng, &
     !$omp          spl_dqi,spl_dni,spl_dqg,spl_dqs, &
     !$omp          dTdt_equiv_d,sl_PLCdep,sl_PLRdep,sl_PNRdep,qke_d, &
     !$omp          dqv,dql,dqi,dcv,dcp, &
-    !$omp          di2l,dtem,fact,sw,sw1,sw2,tmp )
+    !$omp          di2l,dtem,fact,sw,sw1,sw2,tmp)
     do j = JS, JE
     do i = IS, IE
 
@@ -2872,14 +2872,7 @@ contains
           wrm_dnc = max( dt*( PQ(k,I_NCaut)+PQ(k,I_NCacc)               ), -rhoq2(k,I_NC) )
           wrm_dnr = max( dt*( PQ(k,I_NRaut)+PQ(k,I_NRslc)+PQ(k,I_NRbrk) ), -rhoq2(k,I_NR) )
           wrm_dqr = -wrm_dqc
-          ! for charge density
-          if (flg_lt_l) then
-             wrm_dnc_crg = dt*( Pcrg1(k,I_NCaut)+Pcrg1(k,I_NCacc) )   ! C + C -> R
-             !--- limiter
-             sw1 = min( abs(rhoq2_crg(k,I_QC)),abs(wrm_dnc_crg) )
-             wrm_dnc_crg = sign( sw1,wrm_dnc_crg )
-             wrm_dnr_crg = - wrm_dnc_crg
-          end if
+
           ! mixed phase collection
           ! Pxxacyy2zz xx and yy decrease and zz increase .
           !
@@ -2894,19 +2887,6 @@ contains
           gc_dnc  = max( dt*Pac(k,I_NGacNC2NG), min(0.0_RP, -rhoq2(k,I_NC)-wrm_dnc               )) ! => dnc:minus
           sc_dnc  = max( dt*Pac(k,I_NSacNC2NS), min(0.0_RP, -rhoq2(k,I_NC)-wrm_dnc-gc_dnc        )) ! => dnc:minus
           ic_dnc  = max( dt*Pac(k,I_NIacNC2NI), min(0.0_RP, -rhoq2(k,I_NC)-wrm_dnc-gc_dnc-sc_dnc )) ! => dnc:minus
-          ! Decrease of absolute value of cloud charge density
-          if (flg_lt_l) then
-             gc_dnc_crg  = dt*Pcrg2(k,I_NGacNC2NG)  ! C + G -> G  ( move from c to g )
-             sc_dnc_crg  = dt*Pcrg2(k,I_NSacNC2NS)  ! C + S -> S  ( move from c to s )
-             ic_dnc_crg  = dt*Pcrg2(k,I_NIacNC2NI)  ! C + I -> I  ( move from c to i )
-             !--- limiter
-             sw1 = min( abs(rhoq2_crg(k,I_QC)+wrm_dnc_crg                      ),abs(gc_dnc_crg) )
-             gc_dnc_crg = sign( sw1,gc_dnc_crg )
-             sw1 = min( abs(rhoq2_crg(k,I_QC)+wrm_dnc_crg+gc_dnc_crg           ),abs(sc_dnc_crg) )
-             sc_dnc_crg = sign( sw1,sc_dnc_crg )
-             sw1 = min( abs(rhoq2_crg(k,I_QC)+wrm_dnc_crg+gc_dnc_crg+sc_dnc_crg),abs(ic_dnc_crg) )
-             ic_dnc_crg = sign( sw1,ic_dnc_crg )
-          end if
 
           ! rain mass decrease ( tem < 273.15K)
           sw = sign(0.5_RP, T00-temp(k)) + 0.5_RP ! if( temp(k,i,j) <= T00 )then sw=1, else sw=0
@@ -2914,27 +2894,13 @@ contains
           rg_dqg  = max( dt*Pac(k,I_LRacLG2LG  ), min(0.0_RP, -rhoq2(k,I_QG)                       )) * ( 1.0_RP - sw )
           rs_dqr  = max( dt*Pac(k,I_LRacLS2LG_R), min(0.0_RP, -rhoq2(k,I_QR)-wrm_dqr-rg_dqr        )) * sw
           ri_dqr  = max( dt*Pac(k,I_LRacLI2LG_R), min(0.0_RP, -rhoq2(k,I_QR)-wrm_dqr-rg_dqr-rs_dqr )) * sw
+
           ! rain num. decrease
           rg_dnr  = max( dt*Pac(k,I_NRacNG2NG  ), min(0.0_RP, -rhoq2(k,I_NR)-wrm_dnr               )) * sw
           rg_dng  = max( dt*Pac(k,I_NRacNG2NG  ), min(0.0_RP, -rhoq2(k,I_NG)                       )) * ( 1.0_RP - sw )
           rs_dnr  = max( dt*Pac(k,I_NRacNS2NG_R), min(0.0_RP, -rhoq2(k,I_NR)-wrm_dnr-rg_dnr        )) * sw
           ri_dnr  = max( dt*Pac(k,I_NRacNI2NG_R), min(0.0_RP, -rhoq2(k,I_NR)-wrm_dnr-rg_dnr-rs_dnr )) * sw
-          ! Decrease of absolute value of rain charge density
-          if (flg_lt_l) then
-             rg_dnr_crg  = dt*Pcrg2(k,I_NRacNG2NG  )* sw                 ! R + G -> G
-             rg_dng_crg  = dt*Pcrg2(k,I_NRacNG2NG  )* ( 1.0_RP - sw )    ! R + G -> R
-             rs_dnr_crg  = dt*Pcrg2(k,I_NRacNS2NG_R)* sw                 ! R + S -> G
-             ri_dnr_crg  = dt*Pcrg2(k,I_NRacNI2NG_R)* sw                 ! R + I -> G
-             !--- limiter
-             sw1 = min( abs(rhoq2_crg(k,I_QR)+wrm_dnr_crg),abs(rg_dnr_crg) )
-             rg_dnr_crg = sign( sw1,rg_dnr_crg )
-             sw1 = min( abs(rhoq2_crg(k,I_QG)            ),abs(rg_dng_crg) )
-             rg_dng_crg = sign( sw1,rg_dng_crg )
-             sw1 = min( abs(rhoq2_crg(k,I_QR)+wrm_dnr_crg),abs(rs_dnr_crg) )
-             rs_dnr_crg = sign( sw1,rs_dnr_crg )
-             sw1 = min( abs(rhoq2_crg(k,I_QR)+wrm_dnr_crg),abs(ri_dnr_crg) )
-             ri_dnr_crg = sign( sw1,ri_dnr_crg )
-          end if
+
           ! ice mass decrease
           fac1    = (ri_dqr-eps)/ (dt*Pac(k,I_LRacLI2LG_R)-eps) ! suppress factor by filter of rain
           ri_dqi  = max( dt*Pac(k,I_LRacLI2LG_I)*fac1, min(0.0_RP, -rhoq2(k,I_QI)+ic_dqc               )) ! => dqg
@@ -2942,67 +2908,27 @@ contains
           is_dqi  = max( dt*Pac(k,I_LIacLS2LS  )     , min(0.0_RP, -rhoq2(k,I_QI)+ic_dqc-ri_dqi-ii_dqi )) ! => dqs
 !!         !-- Y.Sato added(2018/8/31)
 !!         gi_dqi  = max( dt*Pac(k,I_LGacLI2LG)       , min(0.0_RP, -rhoq2(k,I_QI)+ic_dqc-ri_dqi-ii_dqi-is_dqi )) ! => dqg
+
           ! ice num. decrease
-          fac4    = (ri_dnr-eps)/ (dt*Pac(k,I_NRacNI2NG_R)-eps) ! suppress factor by filter of rain
-          ri_dni  = max( dt*Pac(k,I_NRacNI2NG_I)*fac4, min(0.0_RP, -rhoq2(k,I_NI)               )) ! => dni:minus
-          ii_dni  = max( dt*Pac(k,I_NIacNI2NS  )     , min(0.0_RP, -rhoq2(k,I_NI)-ri_dni        )) ! => dni:minus,dns:plus(*0.5)
-          is_dni  = max( dt*Pac(k,I_NIacNS2NS  )     , min(0.0_RP, -rhoq2(k,I_NI)-ri_dni-ii_dni )) ! => dni:minus,dns:plus
+          fac4(k) = (ri_dnr-eps)/ (dt*Pac(k,I_NRacNI2NG_R)-eps) ! suppress factor by filter of rain
+          ri_dni  = max( dt*Pac(k,I_NRacNI2NG_I)*fac4(k), min(0.0_RP, -rhoq2(k,I_NI)               )) ! => dni:minus
+          ii_dni  = max( dt*Pac(k,I_NIacNI2NS  )        , min(0.0_RP, -rhoq2(k,I_NI)-ri_dni        )) ! => dni:minus,dns:plus(*0.5)
+          is_dni  = max( dt*Pac(k,I_NIacNS2NS  )        , min(0.0_RP, -rhoq2(k,I_NI)-ri_dni-ii_dni )) ! => dni:minus,dns:plus
 !!         !-- Y.Sato added(2018/8/31)
-!!         gi_dni  = max( dt*Pac(k,I_NGacNI2NG)       , min(0.0_RP, -rhoq2(k,I_NI)-ri_dni-ii_dni-is_dni )) ! => dns:minus
-          ! Decrease of absolute value of ice charge density
-          if (flg_lt_l) then
-             ri_dni_crg  = dt*Pcrg2(k,I_NRacNI2NG_I)*fac4   !  I + R -> G
-             ii_dni_crg  = dt*Pcrg2(k,I_NIacNI2NS)          !  I + I -> S
-             is_dni_crg  = dt*Pcrg2(k,I_NIacNS2NS)          !  I + S -> S
-!!            !-- Y.Sato added(2018/8/31)
-!!            gi_dni_crg  = dt*Pcrg2(k,I_NGacNI2NG)          ! G + S -> G
-             !--- limiter
-             sw1 = min( abs(rhoq2_crg(k,I_QI)-ic_dnc_crg)                      ,abs(ri_dni_crg) )
-             ri_dni_crg = sign( sw1,ri_dni_crg )
-             sw1 = min( abs(rhoq2_crg(k,I_QI)-ic_dnc_crg+ri_dni_crg)           ,abs(ii_dni_crg) )
-             ii_dni_crg = sign( sw1,ii_dni_crg )
-             sw1 = min( abs(rhoq2_crg(k,I_QI)-ic_dnc_crg+ri_dni_crg+ii_dni_crg),abs(is_dni_crg) )
-             is_dni_crg = sign( sw1,is_dni_crg )
-!!            !-- Y.Sato added(2018/8/31)
-!!            sw1 = min( abs(rhoq2_crg(k,I_QI)-ic_dnc_crg+ri_dni_crg+ii_dni_crg+is_dni_crg),abs(gi_dni_crg) )
-!!            gi_dni_crg = sign( sw1,gi_dni_crg )
-          end if
+!!         gi_dni  = max( dt*Pac(k,I_NGacNI2NG)          , min(0.0_RP, -rhoq2(k,I_NI)-ri_dni-ii_dni-is_dni )) ! => dns:minus
+
           ! snow mass decrease
           fac3    = (rs_dqr-eps)/(dt*Pac(k,I_LRacLS2LG_R)-eps) ! suppress factor by filter of rain
           rs_dqs  = max( dt*Pac(k,I_LRacLS2LG_S)*fac3, min(0.0_RP, -rhoq2(k,I_QS)+sc_dqc+ii_dqi+is_dqi        )) ! => dqg
           gs_dqs  = max( dt*Pac(k,I_LGacLS2LG  )     , min(0.0_RP, -rhoq2(k,I_QS)+sc_dqc+ii_dqi+is_dqi-rs_dqs )) ! => dqg
           ! snow num. decrease
-          fac6    = (rs_dnr-eps)/(dt*Pac(k,I_NRacNS2NG_R)-eps) ! suppress factor by filter of rain
+          fac6(k) = (rs_dnr-eps)/(dt*Pac(k,I_NRacNS2NG_R)-eps) ! suppress factor by filter of rain
           !       fac7    = (is_dni-eps)/(dt*Pac(I_NIacNS2NS,  k,i,j)-eps) ! suppress factor by filter of ice
-          rs_dns  = max( dt*Pac(k,I_NRacNS2NG_S)*fac6, min(0.0_RP, -rhoq2(k,I_NS)+0.50_RP*ii_dni+is_dni       )) ! => dns:minus
-          gs_dns  = max( dt*Pac(k,I_NGacNS2NG  )     , min(0.0_RP, -rhoq2(k,I_NS)+0.50_RP*ii_dni+is_dni-rs_dns )) ! => dns:minus
-          ss_dns  = max( dt*Pac(k,I_NSacNS2NS  )     , min(0.0_RP, -rhoq2(k,I_NS)+0.50_RP*ii_dni+is_dni-rs_dns-gs_dns ))
-          !
-          gg_dng  = max( dt*Pac(k,I_NGacNG2NG)       , min(0.0_RP, -rhoq2(k,I_NG) ))
-          if (flg_lt_l) then
-             ! Decrease of absolute value of snow charge density
-             rs_dns_crg  = dt*Pcrg2(k,I_NRacNS2NG_S)*fac6  ! R + S -> G
-             gs_dns_crg  = dt*Pcrg2(k,I_NGacNS2NG)         ! G + S -> G
-             ss_dns_crg  = 0.0_RP                              ! S + S -> S (No charge transfer)
-             gg_dng_crg  = 0.0_RP                              ! G + G -> G (No charge transfer)
-             !--- limiter
-             sw1 = min( abs(rhoq2_crg(k,I_QS)-sc_dnc_crg-ii_dni_crg-is_dni_crg),           abs(rs_dns_crg) )
-             rs_dns_crg = sign( sw1,rs_dns_crg )
-             sw1 = min( abs(rhoq2_crg(k,I_QS)-sc_dnc_crg-ii_dni_crg-is_dni_crg+rs_dns_crg),abs(gs_dns_crg) )
-             gs_dns_crg = sign( sw1,gs_dns_crg )
-             !--- Charge split
-             sw1 = sign(0.5_RP, abs( Pcrg2(k,I_CGNGacNS2NG) )-EPS ) + 0.5_RP ! if abs Pcrg2 is smaller than EPS, sw=1, else sw=0
-             sw2 = sign(0.5_RP, abs( Pcrg2(k,I_CGNGacNI2NG) )-EPS ) + 0.5_RP ! if abs Pcrg2 is smaller than EPS, sw=1, else sw=0
-             crg_split_g =  dt*Pcrg2(k,I_CGNGacNS2NG)*sw1 &
-                         +  dt*Pcrg2(k,I_CGNGacNI2NG)*sw2
-             crg_split_s = -dt*Pcrg2(k,I_CGNGacNS2NG)*sw1
-             crg_split_i = 0.0_RP
-!!            crg_split_i = -dt*Pcrg2(k,I_CGNGacNI2NG)*sw2  !Y.Sato (2018/8/31)
-             QSPLT_in(k,i,j,1) = crg_split_g / dt    ! fC/s
-             QSPLT_in(k,i,j,3) = crg_split_s / dt    ! fC/s
-             QSPLT_in(k,i,j,2) = crg_split_i / dt    ! fC/s
-          end if
-          !
+          rs_dns  = max( dt*Pac(k,I_NRacNS2NG_S)*fac6(k), min(0.0_RP, -rhoq2(k,I_NS)+0.50_RP*ii_dni+is_dni        )) ! => dns:minus
+          gs_dns  = max( dt*Pac(k,I_NGacNS2NG  )        , min(0.0_RP, -rhoq2(k,I_NS)+0.50_RP*ii_dni+is_dni-rs_dns )) ! => dns:minus
+          ss_dns  = max( dt*Pac(k,I_NSacNS2NS  )        , min(0.0_RP, -rhoq2(k,I_NS)+0.50_RP*ii_dni+is_dni-rs_dns-gs_dns ))
+          gg_dng  = max( dt*Pac(k,I_NGacNG2NG  )        , min(0.0_RP, -rhoq2(k,I_NG) ))
+
           ! total plus in mixed phase collection(clp_)
           ! mass
           ! if( temp(k,i,j) <= T00 )then sw=1, else sw=0
@@ -3017,19 +2943,6 @@ contains
           clp_dni = 0.0_RP
           clp_dns = -ii_dni*0.5_RP
           clp_dng = (-rs_dnr-ri_dnr) * sw
-          ! Decrease of absolute value of graupel charge density
-          if (flg_lt_l) then
-             clp_dnc_crg = 0.0_RP
-             clp_dnr_crg = -rg_dng_crg*(1.0_RP-sw)
-             clp_dni_crg = -ic_dnc_crg !&
-!!                          +crg_split_i ! Y.Sato added (2018/8/31)
-             clp_dns_crg = -sc_dnc_crg-ii_dni_crg-is_dni_crg-ss_dns_crg &
-                           +crg_split_s
-             clp_dng_crg = -gc_dnc_crg+(-rg_dnr_crg-rs_dnr_crg-ri_dnr_crg)*sw &
-                           -ri_dni_crg-rs_dns_crg-gs_dns_crg-gg_dng_crg &
-!!                          -gi_dni_crg & !--- Y.Sato (2018/8/31)
-                           +crg_split_g
-          end if
 
           ! total minus in mixed phase collection(clm_)
           ! mass
@@ -3044,15 +2957,6 @@ contains
           clm_dni = ri_dni+ii_dni+is_dni
           clm_dns = rs_dns+ss_dns+gs_dns
           clm_dng = gg_dng + rg_dng * (1.0_RP-sw)
-          ! charge density
-          if (flg_lt_l) then
-             clm_dnc_crg = gc_dnc_crg+sc_dnc_crg+ic_dnc_crg
-             clm_dnr_crg = (rg_dnr_crg+rs_dnr_crg+ri_dnr_crg) * sw
-             clm_dni_crg = ri_dni_crg+ii_dni_crg+is_dni_crg  !!&
-!!                        + gi_dni_crg  !Y.Sato (2018/8/31)
-             clm_dns_crg = rs_dns_crg+gs_dns_crg+ss_dns_crg
-             clm_dng_crg = gg_dng_crg+rg_dng_crg*(1.0_RP-sw)
-          end if
 
           ! partial conversion
           ! 08/05/08 [Mod] T.Mitsui
@@ -3063,17 +2967,7 @@ contains
           pco_dni = max( dt*PQ(k,I_NIcon), -clp_dni )
           pco_dns = max( dt*PQ(k,I_NScon), -clp_dns )
           pco_dng = -pco_dni-pco_dns
-          !-- for charge density
-          if (flg_lt_l) then
-             pco_dni_crg = dt*Pcrg1(k,I_NIcon)
-             pco_dns_crg = dt*Pcrg1(k,I_NScon)
-             !--- limiter
-             sw1 = min( abs(rhoq2_crg(k,I_QI)+clp_dni_crg  ),abs(pco_dni_crg) )
-             pco_dni_crg = sign( sw1,pco_dni_crg )
-             sw1 = min( abs(rhoq2_crg(k,I_QS)+clp_dns_crg  ),abs(pco_dns_crg) )
-             pco_dns_crg = sign( sw1,pco_dns_crg )
-             pco_dng_crg = -pco_dni_crg-pco_dns_crg
-          end if
+
           ! enhanced melting ( always negative value )
           ! ice-cloud melting produces cloud, others produce rain
           eml_dqi =  max( dt*PQ(k,I_LIacm), min(0.0_RP, -rhoq2(k,I_QI)-(clp_dqi+clm_dqi)-pco_dqi ))
@@ -3089,78 +2983,40 @@ contains
                      min(0.0_RP, -rhoq2(k,I_NG)-(clp_dng+clm_dng)-pco_dng ))
           eml_dnc = -eml_dni
           eml_dnr = -eml_dns-eml_dng
-          !-- for charge density
-          if (flg_lt_l) then
-             eml_dni_crg =  dt*Pcrg1(k,I_NIacm)   ! I+C->C
-             eml_dns_crg =  dt*Pcrg1(k,I_NSacm)   ! S+C->R
-             eml_dng_crg =  dt*(Pcrg1(k,I_NGacm)+Pcrg1(k,I_NGarm)+Pcrg1(k,I_NSarm)+Pcrg1(k,I_NIarm)) ! G+R->R, G+C->R
-             !--- limiter
-             sw1 = min( abs(rhoq2_crg(k,I_QI)+clp_dni_crg+clm_dni_crg+pco_dni_crg  ),abs(eml_dni_crg) )
-             eml_dni_crg = sign( sw1,eml_dni_crg )
-             sw1 = min( abs(rhoq2_crg(k,I_QS)+clp_dns_crg+clm_dns_crg+pco_dns_crg  ),abs(eml_dns_crg) )
-             eml_dns_crg = sign( sw1,eml_dns_crg )
-             sw1 = min( abs(rhoq2_crg(k,I_QG)+clp_dng_crg+clm_dng_crg+pco_dng_crg  ),abs(eml_dng_crg) )
-             eml_dng_crg = sign( sw1,eml_dng_crg )
 
-             eml_dnc_crg = -eml_dni_crg
-             eml_dnr_crg = -eml_dns_crg-eml_dng_crg
-          end if
-          !
           ! ice multiplication
           spl_dqg = max( dt*PQ(k,I_LGspl), min(0.0_RP, -rhoq2(k,I_QG)-(clp_dqg+clm_dqg)-pco_dqg-eml_dqg ))
           spl_dqs = max( dt*PQ(k,I_LSspl), min(0.0_RP, -rhoq2(k,I_QS)-(clp_dqs+clm_dqs)-pco_dqs-eml_dqs ))
           spl_dqi = -spl_dqg-spl_dqs
-          fac9    = (spl_dqg-eps)/(dt*PQ(k,I_LGspl)-eps)
-          fac10   = (spl_dqs-eps)/(dt*PQ(k,I_LSspl)-eps)
-          spl_dni = dt*PQ(k,I_NIspl)*fac9*fac10
-          !-- for charge density
-          if (flg_lt_l) then
-             spl_dns_crg = dt*Pcrg1(k,I_NSspl)*fac9*fac10
-             spl_dng_crg = dt*Pcrg1(k,I_NGspl)*fac9*fac10
-             !--- limiter
-             sw1 = min( abs(rhoq2_crg(k,I_QS)+clp_dns_crg+pco_dns_crg+eml_dns_crg  ),abs(spl_dns_crg) )
-             spl_dns_crg = sign( sw1,spl_dns_crg )
-             sw1 = min( abs(rhoq2_crg(k,I_QG)+clp_dng_crg+pco_dng_crg+eml_dng_crg  ),abs(spl_dng_crg) )
-             spl_dng_crg = sign( sw1,spl_dng_crg )
-             spl_dni_crg = -spl_dns_crg-spl_dng_crg
-          end if
-
+          fac9(k)  = (spl_dqg-eps)/(dt*PQ(k,I_LGspl)-eps) * (spl_dqs-eps)/(dt*PQ(k,I_LSspl)-eps)
+          spl_dni = dt*PQ(k,I_NIspl)*fac9(k)
 
           !
           ! melting and freezing limiter
           di2l = clp_dqc + clp_dqr + clm_dqc + clm_dqr + eml_dqc + eml_dqr ! = - ( clp_dqi + clp_dqs + clp_dqg + clm_dqi + clm_dqs + clm_dqg + eml_dqi + eml_dqs + eml_dqg )
           dtem = - di2l * LHF0 /  ( cva(k) * DENS(k,i,j) )
           if ( abs(dtem) < EPS ) then
-             fact = 1.0_RP
+             fact(k) = 1.0_RP
           else
-             fact = min( 1.0_RP, max( 0.0_RP, ( T00 - temp(k) ) / dtem ) )
+             fact(k) = min( 1.0_RP, max( 0.0_RP, ( T00 - temp(k) ) / dtem ) )
           end if
 
           !
           ! total cloud change
-          drhoqc = wrm_dqc + ( clp_dqc + clm_dqc + eml_dqc ) * fact
-          drhonc = wrm_dnc + ( clp_dnc + clm_dnc + eml_dnc ) * fact
+          drhoqc = wrm_dqc + ( clp_dqc + clm_dqc + eml_dqc ) * fact(k)
+          drhonc = wrm_dnc + ( clp_dnc + clm_dnc + eml_dnc ) * fact(k)
           ! total rain change
-          drhoqr = wrm_dqr + ( clp_dqr + clm_dqr + eml_dqr ) * fact
-          drhonr = wrm_dnr + ( clp_dnr + clm_dnr + eml_dnr ) * fact
+          drhoqr = wrm_dqr + ( clp_dqr + clm_dqr + eml_dqr ) * fact(k)
+          drhonr = wrm_dnr + ( clp_dnr + clm_dnr + eml_dnr ) * fact(k)
           ! total ice change
-          drhoqi =           ( clp_dqi + clm_dqi + eml_dqi ) * fact + pco_dqi + spl_dqi
-          drhoni =           ( clp_dni + clm_dni + eml_dni ) * fact + pco_dni + spl_dni
+          drhoqi =           ( clp_dqi + clm_dqi + eml_dqi ) * fact(k) + pco_dqi + spl_dqi
+          drhoni =           ( clp_dni + clm_dni + eml_dni ) * fact(k) + pco_dni + spl_dni
           ! total snow change
-          drhoqs =           ( clp_dqs + clm_dqs + eml_dqs ) * fact + pco_dqs + spl_dqs
-          drhons =           ( clp_dns + clm_dns + eml_dns ) * fact + pco_dns
+          drhoqs =           ( clp_dqs + clm_dqs + eml_dqs ) * fact(k) + pco_dqs + spl_dqs
+          drhons =           ( clp_dns + clm_dns + eml_dns ) * fact(k) + pco_dns
           ! total graupel change
-          drhoqg =           ( clp_dqg + clm_dqg + eml_dqg ) * fact + pco_dqg + spl_dqg
-          drhong =           ( clp_dng + clm_dng + eml_dng ) * fact + pco_dng
-          !-- for charge density
-          if (flg_lt_l) then
-             drhoqcrg_c = wrm_dnc_crg + ( clp_dnc_crg + clm_dnc_crg + eml_dnc_crg ) * fact
-             drhoqcrg_r = wrm_dnr_crg + ( clp_dnr_crg + clm_dnr_crg + eml_dnr_crg ) * fact
-             drhoqcrg_i = ( clp_dni_crg + clm_dni_crg + eml_dni_crg ) * fact + pco_dni_crg + spl_dni_crg
-             drhoqcrg_s = ( clp_dns_crg + clm_dns_crg + eml_dns_crg ) * fact + pco_dns_crg + spl_dns_crg
-             drhoqcrg_g = ( clp_dng_crg + clm_dng_crg + eml_dng_crg ) * fact + pco_dng_crg + spl_dng_crg
-          end if
-          !
+          drhoqg =           ( clp_dqg + clm_dqg + eml_dqg ) * fact(k) + pco_dqg + spl_dqg
+          drhong =           ( clp_dng + clm_dng + eml_dng ) * fact(k) + pco_dng
 
           ! tendency
           RHOQ0_t(k,I_QC) = drhoqc / dt
@@ -3173,14 +3029,6 @@ contains
           RHOQ0_t(k,I_NS) = drhons / dt
           RHOQ0_t(k,I_QG) = drhoqg / dt
           RHOQ0_t(k,I_NG) = drhong / dt
-
-          if (flg_lt_l) then
-             RHOQcrg0_t(k,I_QC) = drhoqcrg_c / dt
-             RHOQcrg0_t(k,I_QR) = drhoqcrg_r / dt
-             RHOQcrg0_t(k,I_QI) = drhoqcrg_i / dt
-             RHOQcrg0_t(k,I_QS) = drhoqcrg_s / dt
-             RHOQcrg0_t(k,I_QG) = drhoqcrg_g / dt
-          end if
 
           RHOE0_t(k) = LHF * ( drhoqi + drhoqs + drhoqg ) / dt
 
@@ -3206,13 +3054,162 @@ contains
        !--- update
        do iq = I_QC, I_NG
        do k = KS, KE
-          rhoq(k,iq) = max(0.0_RP, rhoq(k,iq) + RHOQ0_t(k,iq)*dt )
+          rhoq(k,iq) = max(0.0_RP, rhoq(k,iq) + RHOQ0_t(k,iq) * dt )
+       enddo
+       enddo
+
+       ! total tendency
+       do iq = I_QV, I_NG
+       do k = KS, KE
+          RHOQ_t(k,i,j,iq) = ( rhoq(k,iq) - DENS(k,i,j)*QTRC(k,i,j,iq) )/dt
        enddo
        enddo
 
 
        !--- for lithgning component
-       if (flg_lt_l) then
+       if ( flg_lt_l ) then
+
+!OCL LOOP_FISSION_TARGET(LS)
+          do k = KS, KE
+             sw = sign(0.5_RP, T00-temp(k)) + 0.5_RP ! if( temp(k,i,j) <= T00 )then sw=1, else sw=0
+
+             wrm_dnc_crg = dt*( Pcrg1(k,I_NCaut)+Pcrg1(k,I_NCacc) )   ! C + C -> R
+             !--- limiter
+             sw1 = min( abs(rhoq2_crg(k,I_QC)),abs(wrm_dnc_crg) )
+             wrm_dnc_crg = sign( sw1,wrm_dnc_crg )
+             wrm_dnr_crg = - wrm_dnc_crg
+
+             ! Decrease of absolute value of cloud charge density
+             gc_dnc_crg  = dt*Pcrg2(k,I_NGacNC2NG)  ! C + G -> G  ( move from c to g )
+             sc_dnc_crg  = dt*Pcrg2(k,I_NSacNC2NS)  ! C + S -> S  ( move from c to s )
+             ic_dnc_crg  = dt*Pcrg2(k,I_NIacNC2NI)  ! C + I -> I  ( move from c to i )
+             !--- limiter
+             sw1 = min( abs(rhoq2_crg(k,I_QC)+wrm_dnc_crg                      ),abs(gc_dnc_crg) )
+             gc_dnc_crg = sign( sw1,gc_dnc_crg )
+             sw1 = min( abs(rhoq2_crg(k,I_QC)+wrm_dnc_crg+gc_dnc_crg           ),abs(sc_dnc_crg) )
+             sc_dnc_crg = sign( sw1,sc_dnc_crg )
+             sw1 = min( abs(rhoq2_crg(k,I_QC)+wrm_dnc_crg+gc_dnc_crg+sc_dnc_crg),abs(ic_dnc_crg) )
+             ic_dnc_crg = sign( sw1,ic_dnc_crg )
+
+             ! Decrease of absolute value of rain charge density
+             rg_dnr_crg  = dt*Pcrg2(k,I_NRacNG2NG  )* sw                 ! R + G -> G
+             rg_dng_crg  = dt*Pcrg2(k,I_NRacNG2NG  )* ( 1.0_RP - sw )    ! R + G -> R
+             rs_dnr_crg  = dt*Pcrg2(k,I_NRacNS2NG_R)* sw                 ! R + S -> G
+             ri_dnr_crg  = dt*Pcrg2(k,I_NRacNI2NG_R)* sw                 ! R + I -> G
+             !--- limiter
+             sw1 = min( abs(rhoq2_crg(k,I_QR)+wrm_dnr_crg),abs(rg_dnr_crg) )
+             rg_dnr_crg = sign( sw1,rg_dnr_crg )
+             sw1 = min( abs(rhoq2_crg(k,I_QG)            ),abs(rg_dng_crg) )
+             rg_dng_crg = sign( sw1,rg_dng_crg )
+             sw1 = min( abs(rhoq2_crg(k,I_QR)+wrm_dnr_crg),abs(rs_dnr_crg) )
+             rs_dnr_crg = sign( sw1,rs_dnr_crg )
+             sw1 = min( abs(rhoq2_crg(k,I_QR)+wrm_dnr_crg),abs(ri_dnr_crg) )
+             ri_dnr_crg = sign( sw1,ri_dnr_crg )
+
+             ! Decrease of absolute value of ice charge density
+             ri_dni_crg  = dt*Pcrg2(k,I_NRacNI2NG_I)*fac4(k) !  I + R -> G
+             ii_dni_crg  = dt*Pcrg2(k,I_NIacNI2NS)           !  I + I -> S
+             is_dni_crg  = dt*Pcrg2(k,I_NIacNS2NS)           !  I + S -> S
+!!            !-- Y.Sato added(2018/8/31)
+!!            gi_dni_crg  = dt*Pcrg2(k,I_NGacNI2NG)          ! G + S -> G
+             !--- limiter
+             sw1 = min( abs(rhoq2_crg(k,I_QI)-ic_dnc_crg)                      ,abs(ri_dni_crg) )
+             ri_dni_crg = sign( sw1,ri_dni_crg )
+             sw1 = min( abs(rhoq2_crg(k,I_QI)-ic_dnc_crg+ri_dni_crg)           ,abs(ii_dni_crg) )
+             ii_dni_crg = sign( sw1,ii_dni_crg )
+             sw1 = min( abs(rhoq2_crg(k,I_QI)-ic_dnc_crg+ri_dni_crg+ii_dni_crg),abs(is_dni_crg) )
+             is_dni_crg = sign( sw1,is_dni_crg )
+!!            !-- Y.Sato added(2018/8/31)
+!!            sw1 = min( abs(rhoq2_crg(k,I_QI)-ic_dnc_crg+ri_dni_crg+ii_dni_crg+is_dni_crg),abs(gi_dni_crg) )
+!!            gi_dni_crg = sign( sw1,gi_dni_crg )
+
+             ! Decrease of absolute value of snow charge density
+             rs_dns_crg  = dt*Pcrg2(k,I_NRacNS2NG_S)*fac6(k) ! R + S -> G
+             gs_dns_crg  = dt*Pcrg2(k,I_NGacNS2NG)           ! G + S -> G
+             ss_dns_crg  = 0.0_RP                            ! S + S -> S (No charge transfer)
+             gg_dng_crg  = 0.0_RP                            ! G + G -> G (No charge transfer)
+             !--- limiter
+             sw1 = min( abs(rhoq2_crg(k,I_QS)-sc_dnc_crg-ii_dni_crg-is_dni_crg),           abs(rs_dns_crg) )
+             rs_dns_crg = sign( sw1,rs_dns_crg )
+             sw1 = min( abs(rhoq2_crg(k,I_QS)-sc_dnc_crg-ii_dni_crg-is_dni_crg+rs_dns_crg),abs(gs_dns_crg) )
+             gs_dns_crg = sign( sw1,gs_dns_crg )
+             !--- Charge split
+             sw1 = sign(0.5_RP, abs( Pcrg2(k,I_CGNGacNS2NG) )-EPS ) + 0.5_RP ! if abs Pcrg2 is smaller than EPS, sw=1, else sw=0
+             sw2 = sign(0.5_RP, abs( Pcrg2(k,I_CGNGacNI2NG) )-EPS ) + 0.5_RP ! if abs Pcrg2 is smaller than EPS, sw=1, else sw=0
+             crg_split_g =  dt*Pcrg2(k,I_CGNGacNS2NG)*sw1 &
+                         +  dt*Pcrg2(k,I_CGNGacNI2NG)*sw2
+             crg_split_s = -dt*Pcrg2(k,I_CGNGacNS2NG)*sw1
+             crg_split_i = 0.0_RP
+!!            crg_split_i = -dt*Pcrg2(k,I_CGNGacNI2NG)*sw2  !Y.Sato (2018/8/31)
+             QSPLT_in(k,i,j,1) = crg_split_g / dt    ! fC/s
+             QSPLT_in(k,i,j,3) = crg_split_s / dt    ! fC/s
+             QSPLT_in(k,i,j,2) = crg_split_i / dt    ! fC/s
+
+             ! Decrease of absolute value of graupel charge density
+             clp_dnc_crg = 0.0_RP
+             clp_dnr_crg = -rg_dng_crg*(1.0_RP-sw)
+             clp_dni_crg = -ic_dnc_crg !&
+!!                          +crg_split_i ! Y.Sato added (2018/8/31)
+             clp_dns_crg = -sc_dnc_crg-ii_dni_crg-is_dni_crg-ss_dns_crg &
+                           +crg_split_s
+             clp_dng_crg = -gc_dnc_crg+(-rg_dnr_crg-rs_dnr_crg-ri_dnr_crg)*sw &
+                           -ri_dni_crg-rs_dns_crg-gs_dns_crg-gg_dng_crg &
+!!                          -gi_dni_crg & !--- Y.Sato (2018/8/31)
+                           +crg_split_g
+
+             clm_dnc_crg = gc_dnc_crg+sc_dnc_crg+ic_dnc_crg
+             clm_dnr_crg = (rg_dnr_crg+rs_dnr_crg+ri_dnr_crg) * sw
+             clm_dni_crg = ri_dni_crg+ii_dni_crg+is_dni_crg  !!&
+!!                        + gi_dni_crg  !Y.Sato (2018/8/31)
+             clm_dns_crg = rs_dns_crg+gs_dns_crg+ss_dns_crg
+             clm_dng_crg = gg_dng_crg+rg_dng_crg*(1.0_RP-sw)
+
+             pco_dni_crg = dt*Pcrg1(k,I_NIcon)
+             pco_dns_crg = dt*Pcrg1(k,I_NScon)
+             !--- limiter
+             sw1 = min( abs(rhoq2_crg(k,I_QI)+clp_dni_crg  ),abs(pco_dni_crg) )
+             pco_dni_crg = sign( sw1,pco_dni_crg )
+             sw1 = min( abs(rhoq2_crg(k,I_QS)+clp_dns_crg  ),abs(pco_dns_crg) )
+             pco_dns_crg = sign( sw1,pco_dns_crg )
+             pco_dng_crg = -pco_dni_crg-pco_dns_crg
+
+             eml_dni_crg =  dt*Pcrg1(k,I_NIacm)   ! I+C->C
+             eml_dns_crg =  dt*Pcrg1(k,I_NSacm)   ! S+C->R
+             eml_dng_crg =  dt*(Pcrg1(k,I_NGacm)+Pcrg1(k,I_NGarm)+Pcrg1(k,I_NSarm)+Pcrg1(k,I_NIarm)) ! G+R->R, G+C->R
+             !--- limiter
+             sw1 = min( abs(rhoq2_crg(k,I_QI)+clp_dni_crg+clm_dni_crg+pco_dni_crg  ),abs(eml_dni_crg) )
+             eml_dni_crg = sign( sw1,eml_dni_crg )
+             sw1 = min( abs(rhoq2_crg(k,I_QS)+clp_dns_crg+clm_dns_crg+pco_dns_crg  ),abs(eml_dns_crg) )
+             eml_dns_crg = sign( sw1,eml_dns_crg )
+             sw1 = min( abs(rhoq2_crg(k,I_QG)+clp_dng_crg+clm_dng_crg+pco_dng_crg  ),abs(eml_dng_crg) )
+             eml_dng_crg = sign( sw1,eml_dng_crg )
+
+             eml_dnc_crg = -eml_dni_crg
+             eml_dnr_crg = -eml_dns_crg-eml_dng_crg
+
+             spl_dns_crg = dt*Pcrg1(k,I_NSspl)*fac9(k)
+             spl_dng_crg = dt*Pcrg1(k,I_NGspl)*fac9(k)
+             !--- limiter
+             sw1 = min( abs(rhoq2_crg(k,I_QS)+clp_dns_crg+pco_dns_crg+eml_dns_crg  ),abs(spl_dns_crg) )
+             spl_dns_crg = sign( sw1,spl_dns_crg )
+             sw1 = min( abs(rhoq2_crg(k,I_QG)+clp_dng_crg+pco_dng_crg+eml_dng_crg  ),abs(spl_dng_crg) )
+             spl_dng_crg = sign( sw1,spl_dng_crg )
+             spl_dni_crg = -spl_dns_crg-spl_dng_crg
+
+             drhoqcrg_c = wrm_dnc_crg + ( clp_dnc_crg + clm_dnc_crg + eml_dnc_crg ) * fact(k)
+             drhoqcrg_r = wrm_dnr_crg + ( clp_dnr_crg + clm_dnr_crg + eml_dnr_crg ) * fact(k)
+             drhoqcrg_i = ( clp_dni_crg + clm_dni_crg + eml_dni_crg ) * fact(k) + pco_dni_crg + spl_dni_crg
+             drhoqcrg_s = ( clp_dns_crg + clm_dns_crg + eml_dns_crg ) * fact(k) + pco_dns_crg + spl_dns_crg
+             drhoqcrg_g = ( clp_dng_crg + clm_dng_crg + eml_dng_crg ) * fact(k) + pco_dng_crg + spl_dng_crg
+
+             RHOQcrg0_t(k,I_QC) = drhoqcrg_c / dt
+             RHOQcrg0_t(k,I_QR) = drhoqcrg_r / dt
+             RHOQcrg0_t(k,I_QI) = drhoqcrg_i / dt
+             RHOQcrg0_t(k,I_QS) = drhoqcrg_s / dt
+             RHOQcrg0_t(k,I_QG) = drhoqcrg_g / dt
+          end do
+
+
           do iq = I_QC, I_QG
           do k = KS, KE
              rhoq_crg(k,iq) = rhoq_crg(k,iq) + RHOQcrg0_t(k,iq) * dt  !-- need limiter?
@@ -3237,21 +3234,13 @@ contains
              Sarea(k,i,j,I_mp_QS) = Crs(k,I_mp_QS)
              Sarea(k,i,j,I_mp_QG) = Crs(k,I_mp_QG)
           enddo
-       end if
 
-       ! total tendency
-       do iq = I_QV, I_NG
-       do k = KS, KE
-          RHOQ_t(k,i,j,iq) = ( rhoq(k,iq) - DENS(k,i,j)*QTRC(k,i,j,iq) )/dt
-       enddo
-       enddo
-
-       if (flg_lt_l) then
           do iq = I_QC, I_QG
           do k = KS, KE
-             RHOQcrg_t_mp(k,i,j,iq-1) = ( rhoq_crg(k,iq) - DENS(k,i,j)*QTRC_crg(k,i,j,iq-1) )/dt
+             RHOQcrg_t_mp(k,i,j,iq-1) = ( rhoq_crg(k,iq) - DENS(k,i,j)*QTRC_crg(k,i,j,iq-1) ) / dt
           enddo
           enddo
+
        end if
 
 #ifdef DEBUG
@@ -4964,15 +4953,16 @@ contains
     real(RP) :: coef_a_dep, coef_b_dep
     !
     real(RP) :: frz_dqc
-    real(RP) :: frz_dnc
+    real(RP) :: frz_dnc(KA)
     real(RP) :: frz_dqr
-    real(RP) :: frz_dnr
+    real(RP) :: frz_dnr(KA)
     real(RP) :: mlt_dqi
-    real(RP) :: mlt_dni
+    real(RP) :: mlt_dni(KA)
     real(RP) :: mlt_dqs
-    real(RP) :: mlt_dns
+    real(RP) :: mlt_dns(KA)
     real(RP) :: mlt_dqg
-    real(RP) :: mlt_dng
+    real(RP) :: mlt_dng(KA)
+    real(RP) :: dep_qv
     real(RP) :: dep_dqi(KA)
     real(RP) :: dep_dni(KA)
     real(RP) :: dep_dqs(KA)
@@ -5264,21 +5254,6 @@ contains
        dep_dnr(k) = max( dt*PQ(k,I_NRdep)*fac1, -rhoq2(k,I_NR) ) ! ss>0 dep=0, ss<0 dep<0
 
        qc_evaporate(k) = - dep_dnc(k) ! [Add] Y.Sato 15/09/08
-
-       !--- reduce charge density of cloud and rain by evaporation
-       if (flg_lt) then
-          sw = 0.5_RP - sign( 0.5_RP, rhoq2(k,I_NC)-SMALL ) !--- if NC is small,  ignore charge transfer
-          dep_dnc_crg = dep_dnc(k) * ( 1.0_RP-sw ) / ( rhoq2(k,I_NC)+sw ) * rhoq2_crg(k,I_QC)
-          sw = min( abs(rhoq2_crg(k,I_QC)),abs(dep_dnc_crg) )
-          dep_dnc_crg = sign( sw,dep_dnc_crg )
-          drhoqcrg_c(k) = dep_dnc_crg
-
-          sw = 0.5_RP - sign( 0.5_RP, rhoq2(k,I_NR)-SMALL ) !--- if NR is small,  ignore charge transfer
-          dep_dnr_crg = dep_dnr(k) * ( 1.0_RP-sw ) / ( rhoq2(k,I_NR)+sw ) * rhoq2_crg(k,I_QR)
-          sw = min( abs(rhoq2_crg(k,I_QR)),abs(dep_dnr_crg) )
-          dep_dnr_crg = sign( sw,dep_dnr_crg )
-          drhoqcrg_r(k) = dep_dnr_crg
-       end if
     end do
 
     !--- deposition/sublimation
@@ -5328,144 +5303,76 @@ contains
        dep_dni(k) = max( dt*PQ(k,I_NIdep)*fac2, -rhoq2(k,I_NI) ) ! ss>0 dep=0, ss<0 dep<0
        dep_dns(k) = max( dt*PQ(k,I_NSdep)*fac2, -rhoq2(k,I_NS) ) ! ss>0 dep=0, ss<0 dep<0
        dep_dng(k) = max( dt*PQ(k,I_NGdep)*fac2, -rhoq2(k,I_NG) ) ! ss>0 dep=0, ss<0 dep<0
-
-       !--- for Charge density
-       if (flg_lt) then
-          sw = 0.5_RP - sign( 0.5_RP, rhoq2(k,I_NI)-SMALL ) !--- if NI is small,  ignore charge transfer
-          dep_dni_crg = dep_dni(k)*( 1.0_RP-sw )/( rhoq2(k,I_NI)+sw ) * rhoq2_crg(k,I_QI)
-          sw = min( abs(rhoq2_crg(k,I_QI)),abs(dep_dni_crg) )
-          dep_dni_crg = sign( sw,dep_dni_crg )
-          drhoqcrg_i(k) = dep_dni_crg
-
-          sw = 0.5_RP - sign( 0.5_RP, rhoq2(k,I_NS)-SMALL ) !--- if NS is small,  ignore charge transfer
-          dep_dns_crg = dep_dns(k)*( 1.0_RP-sw )/( rhoq2(k,I_NS)+sw ) * rhoq2_crg(k,I_QS)
-          sw = min( abs(rhoq2_crg(k,I_QS)),abs(dep_dns_crg) )
-          dep_dns_crg = sign( sw,dep_dns_crg )
-          drhoqcrg_s(k) = dep_dns_crg
-
-          sw = 0.5_RP - sign( 0.5_RP, rhoq2(k,I_NG)-SMALL ) !--- if NG is small,  ignore charge transfer
-          dep_dng_crg = dep_dng(k)*( 1.0_RP-sw )/( rhoq2(k,I_NG)+sw ) * rhoq2_crg(k,I_QG)
-          sw = min( abs(rhoq2_crg(k,I_QG)),abs(dep_dng_crg) )
-          dep_dng_crg = sign( sw,dep_dng_crg )
-          drhoqcrg_g(k) = dep_dng_crg
-       end if
     end do
 
     !--- freezing of cloud drop
 !OCL LOOP_FISSION_TARGET(LS)
     do k = KS, KE
-       frz_dqc = max( dt*(PQ(k,I_LChom)+PQ(k,I_LChet)), -rhoq2(k,I_QC)-dep_dqc(k) ) ! negative value
-       frz_dnc = max( dt*(PQ(k,I_NChom)+PQ(k,I_NChet)), -rhoq2(k,I_NC)-dep_dnc(k) ) ! negative value
+       frz_dqc    = max( dt*(PQ(k,I_LChom)+PQ(k,I_LChet)), -rhoq2(k,I_QC)-dep_dqc(k) ) ! negative value
+       frz_dnc(k) = max( dt*(PQ(k,I_NChom)+PQ(k,I_NChet)), -rhoq2(k,I_NC)-dep_dnc(k) ) ! negative value
 
        drhoqc(k) =   frz_dqc
-       drhonc(k) =   frz_dnc
+       drhonc(k) =   frz_dnc(k)
        drhoqi(k) = - frz_dqc
-       drhoni(k) = - frz_dnc
+       drhoni(k) = - frz_dnc(k)
 
-       fac3    = ( frz_dqc-eps )/( dt*(PQ(k,I_LChom)+PQ(k,I_LChet))-eps )
-       fac4    = ( frz_dnc-eps )/( dt*(PQ(k,I_NChom)+PQ(k,I_NChet))-eps )
+       fac3    = ( frz_dqc   -eps )/( dt*(PQ(k,I_LChom)+PQ(k,I_LChet))-eps )
+       fac4    = ( frz_dnc(k)-eps )/( dt*(PQ(k,I_NChom)+PQ(k,I_NChet))-eps )
        PQ(k,I_LChom) = fac3*PQ(k,I_LChom)
        PQ(k,I_LChet) = fac3*PQ(k,I_LChet)
        PQ(k,I_NChom) = fac4*PQ(k,I_NChom)
        PQ(k,I_NChet) = fac4*PQ(k,I_NChet)
-       if (flg_lt) then
-          sw = 0.5_RP - sign( 0.5_RP, rhoq2(k,I_NC)-SMALL ) !--- if NI is small,  ignore charge transfer
-          frz_dnc_crg = frz_dnc*( 1.0_RP-sw )/( rhoq2(k,I_NC)+sw ) * rhoq2_crg(k,I_QC)
-          !--- limiter
-          sw = min( abs(rhoq2_crg(k,I_QC)+dep_dnc_crg),abs(frz_dnc_crg) )
-          frz_dnc_crg = sign( sw,frz_dnc_crg )
-          drhoqcrg_c(k) = drhoqcrg_c(k) + frz_dnc_crg
-          drhoqcrg_i(k) = drhoqcrg_i(k) - frz_dnc_crg
-       end if
     end do
 
     !--- melting
 !OCL LOOP_FISSION_TARGET(LS)
     do k = KS, KE
        ! ice change
-       mlt_dqi = max( dt*PQ(k,I_LImlt), -rhoq2(k,I_QI)-dep_dqi(k) )  ! negative value
-       mlt_dni = max( dt*PQ(k,I_NImlt), -rhoq2(k,I_NI)-dep_dni(k) )  ! negative value
+       mlt_dqi    = max( dt*PQ(k,I_LImlt), -rhoq2(k,I_QI)-dep_dqi(k) )  ! negative value
+       mlt_dni(k) = max( dt*PQ(k,I_NImlt), -rhoq2(k,I_NI)-dep_dni(k) )  ! negative value
 
        ! snow change
-       mlt_dqs = max( dt*PQ(k,I_LSmlt), -rhoq2(k,I_QS)-dep_dqs(k) )  ! negative value
-       mlt_dns = max( dt*PQ(k,I_NSmlt), -rhoq2(k,I_NS)-dep_dns(k) )  ! negative value
+       mlt_dqs    = max( dt*PQ(k,I_LSmlt), -rhoq2(k,I_QS)-dep_dqs(k) )  ! negative value
+       mlt_dns(k) = max( dt*PQ(k,I_NSmlt), -rhoq2(k,I_NS)-dep_dns(k) )  ! negative value
 
        ! graupel change
-       mlt_dqg = max( dt*PQ(k,I_LGmlt), -rhoq2(k,I_QG)-dep_dqg(k) )  ! negative value
-       mlt_dng = max( dt*PQ(k,I_NGmlt), -rhoq2(k,I_NG)-dep_dng(k) )  ! negative value
+       mlt_dqg    = max( dt*PQ(k,I_LGmlt), -rhoq2(k,I_QG)-dep_dqg(k) )  ! negative value
+       mlt_dng(k) = max( dt*PQ(k,I_NGmlt), -rhoq2(k,I_NG)-dep_dng(k) )  ! negative value
 
        xi = min(xi_max, max(xi_min, rhoq2(k,I_QI)/(rhoq2(k,I_NI)+ni_min) ))
        sw = 0.5_RP + sign(0.5_RP,xi-x_sep) ! if (xi>=x_sep) then sw=1 else sw=0
                                                   ! sw=1: large ice crystals turn into rain by melting
-       drhoqc(k) = drhoqc(k) - mlt_dqi * (1.0_RP-sw)
-       drhonc(k) = drhonc(k) - mlt_dni * (1.0_RP-sw)
 
-       drhoqr(k) =           - mlt_dqi * sw          - mlt_dqs - mlt_dqg
-       drhonr(k) =           - mlt_dni * sw          - mlt_dns - mlt_dng
+       drhoqc(k) = drhoqc(k) - mlt_dqi    * (1.0_RP-sw)
+       drhonc(k) = drhonc(k) - mlt_dni(k) * (1.0_RP-sw)
+
+       drhoqr(k) =           - mlt_dqi    * sw          - mlt_dqs    - mlt_dqg
+       drhonr(k) =           - mlt_dni(k) * sw          - mlt_dns(k) - mlt_dng(k)
 
        drhoqi(k) = drhoqi(k) + mlt_dqi
-       drhoni(k) = drhoni(k) + mlt_dni
+       drhoni(k) = drhoni(k) + mlt_dni(k)
 
-       drhoqs(k) =                                     mlt_dqs
-       drhons(k) =                                     mlt_dns
+       drhoqs(k) =                                        mlt_dqs
+       drhons(k) =                                        mlt_dns(k)
 
-       drhoqg(k) =                                               mlt_dqg
-       drhong(k) =                                               mlt_dng
-
-       !--- for charge density
-       if (flg_lt) then
-          sw2 = 0.5_RP - sign( 0.5_RP, rhoq2(k,I_NI)-SMALL ) !--- if NI is small,  ignore charge transfer   ! I -> C
-          mlt_dni_crg = mlt_dni*( 1.0_RP-sw2 ) / ( rhoq2(k,I_NI)+sw2 ) * rhoq2_crg(k,I_QI)
-
-          sw2 = 0.5_RP - sign( 0.5_RP, rhoq2(k,I_NS)-SMALL ) !--- if NS is small,  ignore charge transfer   ! S -> C
-          mlt_dns_crg = mlt_dns*( 1.0_RP-sw2 ) / ( rhoq2(k,I_NS)+sw2 ) * rhoq2_crg(k,I_QS)
-
-          sw2 = 0.5_RP - sign( 0.5_RP, rhoq2(k,I_NG)-SMALL ) !--- if NG is small,  ignore charge transfer   ! G -> C
-          mlt_dng_crg = mlt_dng*( 1.0_RP-sw2 ) / ( rhoq2(k,I_NG)+sw2 ) * rhoq2_crg(k,I_QG)
-
-          !--- limiter (|rhoq2(NC)| is already reduced by deposition (dep_dni_crg and -frz_dnc_crg) )
-          !-- Charge abs(frz_dnc_crg) is already moved from cloud to ice
-          sw2 = min( abs(rhoq2_crg(k,I_QI)+drhoqcrg_i(k)),abs(mlt_dni_crg) )
-          mlt_dni_crg = sign( sw2, mlt_dni_crg )
-          sw2 = min( abs(rhoq2_crg(k,I_QS)+drhoqcrg_s(k)),abs(mlt_dns_crg) )
-          mlt_dns_crg = sign( sw2, mlt_dns_crg )
-          sw2 = min( abs(rhoq2_crg(k,I_QG)+drhoqcrg_g(k)),abs(mlt_dng_crg) )
-          mlt_dng_crg = sign( sw2, mlt_dng_crg )
-
-          drhoqcrg_c(k) = drhoqcrg_c(k) - mlt_dni_crg * (1.0_RP-sw)
-          drhoqcrg_r(k) = drhoqcrg_r(k) - mlt_dni_crg * sw          - mlt_dns_crg - mlt_dng_crg
-          drhoqcrg_i(k) = drhoqcrg_i(k) + mlt_dni_crg
-          drhoqcrg_s(k) = drhoqcrg_s(k)                             + mlt_dns_crg
-          drhoqcrg_g(k) = drhoqcrg_g(k)                                           + mlt_dng_crg
-       end if
+       drhoqg(k) =                                                     mlt_dqg
+       drhong(k) =                                                     mlt_dng(k)
     end do
 
     !--- freezing of larger droplets
 !OCL LOOP_FISSION_TARGET(LS)
     do k = KS, KE
-       frz_dqr = max( dt*(PQ(k,I_LRhet)), min(0.0_RP, -rhoq2(k,I_QR)-dep_dqr(k)) ) ! negative value
-       frz_dnr = max( dt*(PQ(k,I_NRhet)), min(0.0_RP, -rhoq2(k,I_NR)-dep_dnr(k)) ) ! negative value
+       frz_dqr    = max( dt*(PQ(k,I_LRhet)), min(0.0_RP, -rhoq2(k,I_QR)-dep_dqr(k)) ) ! negative value
+       frz_dnr(k) = max( dt*(PQ(k,I_NRhet)), min(0.0_RP, -rhoq2(k,I_NR)-dep_dnr(k)) ) ! negative value
 
        drhoqr(k) = drhoqr(k) + frz_dqr
-       drhonr(k) = drhonr(k) + frz_dnr
+       drhonr(k) = drhonr(k) + frz_dnr(k)
        drhoqg(k) = drhoqg(k) - frz_dqr
-       drhong(k) = drhong(k) - frz_dnr
+       drhong(k) = drhong(k) - frz_dnr(k)
 
-       !--- for charge density
-       if (flg_lt) then
-          sw = 0.5_RP - sign( 0.5_RP, rhoq2(k,I_NR)-SMALL ) !--- if NR is small,  ignore charge transfer
-          frz_dnr_crg = frz_dnr*( 1.0_RP-sw ) /( rhoq2(k,I_NR)+sw ) * rhoq2_crg(k,I_QR)
-          !--- limiter
-          sw = min( abs(rhoq2_crg(k,I_QR)+dep_dnr_crg            ),abs(frz_dnr_crg) )
-          frz_dnr_crg = sign( sw,frz_dnr_crg )
-
-          drhoqcrg_r(k) = drhoqcrg_r(k) + frz_dnr_crg
-          drhoqcrg_g(k) = drhoqcrg_g(k) - frz_dnr_crg
-       end if
-
-       fac5         = ( frz_dqr-eps )/( dt*PQ(k,I_LRhet)-eps )
+       fac5         = ( frz_dqr   -eps )/( dt*PQ(k,I_LRhet)-eps )
        PQ(k,I_LRhet) = fac5*PQ(k,I_LRhet)
-       fac6         = ( frz_dnr-eps )/( dt*PQ(k,I_NRhet)-eps )
+       fac6         = ( frz_dnr(k)-eps )/( dt*PQ(k,I_NRhet)-eps )
        PQ(k,I_NRhet) = fac6*PQ(k,I_NRhet)
     end do
 
@@ -5541,8 +5448,94 @@ contains
        CPtot_t(k) = dcp/dt
     end do
 
-    ! tendency of charge density
-    if (flg_lt) then
+    !--- for Charge density
+    if ( flg_lt ) then
+
+       !--- reduce charge density of cloud and rain by evaporation
+       do k = KS, KE
+          sw = 0.5_RP - sign( 0.5_RP, rhoq2(k,I_NC)-SMALL ) !--- if NC is small,  ignore charge transfer
+          dep_dnc_crg = dep_dnc(k) * ( 1.0_RP-sw ) / ( rhoq2(k,I_NC)+sw ) * rhoq2_crg(k,I_QC)
+          sw = 0.5_RP - sign( 0.5_RP, rhoq2(k,I_NR)-SMALL ) !--- if NR is small,  ignore charge transfer
+          dep_dnr_crg = dep_dnr(k) * ( 1.0_RP-sw ) / ( rhoq2(k,I_NR)+sw ) * rhoq2_crg(k,I_QR)
+          !--- limiter
+          sw = min( abs(rhoq2_crg(k,I_QC)), abs(dep_dnc_crg) )
+          dep_dnc_crg = sign( sw, dep_dnc_crg )
+          sw = min( abs(rhoq2_crg(k,I_QR)), abs(dep_dnr_crg) )
+          dep_dnr_crg = sign( sw, dep_dnr_crg )
+
+          drhoqcrg_c(k) = dep_dnc_crg
+          drhoqcrg_r(k) = dep_dnr_crg
+       end do
+
+       do k = KS, KE
+          sw = 0.5_RP - sign( 0.5_RP, rhoq2(k,I_NI)-SMALL ) !--- if NI is small,  ignore charge transfer
+          dep_dni_crg = dep_dni(k) * ( 1.0_RP-sw ) / ( rhoq2(k,I_NI)+sw ) * rhoq2_crg(k,I_QI)
+          sw = 0.5_RP - sign( 0.5_RP, rhoq2(k,I_NS)-SMALL ) !--- if NS is small,  ignore charge transfer
+          dep_dns_crg = dep_dns(k) * ( 1.0_RP-sw ) / ( rhoq2(k,I_NS)+sw ) * rhoq2_crg(k,I_QS)
+          sw = 0.5_RP - sign( 0.5_RP, rhoq2(k,I_NG)-SMALL ) !--- if NG is small,  ignore charge transfer
+          dep_dng_crg = dep_dng(k) * ( 1.0_RP-sw ) / ( rhoq2(k,I_NG)+sw ) * rhoq2_crg(k,I_QG)
+          !--- limiter
+          sw = min( abs(rhoq2_crg(k,I_QI)), abs(dep_dni_crg) )
+          dep_dni_crg = sign( sw, dep_dni_crg )
+          sw = min( abs(rhoq2_crg(k,I_QS)), abs(dep_dns_crg) )
+          dep_dns_crg = sign( sw, dep_dns_crg )
+          sw = min( abs(rhoq2_crg(k,I_QG)), abs(dep_dng_crg) )
+          dep_dng_crg = sign( sw, dep_dng_crg )
+
+          drhoqcrg_i(k) = dep_dni_crg
+          drhoqcrg_s(k) = dep_dns_crg
+          drhoqcrg_g(k) = dep_dng_crg
+       end do
+
+       do k = KS, KE
+          sw = 0.5_RP - sign( 0.5_RP, rhoq2(k,I_NC)-SMALL ) !--- if NC is small,  ignore charge transfer
+          frz_dnc_crg = frz_dnc(k) * ( 1.0_RP-sw ) / ( rhoq2(k,I_NC)+sw ) * rhoq2_crg(k,I_QC)
+          !--- limiter
+          sw = min( abs(rhoq2_crg(k,I_QC) + drhoqcrg_c(k)), abs(frz_dnc_crg) )
+          frz_dnc_crg = sign( sw, frz_dnc_crg )
+
+          drhoqcrg_c(k) = drhoqcrg_c(k) + frz_dnc_crg
+          drhoqcrg_i(k) = drhoqcrg_i(k) - frz_dnc_crg
+       end do
+
+       do k = KS, KE
+          xi = min(xi_max, max(xi_min, rhoq2(k,I_QI)/(rhoq2(k,I_NI)+ni_min) ))
+          sw = 0.5_RP + sign(0.5_RP,xi-x_sep) ! if (xi>=x_sep) then sw=1 else sw=0
+                                              ! sw=1: large ice crystals turn into rain by melting
+          sw2 = 0.5_RP - sign( 0.5_RP, rhoq2(k,I_NI)-SMALL ) !--- if NI is small,  ignore charge transfer   ! I -> C
+          mlt_dni_crg = mlt_dni(k) * ( 1.0_RP-sw2 ) / ( rhoq2(k,I_NI)+sw2 ) * rhoq2_crg(k,I_QI)
+          sw2 = 0.5_RP - sign( 0.5_RP, rhoq2(k,I_NS)-SMALL ) !--- if NS is small,  ignore charge transfer   ! S -> C
+          mlt_dns_crg = mlt_dns(k) * ( 1.0_RP-sw2 ) / ( rhoq2(k,I_NS)+sw2 ) * rhoq2_crg(k,I_QS)
+          sw2 = 0.5_RP - sign( 0.5_RP, rhoq2(k,I_NG)-SMALL ) !--- if NG is small,  ignore charge transfer   ! G -> C
+          mlt_dng_crg = mlt_dng(k) * ( 1.0_RP-sw2 ) / ( rhoq2(k,I_NG)+sw2 ) * rhoq2_crg(k,I_QG)
+          !--- limiter (|rhoq2(NC)| is already reduced by deposition (dep_dni_crg and -frz_dnc_crg) )
+          !-- Charge abs(frz_dnc_crg) is already moved from cloud to ice
+          sw2 = min( abs(rhoq2_crg(k,I_QI) + drhoqcrg_i(k)), abs(mlt_dni_crg) )
+          mlt_dni_crg = sign( sw2, mlt_dni_crg )
+          sw2 = min( abs(rhoq2_crg(k,I_QS) + drhoqcrg_s(k)), abs(mlt_dns_crg) )
+          mlt_dns_crg = sign( sw2, mlt_dns_crg )
+          sw2 = min( abs(rhoq2_crg(k,I_QG) + drhoqcrg_g(k)), abs(mlt_dng_crg) )
+          mlt_dng_crg = sign( sw2, mlt_dng_crg )
+
+          drhoqcrg_c(k) = drhoqcrg_c(k) - mlt_dni_crg * (1.0_RP-sw)
+          drhoqcrg_r(k) = drhoqcrg_r(k) - mlt_dni_crg * sw          - mlt_dns_crg - mlt_dng_crg
+          drhoqcrg_i(k) = drhoqcrg_i(k) + mlt_dni_crg
+          drhoqcrg_s(k) = drhoqcrg_s(k)                             + mlt_dns_crg
+          drhoqcrg_g(k) = drhoqcrg_g(k)                                           + mlt_dng_crg
+       end do
+
+       do k = KS, KE
+          sw = 0.5_RP - sign( 0.5_RP, rhoq2(k,I_NR)-SMALL ) !--- if NR is small,  ignore charge transfer
+          frz_dnr_crg = frz_dnr(k) * ( 1.0_RP-sw ) / ( rhoq2(k,I_NR)+sw ) * rhoq2_crg(k,I_QR)
+          !--- limiter
+          sw = min( abs(rhoq2_crg(k,I_QR) + drhoqcrg_r(k)), abs(frz_dnr_crg) )
+          frz_dnr_crg = sign( sw, frz_dnr_crg )
+
+          drhoqcrg_r(k) = drhoqcrg_r(k) + frz_dnr_crg
+          drhoqcrg_g(k) = drhoqcrg_g(k) - frz_dnr_crg
+       end do
+
+       ! tendency of charge density
        do k = KS, KE
           RHOQcrg_t(k,I_QC) = drhoqcrg_c(k) / dt
           RHOQcrg_t(k,I_QR) = drhoqcrg_r(k) / dt
