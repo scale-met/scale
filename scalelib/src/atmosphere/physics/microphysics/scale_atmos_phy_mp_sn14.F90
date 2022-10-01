@@ -1301,6 +1301,7 @@ contains
        weightk(k) = 0.5_RP * ( 1.0_RP + tanh( PI * log( dq/d_vtr_branch ) ) )
     end do
     do k = KS, KE
+       dq = ( 4.0_RP + mud_r ) * rlambdar(k)
        velq_s = coef_vtr_ar2 * dq &
               * ( 1.0_RP - ( 1.0_RP + coef_vtr_br2*rlambdar(k) )**(-5.0_RP-mud_r) )
        velq_l = coef_vtr_ar1 &
@@ -1311,7 +1312,7 @@ contains
 
     end do
     do k = KS, KE
-       dq = ( 1.0_RP + mud_r ) * rlambdar(k)
+       dq = ( 1.0_RP + mud_r ) * rlambdar(k) ! D^(0)+mu weighted mean diameter
        weightk(k) = 0.5_RP * ( 1.0_RP + tanh( PI * log( dq/d_vtr_branch ) ) )
     end do
     do k = KS, KE
@@ -1328,9 +1329,7 @@ contains
     ! QI, NI
 !OCL LOOP_FISSION_TARGET(LS)
     do k = KS, KE
-!       rhofac_q(k) = ( PRES(k)/pre0_vt )**a_pre0_vt * ( TEMP(k)/tem0_vt )**a_tem0_vt
-!       xq = max( xqmin(I_mp_QI), min( xqmax(I_mp_QI), rhoq(k,I_QI) / ( rhoq(k,I_NI) + nqmin(I_mp_QI) ) ) )
-       log_rhofac_q(k) = log( PRES(k)/pre0_vt ) * a_pre0_vt + log( TEMP(k)/tem0_vt ) * a_tem0_vt
+       rhofac_q(k) = exp( log( PRES(k)/pre0_vt ) * a_pre0_vt + log( TEMP(k)/tem0_vt ) * a_tem0_vt )
        log_xq = log( max( xqmin(I_mp_QI), min( xqmax(I_mp_QI), rhoq(k,I_QI) / ( rhoq(k,I_NI) + nqmin(I_mp_QI) ) ) ) )
 
 !       tmp = a_m(I_mp_QI) * xq**b_m(I_mp_QI)
@@ -1340,28 +1339,17 @@ contains
        log_dq = log_coef_dave_L(I_mp_QI) + tmp
        weight = min( 1.0_RP, max( 0.0_RP, 0.5_RP * ( 1.0_RP + log_dq - log_d0_li ) ) )
 
-!       velq_s = coef_vt1(I_mp_QI,1) * xq**beta_v (I_mp_QI,1)
-!       velq_l = coef_vt1(I_mp_QI,2) * xq**beta_v (I_mp_QI,2)
-!       vterm(k,I_mp_QI) = -rhofac_q(k) * ( velq_l * (          weight ) &
-!                                         + velq_s * ( 1.0_RP - weight ) )
-       velq_s = log_coef_vt1(I_mp_QI,1) + log_xq * beta_v(I_mp_QI,1)
-       velq_l = log_coef_vt1(I_mp_QI,2) + log_xq * beta_v(I_mp_QI,2)
-       vterm(k,I_mp_QI) = - exp( log_rhofac_q(k) + velq_l * (          weight ) &
-                                                 + velq_s * ( 1.0_RP - weight ) )
-
-!       dq = coef_dave_N(I_mp_QI) * tmp
-!       weight = min( 1.0_RP, max( 0.0_RP, 0.5_RP * ( 1.0_RP + log( dq/d0_ni ) ) ) )
+       velq_s = exp( log_coef_vt1(I_mp_QI,1) + log_xq * beta_v(I_mp_QI,1) )
+       velq_l = exp( log_coef_vt1(I_mp_QI,2) + log_xq * beta_v(I_mp_QI,2) )
+       vterm(k,I_mp_QI) = - rhofac_q(k) * ( velq_l * (          weight ) &
+                                          + velq_s * ( 1.0_RP - weight ) )
        log_dq = log_coef_dave_N(I_mp_QI) + tmp
        weight = min( 1.0_RP, max( 0.0_RP, 0.5_RP * ( 1.0_RP + log_dq - log_d0_ni ) ) )
 
-!       velq_s = coef_vt0(I_mp_QI,1) * xq**beta_vn(I_mp_QI,1)
-!       velq_l = coef_vt0(I_mp_QI,2) * xq**beta_vn(I_mp_QI,2)
-!       vterm(k,I_mp_NI) = -rhofac_q(k) * ( velq_l * (          weight ) &
-!                                         + velq_s * ( 1.0_RP - weight ) )
-       velq_s = log_coef_vt0(I_mp_QI,1) + log_xq * beta_vn(I_mp_QI,1)
-       velq_l = log_coef_vt0(I_mp_QI,2) + log_xq * beta_vn(I_mp_QI,2)
-       vterm(k,I_mp_NI) = - exp( log_rhofac_q(k) + velq_l * (          weight ) &
-                                                 + velq_s * ( 1.0_RP - weight ) )
+       velq_s = exp( log_coef_vt0(I_mp_QI,1) + log_xq * beta_vn(I_mp_QI,1) )
+       velq_l = exp( log_coef_vt0(I_mp_QI,2) + log_xq * beta_vn(I_mp_QI,2) )
+       vterm(k,I_mp_NI) = - rhofac_q(k) * ( velq_l * (          weight ) &
+                                          + velq_s * ( 1.0_RP - weight ) )
     end do
 
     ! QS, NS
@@ -1376,28 +1364,18 @@ contains
        log_dq = log_coef_dave_L(I_mp_QS) + tmp
        weight = min( 1.0_RP, max( 0.0_RP, 0.5_RP * ( 1.0_RP + log_dq - log_d0_ls ) ) )
 
-!       velq_s = coef_vt1(I_mp_QS,1) * xq**beta_v (I_mp_QS,1)
-!       velq_l = coef_vt1(I_mp_QS,2) * xq**beta_v (I_mp_QS,2)
-!       vterm(k,I_mp_QS) = -rhofac_q(k) * ( velq_l * (          weight ) &
-!                                         + velq_s * ( 1.0_RP - weight ) )
-       velq_s = log_coef_vt1(I_mp_QS,1) + log_xq * beta_v(I_mp_QS,1)
-       velq_l = log_coef_vt1(I_mp_QS,2) + log_xq * beta_v(I_mp_QS,2)
-       vterm(k,I_mp_QS) = - exp( log_rhofac_q(k) + velq_l * (          weight ) &
-                                                 + velq_s * ( 1.0_RP - weight ) )
+       velq_s = exp( log_coef_vt1(I_mp_QS,1) + log_xq * beta_v(I_mp_QS,1) )
+       velq_l = exp( log_coef_vt1(I_mp_QS,2) + log_xq * beta_v(I_mp_QS,2) )
+       vterm(k,I_mp_QS) = - rhofac_q(k) * ( velq_l * (          weight ) &
+                                          + velq_s * ( 1.0_RP - weight ) )
 
-!       dq = coef_dave_N(I_mp_QS) * tmp
-!       weight = min( 1.0_RP, max( 0.0_RP, 0.5_RP * ( 1.0_RP + log( dq/d0_ns ) ) ) )
        log_dq = log_coef_dave_N(I_mp_QS) + tmp
        weight = min( 1.0_RP, max( 0.0_RP, 0.5_RP * ( 1.0_RP + log_dq - log_d0_ns ) ) )
 
-!       velq_s = coef_vt0(I_mp_QS,1) * xq**beta_vn(I_mp_QS,1)
-!       velq_l = coef_vt0(I_mp_QS,2) * xq**beta_vn(I_mp_QS,2)
-!       vterm(k,I_mp_NS) = -rhofac_q(k) * ( velq_l * (          weight ) &
-!                                         + velq_s * ( 1.0_RP - weight ) )
-       velq_s = log_coef_vt0(I_mp_QS,1) + log_xq * beta_vn(I_mp_QS,1)
-       velq_l = log_coef_vt0(I_mp_QS,2) + log_xq * beta_vn(I_mp_QS,2)
-       vterm(k,I_mp_NS) = - exp( log_rhofac_q(k) + velq_l * (          weight ) &
-                                                 + velq_s * ( 1.0_RP - weight ) )
+       velq_s = exp( log_coef_vt0(I_mp_QS,1) + log_xq * beta_vn(I_mp_QS,1) )
+       velq_l = exp( log_coef_vt0(I_mp_QS,2) + log_xq * beta_vn(I_mp_QS,2) )
+       vterm(k,I_mp_NS) = - rhofac_q(k) * ( velq_l * (          weight ) &
+                                          + velq_s * ( 1.0_RP - weight ) )
     end do
 
     ! QG, NG
@@ -1412,28 +1390,18 @@ contains
        log_dq = log_coef_dave_L(I_mp_QG) + tmp
        weight = min( 1.0_RP, max( 0.0_RP, 0.5_RP * ( 1.0_RP + log_dq - log_d0_lg ) ) )
 
-!       velq_s = coef_vt1(I_mp_QG,1) * xq**beta_v (I_mp_QG,1)
-!       velq_l = coef_vt1(I_mp_QG,2) * xq**beta_v (I_mp_QG,2)
-!       vterm(k,I_mp_QG) = -rhofac_q(k) * ( velq_l * (          weight ) &
-!                                         + velq_s * ( 1.0_RP - weight ) )
-       velq_s = log_coef_vt1(I_mp_QG,1) + log_xq * beta_v(I_mp_QG,1)
-       velq_l = log_coef_vt1(I_mp_QG,2) + log_xq * beta_v(I_mp_QG,2)
-       vterm(k,I_mp_QG) = - exp( log_rhofac_q(k) + velq_l * (          weight ) &
-                                                 + velq_s * ( 1.0_RP - weight ) )
+       velq_s = exp( log_coef_vt1(I_mp_QG,1) + log_xq * beta_v(I_mp_QG,1) )
+       velq_l = exp( log_coef_vt1(I_mp_QG,2) + log_xq * beta_v(I_mp_QG,2) )
+       vterm(k,I_mp_QG) = - rhofac_q(k) * ( velq_l * (          weight ) &
+                                          + velq_s * ( 1.0_RP - weight ) )
 
-!       dq = coef_dave_N(I_mp_QG) * tmp
-!       weight = min( 1.0_RP, max( 0.0_RP, 0.5_RP * ( 1.0_RP + log( dq/d0_ng ) ) ) )
        log_dq = log_coef_dave_N(I_mp_QG) + tmp
        weight = min( 1.0_RP, max( 0.0_RP, 0.5_RP * ( 1.0_RP + log_dq - log_d0_ng ) ) )
 
-!       velq_s = coef_vt0(I_mp_QG,1) * xq**beta_vn(I_mp_QG,1)
-!       velq_l = coef_vt0(I_mp_QG,2) * xq**beta_vn(I_mp_QG,2)
-!       vterm(k,I_mp_NG) = -rhofac_q(k) * ( velq_l * (          weight ) &
-!                                         + velq_s * ( 1.0_RP - weight ) )
-       velq_s = log_coef_vt0(I_mp_QG,1) + log_xq * beta_vn(I_mp_QG,1)
-       velq_l = log_coef_vt0(I_mp_QG,2) + log_xq * beta_vn(I_mp_QG,2)
-       vterm(k,I_mp_NG) = - exp( log_rhofac_q(k) + velq_l * (          weight ) &
-                                                 + velq_s * ( 1.0_RP - weight ) )
+       velq_s = exp( log_coef_vt0(I_mp_QG,1) + log_xq * beta_vn(I_mp_QG,1) )
+       velq_l = exp( log_coef_vt0(I_mp_QG,2) + log_xq * beta_vn(I_mp_QG,2) )
+       vterm(k,I_mp_NG) = - rhofac_q(k) * ( velq_l * (          weight ) &
+                                          + velq_s * ( 1.0_RP - weight ) )
     enddo
 
     do iq = 1, QA_MP-1
@@ -4602,7 +4570,7 @@ contains
     real(RP) :: nua, r_nua         ! kinematic viscosity of air
     real(RP) :: mua                ! viscosity of air
     real(RP) :: Kalfa(KA)          ! thermal conductance
-    real(RP) :: Dw                 ! diffusivity of water vapor
+    real(RP) :: Dw(KA)             ! diffusivity of water vapor
     real(RP) :: Dt                 ! diffusivity of heat
     real(RP) :: Gw, Gi             ! diffusion factor by balance between heat and vapor
     real(RP) :: Gwr, Gii, Gis, Gig ! for rain, ice, snow and graupel.
@@ -4660,13 +4628,13 @@ contains
        ! G:factor of thermal diffusion(1st.term) and vapor diffusion(2nd. term)
        ! SB06(23),(38), Lin et al(31),(52) or others
        ! Dw is introduced by Pruppacher and Klett(1997),(13-3)
-       Dw      = 0.211E-4_RP* (((temc_lim+T00)/T00)**1.94_RP) *(P00/pre_lim)
+       Dw(k)    = 0.211E-4_RP* (((temc_lim+T00)/T00)**1.94_RP) *(P00/pre_lim)
        Kalfa(k) = Ka0  + temc_lim*dKa_dT
        mua     = mua0 + temc_lim*dmua_dT
        nua     = mua/rho_lim
        r_nua   = 1.0_RP/nua
-       Gw      = (LHV0/Kalfa(k)/tem(k))*(LHV0/Rvap/tem(k)-1.0_RP)+(Rvap*tem(k)/Dw/esw(k))
-       Gi      = (LHS0/Kalfa(k)/tem(k))*(LHS0/Rvap/tem(k)-1.0_RP)+(Rvap*tem(k)/Dw/esi(k))
+       Gw      = (LHV0/Kalfa(k)/tem(k))*(LHV0/Rvap/tem(k)-1.0_RP)+(Rvap*tem(k)/Dw(k)/esw(k))
+       Gi      = (LHS0/Kalfa(k)/tem(k))*(LHS0/Rvap/tem(k)-1.0_RP)+(Rvap*tem(k)/Dw(k)/esi(k))
        ! capacities account for their surface geometries
        Gwr     = 4.0_RP*PI/cap(I_mp_QR)/Gw
        Gii     = 4.0_RP*PI/cap(I_mp_QI)/Gi
@@ -4674,7 +4642,7 @@ contains
        Gig     = 4.0_RP*PI/cap(I_mp_QG)/Gi
        ! vent: ventilation effect( asymmetry vapor field around particles due to aerodynamic )
        ! SB06 (30),(31) and each coefficient is by (88),(89)
-       Nsc_r3  = (nua/Dw)**(0.33333333_RP)                    ! (Schmidt number )^(1/3)
+       Nsc_r3  = (nua/Dw(k))**(0.33333333_RP)                    ! (Schmidt number )^(1/3)
        !
 !       Nrecs_r2 = sqrt(max(Re_min,min(Re_max,vt_xave(k,I_mp_QC,1)*dq_xave(k,I_mp_QC)*r_nua))) ! (Reynolds number)^(1/2) cloud
        Nrers_r2 = sqrt(max(Re_min,min(Re_max,vt_xave(k,I_mp_QR,1)*dq_xave(k,I_mp_QR)*r_nua))) ! (Reynolds number)^(1/2) rain
@@ -4776,7 +4744,7 @@ contains
        ! [fix] 08/05/08 T.Mitsui  LHF00 => EMELT  and  esw => PSAT0
        ! LHS0 is more suitable than LHS because melting occurs around 273.15 K.
        Gm      = 2.0_RP*PI/EMELT&
-               * ( (Kalfa(k)*Dt/Dw)*(temc) + (Dw*LHS0/Rvap)*(esi(k)/tem(k)-PSAT0/T00) )
+               * ( (Kalfa(k)*Dt/Dw(k))*(temc) + (Dw(k)*LHS0/Rvap)*(esi(k)/tem(k)-PSAT0/T00) )
        ! SB06(76)
        ! Notice! melting only occurs where T > 273.15 K else doesn't.
        ! [fix] 08/05/08 T.Mitsui, Gm could be both positive and negative value.
@@ -5056,7 +5024,7 @@ contains
     real(RP) :: dep_dnc_crg
     !
     real(RP) :: fac1, fac2, fac3, fac4, fac5, fac6
-    real(RP) :: r_rvaptem        ! 1/(Rvap*tem)
+    real(RP) :: r_rvaptem(KA)    ! 1/(Rvap*tem)
     real(RP) :: pv               ! vapor pressure
     real(RP) :: lvsw, lvsi       ! saturated vapor density
     real(RP) :: dlvsw, dlvsi     !
@@ -5160,9 +5128,9 @@ contains
 
 !OCL LOOP_FISSION_TARGET(LS)
     do k = KS, KE
-       r_rvaptem        = 1.0_RP/(Rvap*wtem(k))
-       lvsw             = esw(k)*r_rvaptem        ! rho=p/(Rv*T)
-       lvsi             = esi(k)*r_rvaptem        !
+       r_rvaptem(k)     = 1.0_RP/(Rvap*wtem(k))
+       lvsw             = esw(k)*r_rvaptem(k)     ! rho=p/(Rv*T)
+       lvsi             = esi(k)*r_rvaptem(k)     !
        pv               = rhoq2(k,I_QV)*Rvap*tem(k)
        r_esw            = 1.0_RP/esw(k)
        r_esi            = 1.0_RP/esi(k)
@@ -5281,8 +5249,7 @@ contains
 !          PQ(k,I_NIdep) = 0.0_RP
 !       end if
 
-       r_rvaptem = 1.0_RP/(Rvap*wtem(k))
-       lvsw    = esw(k)*r_rvaptem
+       lvsw    = esw(k)*r_rvaptem(k)
        dlvsw   = rhoq2(k,I_QV)-lvsw
        dcnd    = dt*(PQ(k,I_LCdep)+PQ(k,I_LRdep))
 
@@ -5342,7 +5309,7 @@ contains
        !--- deposition/sublimation
 !OCL LOOP_FISSION_TARGET(LS)
     do k = KS, KE
-       lvsi    = esi(k)*r_rvaptem
+       lvsi    = esi(k)*r_rvaptem(k)
        ddep    = dt*(PQ(k,I_LIdep)+PQ(k,I_LSdep)+PQ(k,I_LGdep))
        dlvsi   = rhoq2(k,I_QV)-lvsi  ! limiter for esi>1.d0
 
