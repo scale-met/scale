@@ -124,12 +124,16 @@ contains
        FILE_Close_All
     use scale_prc, only: &
        PRC_MPIfinish
+    use scale_const, only: &
+       CONST_finalize
     implicit none
     !---------------------------------------------------------------------------
 
     call PROF_rapend( 'Main', 0 )
 
     call FILE_Close_All
+
+    call CONST_finalize
 
     call PROF_rapreport
 
