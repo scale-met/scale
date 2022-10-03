@@ -280,7 +280,107 @@ module scale_atmos_phy_mp_sn14
   integer, parameter :: I_LGacLS2LG   = 23 ! snow-graupel
   integer, parameter :: I_NGacNS2NG   = 24
 
+!!kondo
+  integer, parameter :: I_LRacLG2LR   = 27
+  integer, parameter :: I_NRacNG2NR   = 28
+  integer, parameter :: I_LIacLG2LG   = 29
+  integer, parameter :: I_NIacNG2NG   = 30
+
+  integer, parameter :: Pac_MAX_so22  = 30
+!!kodno
+
   integer, parameter :: Pac_MAX       = 24
+
+!!  [Add] 22/09/29 M.Kondo
+  integer, private, parameter :: w_nmax = PQ_MAX+Pac_MAX_so22 ! Pac_MAX?
+  character(len=H_SHORT), private :: w_name(w_nmax)
+
+  data w_name / 'I_LCccn', &
+                'I_NCccn', &
+                'I_LIccn', &
+                'I_NIccn', &
+                'I_LChom', &
+                'I_NChom', &
+                'I_LChet', &
+                'I_NChet', &
+                'I_LRhet', &
+                'I_NRhet', &
+                'I_LImlt', &
+                'I_NImlt', &
+                'I_LSmlt', &
+                'I_NSmlt', &
+                'I_LGmlt', &
+                'I_NGmlt', &
+                'I_LRdep', &
+                'I_NRdep', &
+                'I_LIdep', &
+                'I_NIdep', &
+                'I_LSdep', &
+                'I_NSdep', &
+                'I_LGdep', &
+                'I_NGdep', &
+                'I_LCdep', &
+                'I_LCaut', &
+                'I_NCaut', &
+                'I_NRaut', &
+                'I_LCacc', &
+                'I_NCacc', &
+                'I_NRslc', &
+                'I_NRbrk', &
+                'I_LIcon', &
+                'I_NIcon', &
+                'I_LScon', &
+                'I_NScon', &
+                'I_LIacm', &
+                'I_NIacm', &
+                'I_LIarm', &
+                'I_NIarm', &
+                'I_LSacm', &
+                'I_NSacm', &
+                'I_LSarm', &
+                'I_NSarm', &
+                'I_LGacm', &
+                'I_NGacm', &
+                'I_LGarm', &
+                'I_NGarm', &
+                'I_LGspl', &
+                'I_LSspl', &
+                'I_NIspl', &
+                'I_LIacLC2LI', & ! cloud-ice
+                'I_NIacNC2NI', &
+                'I_LSacLC2LS', & ! cloud-snow(cloud change)
+                'I_NSacNC2NS', &
+                'I_LGacLC2LG', & ! cloud-graupel
+                'I_NGacNC2NG', &
+                'I_LRacLI2LG_I', & ! rain-ice(ice change)
+                'I_NRacNI2NG_I', &
+                'I_LRacLI2LG_R', & ! rain-ice(rain change)
+                'I_NRacNI2NG_R', &
+                'I_LRacLS2LG_S', & ! rain-snow(snow change)
+                'I_NRacNS2NG_S', &
+                'I_LRacLS2LG_R', & ! rain-snow(rain change)
+                'I_NRacNS2NG_R', &
+                'I_LRacLG2LG', & ! rain-graupel(rain change)
+                'I_NRacNG2NG', &
+                'I_LIacLI2LS', & ! ice-ice
+                'I_NIacNI2NS', &
+                'I_LIacLS2LS', & ! ice-snow(ice change)
+                'I_NIacNS2NS', &
+                'I_NSacNS2NS', & ! snow-snow
+                'I_NGacNG2NG', & ! graupel-graupel
+                'I_LGacLS2LG', & ! snow-graupel
+                'I_NGacNS2NG', &
+                'I_CGNGacNS2NG', & ! [Add] charge
+                'I_CGNGacNI2NG', & ! [Add] charge
+                'I_LRacLG2LR', & ! [Add] by SO22
+                'I_NRacNG2NR', & ! [Add] by SO22
+                'I_LIacLG2LG', & ! [Add] by SO22
+                'I_NIacNG2NG'  / ! [Add] by SO22
+  real(RP), private, allocatable :: w3d(:,:,:,:) !< for history output
+  integer,  private              :: HIST_id(w_nmax)
+  integer,  private              :: ip
+!!
+
 
   ! for charge density
   integer, parameter :: I_CGNGacNS2NG = 25
@@ -503,6 +603,8 @@ module scale_atmos_phy_mp_sn14
   logical, private, save :: opt_debug_ree=.true.
   logical, private, save :: opt_debug_bcs=.true.
 
+  logical, save, private :: opt_collection_bin = .false. ! [Add] 22/09/29 M.Kondo
+
   logical, private, save :: MP_doautoconversion = .true.
   logical, private, save :: MP_couple_aerosol   = .false. ! apply CCN effect?
   real(RP), private, save :: MP_ssw_lim = 1.E+1_RP
@@ -533,7 +635,7 @@ module scale_atmos_phy_mp_sn14
   real(RP), private, save :: tem_in_low =173.150_RP  ! = -100 degC ! [Add] 10/08/03 T.Mitsui
   logical,  private, save :: nucl_twomey = .false.
   logical,  private, save :: inucl_w     = .false.
-
+  logical,  private, save :: so22_het     = .false. ! [Add] 22/09/28 M.Kondo
 
   ! for incomplete gamma function
   real(RP), private, parameter :: rc_cr= 12.E-6_RP ! critical size[micron]
@@ -636,6 +738,12 @@ contains
 
     allocate(nc_uplim_d(1,IA,JA))
     nc_uplim_d(:,:,:) = 150.E6_RP
+
+!! [Add] 22/09/29 M.Kondo
+    allocate( w3d(KA,IA,JA,w_nmax) )
+    w3d(:,:,:,:) = 0.0_RP
+!!
+
 
     return
   end subroutine ATMOS_PHY_MP_sn14_setup
@@ -1432,6 +1540,7 @@ contains
          opt_debug_act,              &
          opt_debug_ree,              &
          opt_debug_bcs,              &
+         opt_collection_bin,         &  !! [Add] 22/09/29 M.Kondo
          ntmax_phase_change,         &
          ntmax_collection
     !
@@ -1452,7 +1561,8 @@ contains
          tem_ccn_low,                & ! [Add] 10/08/03 T.Mitsui
          tem_in_low,                 & ! [Add] 10/08/03 T.Mitsui
          ssw_max, ssi_max,           &
-         nucl_twomey, inucl_w        ! [Add] 13/01/30 Y.Sato
+         nucl_twomey, inucl_w,        & ! [Add] 13/01/30 Y.Sato
+         so22_het
 
     namelist / PARAM_ATMOS_PHY_MP_SN14_collection / &
          dc0, dc1, di0, ds0, dg0,    &
@@ -2143,6 +2253,13 @@ contains
     use scale_atmos_saturation, only: &
        moist_psat_liq      => ATMOS_SATURATION_psat_liq,   &
        moist_psat_ice      => ATMOS_SATURATION_psat_ice
+
+!! [Add] 22/09/29 M.Kondo
+    use scale_file_history, only: &
+       FILE_HISTORY_in
+!!
+
+
     implicit none
 
     integer, intent(in) :: KA, KS, KE
@@ -2218,7 +2335,12 @@ contains
     real(RP) :: wrm_dqr, wrm_dnr
 
     ! production rate of mixed-phase collection process
-    real(RP) :: Pac(KA,Pac_MAX)
+!!kondo
+!    if( opt_collection_bin ) then
+    real(RP) :: Pac(KA,Pac_MAX_so22)
+!    else
+!    real(RP) :: Pac(KA,Pac_MAX)
+!!kodno
     real(RP) :: gc_dqc, gc_dnc
     real(RP) :: sc_dqc, sc_dnc
     real(RP) :: ic_dqc, ic_dnc
@@ -2352,6 +2474,11 @@ contains
     real(RP) :: tmp
     integer :: ip
     !---------------------------------------------------------------------------
+
+!!  [Add] 22/09/29 M.Kondo
+    logical :: HIST_sw(w_nmax), hist_flag
+!!
+
 
     !---------------------------------------------------------------------------
 
@@ -2837,6 +2964,24 @@ contains
           end do
        endif
 
+!! kondo
+    if( opt_collection_bin ) then
+       call mixed_phase_collection_bin(            &
+      ! collection process
+            KA, KS, KE,                        & ! (in)
+            flg_lt_l,                          & ! (in)
+            d0_crg_l, v0_crg_l,                & ! (in)
+            beta_crg(:,i,j),                   & ! (in)
+            dqcrg(:,i,j),                      & ! (in)
+            temp(:), rhoq2(:,:),               & ! (in)
+            rhoq2_crg(:,:),                    & ! (in)
+            xq(:,:), dq_xa(:,:), vt_xa(:,:,:), & ! (in)
+            DENS(:,i,j),                       & ! (in)
+            PQ(:,:),                           & ! (inout)
+            Pcrg1(:,:),                        & ! (inout)
+            Pcrg2(:,:),                        & ! (inout)
+            Pac(:,:)                           ) ! (out)
+    else
       ! collection process
        call mixed_phase_collection(            &
             KA, KS, KE,                        & ! (in)
@@ -2851,6 +2996,8 @@ contains
             Pcrg1(:,:),                        & ! (inout)
             Pcrg2(:,:),                        & ! (inout)
             Pac(:,:)                           ) ! (out)
+    endif
+!! kondo
 
        call ice_multiplication(  &
             KA, KS, KE,          & ! (in)
@@ -3065,6 +3212,20 @@ contains
        enddo
        enddo
 
+!! [Add] 22/09/29 M.Kondo
+       do ip = 1, PQ_MAX+Pac_MAX_so22 ! SO22?
+    do k = KS, KE
+       tmp = 0.0_RP
+       if(ip<=PQ_MAX) then
+          tmp = PQ(k,ip)
+          w3d(k,i,j,ip) = tmp
+          else
+          tmp = Pac(k,ip-PQ_MAX)
+          w3d(k,i,j,ip) = tmp
+        endif
+    enddo
+       enddo
+!!
 
        !--- for lithgning component
        if ( flg_lt_l ) then
@@ -3251,6 +3412,12 @@ contains
     end do
     end do
 
+!! [Add] 22/09/29 M.Kondo
+    do ip = 1, w_nmax
+       call FILE_HISTORY_in( w3d(:,:,:,ip),      w_name(ip),  'individual tendency term in SN14', 'kg/kg/s',    fill_halo=.true. )
+    enddo
+!!
+
     return
   end subroutine mp_sn14
 
@@ -3307,7 +3474,10 @@ contains
        moist_psat_ice       => ATMOS_SATURATION_psat_ice,   &
        moist_pres2qsat_liq  => ATMOS_SATURATION_pres2qsat_liq, &
        moist_pres2qsat_ice  => ATMOS_SATURATION_pres2qsat_ice,   &
-       moist_dqsi_dtem_dens => ATMOS_SATURATION_dqs_dtem_dens_liq
+       moist_dqsi_dtem_dens => ATMOS_SATURATION_dqs_dtem_dens_liq, & ! [Add] 22/09/27 M.Kondo
+       moist_dqs_dtem_dpre_ice => ATMOS_SATURATION_dqs_dtem_dpre_ice ! [Add] 22/09/27 M.Kondo
+    !! SO22 M.Kondo 2022
+
     implicit none
 
     integer, intent(in) :: KA, KS, KE
@@ -3353,6 +3523,17 @@ contains
     real(RP) :: dssidt_rad(KA)
     real(RP) :: wssi, wdssi
     !
+
+    !! M.Kondo 2022
+    real(RP) :: wtem(KA)         ! temperature[K]
+    real(RP) :: dqsidpre_tem(KA)
+    real(RP) :: dqsidtem_pre(KA)
+    real(RP) :: dssidt
+    real(RP) :: dssidt_mp(KA)
+    real(RP) :: dssidt_dyn(KA)
+    !!
+
+
 !    real(RP) :: xi_nuc(1)    ! xi use the value @ cloud base
 !    real(RP) :: alpha_nuc(1) ! alpha_nuc
 !    real(RP) :: eta_nuc(1)   ! xi use the value @ cloud base
@@ -3386,6 +3567,16 @@ contains
     integer :: k
     !
     !
+
+    if( so22_het ) then
+    do k = KS, KE
+       ! Temperature lower limit is only used for saturation condition.
+       ! On the other hand original "tem" is used for calculation of latent heat or energy equation. [Add] 22/09/27 M.Kondo
+       wtem(k)  = max( tem(k), tem_min )
+    end do
+    endif
+
+
 !    c_ccn_map(1) = c_ccn
 !    kappa_map(1) = kappa
 !    c_in_map(1)  = c_in
@@ -3407,6 +3598,16 @@ contains
     call moist_dqsi_dtem_dens( KA, KS, KE, &
                                tem(:), rho(:), & ! [IN]
                                dqsidtem_rho(:) ) ! [OUT]
+
+    !! SO22 M.Kondo
+    if( so22_het ) then
+    call moist_dqs_dtem_dpre_ice( KA, KS, KE, &
+                                  wtem(:), pre(:), qdry(:),        & ! [IN]
+                                  dqsidtem_pre(:), dqsidpre_tem(:) ) ! [OUT]
+    endif
+    !!
+
+
     !
     ! Lohmann (2002),JAS, eq.(1) but changing unit [cm-3] => [m-3]
     a_max = 1.E+6_RP*0.1_RP*(1.E-6_RP)**1.27_RP
@@ -3589,14 +3790,46 @@ contains
        dni_max       = min( dli_max/xi_ccn, (in_max-rhoq(k,I_NI))*rdt )
        wdssi         = min( w_dssidz(k)+dssidt_rad(k), 0.01_RP)
        wssi          = min( ssi(k), ssi_max)
+
+       !! Seiki and Ohno 2022 by M.Kondo 2022
+       if( so22_het ) then
+       dssidt_mp(k)  = -PQ(k,I_LIdep)/(rho(k)*qsi(k))
+       !!  PLIdep(k) -> PQ(k,I_LIdep)
+       dssidt_rad(k) = -rhoq(k,I_QV)/(rho(k)*qsi(k)*qsi(k))*dqsidtem_rho(k)*dTdt_rad(k)
+       !!
+       dssidt_dyn(k) = +rhoq(k,I_QV)/(rho(k)*qsi(k)*qsi(k))&
+            * velz(k)*GRAV*(dqsidtem_pre(k)/cpa(k)+dqsidpre_tem(k)*rho(k))
+       !    * w(k)*CNST_GRAV*(dqsidtem_pre(ij,k)/cpa(ij,k)+dqsidpre_tem(ij,k)*rho(ij,k))
+       dssidt        = dssidt_mp(k) + dssidt_rad(k) + dssidt_dyn(k)
+       endif
+
+       !! SO22 M.Kondo 2022
+
        ! SB06(34),(35)
-       if(  ( wdssi       > eps         ) .AND. & !
-            (tem(k)       < 273.15_RP   ) .AND. & !
+!#       if(  ( wdssi       > eps         ) .AND. & !
+!#            (tem(k)       < 273.15_RP   ) .AND. & !
+!#            (rhoq(k,I_NI) < in_max      ) .AND. &
+!#            (wssi      >= eps       ) )then   !
+!#          tmp = c_in * nm_M92 * exp( 0.3_RP * bm_M92 * ( wssi - 0.1_RP ) )
+!#          if( inucl_w ) then
+!#             tmp = bm_M92 * 0.3_RP * tmp * wdssi
+!#          else
+!#             tmp = max( tmp - rhoq(k,I_NI), 0.0_RP ) * rdt
+!#          endif
+!#          PQ(k,I_NIccn) = min(dni_max, tmp)
+!#          PQ(k,I_LIccn) = min(dli_max, PQ(k,I_NIccn)*xi_ccn )
+!#       else
+!#          PQ(k,I_NIccn) = 0.0_RP
+!#          PQ(k,I_LIccn) = 0.0_RP
+!#       end if
+       if(  (tem(k)       < 273.15_RP   ) .AND. & !
             (rhoq(k,I_NI) < in_max      ) .AND. &
-            (wssi      >= eps       ) )then   !
+            (wssi        >= eps       ) )then   !
           tmp = c_in * nm_M92 * exp( 0.3_RP * bm_M92 * ( wssi - 0.1_RP ) )
-          if( inucl_w ) then
+          if( inucl_w .and. wdssi > eps ) then
              tmp = bm_M92 * 0.3_RP * tmp * wdssi
+          elseif( so22_het .and. dssidt > eps ) then
+             tmp = bm_M92 * 0.3_RP * tmp * dssidt
           else
              tmp = max( tmp - rhoq(k,I_NI), 0.0_RP ) * rdt
           endif
@@ -3606,6 +3839,8 @@ contains
           PQ(k,I_NIccn) = 0.0_RP
           PQ(k,I_LIccn) = 0.0_RP
        end if
+
+
     end do
 
     return
@@ -3628,7 +3863,13 @@ contains
 
     integer, intent(in) :: KA, KS, KE
     !
-    real(RP), intent(in) :: Pac(KA,Pac_MAX)
+!!kondo
+!    if( opt_collection_bin ) then
+    real(RP), intent(in) :: Pac(KA,Pac_MAX_so22)
+!    else
+!    real(RP), intent(in) :: Pac(KA,Pac_MAX)
+!    endif
+!!kondo
     real(RP), intent(in) :: tem(KA)
     real(RP), intent(in) :: rhoq(KA,I_QV:I_NG)
     real(RP), intent(in) :: xq(KA,HYDRO_MAX)
@@ -4380,6 +4621,736 @@ contains
 
     return
   end subroutine mixed_phase_collection
+
+!!kondo
+  subroutine mixed_phase_collection_bin(   &
+    !!!!from default SN14
+    ! collection process
+       KA, KS, KE,            & ! in
+       flg_lt,                & ! in
+       d0_crg, v0_crg,        & ! in
+       beta_crg, dqcrg,       & ! in
+       wtem, rhoq, rhoq_crg,  & ! in
+       xq, dq_xave,  vt_xave, & ! in
+       rho,                   & ! in ! [Add] 22/09/27 M.Kondo
+       PQ,                    & ! inout
+       Pcrg1, Pcrg2,          & ! inout
+       Pac                    ) ! out
+
+    use scale_atmos_saturation, only: &
+       moist_psat_ice => ATMOS_SATURATION_psat_ice
+    use scale_prc, only: &
+       PRC_abort
+
+    implicit none
+
+    integer, intent(in) :: KA, KS, KE
+
+    !--- mixed-phase collection process
+    !                  And all we set all production term as a negative sign to avoid confusion.
+    !
+    real(RP), intent(in) :: wtem(KA)
+    !--- mass/number concentration[kg/m3]
+    real(RP), intent(in) :: rhoq(KA,I_QV:I_NG)
+    real(RP), intent(in) :: rho(KA) ! air density [Add] 22/09/27 M.Kondo
+    ! necessary ?
+    real(RP), intent(in) :: xq(KA,HYDRO_MAX)
+    !--- diameter of averaged mass( D(ave x) )
+    real(RP), intent(in) :: dq_xave(KA,HYDRO_MAX)
+    !--- terminal velocity of averaged mass( vt(ave x) )
+    real(RP), intent(in) :: vt_xave(KA,HYDRO_MAX,2)
+    ! [Add] 11/08/30 T.Mitsui, for autoconversion of ice
+    !    real(RP), intent(in) :: rho(KA)
+    !--- partial conversion
+    real(RP), intent(inout):: PQ(KA,PQ_MAX)
+    !
+    real(RP), intent(out):: Pac(KA,Pac_MAX_so22)
+    !--- for lightning component
+    logical,  intent(in) :: flg_lt
+    real(RP), intent(in) :: beta_crg(KA)
+    real(RP), intent(in) :: dqcrg(KA)
+    real(RP), intent(in) :: d0_crg, v0_crg
+    real(RP), intent(in) :: rhoq_crg(KA,I_QC:I_QG)
+    real(RP), intent(inout):: Pcrg1(KA,PQ_MAX)
+    real(RP), intent(inout):: Pcrg2(KA,Pcrg_MAX)
+
+    real(RP), parameter :: a_dec = 0.883_RP
+    real(RP), parameter :: b_dec = 0.093_RP
+    real(RP), parameter :: c_dec = 0.00348_RP
+    real(RP), parameter :: d_dec = 4.5185E-5_RP
+    !
+    !!!!from default SN14
+
+    real(RP), save :: rhow=1000.0_RP    ! [kg/m3] ! [Add] 22/09/29 M.Kondo
+
+
+    ! from Seiki and Ohno (2022) by M. Kondo 22/09/27
+    logical, save :: opt_stick_rhH57=.false.  ! [Add] 15/05/19 T.Seiki
+    logical, save :: opt_stick_rhKS96=.false. ! [Add] 15/05/19 T.Seiki
+    real(RP), save :: tem_min_estick=253.0_RP
+
+    logical, save :: opt_stick_C12=.false.
+    real(RP), parameter :: E_C12(6)=(/&
+         0.010_RP, 0.080_RP, 0.10_RP, 0.60_RP, 0.20_RP, 0.10_RP/)
+
+    logical, save :: flag_first = .true.
+    real(RP) :: tem(KA)
+    !
+    !--- collection efficency of each specie
+    real(RP) :: E_c(KA), E_r, E_i, E_s, E_g
+!    real(RP) ::  E_ic, E_sc, E_gc
+    !--- sticking efficiency
+    real(RP):: E_stick(KA)
+    ! [Add] 10/08/03 T.Mitsui
+    real(RP) :: temc, temc2, temc3
+    real(RP) :: E_dec
+    real(RP) :: esi_rat(KA)  ! M.kondo based on [Mod] 15/05/19 T.Seiki scalar=>array 
+    real(RP) :: esi(KA)
+    !
+    real(RP) :: temc_p, temc_m             ! celcius tem.
+!    real(RP) :: ci_aut(KA)
+!    real(RP) :: taui_aut(KA)
+!    real(RP) :: tau_sce(KA)
+    !--- DSD averaged diameter for each species
+    real(RP) :: ave_dc                     ! cloud
+!    real(RP) :: ave_dr                     ! rain
+    real(RP) :: ave_di(KA)                 ! ice
+    real(RP) :: ave_ds(KA)                 ! snow
+    real(RP) :: ave_dg                     ! graupel
+    !--- coefficient of collection equations(L:mass, N:number)
+    real(RP) :: coef_acc_LCI,   coef_acc_NCI   ! cloud     - cloud ice
+    real(RP) :: coef_acc_LCS,   coef_acc_NCS   ! cloud     - snow
+    !
+    real(RP) :: coef_acc_LCG,   coef_acc_NCG   ! cloud     - graupel
+    real(RP) :: coef_acc_LRI_I, coef_acc_NRI_I ! rain      - cloud ice
+    real(RP) :: coef_acc_LRI_R, coef_acc_NRI_R ! rain      - cloud ice
+    real(RP) :: coef_acc_LRS_S, coef_acc_NRS_S ! rain      - snow
+    real(RP) :: coef_acc_LRS_R, coef_acc_NRS_R ! rain      - snow
+    real(RP) :: coef_acc_LRG,   coef_acc_NRG   ! rain      - graupel
+    real(RP) :: coef_acc_LII,   coef_acc_NII   ! cloud ice - cloud ice
+    real(RP) :: coef_acc_LIS,   coef_acc_NIS   ! cloud ice - snow
+    real(RP) ::                 coef_acc_NSS   ! snow      - snow
+    real(RP) ::                 coef_acc_NGG   ! grauepl   - graupel
+    real(RP) :: coef_acc_LSG,   coef_acc_NSG(KA) ! snow      - graupel
+    !--- (diameter) x (diameter)
+    real(RP) :: dcdc(KA), dcdi, dcds, dcdg
+    real(RP) :: drdr(KA), drdi(KA), drds(KA), drdg
+    real(RP) :: didi(KA), dids, didg
+    real(RP) :: dsds(KA), dsdg
+    real(RP) :: dgdg(KA)
+!#    !--- (terminal velocity) x (terminal velocity)
+!#    real(RP) :: vcvc(KA), vcvi, vcvs, vcvg
+!#    real(RP) :: vrvr(KA), vrvi(KA), vrvs(KA), vrvg
+!#    real(RP) :: vivi(KA), vivs, vivg
+!#    real(RP) :: vsvs(KA), vsvg
+!#    real(RP) :: vgvg(KA)
+    !
+!    real(RP) :: wx_cri, wx_crs
+!    real(RP) :: coef_emelt
+!    real(RP) :: w1
+
+    real(RP) :: sw, sw1, sw2
+    real(RP) :: alpha_lt
+    !
+    integer  :: k, iqw
+    !
+
+!!!    namelist /nm_mp_ndw6_collection/ &
+    namelist / PARAM_ATMOS_PHY_MP_SN14_collection_bin / &
+         dc0, dc1, di0, ds0, dg0,    &
+         opt_stick_KS96,   &
+         opt_stick_CO86,   &
+         tem_min_estick,   &
+         opt_stick_rhH57,  &
+         opt_stick_rhKS96, &
+         opt_stick_C12,    &
+         E_im, E_sm, E_gm, &
+         E_ir, E_sr, E_gr, E_ii, E_si, E_gi, E_ss, E_gs, E_gg, &
+         i_iconv2g, i_sconv2g, rho_g, cfill_i, cfill_s, di_cri
+
+    real(RP) :: tem_e(KA) ! [Add] 15/05/19 T.Seiki
+
+
+    !
+    ! work for binary collision
+    !
+    real(RP) :: lambdac, lambdar, lambdai, lambdas, lambdag
+    real(RP) :: A_dsdc, A_dsdr, A_dsdi, A_dsds , A_dsdg
+    real(RP) :: dNdx
+    real(RP) :: dxdd
+    real(RP) :: dNdD
+    real(RP) :: dNc_glx, dNr_glx, dNi_glx, dNs_glx, dNg_glx
+    real(RP) :: dNc_gly, dNr_gly, dNi_gly, dNs_gly, dNg_gly
+    !
+    real(RP) :: dc_glx, dr_glx, di_glx, ds_glx, dg_glx
+    real(RP) :: dc_gly, dr_gly, di_gly, ds_gly, dg_gly
+    real(RP) :: xc_glx, xr_glx, xi_glx, xs_glx, xg_glx
+    real(RP) :: xc_gly, xr_gly, xi_gly, xs_gly, xg_gly
+
+    real(RP) :: vtc_glx, vtr_glx, vti_glx, vts_glx, vtg_glx
+    real(RP) :: vtc_gly, vtr_gly, vti_gly, vts_gly, vtg_gly
+    real(RP) :: dac_glx, dar_glx, dai_glx, das_glx, dag_glx
+    real(RP) :: dac_gly, dar_gly, dai_gly, das_gly, dag_gly
+    !
+    integer :: ngx, ngy
+    !
+    real(RP) :: E_ic, E_sc, E_gc
+    !
+    ! Parameters to calculate terminal velocity formulated by Mitchell (1996)
+    !
+    real(RP) :: acx, bcx, gcx, scx ! geometric parameters of hexagonal column ice defined by Mitchell (1996)
+    real(RP) :: acy, bcy, gcy, scy ! geometric parameters of hexagonal column ice defined by Mitchell (1996)
+    real(RP), parameter :: as = 0.59452551_RP
+    real(RP), parameter :: bs = 2.4490_RP
+    real(RP), parameter :: gs = 0.131488_RP
+    real(RP), parameter :: ss = 1.880000_RP
+    real(RP), save :: ag = 19.5072514_RP !0.049d0*1.d-3*(100.d0**2.8d0)
+    real(RP), save :: bg = 2.8_RP
+    real(RP), save :: gg = 0.5_RP
+    real(RP), save :: sg = 2.0_RP
+    real(RP) :: num_Besti_glx, num_Bests_glx, num_Bestg_glx
+    real(RP) :: num_Besti_gly, num_Bests_gly, num_Bestg_gly
+    real(RP) :: num_Rei_glx, num_Res_glx, num_Reg_glx
+    real(RP) :: num_Rei_gly, num_Res_gly, num_Reg_gly
+    real(RP), parameter :: c0=0.6_RP  ! Bohm (1989)
+    real(RP), parameter :: d0=5.83_RP ! Bohm (1989)
+    !
+    real(RP) :: mua, nua
+    !--- Dynamic viscosity
+    real(RP), parameter :: mua0 = 1.718e-5_RP
+    !<--- Kg/m/s : 0C/1atm
+    real(RP), parameter :: dmua_dT = 5.28e-8_RP
+    !<--- Kg/m/s/K : dependency of temperature
+    !======  mua = mua0 + temc*dmua_dT
+    !
+    ! collection Kernel
+    !
+    real(RP) :: kernel_cg, kernel_cs, kernel_ci
+    real(RP) :: kernel_rg, kernel_rs, kernel_ri
+    real(RP) :: kernel_ig, kernel_is, kernel_ii
+    real(RP) :: kernel_sg, kernel_ss
+    real(RP) :: kernel_gg
+    !
+    ! work for Gauss-Legendre quadrature
+    integer, parameter :: ngmax=4
+    !--------------------------
+    !
+    ! accurate for PSDs with optimization
+    !
+    !-------------------------------
+    ! cloud
+    ! gauss_range = 2.d0
+    ! ngmax = 4
+    ! rain,
+    ! gauss_range = xxx
+    ! ngmax = 4
+    ! ice, snow, graupel
+    ! gauss_range = 5.d0
+    ! ngmax = 4
+    !
+    real(RP), parameter :: gauss_rangec=2.0_RP
+    real(RP), parameter :: wc_gl(ngmax)=(/&
+         0.2411146051511425E+00_RP, &
+         0.4520325754088027E+00_RP, &
+         0.4520325754088027E+00_RP, &
+         0.2411146051511425E+00_RP &
+         /)
+    real(RP), parameter :: coefc_d_gl(ngmax)=(/&
+         0.5505187813766612E+00_RP, &
+         0.7900516927471093E+00_RP, &
+         0.1265739962562290E+01_RP, &
+         0.1816468454535444E+01_RP &
+         /)
+    real(RP), parameter :: gauss_ranger=8.d0
+    real(RP), parameter :: wr_gl(ngmax)=(/&
+         0.723343815453428E+00_RP,&
+         1.35609772622641E+00_RP, &
+         1.35609772622641E+00_RP, &
+         0.723343815453428E+00_RP &
+         /)
+    real(RP), parameter :: coefr_d_gl(ngmax)=(/&
+         0.166846238310235E+00_RP, &
+         0.493135790663523E+00_RP, &
+         2.02783902311062E+00_RP, &
+         5.99354237846583E+00_RP &
+         /)
+    real(RP), parameter :: gauss_range=5.d0
+    real(RP), parameter :: w_gl(ngmax)=(/&
+         0.559850775788111E+00_RP, &
+         1.04958713664599E+00_RP, &
+         1.04958713664599E+00_RP, &
+         0.559850775788111E+00_RP &
+         /)
+    real(RP), parameter :: coef_d_gl(ngmax)=(/&
+         0.2500872485877803E+00_RP, &
+         0.5785800417604080E+00_RP, &
+         0.1728369331505741E+01_RP, &
+         0.3998604509613778E+01_RP &
+         /)
+    !
+    real(RP) :: wx_cri, wx_crs
+    real(RP) :: coef_emelt
+    real(RP) :: w1
+!    integer :: ij, k
+    integer :: ierr
+
+    !---------------------------------------------------------------------------
+    !
+    !
+    do k = KS, KE
+       tem(k) = max( wtem(k), tem_min ) ! 11/08/30 T.Mitsui
+    end do
+
+    call moist_psat_ice( KA, KS, KE, &
+                         tem(:), esi(:)  ) ! [IN], [OUT]
+
+    if( opt_stick_KS96 )then
+       do k = KS, KE
+          ! Khain and Sednev (1996), eq.(3.15)
+          temc       = tem(k) - T00
+          temc2      = temc*temc
+          temc3      = temc2*temc
+          E_dec      = max(0.0_RP, a_dec + b_dec*temc + c_dec*temc2 + d_dec*temc3 )
+          esi_rat(k)    = rhoq(k,I_QV)*Rvap*tem(k)/esi(k)
+          E_stick(k) = min(1.0_RP, E_dec*esi_rat(k))
+       end do
+    else if( opt_stick_CO86 )then
+       do k = KS, KE
+          ! [Add] 11/08/30 T.Mitsui, Cotton et al. (1986)
+          temc       = min(tem(k) - T00,0.0_RP)
+          w1         = 0.035_RP*temc-0.7_RP
+          E_stick(k) = 10._RP**w1
+       end do
+    else
+       do k = KS, KE
+          ! Lin et al. (1983)
+          temc_m     = min(tem(k) - T00,0.0_RP) ! T < 273.15
+          E_stick(k) = exp(0.09_RP*temc_m)
+       end do
+    end if
+
+    do k = KS, KE
+       ! averaged diameter using SB06(82)
+       ave_dc = coef_d(I_mp_QC)*xq(k,I_mp_QC)**b_m(I_mp_QC)
+       !------------------------------------------------------------------------
+       ! coellection efficiency are given as follows
+       E_c(k) = max(0.0_RP, min(1.0_RP, (ave_dc-dc0)/(dc1-dc0) ))
+    end do
+
+    !------------------------------------------------------------------------
+
+
+    if (flag_first) then
+       flag_first = .false.
+
+       rewind(IO_FID_CONF)  ! [Modi]  22/09/27 M.Kondo
+       read(IO_FID_CONF,nml=PARAM_ATMOS_PHY_MP_SN14_collection_bin,iostat=ierr)
+       if ( ierr < 0 ) then
+           LOG_INFO("ATMOS_PHY_MP_sn14_init",*)  '*** PARAM_ATMOS_PHY_MP_SN14_collection_bin is not specified. use default.' ! write(IO_FID_LOG,*)
+       elseif( ierr > 0 ) then
+          !write(*,         *) 'xxx Not appropriate names in namelist PARAM_ATMOS_PHY_MP_SN14_collection_bin. STOP.'
+           LOG_ERROR("ATMOS_PHY_MP_sn14_init",*) 'xxx Not appropriate names in namelist PARAM_ATMOS_PHY_MP_SN14_collection_bin. STOP.' ! write(IO_FID_LOG,*)
+         call PRC_abort ! ADM_proc_stop
+       endif
+!       write(IO_FID_LOG,nml=PARAM_ATMOS_PHY_MP_SN14_collection_bin)
+       !
+     endif
+    LOG_NML(PARAM_ATMOS_PHY_MP_SN14_collection_bin)
+
+       !
+
+    tem(:) = max(wtem(:), tem_min ) ! 11/08/30 T.Mitsui
+    tem_e(:) = max(wtem(:), tem_min_estick ) ! [Add] 15/05/19 T.Seiki
+
+    call moist_psat_ice( KA, KS, KE, tem(:), esi(:) )
+
+
+    if ( opt_stick_KS96 ) then
+       do k=KS, KE
+!!!          do ij=1, ijdim
+             ! Khain and Sednev (1996), eq.(3.15)
+             temc          = tem_e(k) - T00 ![Mod] 15/05/19 T.Seiki
+             temc2         = temc*temc
+             temc3         = temc2*temc
+             E_dec         = max(0.0_RP, a_dec + b_dec*temc + c_dec*temc2 + d_dec*temc3 )
+             esi_rat(k) = rhoq(k,I_QV)*Rvap*tem(k)/esi(k)
+             E_stick(k) = min(1.0_RP, E_dec*esi_rat(k))
+!!!          enddo
+       enddo
+    elseif( opt_stick_CO86 ) then
+       do k=KS, KE
+!!!          do ij=1, ijdim
+             temc          = min(tem_e(k) - T00,0.0_RP)
+             w1            = 0.035_RP*temc-0.7_RP
+             E_stick(k) = 10.0_RP**w1
+!!!          enddo
+       enddo
+    elseif( opt_stick_C12 ) then
+       do k=KS, KE
+!!!          do ij=1, ijdim
+             if     (tem_e(k)>273.15_RP) then  !> 0degC
+                E_stick(k)=1.0_RP
+             elseif(tem_e(k)<243.15_RP) then  !-30degC
+                E_stick(k)=E_C12(1)
+             elseif(tem_e(k)<248.15_RP) then  !-25degC
+                E_stick(k)=E_C12(1)+0.2_RP*(E_C12(2)-E_C12(1))*(tem_e(k)-243.15_RP)
+             elseif(tem_e(k)<253.15_RP) then  !-20degC
+                E_stick(k)=E_C12(2)+0.2_RP*(E_C12(3)-E_C12(2))*(tem_e(k)-248.15_RP)
+             elseif(tem_e(k)<258.15_RP) then  !-15degC
+                E_stick(k)=E_C12(3)+0.2_RP*(E_C12(4)-E_C12(3))*(tem_e(k)-253.15_RP)
+             elseif(tem_e(k)<263.15_RP) then  !-10degC
+                E_stick(k)=E_C12(4)+0.2_RP*(E_C12(5)-E_C12(4))*(tem_e(k)-258.15_RP)
+             elseif(tem_e(k)<268.15_RP) then  !- 5degC
+                E_stick(k)=E_C12(5)+0.2_RP*(E_C12(6)-E_C12(5))*(tem_e(k)-263.15_RP)
+             else                               !  0degC
+                E_stick(k)=E_C12(6)
+             endif
+!!!          enddo
+       enddo
+    else
+       if ( opt_stick_rhH57 ) then
+          do k=KS, KE
+!!!             do ij=1,ijdim
+                if ( tem_e(k) < 270.0_RP .AND. rhoq(k,I_QV)*Rvap*tem(k) < esi(k) ) then
+                   esi_rat(k) = 0.0_RP
+                else
+                   esi_rat(k) = 1.0_RP
+                endif
+!!!             enddo
+          enddo
+       elseif( opt_stick_rhKS96 ) then
+          do k=KS, KE
+!!!             do ij=1,ijdim
+                esi_rat(k) = min( rhoq(k,I_QV)*Rvap*tem(k)/esi(k),1.0_RP )
+!!!             enddo
+          enddo
+       else
+          esi_rat(:) = 1.0_RP
+       endif
+       !
+       do k=KS, KE
+!!!          do ij=1, ijdim
+             ! Lin et al. (1983)
+             temc_m        = min(tem_e(k) - T00,0.0_RP) ! T < 273.15
+             E_stick(k) = exp(0.09_RP*temc_m)*esi_rat(k)
+!!!         enddo
+       enddo
+    endif
+    !
+    ! Integration Start
+    !
+    do ngx=1, ngmax ! X < Y
+       do ngy=1, ngmax
+          !
+          do k= KS, KE
+!!!             do ij=1, ijdim
+                !
+                mua     = mua0 + dmua_dT*(tem(k)-273.15d0)
+                nua     = mua/rho(k)        ! [m2/s]
+                lambdac = xq(k,I_mp_QC)**(-mu(I_mp_QC))*coef_lambda(I_mp_QC)
+                lambdar = xq(k,I_mp_QR)**(-mu(I_mp_QR))*coef_lambda(I_mp_QR)
+                lambdai = xq(k,I_mp_QI)**(-mu(I_mp_QI))*coef_lambda(I_mp_QI)
+                lambdas = xq(k,I_mp_QS)**(-mu(I_mp_QS))*coef_lambda(I_mp_QS)
+                lambdag = xq(k,I_mp_QG)**(-mu(I_mp_QG))*coef_lambda(I_mp_QG)
+                A_dsdc = rhoq(k,I_NC)*coef_A(I_mp_QC)*lambdac**((nu(I_mp_QC)+1.0_RP)/mu(I_mp_QC))
+                A_dsdr = rhoq(k,I_NR)*coef_A(I_mp_QR)*lambdar**((nu(I_mp_QR)+1.0_RP)/mu(I_mp_QR))
+                A_dsdi = rhoq(k,I_NI)*coef_A(I_mp_QI)*lambdai**((nu(I_mp_QI)+1.0_RP)/mu(I_mp_QI))
+                A_dsds = rhoq(k,I_NS)*coef_A(I_mp_QS)*lambdas**((nu(I_mp_QS)+1.0_RP)/mu(I_mp_QS))
+                A_dsdg = rhoq(k,I_NG)*coef_A(I_mp_QG)*lambdag**((nu(I_mp_QG)+1.0_RP)/mu(I_mp_QG))
+                !
+                ! Particle X
+                !
+                dc_glx        = dq_xave(k,I_mp_QC)*coefc_d_gl(ngx)
+                xc_glx        = ( (dc_glx/a_m(I_mp_QC)) )**(1.0_RP/b_m(I_mp_QC))
+                dNc_glx       = a_dsdc*(xc_glx**nu(I_mp_QC)) * exp(-lambdac*xc_glx**mu(I_mp_QC))&
+                     *(xc_glx/(b_m(I_mp_QC)*dc_glx))*dc_glx*wc_gl(ngx) ! dNdlogD*weight
+                !
+                dr_glx        = dq_xave(k,I_mp_QR)*coefr_d_gl(ngx)
+                xr_glx        = ( (dr_glx/a_m(I_mp_QR)) )**(1.0_RP/b_m(I_mp_QR))
+                dNr_glx       = a_dsdr*(xr_glx**nu(I_mp_QR)) * exp(-lambdar*xr_glx**mu(I_mp_QR))&
+                     *(xr_glx/(b_m(I_mp_QR)*dr_glx))*dr_glx*wr_gl(ngx) ! dNdlogD*weight
+                !
+                di_glx         = dq_xave(k,I_mp_QI)*coef_d_gl(ngx)
+                xi_glx         = ( (di_glx/a_m(I_mp_QI)) )**(1.0_RP/b_m(I_mp_QI))
+                dNi_glx       = a_dsdi*(xi_glx**nu(I_mp_QI)) * exp(-lambdai*xi_glx**mu(I_mp_QI))&
+                     *(xi_glx/(b_m(I_mp_QI)*di_glx))*di_glx*w_gl(ngx) ! dNdlogD*weight
+                !
+                ds_glx         = dq_xave(k,I_mp_QS)*coef_d_gl(ngx)
+                xs_glx         = ( (ds_glx/a_m(I_mp_QS)) )**(1.0_RP/b_m(I_mp_QS))
+                dNs_glx       = a_dsds*(xs_glx**nu(I_mp_QS)) * exp(-lambdas*xs_glx**mu(I_mp_QS))&
+                     *(xs_glx/(b_m(I_mp_QS)*ds_glx))*ds_glx*w_gl(ngx)! dNdlogD*weight
+                !
+                dg_glx         = dq_xave(k,I_mp_QG)*coef_d_gl(ngx)
+                xg_glx         = ( (dg_glx/a_m(I_mp_QG)) )**(1.0_RP/b_m(I_mp_QG))
+                dNg_glx       = a_dsdg*(xg_glx**nu(I_mp_QG)) * exp(-lambdag*xg_glx**mu(I_mp_QG))&
+                     *(xg_glx/(b_m(I_mp_QG)*dg_glx))*dg_glx*w_gl(ngx)! dNdlogD*weight
+                !
+                ! Hexagonal Columns
+                if( di_glx <= 100.e-6_RP )then
+                   acx = 0.1677_RP*1.e-3_RP*(100.0_RP**2.91_RP)
+                   bcx = 2.91_RP
+                   gcx = (0.684_RP*1.e-4_RP)*10.0_RP**(2.0_RP*2.0_RP)
+                   scx = 2.0_RP
+                else
+                   acx = 0.00166_RP*1.e-3_RP*(100.0_RP**1.91_RP)
+                   bcx = 1.91_RP
+                   gcx = (0.0696_RP*1.e-4_RP)*10.0_RP**(2.0_RP*1.5_RP)
+                   scx = 1.5_RP
+                end if
+                num_Besti_glx = 2.0_RP*acx*GRAV*rho(k)*di_glx**(bcx+2.0_RP-scx)/(gcx*mua*mua)
+                num_Bests_glx = 2.0_RP*as *GRAV*rho(k)*ds_glx**(bs +2.0_RP-ss )/(gs *mua*mua)
+                num_Bestg_glx = 2.0_RP*ag *GRAV*rho(k)*dg_glx**(bg +2.0_RP-sg )/(gg *mua*mua)
+                num_Rei_glx   = 0.25_RP*d0*d0*( sqrt(1.0_RP+4.0_RP*sqrt(num_Besti_glx)/(d0*d0*sqrt(c0)))-1.0_RP )**2_RP
+                num_Res_glx   = 0.25_RP*d0*d0*( sqrt(1.0_RP+4.0_RP*sqrt(num_Bests_glx)/(d0*d0*sqrt(c0)))-1.0_RP )**2_RP
+                num_Reg_glx   = 0.25_RP*d0*d0*( sqrt(1.0_RP+4.0_RP*sqrt(num_Bestg_glx)/(d0*d0*sqrt(c0)))-1.0_RP )**2_RP
+                !
+                vtc_glx = coef_vtr_ar2*dc_glx*(1.d0-exp(-coef_vtr_br2*dc_glx))
+                !
+                if( dr_glx < d_vtr_branch )then
+                   vtr_glx = coef_vtr_ar2*dr_glx*(1.d0-exp(-coef_vtr_br2*dr_glx))
+                else
+                   vtr_glx = coef_vtr_ar1-coef_vtr_br1*exp(-coef_vtr_cr1*dr_glx)
+                end if
+                !
+                vti_glx   = num_Rei_glx*nua/di_glx
+                vts_glx   = num_Res_glx*nua/ds_glx
+                vtg_glx   = num_Reg_glx*nua/dg_glx
+                ! equivalent area diameter
+                dac_glx = dc_glx
+                dar_glx = dr_glx
+                dai_glx = 2.0_RP*sqrt( (gcx*di_glx**scx)/pi )
+                das_glx = 2.0_RP*sqrt( (gs *ds_glx**ss )/pi )
+                dag_glx = 2.0_RP*sqrt( (gg *dg_glx**sg )/pi )
+                !
+                ! Particle Y
+                !
+                dr_gly        = dq_xave(k,I_mp_QR)*coefr_d_gl(ngy)
+                xr_gly        = ( (dr_gly/a_m(I_mp_QR)) )**(1.0_RP/b_m(I_mp_QR))
+                dNr_gly       = a_dsdr*(xr_gly**nu(I_mp_QR)) * exp(-lambdar*xr_gly**mu(I_mp_QR))&
+                     *(xr_gly/(b_m(I_mp_QR)*dr_gly))*dr_gly*wr_gl(ngy) ! dNdlogD*weight
+                !
+                di_gly        = dq_xave(k,I_mp_QI)*coef_d_gl(ngy)
+                xi_gly        = ( (di_gly/a_m(I_mp_QI)) )**(1.0_RP/b_m(I_mp_QI))
+                dNi_gly       = a_dsdi*(xi_gly**nu(I_mp_QI)) * exp(-lambdai*xi_gly**mu(I_mp_QI))&
+                     *(xi_gly/(b_m(I_mp_QI)*di_gly))*di_gly*w_gl(ngy) ! dNdlogD*weight
+                !
+                ds_gly        = dq_xave(k,I_mp_QS)*coef_d_gl(ngy)
+                xs_gly        = ( (ds_gly/a_m(I_mp_QS)) )**(1.0_RP/b_m(I_mp_QS))
+                dNs_gly       = a_dsds*(xs_gly**nu(I_mp_QS)) * exp(-lambdas*xs_gly**mu(I_mp_QS))&
+                     *(xs_gly/(b_m(I_mp_QS)*ds_gly))*ds_gly*w_gl(ngy)! dNdlogD*weight
+                !
+                dg_gly        = dq_xave(k,I_mp_QG)*coef_d_gl(ngy)
+                xg_gly        = ( (dg_gly/a_m(I_mp_QG)) )**(1.0_RP/b_m(I_mp_QG))
+                dNg_gly       = a_dsdg*(xg_gly**nu(I_mp_QG)) * exp(-lambdag*xg_gly**mu(I_mp_QG))&
+                     *(xg_gly/(b_m(I_mp_QG)*dg_gly))*dg_gly*w_gl(ngy)! dNdlogD*weight
+                !
+                ! Hexagonal Columns
+                if( di_gly <= 100.e-6_RP )then
+                   acy = 0.1677_RP*1.d-3*(100.0_RP**2.91_RP)
+                   bcy = 2.91_RP
+                   gcy = (0.684_RP*1.e-4_RP)*10.d0**(2.0_RP*2.0_RP)
+                   scy = 2.0_RP
+                else
+                   acy = 0.00166_RP*1.e-3_RP*(100.0_RP**1.91d0)
+                   bcy = 1.91_RP
+                   gcy = (0.0696d0*1.e-4_RP)*10.0_RP**(2.0_RP*1.5_RP)
+                   scy = 1.5_RP
+                end if
+                num_Besti_gly = 2.0_RP*acy*GRAV*rho(k)*di_gly**(bcy+2.0_RP-scy)/(gcy*mua*mua)
+                num_Bests_gly = 2.0_RP*as *GRAV*rho(k)*ds_gly**(bs +2.0_RP-ss )/(gs *mua*mua)
+                num_Bestg_gly = 2.0_RP*ag *GRAV*rho(k)*dg_gly**(bg +2.0_RP-sg )/(gg *mua*mua)
+                num_Rei_gly   = 0.25_RP*d0*d0*( sqrt(1.0_RP+4.0_RP*sqrt(num_Besti_gly)/(d0*d0*sqrt(c0)))-1.0_RP )**2
+                num_Res_gly   = 0.25_RP*d0*d0*( sqrt(1.0_RP+4.0_RP*sqrt(num_Bests_gly)/(d0*d0*sqrt(c0)))-1.0_RP )**2
+                num_Reg_gly   = 0.25_RP*d0*d0*( sqrt(1.0_RP+4.0_RP*sqrt(num_Bestg_gly)/(d0*d0*sqrt(c0)))-1.0_RP )**2
+                !
+                if( dr_gly < d_vtr_branch )then
+                   vtr_gly = coef_vtr_ar2*dr_gly*(1.0_RP-exp(-coef_vtr_br2*dr_gly))
+                else
+                   vtr_gly = coef_vtr_ar1-coef_vtr_br1*exp(-coef_vtr_cr1*dr_gly)
+                end if
+                !
+                vti_gly   = num_Rei_gly*nua/di_gly
+                vts_gly   = num_Res_gly*nua/ds_gly
+                vtg_gly   = num_Reg_gly*nua/dg_gly
+                ! equivalent area diameter
+                dar_gly = dr_gly
+                dai_gly = 2.0_RP*sqrt( (gcy*di_gly**scy)/pi )
+                das_gly = 2.0_RP*sqrt( (gs *ds_gly**ss )/pi )
+                dag_gly = 2.0_RP*sqrt( (gg *dg_gly**sg )/pi )
+                !
+                ! BULK collection efficiency are given as follows
+                !
+                E_c(k) = max(0.0_RP, min(1.0_RP, (dq_xave(k,I_mp_QC)-dc0)/(dc1-dc0) ))
+                !
+                if (dq_xave(k,I_mp_QI)>di0) then
+                   E_i = E_im
+                else
+                   E_i = 0.0_RP
+                endif
+                if (dq_xave(k,I_mp_QS)>ds0) then
+                   E_s = E_sm
+                else
+                   E_s = 0.0_RP
+                endif
+                if (dq_xave(k,I_mp_QG)>dg0) then
+                   E_g = E_gm
+                else
+                   E_g = 0.0_RP
+                endif
+                E_ic = E_i*E_c(k)
+                E_sc = E_s*E_c(k)
+                E_gc = E_g*E_c(k)
+                !=========================================================================================
+                ! collection equation
+                !=========================================================================================
+                !
+                ! 1.c-g (X=Cloud, Y=Graupel)
+                !
+                kernel_cg        = 0.25_RP*pi*(dag_gly+dac_glx)*(dag_gly+dac_glx)*sqrt((vtg_gly-vtc_glx)*(vtg_gly-vtc_glx))  * E_gc
+                Pac(k,I_NGacNC2NG) = Pac(k,I_NGacNC2NG) - kernel_cg       *dNc_glx*dNg_gly
+                Pac(k,I_LGacLC2LG) = Pac(k,I_LGacLC2LG) - kernel_cg*xc_glx*dNc_glx*dNg_gly
+                !
+                ! 2.c-s (X=Cloud, Y=Snow)
+                !
+                kernel_cs        = 0.25_RP*pi*(das_gly+dac_glx)*(das_gly+dac_glx)*sqrt((vts_gly-vtc_glx)*(vts_gly-vtc_glx))  * E_sc
+                Pac(k,I_NSacNC2NS) = Pac(k,I_NSacNC2NS) - kernel_cs       *dNc_glx*dNs_gly
+                Pac(k,I_LSacLC2LS) = Pac(k,I_LSacLC2LS) - kernel_cs*xc_glx*dNc_glx*dNs_gly
+                !
+                ! 3.c-i (X=Cloud, Y=Cloud Ice)
+                !
+                kernel_ci        = 0.25_RP*pi*(dai_gly+dac_glx)*(dai_gly+dac_glx)*sqrt((vti_gly-vtc_glx)*(vti_gly-vtc_glx))  * E_ic
+                Pac(k,I_NIacNC2NI) = Pac(k,I_NIacNC2NI) - kernel_ci       *dNc_glx*dNi_gly
+                Pac(k,I_LIacLC2LI) = Pac(k,I_LIacLC2LI) - kernel_ci*xc_glx*dNc_glx*dNi_gly
+                !
+                ! 4.r-g
+                !
+                kernel_rg        = 0.25_RP*pi*(dag_gly+dar_glx)*(dag_gly+dar_glx)*sqrt((vtg_gly-vtr_glx)*(vtg_gly-vtr_glx)) * E_gr
+                ! T < 273K  (X=Rain   , Y=Graupel)
+                Pac(k,I_NRacNG2NG) = Pac(k,I_NRacNG2NG) - kernel_rg       *dNr_glx*dNg_gly
+                Pac(k,I_LRacLG2LG) = Pac(k,I_LRacLG2LG) - kernel_rg*xr_glx*dNr_glx*dNg_gly
+                ! T > 273K  (X=Graupel, Y=Rain   )
+                Pac(k,I_NRacNG2NR) = Pac(k,I_NRacNG2NR) - kernel_rg       *dNg_glx*dNr_gly
+                Pac(k,I_LRacLG2LR) = Pac(k,I_LRacLG2LR) - kernel_rg*xg_glx*dNg_glx*dNr_gly
+                !
+                ! 5.r-s
+                !
+                kernel_rs          = 0.25_RP*pi*(das_glx+dar_gly)*(das_glx+dar_gly)*sqrt((vts_glx-vtr_gly)*(vts_glx-vtr_gly)) * E_sr
+                ! (X=Snow, Y=Rain)
+                Pac(k,I_NRacNS2NG_R) = Pac(k,I_NRacNS2NG_R) - kernel_rs       *dNs_glx*dNr_gly
+                Pac(k,I_LRacLS2LG_R) = Pac(k,I_LRacLS2LG_R) - kernel_rs*xr_gly*dNs_glx*dNr_gly
+                !
+                Pac(k,I_NRacNS2NG_S) = Pac(k,I_NRacNS2NG_S) - kernel_rs       *dNs_glx*dNr_gly
+                Pac(k,I_LRacLS2LG_S) = Pac(k,I_LRacLS2LG_S) - kernel_rs*xs_glx*dNs_glx*dNr_gly
+                !
+                ! 6.r-i
+                !
+                kernel_ri          = 0.25_RP*pi*(dai_glx+dar_gly)*(dai_glx+dar_gly)*sqrt((vti_glx-vtr_gly)*(vti_glx-vtr_gly)) * E_ir
+                ! (X=Cloud Ice, Y=Rain)
+                Pac(k,I_NRacNI2NG_R) = Pac(k,I_NRacNI2NG_R) - kernel_ri       *dNi_glx*dNr_gly
+                Pac(k,I_LRacLI2LG_R) = Pac(k,I_LRacLI2LG_R) - kernel_ri*xr_gly*dNi_glx*dNr_gly
+                !
+                Pac(k,I_NRacNI2NG_I) = Pac(k,I_NRacNI2NG_I) - kernel_ri       *dNi_glx*dNr_gly
+                Pac(k,I_LRacLI2LG_I) = Pac(k,I_LRacLI2LG_I) - kernel_ri*xi_glx*dNi_glx*dNr_gly
+                !
+                ! 7.i-g
+                !
+                kernel_ig          = 0.25_RP*pi*(dai_glx+dag_gly)*(dai_glx+dag_gly)*sqrt((vti_glx-vtg_gly)*(vti_glx-vtg_gly))  * E_stick(k) * E_gi
+                Pac(k,I_NIacNG2NG)   = Pac(k,I_NIacNG2NG) - kernel_ig       *dNi_glx*dNg_gly
+                Pac(k,I_LIacLG2LG)   = Pac(k,I_LIacLG2LG) - kernel_ig*xi_glx*dNi_glx*dNg_gly
+                !
+                ! 8.i-s
+                !
+                kernel_is          = 0.25_RP*pi*(dai_glx+das_gly)*(dai_glx+das_gly)*sqrt((vti_glx-vts_gly)*(vti_glx-vts_gly))  * E_stick(k) * E_si
+                Pac(k,I_NIacNS2NS)   = Pac(k,I_NIacNS2NS) - kernel_is       *dNi_glx*dNs_gly
+                Pac(k,I_LIacLS2LS)   = Pac(k,I_LIacLS2LS) - kernel_is*xi_glx*dNi_glx*dNs_gly
+                !
+                ! 9.i-i
+                !
+                kernel_ii          = 0.25_RP*pi*(dai_glx+dai_gly)*(dai_glx+dai_gly)*sqrt((vti_glx-vti_gly)*(vti_glx-vti_gly))  * E_stick(k) * E_ii
+                Pac(k,I_NIacNI2NS)   = Pac(k,I_NIacNI2NS) - kernel_ii       *dNi_glx*dNi_gly
+                Pac(k,I_LIacLI2LS)   = Pac(k,I_LIacLI2LS) - kernel_ii*xi_glx*dNi_glx*dNi_gly
+
+                !
+                ! 10.s-g
+                !
+                kernel_sg          = 0.25_RP*pi*(das_glx+dag_gly)*(das_glx+dag_gly)*sqrt((vts_glx-vtg_gly)*(vts_glx-vtg_gly))  * E_stick(k) * E_gs
+                Pac(k,I_NGacNS2NG)   = Pac(k,I_NGacNS2NG) - kernel_sg       *dNs_glx*dNg_gly
+                Pac(k,I_LGacLS2LG)   = Pac(k,I_LGacLS2LG) - kernel_sg*xs_glx*dNs_glx*dNg_gly
+                !
+                ! 11.s-s
+                !
+                kernel_ss          = 0.125_RP*pi*(das_glx+das_gly)*(das_glx+das_gly)*sqrt((vts_glx-vts_gly)*(vts_glx-vts_gly))  * E_stick(k) * E_ss
+                Pac(k,I_NSacNS2NS)   = Pac(k,I_NSacNS2NS) - kernel_ss*dNs_glx*dNs_gly
+                !
+                ! 12.g-g
+                !
+                kernel_gg          = 0.125_RP*pi*(dag_glx+dag_gly)*(dag_glx+dag_gly)*sqrt((vtg_glx-vtg_gly)*(vtg_glx-vtg_gly))  * E_stick(k) * E_gg
+                Pac(k,I_NGacNG2NG)   = Pac(k,I_NGacNG2NG) - kernel_gg*dNg_glx*dNg_gly
+             end do
+ !!!         end do
+          !
+       end do
+    end do
+    !
+    !
+    do k=KS, KE
+!!!       do ij=1, ijdim
+          temc_p = max(tem(k) - T00,0.0_RP) ! T > 273.15
+          !------------------------------------------------------------------------
+          !--- Partial conversion
+          ! SB06(70),(71)
+          ! i_iconv2g: option whether partial conversions work or not
+          ! ice-cloud => graupel
+          if ( dq_xave(k,I_mp_QI) > di_cri ) then
+             wx_cri = cfill_i*rhow/rho_g*( pi/6.d0*rho_g*dq_xave(k,I_mp_QI)*dq_xave(k,I_mp_QI)*dq_xave(k,I_mp_QI)/xq(k,I_mp_QI) - 1.0_RP )
+             PQ(k,I_LIcon) = i_iconv2g*  Pac(k,I_LIacLC2LI)/max(1.d0, wx_cri)
+             PQ(k,I_NIcon) = i_iconv2g*  PQ(k,I_LIcon)/xq(k,I_mp_QI)
+          else
+             wx_cri       = 0.0_RP
+             PQ(k,I_LIcon) = 0.0_RP
+             PQ(k,I_NIcon) = 0.0_RP
+          endif
+          ! snow-cloud => graupel
+          wx_crs = cfill_s*rhow/rho_g*( pi/6.0_RP*rho_g*dq_xave(k,I_mp_QS)*dq_xave(k,I_mp_QS)*dq_xave(k,I_mp_QS)/xq(k,I_mp_QS) - 1.0_RP )
+          PQ(k,I_LScon) = i_sconv2g*  (Pac(k,I_LSacLC2LS))/max(1.0_RP, wx_crs)
+          PQ(k,I_NScon) = i_sconv2g*  PQ(k,I_LScon)/xq(k,I_mp_QS)
+          !------------------------------------------------------------------------
+          !--- enhanced melting( due to collection-freezing of water droplets )
+          !    originally from Rutledge and Hobbs(1984). eq.(A.21)
+          ! if T > 273.15 then temc_p=T-273.15, else temc_p=0
+          ! 08/05/08 [fix] T.Mitsui LHF00 => LHF0
+          ! melting occurs around T=273K, so LHF0 is suitable both SIMPLE and EXACT,
+          ! otherwise LHF can have sign both negative(EXACT) and positive(SIMPLE).
+          coef_emelt   =  CL/LHF0*temc_p
+          ! cloud-graupel
+          PQ(k,I_LGacm) =  coef_emelt*Pac(k,I_LGacLC2LG)
+          PQ(k,I_NGacm) =  PQ(k,I_LGacm)/xq(k,I_mp_QG)
+          ! rain-graupel
+          PQ(k,I_LGarm) =  coef_emelt*Pac(k,I_LRacLG2LG)
+          PQ(k,I_NGarm) =  PQ(k,I_LGarm)/xq(k,I_mp_QG)
+          ! cloud-snow
+          PQ(k,I_LSacm) =  coef_emelt*(Pac(k,I_LSacLC2LS))
+          PQ(k,I_NSacm) =  PQ(k,I_LSacm)/xq(k,I_mp_QS)
+          ! rain-snow
+          PQ(k,I_LSarm) =  coef_emelt*(Pac(k,I_LRacLS2LG_R)+Pac(k,I_LRacLS2LG_S))
+          PQ(k,I_NSarm) =  PQ(k,I_LSarm)/xq(k,I_mp_QG)
+          ! cloud-ice
+          PQ(k,I_LIacm) =  coef_emelt*Pac(k,I_LIacLC2LI)
+          PQ(k,I_NIacm) =  PQ(k,I_LIacm)/xq(k,I_mp_QI)
+          ! rain-ice
+          PQ(k,I_LIarm) =  coef_emelt*(Pac(k,I_LRacLI2LG_R)+Pac(k,I_LRacLI2LG_I))
+          PQ(k,I_NIarm) =  PQ(k,I_LIarm)/xq(k,I_mp_QG)
+!!!       enddo
+    enddo
+    !
+    return
+  end subroutine mixed_phase_collection_bin
+
+
+!!kondo
+
+
+
   !----------------------------
   ! Auto-conversion, Accretion, Self-collection, Break-up
 !OCL SERIAL
@@ -5590,6 +6561,7 @@ contains
        xs(k) = min( xs_max, max( xs_min, DENS0(k)*QTRC0(k,I_QS)/(QTRC0(k,I_NS)+ns_min) ) )
        xg(k) = min( xg_max, max( xg_min, DENS0(k)*QTRC0(k,I_QG)/(QTRC0(k,I_NG)+ng_min) ) )
     enddo
+
 
     do k = KS, KE
        Crs(k,I_mp_QC) = PI * coef_r2(I_mp_QC) * QTRC0(k,I_NC) * a_rea2(I_mp_QC) * xc(k)**b_rea2(I_mp_QC)
