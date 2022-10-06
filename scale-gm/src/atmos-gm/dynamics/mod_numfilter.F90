@@ -1923,7 +1923,7 @@ contains
                                            + 1.0_RP * vtmp0_pl(:,ADM_kmax-2,:,vmax+nq)
        enddo
 
-       do l = 1, ADM_lall
+       do l = 1, ADM_lall_pl
           do p = 1, 2
              do k = ADM_kmin, ADM_kmax
                 vtmp1_pl(:,k,l,I_VX ) = ( ( vtmp0_pl(:,k+1,l,I_VX )-vtmp0_pl(:,k  ,l,I_VX ) ) * GRD_rdgzh(k+1) &
@@ -2002,11 +2002,11 @@ contains
                 enddo
 
              endif
+             vtmp0_pl(:,:,l,:) = vtmp1_pl(:,:,l,:)
           enddo
-          vtmp0_pl(:,:,:,:) = vtmp1_pl(:,:,:,:)
 
           do k = ADM_kmin, ADM_kmax+1
-          do g = 1, ADM_gall
+          do g = 1, ADM_gall_pl
              flux_pl(g,k,l,I_VX ) = Kv_coef_h(k) * ( vtmp0_pl(g,k,l,I_VX )-vtmp0_pl(g,k-1,l,I_VX ) ) &
                                   * GRD_rdgzh(k) * rhog_h_pl(g,k,l)
              flux_pl(g,k,l,I_VY ) = Kv_coef_h(k) * ( vtmp0_pl(g,k,l,I_VY )-vtmp0_pl(g,k-1,l,I_VY ) ) &
@@ -2021,7 +2021,7 @@ contains
           enddo
 
           do k = ADM_kmin, ADM_kmax
-          do g = 1, ADM_gall
+          do g = 1, ADM_gall_pl
              flux_pl(g,k,l,I_W) = Kv_coef(k) * ( vtmp0_pl(g,k+1,l,I_W)-vtmp0_pl(g,k,l,I_W) ) &
                                 * GRD_rdgz(k) * rhog_pl(g,k,l)
           enddo
@@ -2029,7 +2029,7 @@ contains
 
           !--- update tendency
           do k = ADM_kmin, ADM_kmax
-          do g = 1, ADM_gall
+          do g = 1, ADM_gall_pl
              tendency_pl(g,k,l,I_RHOG    ) = tendency_pl(g,k,l,I_RHOG    ) &
                                            + ( flux_pl(g,k+1,l,I_RHO) - flux_pl(g,k,l,I_RHO) ) * GRD_rdgz(k)
              tendency_pl(g,k,l,I_RHOGVX  ) = tendency_pl(g,k,l,I_RHOGVX  ) &
@@ -2044,7 +2044,7 @@ contains
           enddo
 
           do k = ADM_kmin+1, ADM_kmax
-          do g = 1, ADM_gall
+          do g = 1, ADM_gall_pl
              tendency_pl(g,k,l,I_RHOGW) = tendency_pl(g,k,l,I_RHOGW) &
                                         + ( flux_pl(g,k,l,I_W) - flux_pl(g,k-1,l,I_W) ) * GRD_rdgzh(k)
           enddo
@@ -2053,7 +2053,7 @@ contains
           if ( TRC_ADV_TYPE /= 'MIURA2004' ) then
              do nq = 1, QA
              do k = ADM_kmin, ADM_kmax+1
-             do g = 1, ADM_gall
+             do g = 1, ADM_gall_pl
                 flux_pl(g,k,l,vmax+nq) = Kv_coef_h(k) * ( vtmp0_pl(g,k,l,vmax+nq)-vtmp0_pl(g,k-1,l,vmax+nq) ) &
                                        * GRD_rdgzh(k) * rhog_h_pl(g,k,l)
              enddo
@@ -2062,7 +2062,7 @@ contains
 
              do nq = 1, QA
              do k = ADM_kmin, ADM_kmax
-             do g = 1, ADM_gall
+             do g = 1, ADM_gall_pl
                 tendency_q_pl(g,k,l,nq) = tendency_q_pl(g,k,l,nq) &
                                         + ( flux_pl(g,k+1,l,vmax+nq) - flux_pl(g,k,l,vmax+nq) ) * GRD_rdgz(k)
              enddo
