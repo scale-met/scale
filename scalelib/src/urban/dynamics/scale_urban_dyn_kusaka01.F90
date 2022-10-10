@@ -935,11 +935,15 @@ contains
 
     real(RP) :: FracU10, FracT2
 
+    real(RP) :: dt_RP
+
     integer  :: iteration
 
     !-----------------------------------------------------------
     ! Set parameters
     !-----------------------------------------------------------
+
+    dt_RP = dt
 
     RovCP = Rdry / CPdry
     THA   = TA * ( PRE00 / PRSA )**RovCP
@@ -959,7 +963,7 @@ contains
 
 
     !--- limiter for surface temp change
-    DTS_MAX_onestep = DTS_MAX * dt
+    DTS_MAX_onestep = DTS_MAX * dt_RP
 
     if ( ZDC + Z0C + 2.0_RP >= ZA ) then
        LOG_ERROR("URBAN_DYN_kusaka01_SLC_main",*) 'ZDC + Z0C + 2m must be less than the 1st level! STOP.'
@@ -989,7 +993,7 @@ contains
     ! calculate water content (temporally)
     !-----------------------------------------------------------
 
-    RAINT = RAIN * dt ! [kg/m2/s -> kg/m2]
+    RAINT = RAIN * dt_RP ! [kg/m2/s -> kg/m2]
 
     RAINR = RAINR + RAINT * rain_rate_R
     RAINB = RAINB + RAINT * rain_rate_B
@@ -1067,7 +1071,7 @@ contains
       RR    = EPSR * ( rflux_LW - STB * (TR**4)  )
       !HR    = RHOO * CPdry * CHR * UA * (TR-TA)
       HR    = RHOO * CPdry * CHR * UA * (THS-THA) * EXN
-      EVPR  = min( RHOO * CHR * UA * BETR * (QS0R-QA), real(RAINR/dt,RP) )
+      EVPR  = min( RHOO * CHR * UA * BETR * (QS0R-QA), RAINR / dt_RP )
       ELER  = EVPR * LHV
 
       G0R   = SR + RR - HR - ELER
@@ -1080,10 +1084,10 @@ contains
     !    AKSL1 = AKSR
     !  endif
     !! 1st layer's cap, aks are replaced.
-    !! call multi_layer2(UKE,BOUND,G0R,CAPR,AKSR,TRL,DZR,dt,TRLEND,CAPL1,AKSL1)
+    !! call multi_layer2(UKE,BOUND,G0R,CAPR,AKSR,TRL,DZR,dt_RP,TRLEND,CAPL1,AKSL1)
 
       TRL = TRLP
-      call multi_layer(UKE,BOUND,G0R,CAPR,AKSR,TRL,DZR,dt,TRLEND)
+      call multi_layer(UKE,BOUND,G0R,CAPR,AKSR,TRL,DZR,dt_RP,TRLEND)
       resi1 = TRL(1) - TR
 
      ! LOG_INFO("URBAN_DYN_kusaka01_SLC_main",'(a3,i5,f8.3,6f15.5)') "TR,",iteration,TR,G0R,SR,RR,HR,ELER,resi1
@@ -1103,7 +1107,7 @@ contains
       TR = TRL(1) * fact1 + TR * ( 1.0_RP - fact1 )
       TR = max( TRP - DTS_MAX_onestep, min( TRP + DTS_MAX_onestep, TR ) )
 
-      RAINR = max( ( RAINRP - EVPR * dt ) * fact1 + RAINR * ( 1.0_RP - fact1 ), 0.0_RP )
+      RAINR = max( ( RAINRP - EVPR * dt_RP ) * fact1 + RAINR * ( 1.0_RP - fact1 ), 0.0_RP )
 
       resi1p = resi1
 
@@ -1162,15 +1166,15 @@ contains
 
      RR      = EPSR * ( rflux_LW - STB * (TR**4) )
      HR      = RHOO * CPdry * CHR * UA * (THS-THA) * EXN
-     EVPR    = min( RHOO * CHR * UA * BETR * (QS0R-QA), real(RAINR/dt,RP) )
+     EVPR    = min( RHOO * CHR * UA * BETR * (QS0R-QA), RAINR / dt_RP )
      ELER    = EVPR * LHV
 
 !     G0R     = SR + RR - HR - ELER + EFLX
      G0R     = SR + RR - HR - ELER
-     RAINR   = max( RAINRP - EVPR * dt, 0.0_RP )
+     RAINR   = max( RAINRP - EVPR * dt_RP, 0.0_RP )
 
      TRL   = TRLP
-     call multi_layer(UKE,BOUND,G0R,CAPR,AKSR,TRL,DZR,dt,TRLEND)
+     call multi_layer(UKE,BOUND,G0R,CAPR,AKSR,TRL,DZR,dt_RP,TRLEND)
      resi1 = TRL(1) - TR
      TR    = TRL(1)
 
@@ -1257,25 +1261,25 @@ contains
       RB    = RB1 + RB2
 
       HB    = RHOO * CPdry * CHB * UC * (THS1-THC) * EXN
-      EVPB  = min( RHOO * CHB * UC * BETB * (QS0B-QC), real(RAINB/dt,RP) )
+      EVPB  = min( RHOO * CHB * UC * BETB * (QS0B-QC), RAINB / dt_RP )
       ELEB  = EVPB * LHV
 
 !      G0B   = SB + RB - HB - ELEB + EFLX
       G0B   = SB + RB - HB - ELEB
 
       HG    = RHOO * CPdry * CHG * UC * (THS2-THC) * EXN
-      EVPG  = min( RHOO * CHG * UC * BETG * (QS0G-QC), real(RAING/dt,RP) )
+      EVPG  = min( RHOO * CHG * UC * BETG * (QS0G-QC), RAING / dt_RP )
       ELEG  = EVPG * LHV
 
 !      G0G   = SG + RG - HG - ELEG + EFLX
       G0G   = SG + RG - HG - ELEG
 
       TBL = TBLP
-      call multi_layer(UKE,BOUND,G0B,CAPB,AKSB,TBL,DZB,dt,TBLEND)
+      call multi_layer(UKE,BOUND,G0B,CAPB,AKSB,TBL,DZB,dt_RP,TBLEND)
       resi1 = TBL(1) - TB
 
       TGL = TGLP
-      call multi_layer(UKE,BOUND,G0G,CAPG,AKSG,TGL,DZG,dt,TGLEND)
+      call multi_layer(UKE,BOUND,G0G,CAPG,AKSG,TGL,DZG,dt_RP,TGLEND)
       resi2 = TGL(1) - TG
 
       !-----------
@@ -1317,8 +1321,8 @@ contains
       TG = TGL(1) * fact2 + TG * ( 1.0_RP - fact2 )
       TG = max( TGP - DTS_MAX_onestep, min( TGP + DTS_MAX_onestep, TG ) )
 
-      RAINB = max( ( RAINBP - EVPB * dt ) * fact1 + RAINB * ( 1.0_RP - fact1 ), 0.0_RP )
-      RAING = max( ( RAINGP - EVPG * dt ) * fact2 + RAING * ( 1.0_RP - fact2 ), 0.0_RP )
+      RAINB = max( ( RAINBP - EVPB * dt_RP ) * fact1 + RAINB * ( 1.0_RP - fact1 ), 0.0_RP )
+      RAING = max( ( RAINGP - EVPG * dt_RP ) * fact2 + RAING * ( 1.0_RP - fact2 ), 0.0_RP )
 
       resi1p = resi1
       resi2p = resi2
@@ -1426,26 +1430,26 @@ contains
      THC    = TC / EXN
 
      HB    = RHOO * CPdry * CHB * UC * (THS1-THC) * EXN
-     EVPB  = min( RHOO * CHB * UC * BETB * (QS0B-QC), real(RAINB/dt,RP) )
+     EVPB  = min( RHOO * CHB * UC * BETB * (QS0B-QC), RAINB / dt_RP )
      ELEB  = EVPB * LHV
 !     G0B   = SB + RB - HB - ELEB + EFLX
      G0B   = SB + RB - HB - ELEB
-     RAINB = max( RAINBP - EVPB * dt, 0.0_RP )
+     RAINB = max( RAINBP - EVPB * dt_RP, 0.0_RP )
 
      HG    = RHOO * CPdry * CHG * UC * (THS2-THC) * EXN
-     EVPG  = min( RHOO * CHG * UC * BETG * (QS0G-QC), real(RAING/dt,RP) )
+     EVPG  = min( RHOO * CHG * UC * BETG * (QS0G-QC), RAING / dt_RP )
      ELEG  = EVPG * LHV
 !     G0G   = SG + RG - HG - ELEG + EFLX
      G0G   = SG + RG - HG - ELEG
-     RAING = max( RAINGP - EVPG * dt, 0.0_RP )
+     RAING = max( RAINGP - EVPG * dt_RP, 0.0_RP )
 
      TBL   = TBLP
-     call multi_layer(UKE,BOUND,G0B,CAPB,AKSB,TBL,DZB,dt,TBLEND)
+     call multi_layer(UKE,BOUND,G0B,CAPB,AKSB,TBL,DZB,dt_RP,TBLEND)
      resi1 = TBL(1) - TB
      TB    = TBL(1)
 
      TGL   = TGLP
-     call multi_layer(UKE,BOUND,G0G,CAPG,AKSG,TGL,DZG,dt,TGLEND)
+     call multi_layer(UKE,BOUND,G0G,CAPG,AKSG,TGL,DZG,dt_RP,TGLEND)
      resi2 = TGL(1) - TG
      TG    = TGL(1)
 
@@ -1772,7 +1776,7 @@ contains
     real(RP), intent(in)    :: G0
     real(RP), intent(in)    :: CAP
     real(RP), intent(in)    :: AKS
-    real(DP), intent(in)    :: DELT      ! Tim setep [ s ]
+    real(RP), intent(in)    :: DELT      ! Tim setep [ s ]
     real(RP), intent(in)    :: TSLEND
     integer,  intent(in)    :: KM
     integer,  intent(in)    :: BOUND
