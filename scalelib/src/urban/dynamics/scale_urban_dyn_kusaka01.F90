@@ -643,7 +643,7 @@ contains
           MUFLX(i,j) = 0.0_RP
           MVFLX(i,j) = 0.0_RP
        else
-          MFLUX = - RHOS(i,j) * Ustar(i,j)**2
+          MFLUX = - min( RHOS(i,j) * Ustar(i,j)**2, Uabs * z1(i,j) * 2.0_RP / real(dt,RP) )
           MWFLX(i,j) = MFLUX * w / Uabs
           MUFLX(i,j) = MFLUX * U1(i,j) / Uabs
           MVFLX(i,j) = MFLUX * V1(i,j) / Uabs
