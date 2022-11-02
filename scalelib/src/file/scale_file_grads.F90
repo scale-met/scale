@@ -765,7 +765,7 @@ contains
        end if
 
        do i = 1, count_(1)
-          ii = i + start(1) - 2 ! from 0
+          ii = i + start_(1) - 2 ! from 0
           var(i) = var_info%swpoint + ii * var_info%dd
        end do
 
