@@ -24,6 +24,16 @@ cat << EOF > base.sno.vgridope.conf
 /
 EOF
 
+pi=3.14159265359
+buffer=1.1
+earth_radius=6371000 # meter
+
+dlon=$(bc -l <<< "${DX[$D]} / (c($MAPPROJECTION_BASEPOINT_LAT / (180 / $pi)) * $earth_radius) * (180 / $pi)")
+dlat=$(bc -l <<< "${DY[$D]} / $earth_radius * (180 / $pi)")
+
+half_width=$(bc -l <<< "$buffer * (${IMAXG[$D]} / 2) * $dlon")
+half_height=$(bc -l <<< "$buffer * (${JMAXG[$D]} / 2) * $dlat")
+
 cat << EOF > base.sno.hgridope.conf
 
 #################################################
@@ -36,19 +46,19 @@ cat << EOF > base.sno.hgridope.conf
  basename_in     = 'merged-p_history_d${FNUM}',
  dirpath_out     = '.',
  basename_out    = 'merged-h_history_d${FNUM}',
- nprocs_x_out    = ${PRC_NUM_X[$D]},
- nprocs_y_out    = ${PRC_NUM_Y[$D]},
+ nprocs_x_out    = 1,
+ nprocs_y_out    = 1,
  vars            = '',
  output_single   = .true.,
 /
 
 &PARAM_SNOPLGIN_HGRIDOPE
  SNOPLGIN_hgridope_type      = 'LATLON',
- SNOPLGIN_hgridope_lat_start = 20.0,
- SNOPLGIN_hgridope_lat_end   = 50.0,
- SNOPLGIN_hgridope_dlat      = 0.2,
- SNOPLGIN_hgridope_lon_start = 120.0,
- SNOPLGIN_hgridope_lon_end   = 150.0,
- SNOPLGIN_hgridope_dlon      = 0.2,
+ SNOPLGIN_hgridope_lat_start = $(bc -l <<< "$MAPPROJECTION_BASEPOINT_LAT - $half_height")
+ SNOPLGIN_hgridope_lat_end   = $(bc -l <<< "$MAPPROJECTION_BASEPOINT_LAT + $half_height")
+ SNOPLGIN_hgridope_dlat      = $dlat
+ SNOPLGIN_hgridope_lon_start = $(bc -l <<< "$MAPPROJECTION_BASEPOINT_LON - $half_width")
+ SNOPLGIN_hgridope_lon_end   = $(bc -l <<< "$MAPPROJECTION_BASEPOINT_LON + $half_width")
+ SNOPLGIN_hgridope_dlon      = $dlon
 /
 EOF
