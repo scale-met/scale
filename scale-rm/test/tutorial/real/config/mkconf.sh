@@ -41,6 +41,28 @@ echo ""
 
 #################################################
 #
+# Support functions
+#
+#################################################
+
+multiply() {
+  factor=$1
+  shift
+  for x in "$@"; do
+    bc -l <<< "$factor * $x"
+  done
+}
+
+replicate() {
+  n=$1
+  value=$2
+  for (( i = 0; i < n; ++i )); do
+    echo "$value"
+  done
+}
+
+#################################################
+#
 # check parameters
 #
 #################################################
@@ -48,7 +70,20 @@ echo ""
 if [ ! -n "${SCALE_DB-}" ]; then echo "Error: SCALE_DB is not defined. Check!"; exit 1; fi
 
 if [ ${NUM_DOMAIN} -ne ${#TIME_DT[*]} ];              then echo "Error: Wrong array size (TIME_DT).";              exit 1; fi
+
+if [[ ! -v TIME_DT_ATMOS_DYN ]];    then TIME_DT_ATMOS_DYN=( $(multiply 0.5 "${TIME_DT[@]}") );   fi
+if [[ ! -v TIME_DT_ATMOS_PHY_CP ]]; then TIME_DT_ATMOS_PHY_CP=( "${TIME_DT[@]}" );                fi
+if [[ ! -v TIME_DT_ATMOS_PHY_MP ]]; then TIME_DT_ATMOS_PHY_MP=( "${TIME_DT[@]}" );                fi
+if [[ ! -v TIME_DT_ATMOS_PHY_RD ]]; then TIME_DT_ATMOS_PHY_RD=( $(multiply 10 "${TIME_DT[@]}") ); fi
+if [[ ! -v TIME_DT_ATMOS_PHY_SF ]]; then TIME_DT_ATMOS_PHY_SF=( "${TIME_DT[@]}" );                fi
+if [[ ! -v TIME_DT_ATMOS_PHY_TB ]]; then TIME_DT_ATMOS_PHY_TB=( "${TIME_DT[@]}" );                fi
+if [[ ! -v TIME_DT_ATMOS_PHY_BL ]]; then TIME_DT_ATMOS_PHY_BL=( "${TIME_DT[@]}" );                fi
+if [[ ! -v TIME_DT_OCEAN ]];        then TIME_DT_OCEAN=( $(multiply 5 "${TIME_DT[@]}") );         fi
+if [[ ! -v TIME_DT_LAND ]];         then TIME_DT_LAND=( $(multiply 5 "${TIME_DT[@]}") );          fi
+if [[ ! -v TIME_DT_URBAN ]];        then TIME_DT_URBAN=( "${TIME_DT[@]}" );                       fi
+
 if [ ${NUM_DOMAIN} -ne ${#TIME_DT_ATMOS_DYN[*]} ];    then echo "Error: Wrong array size (TIME_DT_ATMOS_DYN).";    exit 1; fi
+if [ ${NUM_DOMAIN} -ne ${#TIME_DT_ATMOS_PHY_CP[*]} ]; then echo "Error: Wrong array size (TIME_DT_ATMOS_PHY_CP)."; exit 1; fi
 if [ ${NUM_DOMAIN} -ne ${#TIME_DT_ATMOS_PHY_MP[*]} ]; then echo "Error: Wrong array size (TIME_DT_ATMOS_PHY_MP)."; exit 1; fi
 if [ ${NUM_DOMAIN} -ne ${#TIME_DT_ATMOS_PHY_RD[*]} ]; then echo "Error: Wrong array size (TIME_DT_ATMOS_PHY_RD)."; exit 1; fi
 if [ ${NUM_DOMAIN} -ne ${#TIME_DT_ATMOS_PHY_SF[*]} ]; then echo "Error: Wrong array size (TIME_DT_ATMOS_PHY_SF)."; exit 1; fi
@@ -72,10 +107,26 @@ if [ ${NUM_DOMAIN} -ne ${#DX[*]} ];    then echo "Error: Wrong array size (DX)."
 if [ ${NUM_DOMAIN} -ne ${#DY[*]} ];    then echo "Error: Wrong array size (DY).";    exit 1; fi
 if [ ${NUM_DOMAIN} -ne ${#DEF_Z[*]} ]; then echo "Error: Wrong array size (DEF_Z)."; exit 1; fi
 
+if [[ ! -v BUFFER_DZ ]]; then BUFFER_DZ=( $(multiply 0 "${DY[@]}") ); fi
+if [[ ! -v BUFFER_DX ]]; then BUFFER_DX=( $(multiply 20 "${DX[@]}") ); fi
+if [[ ! -v BUFFER_DY ]]; then BUFFER_DY=( $(multiply 20 "${DY[@]}") ); fi
 if [ ${NUM_DOMAIN} -ne ${#BUFFER_DZ[*]} ]; then echo "Error: Wrong array size (BUFFER_DZ)."; exit 1; fi
 if [ ${NUM_DOMAIN} -ne ${#BUFFER_DX[*]} ]; then echo "Error: Wrong array size (BUFFER_DX)."; exit 1; fi
 if [ ${NUM_DOMAIN} -ne ${#BUFFER_DY[*]} ]; then echo "Error: Wrong array size (BUFFER_DY)."; exit 1; fi
 
+if [[ $NUM_DOMAIN -gt 1 ]]; then
+  if [[ ${#ATMOS_DYN_TYPE[@]} -eq 1 ]];    then ATMOS_DYN_TYPE=( $(replicate "$NUM_DOMAIN" "$ATMOS_DYN_TYPE") );       fi
+  if [[ ${#ATMOS_PHY_CP_TYPE[@]} -eq 1 ]]; then ATMOS_PHY_CP_TYPE=( $(replicate "$NUM_DOMAIN" "$ATMOS_PHY_CP_TYPE") ); fi
+  if [[ ${#ATMOS_PHY_MP_TYPE[@]} -eq 1 ]]; then ATMOS_PHY_MP_TYPE=( $(replicate "$NUM_DOMAIN" "$ATMOS_PHY_MP_TYPE") ); fi
+  if [[ ${#ATMOS_PHY_RD_TYPE[@]} -eq 1 ]]; then ATMOS_PHY_RD_TYPE=( $(replicate "$NUM_DOMAIN" "$ATMOS_PHY_RD_TYPE") ); fi
+  if [[ ${#ATMOS_PHY_SF_TYPE[@]} -eq 1 ]]; then ATMOS_PHY_SF_TYPE=( $(replicate "$NUM_DOMAIN" "$ATMOS_PHY_SF_TYPE") ); fi
+  if [[ ${#ATMOS_PHY_TB_TYPE[@]} -eq 1 ]]; then ATMOS_PHY_TB_TYPE=( $(replicate "$NUM_DOMAIN" "$ATMOS_PHY_TB_TYPE") ); fi
+  if [[ ${#ATMOS_PHY_BL_TYPE[@]} -eq 1 ]]; then ATMOS_PHY_BL_TYPE=( $(replicate "$NUM_DOMAIN" "$ATMOS_PHY_BL_TYPE") ); fi
+  if [[ ${#OCEAN_DYN_TYPE[@]} -eq 1 ]];    then OCEAN_DYN_TYPE=( $(replicate "$NUM_DOMAIN" "$OCEAN_DYN_TYPE") );       fi
+  if [[ ${#LAND_DYN_TYPE[@]} -eq 1 ]];     then LAND_DYN_TYPE=( $(replicate "$NUM_DOMAIN" "$LAND_DYN_TYPE") );         fi
+  if [[ ${#LAND_SFC_TYPE[@]} -eq 1 ]];     then LAND_SFC_TYPE=( $(replicate "$NUM_DOMAIN" "$LAND_SFC_TYPE") );         fi
+  if [[ ${#URBAN_DYN_TYPE[@]} -eq 1 ]];    then URBAN_DYN_TYPE=( $(replicate "$NUM_DOMAIN" "$URBAN_DYN_TYPE") );       fi
+fi
 if [ ${NUM_DOMAIN} -ne ${#ATMOS_DYN_TYPE[*]} ];    then echo "Error: Wrong array size (ATMOS_DYN_TYPE).";    exit 1; fi
 if [ ${NUM_DOMAIN} -ne ${#ATMOS_PHY_CP_TYPE[*]} ]; then echo "Error: Wrong array size (ATMOS_PHY_CP_TYPE)."; exit 1; fi
 if [ ${NUM_DOMAIN} -ne ${#ATMOS_PHY_MP_TYPE[*]} ]; then echo "Error: Wrong array size (ATMOS_PHY_MP_TYPE)."; exit 1; fi
@@ -88,9 +139,14 @@ if [ ${NUM_DOMAIN} -ne ${#LAND_DYN_TYPE[*]} ];     then echo "Error: Wrong array
 if [ ${NUM_DOMAIN} -ne ${#LAND_SFC_TYPE[*]} ];     then echo "Error: Wrong array size (LAND_SFC_TYPE).";     exit 1; fi
 if [ ${NUM_DOMAIN} -ne ${#URBAN_DYN_TYPE[*]} ];    then echo "Error: Wrong array size (URBAN_DYN_TYPE).";    exit 1; fi
 
+if [[ $NUM_DOMAIN -gt 1 ]]; then
+  if [[ ${#TOPOTYPE[@]} -eq 1 ]];    then TOPOTYPE=( $(replicate "$NUM_DOMAIN" "$TOPOTYPE") );       fi
+  if [[ ${#LANDUSETYPE[@]} -eq 1 ]]; then LANDUSETYPE=( $(replicate "$NUM_DOMAIN" "$LANDUSETYPE") ); fi
+fi
 if [ ${NUM_DOMAIN} -ne ${#TOPOTYPE[*]} ];    then echo "Error: Wrong array size (TOPOTYPE).";     exit 1; fi
 if [ ${NUM_DOMAIN} -ne ${#LANDUSETYPE[*]} ]; then echo "Error: Wrong array size (LANDUSETYPE).";  exit 1; fi
 if [ ${NUM_DOMAIN} -ne ${#COPYTOPO[*]} ];    then echo "Error: Wrong array size (COPYTOPO).";     exit 1; fi
+if [ ${NUM_DOMAIN} -ne ${#SMOOTH_LOCAL[*]} ]; then echo "Error: Wrong array size (COPYTOPO).";    exit 1; fi
 
 #################################################
 #
