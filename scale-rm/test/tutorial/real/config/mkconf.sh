@@ -148,6 +148,8 @@ if [ ${NUM_DOMAIN} -ne ${#LANDUSETYPE[*]} ]; then echo "Error: Wrong array size 
 if [ ${NUM_DOMAIN} -ne ${#COPYTOPO[*]} ];    then echo "Error: Wrong array size (COPYTOPO).";     exit 1; fi
 if [ ${NUM_DOMAIN} -ne ${#SMOOTH_LOCAL[*]} ]; then echo "Error: Wrong array size (COPYTOPO).";    exit 1; fi
 
+if [[ -z ${ONLINE_AGGRESSIVE_COMM+x} ]]; then ONLINE_AGGRESSIVE_COMM=".true."; fi
+
 #################################################
 #
 # set common parameters
