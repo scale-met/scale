@@ -602,6 +602,7 @@ contains
     real(RP) :: slope(IA,JA)
     real(RP) :: maxslope
     real(RP), pointer :: TOPO_sign(:,:)
+    real(RP), allocatable, target :: TOPO_sign_t(:,:)
     real(RP) :: flag, ocean_flag
 
     character(len=8), parameter :: varname(2) = (/ "DZsfc_DX", "DZsfc_DY" /)
@@ -629,7 +630,8 @@ contains
     DYL(:) = FDY(:)
 
     if ( CNVTOPO_smooth_trim_ocean ) then
-       allocate( TOPO_sign(IA,JA) )
+       allocate( TOPO_sign_t(IA,JA) )
+       TOPO_sign => TOPO_sign_t
        !$omp parallel do &
        !$omp private(ocean_flag)
        do j = 1, JA
