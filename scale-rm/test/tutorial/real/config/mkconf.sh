@@ -71,16 +71,16 @@ if [ ! -n "${SCALE_DB-}" ]; then echo "Error: SCALE_DB is not defined. Check!"; 
 
 if [ ${NUM_DOMAIN} -ne ${#TIME_DT[*]} ];              then echo "Error: Wrong array size (TIME_DT).";              exit 1; fi
 
-if [[ -z ${TIME_DT_ATMOS_DYN+} ]];    then TIME_DT_ATMOS_DYN=( $(multiply 0.5 "${TIME_DT[@]}") );   fi
-if [[ -z ${TIME_DT_ATMOS_PHY_CP+} ]]; then TIME_DT_ATMOS_PHY_CP=( "${TIME_DT[@]}" );                fi
-if [[ -z ${TIME_DT_ATMOS_PHY_MP+} ]]; then TIME_DT_ATMOS_PHY_MP=( "${TIME_DT[@]}" );                fi
-if [[ -z ${TIME_DT_ATMOS_PHY_RD+} ]]; then TIME_DT_ATMOS_PHY_RD=( $(multiply 10 "${TIME_DT[@]}") ); fi
-if [[ -z ${TIME_DT_ATMOS_PHY_SF+} ]]; then TIME_DT_ATMOS_PHY_SF=( "${TIME_DT[@]}" );                fi
-if [[ -z ${TIME_DT_ATMOS_PHY_TB+} ]]; then TIME_DT_ATMOS_PHY_TB=( "${TIME_DT[@]}" );                fi
-if [[ -z ${TIME_DT_ATMOS_PHY_BL+} ]]; then TIME_DT_ATMOS_PHY_BL=( "${TIME_DT[@]}" );                fi
-if [[ -z ${TIME_DT_OCEAN+} ]];        then TIME_DT_OCEAN=( $(multiply 5 "${TIME_DT[@]}") );         fi
-if [[ -z ${TIME_DT_LAND+} ]];         then TIME_DT_LAND=( $(multiply 5 "${TIME_DT[@]}") );          fi
-if [[ -z ${TIME_DT_URBAN+} ]];        then TIME_DT_URBAN=( "${TIME_DT[@]}" );                       fi
+if [[ -z ${TIME_DT_ATMOS_DYN+x} ]];    then TIME_DT_ATMOS_DYN=( $(multiply 0.5 "${TIME_DT[@]}") );   fi
+if [[ -z ${TIME_DT_ATMOS_PHY_CP+x} ]]; then TIME_DT_ATMOS_PHY_CP=( "${TIME_DT[@]}" );                fi
+if [[ -z ${TIME_DT_ATMOS_PHY_MP+x} ]]; then TIME_DT_ATMOS_PHY_MP=( "${TIME_DT[@]}" );                fi
+if [[ -z ${TIME_DT_ATMOS_PHY_RD+x} ]]; then TIME_DT_ATMOS_PHY_RD=( $(multiply 10 "${TIME_DT[@]}") ); fi
+if [[ -z ${TIME_DT_ATMOS_PHY_SF+x} ]]; then TIME_DT_ATMOS_PHY_SF=( "${TIME_DT[@]}" );                fi
+if [[ -z ${TIME_DT_ATMOS_PHY_TB+x} ]]; then TIME_DT_ATMOS_PHY_TB=( "${TIME_DT[@]}" );                fi
+if [[ -z ${TIME_DT_ATMOS_PHY_BL+x} ]]; then TIME_DT_ATMOS_PHY_BL=( "${TIME_DT[@]}" );                fi
+if [[ -z ${TIME_DT_OCEAN+x} ]];        then TIME_DT_OCEAN=( $(multiply 5 "${TIME_DT[@]}") );         fi
+if [[ -z ${TIME_DT_LAND+x} ]];         then TIME_DT_LAND=( $(multiply 5 "${TIME_DT[@]}") );          fi
+if [[ -z ${TIME_DT_URBAN+x} ]];        then TIME_DT_URBAN=( "${TIME_DT[@]}" );                       fi
 
 if [ ${NUM_DOMAIN} -ne ${#TIME_DT_ATMOS_DYN[*]} ];    then echo "Error: Wrong array size (TIME_DT_ATMOS_DYN).";    exit 1; fi
 if [ ${NUM_DOMAIN} -ne ${#TIME_DT_ATMOS_PHY_CP[*]} ]; then echo "Error: Wrong array size (TIME_DT_ATMOS_PHY_CP)."; exit 1; fi
@@ -107,9 +107,9 @@ if [ ${NUM_DOMAIN} -ne ${#DX[*]} ];    then echo "Error: Wrong array size (DX)."
 if [ ${NUM_DOMAIN} -ne ${#DY[*]} ];    then echo "Error: Wrong array size (DY).";    exit 1; fi
 if [ ${NUM_DOMAIN} -ne ${#DEF_Z[*]} ]; then echo "Error: Wrong array size (DEF_Z)."; exit 1; fi
 
-if [[ -z ${BUFFER_DZ+} ]]; then BUFFER_DZ=( $(multiply 0 "${DY[@]}") ); fi
-if [[ -z ${BUFFER_DX+} ]]; then BUFFER_DX=( $(multiply 20 "${DX[@]}") ); fi
-if [[ -z ${BUFFER_DY+} ]]; then BUFFER_DY=( $(multiply 20 "${DY[@]}") ); fi
+if [[ -z ${BUFFER_DZ+x} ]]; then BUFFER_DZ=( $(multiply 0 "${DY[@]}") ); fi
+if [[ -z ${BUFFER_DX+x} ]]; then BUFFER_DX=( $(multiply 20 "${DX[@]}") ); fi
+if [[ -z ${BUFFER_DY+x} ]]; then BUFFER_DY=( $(multiply 20 "${DY[@]}") ); fi
 if [ ${NUM_DOMAIN} -ne ${#BUFFER_DZ[*]} ]; then echo "Error: Wrong array size (BUFFER_DZ)."; exit 1; fi
 if [ ${NUM_DOMAIN} -ne ${#BUFFER_DX[*]} ]; then echo "Error: Wrong array size (BUFFER_DX)."; exit 1; fi
 if [ ${NUM_DOMAIN} -ne ${#BUFFER_DY[*]} ]; then echo "Error: Wrong array size (BUFFER_DY)."; exit 1; fi
