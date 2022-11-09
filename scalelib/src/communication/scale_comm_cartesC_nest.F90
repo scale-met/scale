@@ -62,8 +62,8 @@ module scale_comm_cartesC_nest
      integer  :: UKMAX
      logical  :: periodic_x
      logical  :: periodic_y
-     real(RP), pointer :: latlon_catalogue(:,:,:)
-     integer, pointer :: tile_id(:)
+     real(RP), allocatable :: latlon_catalogue(:,:,:)
+     integer, allocatable :: tile_id(:)
      integer  :: tile_num_x
      integer  :: tile_num_y
      character(len=FILE_HLONG) :: basename
@@ -1159,7 +1159,7 @@ contains
 
     if ( present(num_tile) ) &
          NUM_TILE = dom_info(dom_id)%tile_num_x * dom_info(dom_id)%tile_num_y
-         
+
     if ( present(tile_id) ) then
        do i = 1, min( size(tile_id), size(dom_info(dom_id)%tile_id) )
           tile_id(i) = dom_info(dom_id)%tile_id(i)
@@ -1500,7 +1500,7 @@ contains
 
        !##### child ####
 
-       nprocs = dom_info(I_PARENT)%prc_num_x * dom_info(I_PARENT)%prc_num_y 
+       nprocs = dom_info(I_PARENT)%prc_num_x * dom_info(I_PARENT)%prc_num_y
        ileng = nprocs * 2 * 2
 
        if ( PRC_IsMaster ) then
@@ -3139,8 +3139,8 @@ contains
     integer :: i
 
     do i = 1, num_dom
-       if ( associated( dom_info(i)%latlon_catalogue ) ) deallocate( dom_info(i)%latlon_catalogue )
-       if ( associated( dom_info(i)%tile_id ) )          deallocate( dom_info(i)%tile_id )
+       if ( allocated( dom_info(i)%latlon_catalogue ) ) deallocate( dom_info(i)%latlon_catalogue )
+       if ( allocated( dom_info(i)%tile_id ) )          deallocate( dom_info(i)%tile_id )
        num_dom = 0
     end do
 

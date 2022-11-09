@@ -197,7 +197,7 @@ module scale_file_history
      logical                :: flag_clear        !> Data buffer should be cleared at the timing of putting?
      integer                :: size              !> Size of array
      real(DP)               :: timesum           !> Buffer for time
-     real(DP), pointer      :: varsum(:)         !> Buffer for value
+     real(DP), allocatable      :: varsum(:)         !> Buffer for value
      logical                :: fill_halo         !> switch to fill halo with RMISS value
   end type var_out
 
@@ -212,11 +212,11 @@ module scale_file_history
      character(len=H_SHORT)          :: name
      integer                         :: ndims
      integer                         :: nzcoords
-     character(len=H_SHORT), pointer :: dims(:,:)
-     integer               , pointer :: start(:,:)
-     integer               , pointer :: count(:,:)
-     integer               , pointer :: size(:)
-     character(len=H_SHORT), pointer :: zcoords(:)
+     character(len=H_SHORT), allocatable :: dims(:,:)
+     integer               , allocatable :: start(:,:)
+     integer               , allocatable :: count(:,:)
+     integer               , allocatable :: size(:)
+     character(len=H_SHORT), allocatable :: zcoords(:)
      character(len=H_SHORT)          :: mapping
      character(len=H_SHORT)          :: area
      character(len=H_SHORT)          :: area_x
@@ -232,8 +232,8 @@ module scale_file_history
      character(len=H_SHORT) :: units
      character(len=H_SHORT) :: dim
      integer                :: dim_size
-     real(DP), pointer      :: var(:)
-     real(DP), pointer      :: bounds(:,:)
+     real(DP), allocatable      :: var(:)
+     real(DP), allocatable      :: bounds(:,:)
      logical                :: down
      integer                :: gdim_size  ! global dimension size
      integer                :: start      ! global array start index
@@ -246,7 +246,7 @@ module scale_file_history
      integer                :: ndims
      character(len=H_SHORT) :: dims(4)
      integer                :: dtype
-     real(DP), pointer      :: var(:)
+     real(DP), allocatable      :: var(:)
      integer                :: start(4)   ! global array start indices
      integer                :: count(4)   ! global array request lengths
   end type assoc
@@ -257,9 +257,9 @@ module scale_file_history
      character(len=H_MID)   :: key
      integer                :: type
      character(len=H_LONG)  :: text
-     integer,  pointer      :: int(:)
-     real(SP), pointer      :: float(:)
-     real(DP), pointer      :: double(:)
+     integer,  allocatable      :: int(:)
+     real(SP), allocatable      :: float(:)
+     real(DP), allocatable      :: double(:)
      logical                :: add_variable
   end type attr
 
@@ -1953,7 +1953,7 @@ contains
 
     do id = 1, FILE_HISTORY_naxes
        deallocate( FILE_HISTORY_axes(id)%var )
-       if ( associated( FILE_HISTORY_axes(id)%bounds ) ) &
+       if ( allocated( FILE_HISTORY_axes(id)%bounds ) ) &
             deallocate( FILE_HISTORY_axes(id)%bounds )
     end do
     FILE_HISTORY_naxes = 0
@@ -1964,11 +1964,11 @@ contains
     FILE_HISTORY_nassocs   =  0
 
     do id = 1, FILE_HISTORY_nattrs
-       if ( associated(FILE_HISTORY_attrs(id)%int ) ) &
+       if ( allocated(FILE_HISTORY_attrs(id)%int ) ) &
           deallocate( FILE_HISTORY_attrs(id)%int )
-       if ( associated(FILE_HISTORY_attrs(id)%float ) ) &
+       if ( allocated(FILE_HISTORY_attrs(id)%float ) ) &
             deallocate( FILE_HISTORY_attrs(id)%float )
-       if ( associated(FILE_HISTORY_attrs(id)%double ) ) &
+       if ( allocated(FILE_HISTORY_attrs(id)%double ) ) &
             deallocate( FILE_HISTORY_attrs(id)%double )
     end do
     FILE_HISTORY_nattrs   = 0
@@ -2280,7 +2280,7 @@ contains
                               FILE_HISTORY_axes(m)%units,                    & ! [IN]
                               FILE_HISTORY_axes(m)%dim,                      & ! [IN]
                               dtype, dim_size,                               & ! [IN]
-                              bounds=associated(FILE_HISTORY_axes(m)%bounds) ) ! [IN]
+                              bounds=allocated(FILE_HISTORY_axes(m)%bounds) ) ! [IN]
           if ( FILE_HISTORY_axes(m)%down ) then
              call FILE_Set_Attribute( fid, FILE_HISTORY_axes(m)%name, 'positive', 'down' ) ! [IN]
           endif
@@ -3018,7 +3018,7 @@ contains
                                 FILE_HISTORY_axes(m)%var,  & ! [IN]
                                 start                      ) ! [IN]
 
-          if ( associated(FILE_HISTORY_axes(m)%bounds) ) then
+          if ( allocated(FILE_HISTORY_axes(m)%bounds) ) then
              call FILE_Write_AssociatedCoordinate( fid,                                      & ! [IN]
                                                    trim(FILE_HISTORY_axes(m)%name)//'_bnds', & ! [IN]
                                                    FILE_HISTORY_axes(m)%bounds(:,:),         & ! [IN]

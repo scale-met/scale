@@ -1145,8 +1145,8 @@ contains
     integer, intent(out) :: timelen
     logical, intent(out) :: qtrc_flag(QA)
 
-    real(RP), pointer :: LON_all(:,:)
-    real(RP), pointer :: LAT_all(:,:)
+    real(RP), allocatable :: LON_all(:,:)
+    real(RP), allocatable :: LAT_all(:,:)
 
     real(RP) :: LON_min, LON_max
     real(RP) :: LAT_min, LAT_max
@@ -2759,8 +2759,8 @@ contains
     character(len=*), intent(in)  :: intrp_ocean_temp
     character(len=*), intent(in)  :: intrp_ocean_sfc_temp
 
-    real(RP), pointer :: lon_all(:,:)
-    real(RP), pointer :: lat_all(:,:)
+    real(RP), allocatable :: lon_all(:,:)
+    real(RP), allocatable :: lat_all(:,:)
 
     real(RP) :: LON_min, LON_max
     real(RP) :: LAT_min, LAT_max

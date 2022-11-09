@@ -72,8 +72,8 @@ contains
     integer,           intent(out) :: dims(6)
     integer,           intent(out) :: timelen
     logical,           intent(out) :: qtrc_flag(QA)
-    real(RP), pointer, intent(out) :: LON_all(:,:)
-    real(RP), pointer, intent(out) :: LAT_all(:,:)
+    real(RP), allocatable, intent(out) :: LON_all(:,:)
+    real(RP), allocatable, intent(out) :: LAT_all(:,:)
 
     character(len=*), intent(in)  :: basename_org
     character(len=*), intent(in)  :: basename_num
@@ -626,8 +626,8 @@ contains
     implicit none
     integer,           intent(out) :: ldims(3)
     integer,           intent(out) :: timelen
-    real(RP), pointer, intent(out) :: lon_all(:,:)
-    real(RP), pointer, intent(out) :: lat_all(:,:)
+    real(RP), allocatable, intent(out) :: lon_all(:,:)
+    real(RP), allocatable, intent(out) :: lat_all(:,:)
 
     character(len=*), intent(in)  :: basename
     character(len=*), intent(in)  :: basename_num
@@ -917,8 +917,8 @@ contains
 
     integer,           intent(out) :: odims(2)
     integer,           intent(out) :: timelen
-    real(RP), pointer, intent(out) :: lon_all(:,:)
-    real(RP), pointer, intent(out) :: lat_all(:,:)
+    real(RP), allocatable, intent(out) :: lon_all(:,:)
+    real(RP), allocatable, intent(out) :: lat_all(:,:)
 
     character(len=*), intent(in)  :: basename
     character(len=*), intent(in)  :: basename_num
