@@ -18,6 +18,8 @@ module scale_urban_dyn_kusaka01
   use scale_io
   use scale_prof
   use scale_cpl_sfc_index
+  use scale_mapprojection, only: &
+      BASE_LON => MAPPROJECTION_basepoint_lon
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -189,9 +191,13 @@ contains
     ! set other urban parameters
     call urban_param_setup
 
+    ! Local time: 1 to 24
     ahdiurnal(:) = (/ 0.356, 0.274, 0.232, 0.251, 0.375, 0.647, 0.919, 1.135, 1.249, 1.328, &
                       1.365, 1.363, 1.375, 1.404, 1.457, 1.526, 1.557, 1.521, 1.372, 1.206, &
                       1.017, 0.876, 0.684, 0.512                                            /)
+
+    ! Shift to UTC based on local solar timezone (BASE_LON / 15)
+    ahdiurnal(:) = cshift(ahdiurnal, nint(BASE_LON / 15))
 
     do j = UJS, UJE
     do i = UIS, UIE
