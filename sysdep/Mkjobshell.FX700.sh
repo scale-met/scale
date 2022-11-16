@@ -15,7 +15,7 @@ eval DATPARAM=(`echo ${11} | tr -s '[' '"' | tr -s ']' '"'`)
 eval DATDISTS=(`echo ${12} | tr -s '[' '"' | tr -s ']' '"'`)
 
 # System specific
-MPIEXEC="mpiexec.hydra -np"
+MPIEXEC="mpiexec -np"
 
 PROCLIST=(`echo ${PROCS} | tr -s ',' ' '`)
 TPROC=${PROCLIST[0]}
@@ -64,55 +64,41 @@ if [ ! ${N2GCONF} = "NONE" ]; then
    done
 fi
 
-NNODE=`expr \( $TPROC - 1 \) / 64 + 1`
-NPROC=`expr $TPROC / $NNODE`
-NPIN=`expr 255 / \( $NPROC \) + 1`
+array=( `echo ${TPROC} | tr -s 'x' ' '`)
+x=${array[0]}
+y=${array[1]:-1}
+let xy="${x} * ${y}"
 
-if [[ ${BINNAME} =~ ^scale-gm ]]; then
+if [ "${BINNAME}" = "scale-gm" ]; then
    nc=""
 else
    nc=".nc"
 fi
 
-
-
 cat << EOF1 > ./run.sh
 #! /bin/bash -x
 ################################################################################
 #
-# ------ FOR Oakforest-PACS -----
+# ------ For FX700 / FX1000
 #
 ################################################################################
-#PJM -g gc26
-#PJM -L rscgrp=regular-cache
-#PJM -L node=${NNODE}
-#PJM --mpi proc=${TPROC}
-#PJM --omp thread=1
-#PJM -L elapse=00:30:00
-#PJM -N SCALE
-#PJM -X
+#PJM -g xxxxxxx
+#PJM -L freq=2200
+#PJM -L eco_state=2
+#PJM -L rscgrp="small"
+#PJM -L node=$(((TPROC+3)/4))
+#PJM -L elapse=01:00:00
+#PJM --mpi "max-proc-per-node=4"
 #PJM -j
 #PJM -s
 #
-module load hdf5_szip
-module load hdf5
-module load netcdf
-module load netcdf-fortran
 
-export FORT_FMT_RECL=500
-
-export HFI_NO_CPUAFFINITY=1
-export I_MPI_PIN_PROCESSOR_EXCLUDE_LIST=0,1,68,69,136,137,204,205
-export I_MPI_HBW_POLICY=hbw_preferred,,
-export I_MPI_FABRICS_LIST=tmi
-unset KMP_AFFINITY
-#export KMP_AFFINITY=verbose
-#export I_MPI_DEBUG=5
-
-export OMP_NUM_THREADS=1
-export I_MPI_PIN_DOMAIN=${NPIN}
-export I_MPI_PERHOST=${NPROC}
-export KMP_HW_SUBSET=1t
+export PARALLEL=12
+export OMP_NUM_THREADS=\${PARALLEL}
+export FORT90L=-Wl,-T
+export PLE_MPI_STD_EMPTYFILE=off
+export OMP_WAIT_POLICY=active
+export FLIB_BARRIER=HARD
 
 EOF1
 
@@ -174,11 +160,13 @@ fi
 
 cat << EOF2 >> ./run.sh
 
-# run
+#run
+
 ${RUN_PP}
 ${RUN_INIT}
 ${RUN_MAIN}
 ${RUN_N2G}
+
 
 ################################################################################
 EOF2

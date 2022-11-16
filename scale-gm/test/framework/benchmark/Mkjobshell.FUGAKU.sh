@@ -117,13 +117,13 @@ spack load --first netcdf-fortran%fj
 spack load --first parallel-netcdf%fj
 
 /home/system/tool/sort_libp -s
-if [ $? -eq 0 ]; then
+if [ \$? -eq 0 ]; then
     :
 else
     echo "[ERROR] Error in sort_libp."
     exit 1
 fi
-export LD_LIBRARY_PATH=`/home/system/tool/sort_libp`
+export LD_LIBRARY_PATH=\`/home/system/tool/sort_libp\`
 
 EOF1
 
