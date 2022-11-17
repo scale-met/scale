@@ -98,6 +98,7 @@ module scale_atmos_phy_mp_tomita08
   logical,  private              :: nofall_qi = .false. ! surpress sedimentation of ice?
   logical,  private              :: nofall_qs = .false. ! surpress sedimentation of snow?
   logical,  private              :: nofall_qg = .false. ! surpress sedimentation of graupel?
+  !$acc declare create(nofall_qr, nofall_qi, nofall_qs, nofall_qg)
 
   real(RP), private, parameter   :: dens00      = 1.28_RP !< standard density [kg/m3]
 
@@ -105,6 +106,7 @@ module scale_atmos_phy_mp_tomita08
   real(RP), private              :: N0r_def     = 8.E+6_RP !< intercept parameter for rain    [1/m4]
   real(RP), private              :: N0s_def     = 3.E+6_RP !< intercept parameter for snow    [1/m4]
   real(RP), private              :: N0g_def     = 4.E+6_RP !< intercept parameter for graupel [1/m4]
+  !$acc declare create(N0r_def, N0s_def, N0g_def)
 
   real(RP), private              :: dens_s      = 100.0_RP !< density of snow    [kg/m3]
   real(RP), private              :: dens_g      = 400.0_RP !< density of graupel [kg/m3]
@@ -115,12 +117,14 @@ module scale_atmos_phy_mp_tomita08
   real(RP), private              :: re_qi       = 40.E-6_RP ! effective radius for cloud ice
   real(RP), private              :: Cr          = 130.0_RP
   real(RP), private              :: Cs          = 4.84_RP
+  !$acc declare create(Cr, Cs)
 
   ! Empirical parameter
   real(RP), private              :: Ar, As, Ag
   real(RP), private              :: Br, Bs, Bg
   real(RP), private              :: Cg
   real(RP), private              :: Dr, Ds, Dg
+  !$acc declare create(Ar, As, Ag, Cg)
 
   ! GAMMA function
   real(RP), private              :: GAM, GAM_2, GAM_3
@@ -139,6 +143,7 @@ module scale_atmos_phy_mp_tomita08
   real(RP), private              :: GAM_1bg, GAM_3dg
   real(RP), private              :: GAM_1bgdg
   real(RP), private              :: GAM_5dg_h
+  !$acc declare create(GAM_1brdr, GAM_1bs, GAM_1bg, GAM_1br, GAM_1bsds, GAM_1bgdg)
 
   ! Bergeron Parameter
   real(RP), parameter :: Bergeron_a1_tab(32) = (/ &
@@ -188,9 +193,11 @@ module scale_atmos_phy_mp_tomita08
   real(RP), private, parameter   :: coef_b08 =  0.000594_RP
   real(RP), private, parameter   :: coef_b09 =  0.0_RP
   real(RP), private, parameter   :: coef_b10 = -0.003577_RP
+  !$acc declare create(enable_RS2014)
 
   !---< Wainwright et al. (2014) >---
   logical, private :: enable_WDXZ2014 = .false. !< use scheme by Wainwright et al. (2014)
+  !$acc declare create(enable_WDXZ2014)
 
   !---< Heymsfield et al. (2007) >---
   logical,           private :: enable_HZDFHI2007 = .false. ! use scheme by Heymsfield et al. (2007)
@@ -199,6 +206,7 @@ module scale_atmos_phy_mp_tomita08
   real(RP),          private :: coef_a1
   real(RP),          private :: coef_b0
   real(RP),          private :: coef_b1
+  !$acc declare create(enable_HZDFHI2007, coef_a0, coef_a1, coef_b0, coef_b1)
 
   !---< Thornberry et al. (2017) >---
   logical, private :: enable_TRAWLBG2017 = .false. ! use scheme by Thornberry et al. (2017)
@@ -222,6 +230,7 @@ module scale_atmos_phy_mp_tomita08
   real(RP), private, parameter   :: Nc_lnd      = 2000.0_RP   !< number concentration of cloud water (land)  [1/cc]
   real(RP), private, parameter   :: Nc_ocn      =   50.0_RP   !< number concentration of cloud water (ocean) [1/cc]
   real(RP), private, allocatable :: Nc_def(:,:)               !< number concentration of cloud water         [1/cc]
+  !$acc declare create(Nc_def)
 
   real(RP), private              :: beta_saut   =  6.E-3_RP   !< auto-conversion factor beta  for ice
   real(RP), private              :: gamma_saut  = 60.E-3_RP   !< auto-conversion factor gamma for ice
@@ -374,6 +383,7 @@ module scale_atmos_phy_mp_tomita08
   real(RP), private, allocatable :: w3d(:,:,:,:) !< for history output
   integer,  private              :: HIST_id(w_nmax)
   integer,  private              :: HIST_Pcsat, HIST_Pisat
+  !$acc declare create(w3d)
 
   !-----------------------------------------------------------------------------
 contains
@@ -625,6 +635,16 @@ contains
       Ecoal_GS = 1.0_RP
     endif
 
+    !$acc update device(Cr, Cs)
+    !$acc update device(Ar, As, Ag, Cg)
+    !$acc update device(nofall_qr, nofall_qi, nofall_qs, nofall_qg)
+    !$acc update device(N0r_def, N0s_def, N0g_def)
+    !$acc update device(Nc_def)
+    !$acc update device(GAM_1brdr, GAM_1bs, GAM_1bg, GAM_1br, GAM_1bsds, GAM_1bgdg)
+    !$acc update device(enable_RS2014)
+    !$acc update device(enable_WDXZ2014)
+    !$acc update device(enable_HZDFHI2007, coef_a0, coef_a1, coef_b0, coef_b1)
+
     return
   end subroutine ATMOS_PHY_MP_tomita08_setup
 
@@ -698,6 +718,13 @@ contains
 
     LOG_PROGRESS(*) 'atmosphere / physics / microphysics / Tomita08'
 
+    !$acc data copy(TEMP, QTRC, CPtot, CVtot), &
+    !$acc      copyin(KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+    !$acc             DENS, PRES, CCN, dt ) &
+    !$acc      copyout(RHOE_t, EVAPORATE), &
+    !$acc      create(RHOE_d_sat, QC_t_sat, QI_t_sat)
+
+
     !##### MP Main #####
     call MP_tomita08( &
          KA, KS, KE, IA, IS, IE, JA, JS, JE,   & ! [IN]
@@ -707,13 +734,14 @@ contains
          CPtot(:,:,:), CVtot(:,:,:),           & ! [INOUT]
          RHOE_t(:,:,:),                        & ! [OUT]
          flg_lt, d0_crg, v0_crg,               & ! [IN:Optional]
-         dqcrg(:,:,:), beta_crg(:,:,:),        & ! [OUT:Optional]
+         dqcrg(:,:,:), beta_crg(:,:,:),        & ! [IN:Optional]
          QSPLT_in(:,:,:,:),                    & ! [OUT:Optional]
          Sarea(:,:,:,:),                       & ! [OUT:Optional]
          QTRC_crg(:,:,:,:)                     ) ! [INOUT:Optional]
 
     ! save value before saturation adjustment
     !$omp parallel do collapse(2)
+    !$acc kernels
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -722,6 +750,7 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
 
     call MP_saturation_adjustment( &
          KA, KS, KE, IA, IS, IE, JA, JS, JE, &
@@ -734,6 +763,7 @@ contains
          RHOE_d_sat(:,:,:)                   ) ! [OUT]
 
     !$omp parallel do collapse(2)
+    !$acc kernels
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -741,8 +771,10 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
 
     !$omp parallel do collapse(2)
+    !$acc kernels
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -753,6 +785,7 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
 
     call FILE_HISTORY_query( HIST_Pcsat, hist_flag )
     if ( hist_flag ) then
@@ -763,6 +796,7 @@ contains
     call FILE_HISTORY_query( HIST_Pisat, hist_flag )
     if ( hist_flag ) then
        !$omp parallel do collapse(2)
+       !$acc kernels
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
@@ -770,9 +804,12 @@ contains
        enddo
        enddo
        enddo
+       !$acc end kernels
        call FILE_HISTORY_put( HIST_Pisat, QI_t_sat(:,:,:) )
     end if
 
+
+    !$acc end data
 
     !##### END MP Main #####
 
@@ -932,12 +969,17 @@ contains
     real(RP) :: alpha
     real(RP) :: facq_QC, facq_QR, facq_QI, facq_QS, facq_QG
     logical  :: flg_lt_l
-    integer  :: grid(2), pp, qq, iq
+    integer  :: pp, qq, iq
     real(RP) :: qc_crg_t(KA), qr_crg_t(KA), qi_crg_t(KA), qs_crg_t(KA), qg_crg_t(KA)
     real(RP) :: rlambda(I_QC:I_QG)
     !---------------------------------------------------------------------------
 
     call PROF_rapstart('MP_tomita08', 3)
+
+    !$acc data copy(TEMP0, QTRC0, CPtot0, CVtot0) &
+    !$acc      copyin(DENS0, PRES0, CCN) &
+    !$acc      copyout(RHOE_t) &
+    !$acc      create(HIST_sw)
 
     rdens_i = 1.0_RP / DICE
     rdens_g = 1.0_RP / dens_g
@@ -949,10 +991,19 @@ contains
        flg_lt_l = .false.
     end if
     if( flg_lt_l ) then
+
+       !$acc enter data copyin(dqcrg, beta_crg, &
+       !$acc                   QTRC_crg0) &
+       !$acc            create(QSPLT_in, Sarea, &
+       !$acc                   Re)
+
 !OCL ZFILL
        !$omp parallel workshare
+       !$omp kernels
        QSPLT_in(:,:,:,:) = 0.0_RP
+       !$omp end kernels
        !$omp end parallel workshare
+
        call ATMOS_PHY_MP_tomita08_effective_radius( &
        KA, KS, KE, IA, IS, IE, JA, JS, JE, &
        DENS0, TEMP0, QTRC0, &
@@ -964,6 +1015,7 @@ contains
        call FILE_HISTORY_query( HIST_id(ip), HIST_sw(ip) )
        hist_flag = hist_flag .or. HIST_sw(ip)
     end do
+    !$acc update device(HIST_sw)
 
     !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
     !$omp shared(KA,KS,KE,IS,IE,JS,JE, &
@@ -996,7 +1048,17 @@ contains
     !$omp         w_q,w_qcrg,re_qs,dcrg,beta1_crg,alpha,facq_QC,facq_QR,facq_QI,facq_QS,facq_QG,rlambda, &
     !$omp         sw_bergeron,a1,a2,ma2,dt1,Ni50, &
     !$omp         sw,rhoqi,XNi,XMi,Di,Nig,Qig,w)
+    !$acc kernels
     do j = JS, JE
+    !$acc loop private(dens, temp, cvtot, qv, qc, qr, qi, qs, qg, qv_t, qc_t, qr_t, qi_t, qs_t, qg_t, &
+    !$acc              QSATL, QSATI, Sliq, Sice, Rdens, rho_fact, temc, N0r, N0s, N0g, &
+    !$acc              RLMDr, RLMDr_2, RLMDr_3, RLMDg, RLMDg_2, RLMDg_3, &
+    !$acc              RLMDr_1br, RLMDr_2br, RLMDr_3br, RLMDr_dr, RLMDr_3dr, RLMDr_5dr, &
+    !$acc              RLMDg_dg, RLMDg_3dg, RLMDg_5dg, RLMDr_7, RLMDr_6dr, &
+    !$acc              MOMs_0, MOMs_1, MOMs_2, MOMs_0bs, MOMs_1bs, MOMs_2bs, MOMs_2ds, MOMs_5ds_h, RMOMs_Vt, &
+    !$acc              Vti, Vtr, Vts, Vtg, Egs_mod, Nc, Nu, fack, Glv, Giv, Gil, sw_bergeron, a1, a2, ma2, w, &
+    !$acc              qcrg_c, qcrg_r, qcrg_i, qcrg_s, qcrg_g, w_q, w_qcrg, &
+    !$acc              dcrg, beta1_crg, re_qs, qc_crg_t, qr_crg_t, qi_crg_t, qs_crg_t, qg_crg_t)
     do i = IS, IE
 
        if ( do_couple_aerosol ) then
@@ -1051,6 +1113,7 @@ contains
 
        ! slope parameter lambda (Snow)
        if ( enable_RS2014 ) then
+          !$acc loop private(coef_at, coef_bt)
           do k = KS, KE
              !---< modification by Roh and Satoh (2014) >---
              ! bimodal size distribution of snow
@@ -2015,6 +2078,7 @@ contains
           end do
 
 !OCL LOOP_FISSION_TARGET(LS)
+          !$acc loop private(rlambda)
           do k = KS, KE
              rlambda(I_QR) = sqrt(sqrt( DENS0(k,i,j) * max( QTRC0(k,i,j,I_QR),0.0_RP ) / ( Ar * N0r(k) * GAM_1br ) ))
              rlambda(I_QS) = sqrt(sqrt( DENS0(k,i,j) * max( QTRC0(k,i,j,I_QS),0.0_RP ) / ( As * N0s(k) * GAM_1bs ) ))
@@ -2028,13 +2092,15 @@ contains
              Sarea(k,i,j,I_QG-1) = PI * N0g(k) * GAM_3 * rlambda(I_QG)**3
           end do
 
+          do iq = 1, 3
           do k = KS, KE
-             QSPLT_in(k,i,j,:) = QSPLT_in(k,i,j,:) * DENS0(k,i,j)
-          end do
-
+             QSPLT_in(k,i,j,iq) = QSPLT_in(k,i,j,iq) * DENS0(k,i,j)
+          enddo
+          enddo
        end if
 
        if ( hist_flag ) then
+          !$acc loop seq
           do ip = 1, w_nmax
              if ( HIST_sw(ip) ) then
                 do k = KS, KE
@@ -2046,10 +2112,18 @@ contains
 
     enddo
     enddo
+    !$acc end kernels
 
     do ip = 1, w_nmax
        if ( HIST_sw(ip) ) call FILE_HISTORY_put( HIST_id(ip), w3d(:,:,:,ip) )
     enddo
+
+    if( flg_lt_l ) then
+       !$acc exit data copyout(QSPLT_in, Sarea, QTRC_crg0) &
+       !$acc           delete(Re, dqcrg, beta_crg)
+    end if
+
+    !$acc end data
 
     call PROF_rapend  ('MP_tomita08', 3)
 
@@ -2063,6 +2137,7 @@ contains
        KA, KS, KE, &
        DENS0, TEMP0, RHOQ0, &
        vterm                )
+    !$acc routine vector
     use scale_const, only: &
        TEM00 => CONST_TEM00
     implicit none
@@ -2152,6 +2227,7 @@ contains
     if ( enable_RS2014 ) then
        !---< modification by Roh and Satoh (2014) >---
        ! bimodal size distribution of snow
+       !$acc loop private(coef_at, coef_bt)
        do k = KS, KE
           zerosw = 0.5_RP - sign(0.5_RP, dens(k) * qs(k) - 1.E-12_RP )
           Xs2    = dens(k) * qs(k) / As
@@ -2262,6 +2338,7 @@ contains
 
     !$omp parallel do OMP_SCHEDULE_ &
     !$omp private(qhydro)
+    !$acc kernels copyin(QTRC) copyout(cldfrac)
     do j  = JS, JE
     do i  = IS, IE
     do k  = KS, KE
@@ -2271,6 +2348,7 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
 
     return
   end subroutine ATMOS_PHY_MP_tomita08_cloud_fraction
@@ -2321,9 +2399,12 @@ contains
     integer  :: k, i, j, ih
     !---------------------------------------------------------------------------
 
+    !$acc data copyin(DENS0,TEMP0,QTRC0) copyout(Re)
+
     if ( enable_TRAWLBG2017 ) then
        !$omp parallel do OMP_SCHEDULE_ &
        !$omp private(sw)
+       !$acc kernels
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
@@ -2334,8 +2415,10 @@ contains
        end do
        end do
        end do
+       !$acc end kernels
     else
        !$omp parallel do OMP_SCHEDULE_
+       !$acc kernels
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
@@ -2343,8 +2426,10 @@ contains
        end do
        end do
        end do
+       !$acc end kernels
     end if
     !$omp parallel do OMP_SCHEDULE_
+    !$acc kernels
     do ih = I_HG+1, N_HYD
     do j = JS, JE
     do i = IS, IE
@@ -2354,10 +2439,12 @@ contains
     end do
     end do
     end do
+    !$acc end kernels
 
     if ( const_rec .or. fixed_re ) then
 
        !$omp parallel do OMP_SCHEDULE_
+       !$acc kernels
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
@@ -2365,12 +2452,15 @@ contains
        end do
        end do
        end do
+       !$acc end kernels
 
     else
 
        !$omp parallel do OMP_SCHEDULE_ &
        !$omp private(Nc)
+       !$acc kernels
        do j = JS, JE
+       !$acc loop private(Nc)
        do i = IS, IE
           if ( do_couple_aerosol ) then
              do k = KS, KE
@@ -2390,12 +2480,14 @@ contains
           enddo
        enddo
        enddo
+       !$acc end kernels
 
     endif
 
     if ( fixed_re ) then
 
        !$omp parallel do OMP_SCHEDULE_
+       !$acc kernels
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
@@ -2403,7 +2495,10 @@ contains
        end do
        end do
        end do
+       !$acc end kernels
+
        !$omp parallel do OMP_SCHEDULE_
+       !$acc kernels
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
@@ -2411,14 +2506,18 @@ contains
        end do
        end do
        end do
+       !$acc end kernels
+
        !$omp parallel do OMP_SCHEDULE_
+       !$acc kernels
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
-       Re(k,i,j,I_HG) =  re_qi * m2cm
+          Re(k,i,j,I_HG) =  re_qi * m2cm
        end do
        end do
        end do
+       !$acc end kernels
 
     else
 
@@ -2436,7 +2535,9 @@ contains
        !$omp private(b_,RLMDg,coef_at,coef_bt) &
        !$omp OMP_SCHEDULE_ collapse(2)
 #endif
+       !$acc kernels
        do j  = JS, JE
+       !$acc loop private(dens,temc,qr,qs,qg,N0r,N0s,N0g)
        do i  = IS, IE
 
           do k = KS, KE
@@ -2472,6 +2573,7 @@ contains
           end do
 
           if ( enable_RS2014 ) then
+             !$acc loop private(coef_at, coef_bt)
              do k = KS, KE
                 zerosw = 0.5_RP - sign(0.5_RP, qs(k) - 1.E-12_RP )
                 !---< modification by Roh and Satoh (2014) >---
@@ -2513,8 +2615,11 @@ contains
 
        enddo
        enddo
+       !$acc end kernels
 
     endif
+
+    !$acc end data
 
     return
   end subroutine ATMOS_PHY_MP_tomita08_effective_radius
@@ -2544,7 +2649,10 @@ contains
     integer :: k, i, j, ih
     !---------------------------------------------------------------------------
 
+    !$acc data copyin(QTRC) copyout(Qe)
+
     !$omp parallel do OMP_SCHEDULE_
+    !$acc kernels async
 !OCL XFILL
     do j = JS, JE
     do i = IS, IE
@@ -2553,8 +2661,11 @@ contains
     end do
     end do
     end do
+    !$acc end kernels
+
     !$omp parallel do OMP_SCHEDULE_
 !OCL XFILL
+    !$acc kernels async
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -2562,7 +2673,10 @@ contains
     end do
     end do
     end do
+    !$acc end kernels
+
     !$omp parallel do OMP_SCHEDULE_
+    !$acc kernels async
 !OCL XFILL
     do j = JS, JE
     do i = IS, IE
@@ -2571,7 +2685,10 @@ contains
     end do
     end do
     end do
+    !$acc end kernels
+
     !$omp parallel do OMP_SCHEDULE_
+    !$acc kernels async
 !OCL XFILL
     do j = JS, JE
     do i = IS, IE
@@ -2580,7 +2697,10 @@ contains
     end do
     end do
     end do
+    !$acc end kernels
+
     !$omp parallel do OMP_SCHEDULE_
+    !$acc kernels async
 !OCL XFILL
     do j = JS, JE
     do i = IS, IE
@@ -2589,7 +2709,10 @@ contains
     end do
     end do
     end do
+    !$acc end kernels
+
     !$omp parallel do OMP_SCHEDULE_
+    !$acc kernels async
 !OCL XFILL
     do ih = I_HG+1, N_HYD
     do j = JS, JE
@@ -2600,6 +2723,11 @@ contains
     end do
     end do
     end do
+    !$acc end kernels
+
+    !$acc wait
+
+    !$acc end data
 
     return
   end subroutine ATMOS_PHY_MP_tomita08_qtrc2qhyd
@@ -2629,7 +2757,10 @@ contains
     integer :: k, i, j
     !---------------------------------------------------------------------------
 
+    !$acc data copyin(Qe) copyout(QTRC)
+
     !$omp parallel do OMP_SCHEDULE_
+    !$acc kernels async
 !OCL XFILL
     do j = JS, JE
     do i = IS, IE
@@ -2638,7 +2769,10 @@ contains
     end do
     end do
     end do
+    !$acc end kernels
+
     !$omp parallel do OMP_SCHEDULE_
+    !$acc kernels async
 !OCL XFILL
     do j = JS, JE
     do i = IS, IE
@@ -2647,7 +2781,10 @@ contains
     end do
     end do
     end do
+    !$acc end kernels
+
     !$omp parallel do OMP_SCHEDULE_
+    !$acc kernels async
 !OCL XFILL
     do j = JS, JE
     do i = IS, IE
@@ -2656,7 +2793,10 @@ contains
     end do
     end do
     end do
+    !$acc end kernels
+
     !$omp parallel do OMP_SCHEDULE_
+    !$acc kernels async
 !OCL XFILL
     do j = JS, JE
     do i = IS, IE
@@ -2665,7 +2805,10 @@ contains
     end do
     end do
     end do
+    !$acc end kernels
+
     !$omp parallel do OMP_SCHEDULE_
+    !$acc kernels async
 !OCL XFILL
     do j = JS, JE
     do i = IS, IE
@@ -2674,6 +2817,11 @@ contains
     end do
     end do
     end do
+    !$acc end kernels
+
+    !$acc wait
+
+    !$acc end data
 
     return
   end subroutine ATMOS_PHY_MP_tomita08_qhyd2qtrc

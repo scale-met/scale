@@ -132,7 +132,10 @@ contains
     !$omp        CVdry,CPdry,CV_VAPOR,CP_VAPOR,CV_WATER,CP_WATER,CV_ICE,CP_ICE, &
     !$omp        DENS,TEMP,CVtot,CPtot,QV,QTRC, &
     !$omp        RHOH,DENS_diff,ENGI_diff,rhoh_out,dens_out,engi_out,limit_negative)
+    !$acc kernels copy(DENS, TEMP, CVtot, CPtot, QV, QTRC) copyout(RHOH, DENS_diff, ENGI_diff)
+    !$acc loop reduction(min:diffq_min)
     do j = JS, JE
+    !$acc loop private(LHV, LHS, eng, eng0, dens0, diffq) reduction(min:diffq_min)
     do i = IS, IE
 
        diffq(:) = 0.0_RP
@@ -185,11 +188,14 @@ contains
 
 
        if ( abs(limit_negative) > 0.0_RP ) then
+          !$acc loop reduction(min:diffq_min)
           do k = KS, KE
              if ( diffq(k) < - abs(limit_negative) ) then
                 diffq_min = min( diffq_min, diffq(k) )
+#ifndef _OPENACC
                 LOG_ERROR("ATMOS_PHY_MP_negative_fixer",*) 'large negative is found'
                 LOG_ERROR_CONT(*) 'value = ', diffq(k), ' at (', k, ',', i, ',', j, ')'
+#endif
              end if
           end do
        end if
@@ -249,6 +255,7 @@ contains
 
     enddo
     enddo
+    !$acc end kernels
 
 
     if (       abs(limit_negative) > 0.0_RP         &
@@ -330,8 +337,12 @@ contains
        !$omp         DENS,QV,QC,TEMP,CPtot,CVtot,RHOE_d,error) &
        !$omp private(i,j,k, &
        !$omp         QV1,QC1,Emoist,converged)
+       !$acc kernels copyin(DENS) copyout(RHOE_d) copy(TEMP, QV, QC, CPtot, CVtot)
+       !$acc loop reduction(.or.:error)
        do j = JS, JE
+       !$acc loop reduction(.or.:error)
        do i = IS, IE
+       !$acc loop reduction(.or.:error) private(qv1, qc1, emoist, converged)
        do k = KS, KE
 
           QV1 = QV(k,i,j)
@@ -346,9 +357,11 @@ contains
                                                            converged                   ) ! [OUT]
 
           if ( .NOT. converged ) then
-             LOG_ERROR("ATMOS_PHY_MP_saturation_adjustment_3D",*) 'moist_conversion not converged! ', k,i,j
              error = .true.
+#ifndef _OPENACC
+             LOG_ERROR("ATMOS_PHY_MP_saturation_adjustment_3D",*) 'moist_conversion not converged! ', k,i,j, DENS(k,i,j), Emoist, TEMP(k,i,j), QV(k,i,j), QC(k,i,j), CPtot(k,i,j), CVtot(k,i,j)
              exit
+#endif
           endif
 
           RHOE_d(k,i,j) = - LHV * ( QV1 - QV(k,i,j) ) * DENS(k,i,j)
@@ -359,9 +372,14 @@ contains
        end do
        end do
        end do
+       !$acc end kernels
 
-       if ( error ) call PRC_abort
-
+       if ( error ) then
+#ifndef _OPENACC
+          LOG_ERROR("ATMOS_PHY_MP_saturation_adjustment_3D",*) 'moist_conversion not converged!'
+#endif
+          call PRC_abort
+       end if
     else ! cold rain
 
        !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
@@ -371,8 +389,12 @@ contains
        !$omp         DENS,QV,QC,QI,TEMP,CPtot,CVtot,RHOE_d,error) &
        !$omp private(i,j,k, &
        !$omp         QV1,QC1,QI1,Emoist,converged)
+       !$acc kernels copyin(DENS) copyout(RHOE_d) copy(TEMP, QV, QC, QI, CPtot, CVtot)
+       !$acc loop reduction(.or.:error) independent
        do j = JS, JE
+       !$acc loop reduction(.or.:error) independent
        do i = IS, IE
+       !$acc loop reduction(.or.:error) private(qv1, qc1, qi1, emoist, converged) independent
        do k = KS, KE
           QV1 = QV(k,i,j)
           QC1 = QC(k,i,j)
@@ -388,9 +410,11 @@ contains
                                                            converged                   ) ! [OUT]
 
           if ( .NOT. converged ) then
-             LOG_ERROR("ATMOS_PHY_MP_saturation_adjustment_3D",*) 'moist_conversion not converged! ', k,i,j, DENS(k,i,j), Emoist, TEMP(k,i,j), QV(k,i,j), QC(k,i,j), QI(k,i,j), CPtot(k,i,j), CVtot(k,i,j)
              error = .true.
+#ifndef _OPENACC
+             LOG_ERROR("ATMOS_PHY_MP_saturation_adjustment_3D",*) 'moist_conversion not converged! ', k,i,j, DENS(k,i,j), Emoist, TEMP(k,i,j), QV(k,i,j), QC(k,i,j), QI(k,i,j), CPtot(k,i,j), CVtot(k,i,j)
              exit
+#endif
           endif
 
           RHOE_d(k,i,j) = ( - LHV * ( QV1 - QV(k,i,j) ) &
@@ -403,8 +427,14 @@ contains
        end do
        end do
        end do
+       !$acc end kernels
 
-       if ( error ) call PRC_abort
+       if ( error ) then
+#ifdef _OPENACC
+          LOG_ERROR("ATMOS_PHY_MP_saturation_adjustment_3D",*) 'moist_conversion not converged!'
+#endif
+          call PRC_abort
+       end if
     endif
 
     call PROF_rapend  ('MP_Saturation_adjustment', 2)
@@ -420,6 +450,7 @@ contains
        i, j,                           &
        DENS, RHOQ, CPtot, CVtot, RHOE, &
        mflx, sflx, esflx               )
+    !$acc routine vector
     use scale_const, only: &
        GRAV  => CONST_GRAV
     use scale_atmos_hydrometeor, only: &
@@ -474,6 +505,7 @@ contains
        RHOCV(k) = CVtot(k) * DENS(k)
     end do
 
+    !$acc loop seq
     do iq = 1, QHA
 
        !--- mass flux for each tracer, upwind with vel < 0
@@ -544,6 +576,7 @@ contains
        i, j,                           &
        DENS, RHOQ, CPtot, CVtot, RHOE, &
        mflx, sflx, esflx               )
+    !$acc routine vector
     use scale_const, only: &
        GRAV  => CONST_GRAV
     use scale_atmos_hydrometeor, only: &
@@ -598,7 +631,6 @@ contains
 
     mflx(:) = 0.0_RP
     sflx(:) = 0.0_RP
-    eflx(:) = 0.0_RP
 
     do k = KS, KE
        RHOCP(k) = CPtot(k) * DENS(k)
@@ -612,9 +644,11 @@ contains
        rfdz2(k) = 1.0_RP / ( CDZ(k) + CDZ(k+1) )
     end do
 
+    !$acc loop seq
     do iq = 1, QHA
 
        qflx(:) = 0.0_RP
+       eflx(:) = 0.0_RP
 
        do k = KS, KE-1
           vtermh(k) = ( CDZ(k) * vterm(k+1,iq) + CDZ(k+1) * vterm(k,iq) ) * rfdz2(k)
@@ -639,6 +673,7 @@ contains
        dist(KS-1) = max( dist(KS-1), 0.0_RP )
 
        ! wall cannot overtake
+       !$acc loop seq
        do k = KE-2, KS-1, -1
           dist(k) = min( dist(k), dist(k+1) + CDZ(k+1) )
        end do
@@ -676,7 +711,9 @@ contains
           CV = CV_WATER
        end if
 
+       !$acc loop seq
        do k_dst = KS-1, KE-1
+          !$acc loop independent
           do k = k_dst, k_src(k_dst)-1
              flx = RHOQ(k+1,iq) * CDZ(k+1) / dt               ! sum column mass rhoq*dz
              qflx(k_dst) = qflx(k_dst) - flx
@@ -733,7 +770,7 @@ contains
                               + qflx(k) * FDZ(k) * GRAV  & ! contribution with the release of potential energy
                               ) * RCDZ(k) * dt
        end do
-       esflx = eflx(KS-1)
+       esflx = esflx + eflx(KS-1)
 
     end do
 
@@ -752,6 +789,7 @@ contains
        DENS, MOMZ, U, V, mflx, &
        RCDZ, RFDZ,             &
        MOMZ_t, RHOU_t, RHOV_t  )
+    !$acc routine vector
     implicit none
 
     integer,  intent(in)  :: KA, KS, KE
