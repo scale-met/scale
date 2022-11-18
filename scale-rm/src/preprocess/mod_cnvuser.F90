@@ -45,39 +45,55 @@ module mod_cnvuser
   !
   !++ Private parameters & variables
   !
-  integer, parameter     :: n_vars_max                              = 10                       ! Maximum number of variables
-  integer                :: CNVUSER_NVARS                           = 1
-  character(len=H_SHORT) :: CNVUSER_FILE_TYPE(n_vars_max)           = ''                       ! '' : do nothing
-                                                                                               ! 'TILE': tile data
-                                                                                               ! 'GrADS': GrADS data
-  character(len=H_SHORT) :: CNVUSER_INTERP_TYPE(n_vars_max)         = 'LINEAR'
-  integer                :: CNVUSER_INTERP_LEVEL(n_vars_max)        = 5
+  logical                  :: CNVUSER_OUT_AGGREGATE
 
-  character(len=H_LONG)  :: CNVUSER_OUT_BASENAME(n_vars_max)        = ''                       ! basename of the output file
-  character(len=H_MID)   :: CNVUSER_OUT_TITLE(n_vars_max)           = 'SCALE-RM User Boundary' ! title    of the output file
-  character(len=H_SHORT) :: CNVUSER_OUT_VARNAME(n_vars_max)         = ''                       ! name  of the variable
-  character(len=H_MID)   :: CNVUSER_OUT_VARDESC(n_vars_max)         = ''                       ! title of the variable
-  character(len=H_SHORT) :: CNVUSER_OUT_VARUNIT(n_vars_max)         = ''                       ! units of the variable
-  character(len=H_SHORT) :: CNVUSER_OUT_DTYPE(n_vars_max)           = 'DEFAULT'                ! REAL4 or REAL8
-  real(DP)               :: CNVUSER_OUT_DT(n_vars_max)              = -1_DP                    ! sec
-  logical                :: CNVUSER_OUT_AGGREGATE
+  type, abstract :: t_param
+    character(len=H_SHORT) :: INTERP_TYPE
+    integer                :: INTERP_LEVEL
 
-  integer                :: CNVUSER_NSTEPS(n_vars_max)              = 1                        ! # of time steps
+    character(len=H_LONG)  :: OUT_BASENAME     ! basename of the output file
+    character(len=H_MID)   :: OUT_TITLE        ! title    of the output file
+    character(len=H_SHORT) :: OUT_VARNAME      ! name  of the variable
+    character(len=H_MID)   :: OUT_VARDESC      ! title of the variable
+    character(len=H_SHORT) :: OUT_VARUNIT      ! units of the variable
+    character(len=H_SHORT) :: OUT_DTYPE        ! REAL4 or REAL8
+    real(DP)               :: OUT_DT           ! sec
+
+    integer                :: NSTEPS           ! # of time steps
+  end type t_param
 
   ! TILE data
-  character(len=H_SHORT) :: CNVUSER_TILE_DTYPE(n_vars_max)          = 'real4'                  ! data type in the tiled data
-  real(RP)               :: CNVUSER_TILE_DLAT(n_vars_max)
-  real(RP)               :: CNVUSER_TILE_DLON(n_vars_max)
-  character(len=H_LONG)  :: CNVUSER_TILE_DIR(n_vars_max)            = ''
-  character(len=H_LONG)  :: CNVUSER_TILE_CATALOGUE(n_vars_max)      = ''
+  type, extends(t_param) :: t_tile
+    character(len=H_SHORT) :: TILE_DTYPE       ! data type in the tiled data
+    real(RP)               :: TILE_DLAT
+    real(RP)               :: TILE_DLON
+    character(len=H_LONG)  :: TILE_DIR
+    character(len=H_LONG)  :: TILE_CATALOGUE
+  end type t_tile
 
   ! GrADS data
-  character(len=H_LONG)  :: CNVUSER_GrADS_FILENAME(n_vars_max)     = ''
-  character(len=H_SHORT) :: CNVUSER_GrADS_VARNAME(n_vars_max)      = ''
-  character(len=H_SHORT) :: CNVUSER_GrADS_LATNAME(n_vars_max)      = 'lat'
-  character(len=H_SHORT) :: CNVUSER_GrADS_LONNAME(n_vars_max)      = 'lon'
-  character(len=H_SHORT) :: CNVUSER_GrADS_LEVNAME(n_vars_max)      = ''
-  character(len=H_SHORT) :: CNVUSER_GrADS_HEIGHT_PLEV(n_vars_max)  = 'HGT'
+  type, extends(t_param) :: t_grads
+    character(len=H_LONG)  :: GrADS_FILENAME
+    character(len=H_SHORT) :: GrADS_VARNAME
+    character(len=H_SHORT) :: GrADS_LATNAME
+    character(len=H_SHORT) :: GrADS_LONNAME
+  end type t_grads
+
+  ! GrADS-3D data
+  type, extends(t_param) :: t_grads_3d
+    character(len=H_LONG)  :: GrADS_FILENAME
+    character(len=H_SHORT) :: GrADS_VARNAME
+    character(len=H_SHORT) :: GrADS_LATNAME
+    character(len=H_SHORT) :: GrADS_LONNAME
+    character(len=H_SHORT) :: GrADS_LEVNAME
+    character(len=H_SHORT) :: GrADS_HEIGHT_PLEV
+  end type t_grads_3d
+
+  type t_param_wrapper
+    class(t_param), allocatable :: param
+  end type t_param_wrapper
+
+  type(t_param_wrapper), allocatable :: params(:)
 
   !-----------------------------------------------------------------------------
 contains
@@ -88,8 +104,36 @@ contains
     use scale_file, only: &
        FILE_AGGREGATE
 
+    character(len=H_SHORT) :: CNVUSER_FILE_TYPE
+    character(len=H_SHORT) :: CNVUSER_INTERP_TYPE
+    integer                :: CNVUSER_INTERP_LEVEL
+
+    character(len=H_LONG)  :: CNVUSER_OUT_BASENAME
+    character(len=H_MID)   :: CNVUSER_OUT_TITLE
+    character(len=H_SHORT) :: CNVUSER_OUT_VARNAME
+    character(len=H_MID)   :: CNVUSER_OUT_VARDESC
+    character(len=H_SHORT) :: CNVUSER_OUT_VARUNIT
+    character(len=H_SHORT) :: CNVUSER_OUT_DTYPE
+    real(DP)               :: CNVUSER_OUT_DT
+
+    integer                :: CNVUSER_NSTEPS
+
+    ! TILE data
+    character(len=H_SHORT) :: CNVUSER_TILE_DTYPE
+    real(RP)               :: CNVUSER_TILE_DLAT
+    real(RP)               :: CNVUSER_TILE_DLON
+    character(len=H_LONG)  :: CNVUSER_TILE_DIR
+    character(len=H_LONG)  :: CNVUSER_TILE_CATALOGUE
+
+    ! GrADS data
+    character(len=H_LONG)  :: CNVUSER_GrADS_FILENAME
+    character(len=H_SHORT) :: CNVUSER_GrADS_VARNAME
+    character(len=H_SHORT) :: CNVUSER_GrADS_LATNAME
+    character(len=H_SHORT) :: CNVUSER_GrADS_LONNAME
+    character(len=H_SHORT) :: CNVUSER_GrADS_LEVNAME
+    character(len=H_SHORT) :: CNVUSER_GrADS_HEIGHT_PLEV
+
     namelist / PARAM_CNVUSER /    &
-       CNVUSER_NVARS,             &
        CNVUSER_FILE_TYPE,         &
        CNVUSER_NSTEPS,            &
        CNVUSER_INTERP_TYPE,       &
@@ -113,7 +157,7 @@ contains
        CNVUSER_OUT_DTYPE,         &
        CNVUSER_OUT_DT
 
-    integer  :: ierr
+    integer  :: ierr, n_vars
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
@@ -123,14 +167,108 @@ contains
 
     !--- read namelist
     rewind(IO_FID_CONF)
-    read(IO_FID_CONF,nml=PARAM_CNVUSER,iostat=ierr)
-    if( ierr < 0 ) then !--- missing
-       LOG_INFO("CNVUSER_setup",*) 'Not found namelist. Default used.'
-    elseif( ierr > 0 ) then !--- fatal error
-       LOG_ERROR("CNVUSER_setup",*) 'Not appropriate names in namelist PARAM_CNVUSER. Check!'
-       call PRC_abort
-    endif
-    LOG_NML(PARAM_CNVUSER)
+    n_vars = 0
+    do
+      CNVUSER_FILE_TYPE = ''
+      read(IO_FID_CONF,nml=PARAM_CNVUSER,iostat=ierr)
+      if( ierr < 0 ) then !--- missing
+         exit
+      elseif( ierr > 0 ) then !--- fatal error
+         LOG_ERROR("CNVUSER_setup",*) 'Not appropriate names in namelist PARAM_CNVUSER. Check!'
+         call PRC_abort
+      endif
+      if (CNVUSER_FILE_TYPE == "") cycle
+      n_vars = n_vars + 1
+    end do
+
+    allocate(params(n_vars))
+    rewind(IO_FID_CONF)
+    n_vars = 0
+    do
+      ! Default value
+      CNVUSER_FILE_TYPE           = ''
+      CNVUSER_INTERP_TYPE         = 'LINEAR'
+      CNVUSER_INTERP_LEVEL        = 5
+
+      CNVUSER_OUT_BASENAME        = ''
+      CNVUSER_OUT_TITLE           = 'SCALE-RM User Boundary'
+      CNVUSER_OUT_VARNAME         = ''
+      CNVUSER_OUT_VARDESC         = ''
+      CNVUSER_OUT_VARUNIT         = ''
+      CNVUSER_OUT_DTYPE           = 'DEFAULT'
+      CNVUSER_OUT_DT              = -1_DP
+
+      CNVUSER_NSTEPS              = 1
+
+
+      CNVUSER_TILE_DTYPE          = 'real4'
+      CNVUSER_TILE_DLAT           = -1
+      CNVUSER_TILE_DLON           = -1
+      CNVUSER_TILE_DIR            = ''
+      CNVUSER_TILE_CATALOGUE      = ''
+
+
+      CNVUSER_GrADS_FILENAME     = ''
+      CNVUSER_GrADS_VARNAME      = ''
+      CNVUSER_GrADS_LATNAME      = 'lat'
+      CNVUSER_GrADS_LONNAME      = 'lon'
+      CNVUSER_GrADS_LEVNAME      = ''
+      CNVUSER_GrADS_HEIGHT_PLEV  = 'HGT'
+
+      read(IO_FID_CONF,nml=PARAM_CNVUSER,iostat=ierr)
+      if( ierr /= 0 ) exit
+      LOG_NML(PARAM_CNVUSER)
+      if (CNVUSER_FILE_TYPE == "") cycle
+
+      n_vars = n_vars + 1
+
+      select case (CNVUSER_FILE_TYPE)
+      case ("TILE")
+        allocate(t_tile::params(n_vars)%param)
+      case ("GrADS")
+        allocate(t_grads::params(n_vars)%param)
+      case ("GrADS-3D")
+        allocate(t_grads_3d::params(n_vars)%param)
+      case default
+         LOG_ERROR('CNVUSER_setup',*) 'CNVUSER_FILE_TYPE is invalid: ', CNVUSER_FILE_TYPE
+         LOG_ERROR_CONT(*)            'It must be "TILE" or "GrADS".'
+         call PRC_abort
+      end select
+
+      associate (param => params(n_vars)%param)
+        param%INTERP_TYPE = CNVUSER_INTERP_TYPE
+        param%INTERP_LEVEL = CNVUSER_INTERP_LEVEL
+        param%OUT_BASENAME = CNVUSER_OUT_BASENAME
+        param%OUT_TITLE = CNVUSER_OUT_TITLE
+        param%OUT_VARNAME = CNVUSER_OUT_VARNAME
+        param%OUT_VARDESC = CNVUSER_OUT_VARDESC
+        param%OUT_VARUNIT = CNVUSER_OUT_VARUNIT
+        param%OUT_DTYPE = CNVUSER_OUT_DTYPE
+        param%OUT_DT = CNVUSER_OUT_DT
+        param%NSTEPS = CNVUSER_NSTEPS
+      end associate
+
+      select type (param => params(n_vars)%param)
+      type is (t_tile)
+        param%TILE_DTYPE      = CNVUSER_TILE_DTYPE
+        param%TILE_DLAT       = CNVUSER_TILE_DLAT
+        param%TILE_DLON       = CNVUSER_TILE_DLON
+        param%TILE_DIR        = CNVUSER_TILE_DIR
+        param%TILE_CATALOGUE  = CNVUSER_TILE_CATALOGUE
+      type is (t_grads)
+        param%GrADS_FILENAME = CNVUSER_GrADS_FILENAME
+        param%GrADS_VARNAME  = CNVUSER_GrADS_VARNAME
+        param%GrADS_LATNAME  = CNVUSER_GrADS_LATNAME
+        param%GrADS_LONNAME  = CNVUSER_GrADS_LONNAME
+      type is (t_grads_3d)
+        param%GrADS_FILENAME    = CNVUSER_GrADS_FILENAME
+        param%GrADS_VARNAME     = CNVUSER_GrADS_VARNAME
+        param%GrADS_LATNAME     = CNVUSER_GrADS_LATNAME
+        param%GrADS_LONNAME     = CNVUSER_GrADS_LONNAME
+        param%GrADS_LEVNAME     = CNVUSER_GrADS_LEVNAME
+        param%GrADS_HEIGHT_PLEV = CNVUSER_GrADS_HEIGHT_PLEV
+      end select
+    end do
 
   end subroutine CNVUSER_setup
 
@@ -140,184 +278,76 @@ contains
     integer :: i
     !---------------------------------------------------------------------------
 
-    do i = 1, CNVUSER_NVARS
-      if ( CNVUSER_FILE_TYPE(i) == '' ) cycle
-
-      select case ( CNVUSER_FILE_TYPE(i) )
-        case ( 'TILE' )
-          call CNVUSER_prepare_TILE( &
-            CNVUSER_TILE_DTYPE(i), &
-            CNVUSER_TILE_DLAT(i), &
-            CNVUSER_TILE_DLON(i), &
-            CNVUSER_TILE_DIR(i), &
-            CNVUSER_TILE_CATALOGUE(i), &
-            CNVUSER_INTERP_TYPE(i), &
-            CNVUSER_INTERP_LEVEL(i) &
-            )
-        case ( 'GrADS' )
-          call CNVUSER_prepare_GrADS( &
-            CNVUSER_GrADS_FILENAME(i), &
-            CNVUSER_GrADS_VARNAME(i), &
-            CNVUSER_GrADS_LATNAME(i), &
-            CNVUSER_GrADS_LONNAME(i), &
-            CNVUSER_INTERP_TYPE(i), &
-            CNVUSER_INTERP_LEVEL(i), &
-            CNVUSER_OUT_VARNAME(i) &
-            )
-        case ( 'GrADS-3D' )
-          call CNVUSER_prepare_GrADS_3D( &
-            CNVUSER_GrADS_VARNAME(i), &
-            CNVUSER_OUT_VARNAME(i) &
-            )
-        case default
-           LOG_ERROR('CNVUSER',*) 'CNVUSER_FILE_TYPE is invalid: ', CNVUSER_FILE_TYPE(i)
-           LOG_ERROR_CONT(*)            'It must be "TILE" or "GrADS".'
-           call PRC_abort
+    do i = 1, size(params)
+    associate (param => params(i)%param)
+      select type (param)
+      type is (t_tile)
+        call CNVUSER_prepare_TILE(param)
+      type is (t_grads)
+        call CNVUSER_prepare_GrADS(param)
+      type is (t_grads_3d)
+        call CNVUSER_prepare_GrADS_3D(param)
       end select
 
-      if ( CNVUSER_OUT_BASENAME(i) == '' .or. CNVUSER_OUT_VARNAME(i) == '' ) then
-         LOG_INFO("CNVUSER", *) CNVUSER_OUT_BASENAME(1:CNVUSER_NVARS), CNVUSER_OUT_VARNAME(1:CNVUSER_NVARS)
+      if ( param%OUT_BASENAME == '' .or. param%OUT_VARNAME == '' ) then
          LOG_ERROR('CNVUSER',*) 'CNVUSER_OUT_BASENAME and CNVUSER_OUT_VARNAME are required'
          call PRC_abort
       end if
 
-      select case ( CNVUSER_FILE_TYPE(i) )
-        case ( 'TILE' )
-          call CNVUSER_execute_TILE_GrADS( &
-            CNVUSER_NSTEPS(i), &
-            CNVUSER_OUT_BASENAME(i), &
-            CNVUSER_OUT_TITLE(i), &
-            CNVUSER_OUT_VARNAME(i), &
-            CNVUSER_OUT_VARDESC(i), &
-            CNVUSER_OUT_VARUNIT(i), &
-            CNVUSER_OUT_DTYPE(i), &
-            CNVUSER_OUT_DT(i) &
-            )
-        case ( 'GrADS' )
-          call CNVUSER_execute_TILE_GrADS( &
-            CNVUSER_NSTEPS(i), &
-            CNVUSER_OUT_BASENAME(i), &
-            CNVUSER_OUT_TITLE(i), &
-            CNVUSER_OUT_VARNAME(i), &
-            CNVUSER_OUT_VARDESC(i), &
-            CNVUSER_OUT_VARUNIT(i), &
-            CNVUSER_OUT_DTYPE(i), &
-            CNVUSER_OUT_DT(i) &
-            )
-        case ( 'GrADS-3D' )
-          call CNVUSER_execute_GrADS_3D( &
-            CNVUSER_NSTEPS(i), &
-            CNVUSER_GrADS_FILENAME(i), &
-            CNVUSER_GrADS_VARNAME(i), &
-            CNVUSER_GrADS_LATNAME(i), &
-            CNVUSER_GrADS_LONNAME(i), &
-            CNVUSER_GrADS_LEVNAME(i), &
-            CNVUSER_GrADS_HEIGHT_PLEV(i), &
-            CNVUSER_INTERP_TYPE(i), &
-            CNVUSER_INTERP_LEVEL(i), &
-            CNVUSER_OUT_BASENAME(i), &
-            CNVUSER_OUT_TITLE(i), &
-            CNVUSER_OUT_VARNAME(i), &
-            CNVUSER_OUT_VARDESC(i), &
-            CNVUSER_OUT_VARUNIT(i), &
-            CNVUSER_OUT_DTYPE(i), &
-            CNVUSER_OUT_DT(i) &
-            )
+      select type (param)
+      type is (t_tile)
+        call CNVUSER_execute_TILE_GrADS(param)
+      type is (t_grads)
+        call CNVUSER_execute_TILE_GrADS(param)
+      type is (t_grads_3d)
+        call CNVUSER_execute_TILE_GrADS(param)
       end select
+    end associate
     end do
 
   end subroutine CNVUSER
 
   ! private
 
-  subroutine CNVUSER_prepare_TILE( &
-    CNVUSER_TILE_DTYPE, &
-    CNVUSER_TILE_DLAT, &
-    CNVUSER_TILE_DLON, &
-    CNVUSER_TILE_DIR, &
-    CNVUSER_TILE_CATALOGUE, &
-    CNVUSER_INTERP_TYPE, &
-    CNVUSER_INTERP_LEVEL &
-    )
+  subroutine CNVUSER_prepare_TILE(tile)
 
     use mod_cnv2d, only: &
        CNV2D_tile_init
 
-    character(len=H_SHORT), intent(in) :: CNVUSER_TILE_DTYPE
-    real(RP),               intent(in) :: CNVUSER_TILE_DLAT
-    real(RP),               intent(in) :: CNVUSER_TILE_DLON
-    character(len=H_LONG),  intent(in) :: CNVUSER_TILE_DIR
-    character(len=H_LONG),  intent(in) :: CNVUSER_TILE_CATALOGUE
-    character(len=H_SHORT), intent(in) :: CNVUSER_INTERP_TYPE
-    integer,                intent(in) :: CNVUSER_INTERP_LEVEL
+    type(t_tile), intent(in) :: tile
 
-    call CNV2D_tile_init( CNVUSER_TILE_DTYPE,                   &
-                          CNVUSER_TILE_DLAT, CNVUSER_TILE_DLON, &
-                          CNVUSER_TILE_DIR,                     &
-                          CNVUSER_TILE_CATALOGUE,               &
-                          CNVUSER_INTERP_TYPE,                  &
-                          interp_level = CNVUSER_INTERP_LEVEL   )
+    call CNV2D_tile_init( tile%TILE_DTYPE,                   &
+                          tile%TILE_DLAT, tile%TILE_DLON,    &
+                          tile%TILE_DIR,                     &
+                          tile%TILE_CATALOGUE,               &
+                          tile%INTERP_TYPE,                  &
+                          interp_level = tile%INTERP_LEVEL   )
   end subroutine CNVUSER_prepare_TILE
 
-  subroutine CNVUSER_prepare_GrADS( &
-    CNVUSER_GrADS_FILENAME, &
-    CNVUSER_GrADS_VARNAME, &
-    CNVUSER_GrADS_LATNAME, &
-    CNVUSER_GrADS_LONNAME, &
-    CNVUSER_INTERP_TYPE, &
-    CNVUSER_INTERP_LEVEL, &
-    CNVUSER_OUT_VARNAME &
-    )
+  subroutine CNVUSER_prepare_GrADS(grads)
 
     use mod_cnv2d, only: &
        CNV2D_grads_init
 
-    character(len=H_LONG),  intent(in) :: CNVUSER_GrADS_FILENAME
-    character(len=H_SHORT), intent(in) :: CNVUSER_GrADS_VARNAME
-    character(len=H_SHORT), intent(in) :: CNVUSER_GrADS_LATNAME
-    character(len=H_SHORT), intent(in) :: CNVUSER_GrADS_LONNAME
-    character(len=H_SHORT), intent(in) :: CNVUSER_INTERP_TYPE
-    integer,                intent(in) :: CNVUSER_INTERP_LEVEL
-    character(len=H_SHORT), intent(inout) :: CNVUSER_OUT_VARNAME
+    type(t_grads), intent(inout) :: grads
 
-    call CNV2D_grads_init( CNVUSER_GrADS_FILENAME, &
-                           CNVUSER_GrADS_VARNAME,  &
-                           CNVUSER_GrADS_LATNAME,  &
-                           CNVUSER_GrADS_LONNAME,  &
-                           CNVUSER_INTERP_TYPE,    &
-                           CNVUSER_INTERP_LEVEL    )
-    if ( CNVUSER_OUT_VARNAME == '' ) CNVUSER_OUT_VARNAME = CNVUSER_GrADS_VARNAME
+    call CNV2D_grads_init( grads%GrADS_FILENAME, &
+                           grads%GrADS_VARNAME,  &
+                           grads%GrADS_LATNAME,  &
+                           grads%GrADS_LONNAME,  &
+                           grads%INTERP_TYPE,    &
+                           grads%INTERP_LEVEL    )
+    if ( grads%OUT_VARNAME == '' ) grads%OUT_VARNAME = grads%GrADS_VARNAME
   end subroutine CNVUSER_prepare_GrADS
 
-  subroutine CNVUSER_prepare_GrADS_3D( &
-    CNVUSER_GrADS_VARNAME, &
-    CNVUSER_OUT_VARNAME &
-    )
+  subroutine CNVUSER_prepare_GrADS_3D(grads_3d)
 
-    character(len=H_SHORT), intent(in)    :: CNVUSER_GrADS_VARNAME
-    character(len=H_SHORT), intent(inout) :: CNVUSER_OUT_VARNAME
+    type(t_grads_3d), intent(inout) :: grads_3d
 
-    if ( CNVUSER_OUT_VARNAME == '' ) CNVUSER_OUT_VARNAME = CNVUSER_GrADS_VARNAME
+    if ( grads_3d%OUT_VARNAME == '' ) grads_3d%OUT_VARNAME = grads_3d%GrADS_VARNAME
   end subroutine CNVUSER_prepare_GrADS_3D
 
-  subroutine CNVUSER_execute_GrADS_3D( &
-    CNVUSER_NSTEPS, &
-    CNVUSER_GrADS_FILENAME, &
-    CNVUSER_GrADS_VARNAME, &
-    CNVUSER_GrADS_LATNAME, &
-    CNVUSER_GrADS_LONNAME, &
-    CNVUSER_GrADS_LEVNAME, &
-    CNVUSER_GrADS_HEIGHT_PLEV, &
-    CNVUSER_INTERP_TYPE, &
-    CNVUSER_INTERP_LEVEL, &
-    CNVUSER_OUT_BASENAME, &
-    CNVUSER_OUT_TITLE, &
-    CNVUSER_OUT_VARNAME, &
-    CNVUSER_OUT_VARDESC, &
-    CNVUSER_OUT_VARUNIT, &
-    CNVUSER_OUT_DTYPE, &
-    CNVUSER_OUT_DT &
-    )
+  subroutine CNVUSER_execute_GrADS_3D(grads_3d)
 
     use scale_const, only: &
        PI  => CONST_PI,  &
@@ -350,22 +380,7 @@ contains
     use scale_mapprojection, only: &
        MAPPROJECTION_lonlat2xy
 
-    integer,                intent(in) :: CNVUSER_NSTEPS
-    character(len=H_LONG),  intent(in) :: CNVUSER_GrADS_FILENAME
-    character(len=H_SHORT), intent(in) :: CNVUSER_GrADS_VARNAME
-    character(len=H_SHORT), intent(in) :: CNVUSER_GrADS_LATNAME
-    character(len=H_SHORT), intent(in) :: CNVUSER_GrADS_LONNAME
-    character(len=H_SHORT), intent(in) :: CNVUSER_GrADS_LEVNAME
-    character(len=H_SHORT), intent(in) :: CNVUSER_GrADS_HEIGHT_PLEV
-    character(len=H_SHORT), intent(in) :: CNVUSER_INTERP_TYPE
-    integer,                intent(inout) :: CNVUSER_INTERP_LEVEL
-    character(len=H_LONG),  intent(in) :: CNVUSER_OUT_BASENAME
-    character(len=H_MID),   intent(in) :: CNVUSER_OUT_TITLE
-    character(len=H_SHORT), intent(in) :: CNVUSER_OUT_VARNAME
-    character(len=H_MID),   intent(in) :: CNVUSER_OUT_VARDESC
-    character(len=H_SHORT), intent(in) :: CNVUSER_OUT_VARUNIT
-    character(len=H_SHORT), intent(in) :: CNVUSER_OUT_DTYPE
-    real(DP),               intent(in) :: CNVUSER_OUT_DT
+    type(t_grads_3d), intent(inout) :: grads_3d
 
     integer  :: i, j, k, step
     integer  :: file_id, var_id
@@ -393,29 +408,29 @@ contains
     real(RP), allocatable :: LON_1d    (:)
     real(RP), allocatable :: LEV_1d    (:)
 
-    call FILE_GrADS_open( CNVUSER_GrADS_FILENAME, & ! [IN]
-                          file_id                 ) ! [OUT]
+    call FILE_GrADS_open( grads_3d%GrADS_FILENAME, & ! [IN]
+                          file_id                  ) ! [OUT]
 
-    call FILE_GrADS_get_shape( file_id,               & ! [IN]
-                               CNVUSER_GrADS_VARNAME, & ! [IN]
-                               data_shape(:)          ) ! [OUT]
+    call FILE_GrADS_get_shape( file_id,                & ! [IN]
+                               grads_3d%GrADS_VARNAME, & ! [IN]
+                               data_shape(:)           ) ! [OUT]
     nLEV = data_shape(1)
     nLON = data_shape(2)
     nLAT = data_shape(3)
 
     ! interporation
-    select case ( trim(CNVUSER_INTERP_TYPE) )
+    select case ( trim(grads_3d%INTERP_TYPE) )
     case ( 'LINEAR' )
-       CNVUSER_INTERP_LEVEL = 4
+       grads_3d%INTERP_LEVEL = 4
     case ( 'DIST-WEIGHT' )
        ! do nothing
     end select
 
-    allocate( idx_i(     IA,JA,CNVUSER_INTERP_LEVEL) )
-    allocate( idx_j(     IA,JA,CNVUSER_INTERP_LEVEL) )
-    allocate( hfact(     IA,JA,CNVUSER_INTERP_LEVEL) )
-    allocate( idx_k(KA,2,IA,JA,CNVUSER_INTERP_LEVEL) )
-    allocate( vfact(KA,  IA,JA,CNVUSER_INTERP_LEVEL) )
+    allocate( idx_i(     IA,JA,grads_3d%INTERP_LEVEL) )
+    allocate( idx_j(     IA,JA,grads_3d%INTERP_LEVEL) )
+    allocate( hfact(     IA,JA,grads_3d%INTERP_LEVEL) )
+    allocate( idx_k(KA,2,IA,JA,grads_3d%INTERP_LEVEL) )
+    allocate( vfact(KA,  IA,JA,grads_3d%INTERP_LEVEL) )
 
     allocate( data_org( nLEV, nLON, nLAT ) )
     allocate( X_org   (       nLON, nLAT ) )
@@ -428,9 +443,9 @@ contains
     allocate( LEV_1d  ( nLEV             ) )
 
     ! lat
-    call FILE_GrADS_varid( file_id,               & ! [IN]
-                           CNVUSER_GrADS_LATNAME, & ! [IN]
-                           var_id                 ) ! [OUT]
+    call FILE_GrADS_varid( file_id,                & ! [IN]
+                           grads_3d%GrADS_LATNAME, & ! [IN]
+                           var_id                  ) ! [OUT]
 
     if ( FILE_GrADS_isOneD( file_id, var_id ) ) then
        call FILE_GrADS_read( file_id,  & ! [IN]
@@ -457,9 +472,9 @@ contains
     end if
 
     ! lon
-    call FILE_GrADS_varid( file_id,               & ! [IN]
-                           CNVUSER_GrADS_LONNAME, & ! [IN]
-                           var_id                 ) ! [OUT]
+    call FILE_GrADS_varid( file_id,                & ! [IN]
+                           grads_3d%GrADS_LONNAME, & ! [IN]
+                           var_id                  ) ! [OUT]
 
     if ( FILE_GrADS_isOneD( file_id, var_id ) ) then
        call FILE_GrADS_read( file_id,  & ! [IN]
@@ -486,11 +501,11 @@ contains
     end if
 
     ! lev
-    select case ( trim(CNVUSER_GrADS_LEVNAME) )
+    select case ( trim(grads_3d%GrADS_LEVNAME) )
     case ( 'zlev' )
-       call FILE_GrADS_varid( file_id,               & ! [IN]
-                              CNVUSER_GrADS_LEVNAME, & ! [IN]
-                              var_id                 ) ! [OUT]
+       call FILE_GrADS_varid( file_id,                & ! [IN]
+                              grads_3d%GrADS_LEVNAME, & ! [IN]
+                              var_id                  ) ! [OUT]
 
        call FILE_GrADS_read( file_id,  & ! [IN]
                              var_id,   & ! [IN]
@@ -505,24 +520,24 @@ contains
        end do
        end do
     case ( 'plev' )
-       call FILE_GrADS_varid( file_id,                   & ! [IN]
-                              CNVUSER_GrADS_HEIGHT_PLEV, & ! [IN]
-                              var_id                     ) ! [OUT]
+       call FILE_GrADS_varid( file_id,                    & ! [IN]
+                              grads_3d%GrADS_HEIGHT_PLEV, & ! [IN]
+                              var_id                      ) ! [OUT]
 
        call FILE_GrADS_read( file_id,       & ! [IN]
                              var_id,        & ! [IN]
                              LEV_org(:,:,:) ) ! [OUT]
     case default
-       LOG_ERROR("CNVUSER_setup",*) 'Invalid proparty in CNVUSER_GrADS_LEVNAME: ', trim(CNVUSER_GrADS_LEVNAME)
+       LOG_ERROR("CNVUSER_execute_GrADS_3D",*) 'Invalid proparty in grads_3d%GrADS_LEVNAME: ', trim(grads_3d%GrADS_LEVNAME)
        call PRC_abort
     end select
 
     ! prepare to read target data
-    call FILE_GrADS_varid( file_id,               & ! [IN]
-                           CNVUSER_GrADS_VARNAME, & ! [IN]
-                           var_id                 ) ! [OUT]
+    call FILE_GrADS_varid( file_id,                & ! [IN]
+                           grads_3d%GrADS_VARNAME, & ! [IN]
+                           var_id                  ) ! [OUT]
 
-    select case ( CNVUSER_INTERP_TYPE )
+    select case ( grads_3d%INTERP_TYPE )
     case ( 'LINEAR' )
        call MAPPROJECTION_lonlat2xy( nLON, 1, nLON, & ! [IN]
                                      nLAT, 1, nLAT, & ! [IN]
@@ -552,81 +567,81 @@ contains
                                        zonal = zonal,    & ! [IN]
                                        pole  = pole      ) ! [IN]
     case ( 'DIST-WEIGHT' )
-       call INTERP_factor3d_weight( CNVUSER_INTERP_LEVEL, & ! [IN]
-                                    nLEV, 1, nLEV,        & ! [IN]
-                                    nLON, nLAT,           & ! [IN]
-                                    KA, 1, KA,            & ! [IN]
-                                    IA, JA,               & ! [IN]
-                                    LON_org(:,:),         & ! [IN]
-                                    LAT_org(:,:),         & ! [IN]
-                                    LEV_org(:,:,:),       & ! [IN]
-                                    LON(:,:),             & ! [IN]
-                                    LAT(:,:),             & ! [IN]
-                                    CZ(:,:,:),            & ! [IN]
-                                    idx_i(:,:,:),         & ! [OUT]
-                                    idx_j(:,:,:),         & ! [OUT]
-                                    hfact(:,:,:),         & ! [OUT]
-                                    idx_k(:,:,:,:,:),     & ! [OUT]
-                                    vfact(:,:,:,:)        ) ! [OUT]
+       call INTERP_factor3d_weight( grads_3d%INTERP_LEVEL, & ! [IN]
+                                    nLEV, 1, nLEV,         & ! [IN]
+                                    nLON, nLAT,            & ! [IN]
+                                    KA, 1, KA,             & ! [IN]
+                                    IA, JA,                & ! [IN]
+                                    LON_org(:,:),          & ! [IN]
+                                    LAT_org(:,:),          & ! [IN]
+                                    LEV_org(:,:,:),        & ! [IN]
+                                    LON(:,:),              & ! [IN]
+                                    LAT(:,:),              & ! [IN]
+                                    CZ(:,:,:),             & ! [IN]
+                                    idx_i(:,:,:),          & ! [OUT]
+                                    idx_j(:,:,:),          & ! [OUT]
+                                    hfact(:,:,:),          & ! [OUT]
+                                    idx_k(:,:,:,:,:),      & ! [OUT]
+                                    vfact(:,:,:,:)         ) ! [OUT]
     end select
 
-    call FILE_CARTESC_create( CNVUSER_OUT_BASENAME,             & ! [IN]
-                              CNVUSER_OUT_TITLE,                & ! [IN]
-                              CNVUSER_OUT_DTYPE,                & ! [IN]
+    call FILE_CARTESC_create( grads_3d%OUT_BASENAME,            & ! [IN]
+                              grads_3d%OUT_TITLE,               & ! [IN]
+                              grads_3d%OUT_DTYPE,               & ! [IN]
                               fid,                              & ! [OUT]
                               date = TIME_NOWDATE,              & ! [IN]
                               haszcoord = .true.,               & ! [IN]
                               aggregate = CNVUSER_OUT_AGGREGATE ) ! [IN]
 
-    call FILE_CARTESC_def_var( fid,                       & ! [IN]
-                               CNVUSER_OUT_VARNAME,       & ! [IN]
-                               CNVUSER_OUT_VARDESC,       & ! [IN]
-                               CNVUSER_OUT_VARUNIT,       & ! [IN]
-                               'ZXYT',                    & ! [IN]
-                               CNVUSER_OUT_DTYPE,         & ! [IN]
-                               vid,                       & ! [OUT]
-                               timeintv = CNVUSER_OUT_DT, & ! [IN]
-                               nsteps = CNVUSER_NSTEPS    ) ! [IN]
+    call FILE_CARTESC_def_var( fid,                        & ! [IN]
+                               grads_3d%OUT_VARNAME,       & ! [IN]
+                               grads_3d%OUT_VARDESC,       & ! [IN]
+                               grads_3d%OUT_VARUNIT,       & ! [IN]
+                               'ZXYT',                     & ! [IN]
+                               grads_3d%OUT_DTYPE,         & ! [IN]
+                               vid,                        & ! [OUT]
+                               timeintv = grads_3d%OUT_DT, & ! [IN]
+                               nsteps = grads_3d%NSTEPS    ) ! [IN]
 
     call FILE_CARTESC_enddef(fid)
 
-    call FILE_GrADS_open( CNVUSER_GrADS_FILENAME, & ! [IN]
-                          file_id                 ) ! [OUT]
+    call FILE_GrADS_open( grads_3d%GrADS_FILENAME, & ! [IN]
+                          file_id                  ) ! [OUT]
 
-    call FILE_GrADS_varid( file_id,               & ! [IN]
-                           CNVUSER_GrADS_VARNAME, & ! [IN]
-                           var_id                 ) ! [OUT]
+    call FILE_GrADS_varid( file_id,                & ! [IN]
+                           grads_3d%GrADS_VARNAME, & ! [IN]
+                           var_id                  ) ! [OUT]
 
-    do step = 1, CNVUSER_NSTEPS
+    do step = 1, grads_3d%NSTEPS
        LOG_PROGRESS(*) 'step = ', step
-       timeofs = ( step - 1 ) * CNVUSER_OUT_DT
+       timeofs = ( step - 1 ) * grads_3d%OUT_DT
 
        call FILE_GrADS_read( file_id, var_id, & ! [IN]
                              data_org(:,:,:), & ! [OUT]
                              step = step      ) ! [IN]
 
-       call INTERP_interp3d( CNVUSER_INTERP_LEVEL, & ! [IN]
-                             nLEV, 1, nLEV,        & ! [IN]
-                             nLON, nLAT,           & ! [IN]
-                             KA, 1, KA,            & ! [IN]
-                             IA, JA,               & ! [IN]
-                             idx_i(:,:,:),         & ! [IN]
-                             idx_j(:,:,:),         & ! [IN]
-                             hfact(:,:,:),         & ! [IN]
-                             idx_k(:,:,:,:,:),     & ! [IN]
-                             vfact(:,:,:,:),       & ! [IN]
-                             LEV_org(:,:,:),       & ! [IN]
-                             CZ(:,:,:),            & ! [IN]
-                             data_org(:,:,:),      & ! [IN]
-                             var_3D(:,:,:,1)       ) ! [OUT]
+       call INTERP_interp3d( grads_3d%INTERP_LEVEL, & ! [IN]
+                             nLEV, 1, nLEV,         & ! [IN]
+                             nLON, nLAT,            & ! [IN]
+                             KA, 1, KA,             & ! [IN]
+                             IA, JA,                & ! [IN]
+                             idx_i(:,:,:),          & ! [IN]
+                             idx_j(:,:,:),          & ! [IN]
+                             hfact(:,:,:),          & ! [IN]
+                             idx_k(:,:,:,:,:),      & ! [IN]
+                             vfact(:,:,:,:),        & ! [IN]
+                             LEV_org(:,:,:),        & ! [IN]
+                             CZ(:,:,:),             & ! [IN]
+                             data_org(:,:,:),       & ! [IN]
+                             var_3D(:,:,:,1)        ) ! [OUT]
 
-       call FILE_CARTESC_write_var( fid, vid,            & ! [IN]
-                                    var_3D(:,:,:,:),     & ! [IN]
-                                    CNVUSER_OUT_VARNAME, & ! [IN]
-                                    'ZXYT',              & ! [IN]
-                                    CNVUSER_OUT_DT,      & ! [IN]
-                                    timetarg = 1,        & ! [IN]
-                                    timeofs  = timeofs   ) ! [IN]
+       call FILE_CARTESC_write_var( fid, vid,             & ! [IN]
+                                    var_3D(:,:,:,: ),     & ! [IN]
+                                    grads_3d%OUT_VARNAME, & ! [IN]
+                                    'ZXYT',               & ! [IN]
+                                    grads_3d%OUT_DT,      & ! [IN]
+                                    timetarg = 1,         & ! [IN]
+                                    timeofs  = timeofs    ) ! [IN]
     end do
 
     call FILE_CARTESC_close( fid )
@@ -648,16 +663,7 @@ contains
     deallocate( LEV_1d   )
   end subroutine CNVUSER_execute_GrADS_3D
 
-  subroutine CNVUSER_execute_TILE_GrADS( &
-    CNVUSER_NSTEPS, &
-    CNVUSER_OUT_BASENAME, &
-    CNVUSER_OUT_TITLE, &
-    CNVUSER_OUT_VARNAME, &
-    CNVUSER_OUT_VARDESC, &
-    CNVUSER_OUT_VARUNIT, &
-    CNVUSER_OUT_DTYPE, &
-    CNVUSER_OUT_DT &
-    )
+  subroutine CNVUSER_execute_TILE_GrADS(param)
 
     use scale_file_cartesc, only: &
        FILE_CARTESC_create, &
@@ -669,46 +675,39 @@ contains
     use mod_cnv2d, only: &
        CNV2D_exec
 
-    integer,                intent(in) :: CNVUSER_NSTEPS
-    character(len=H_LONG),  intent(in) :: CNVUSER_OUT_BASENAME
-    character(len=H_MID),   intent(in) :: CNVUSER_OUT_TITLE
-    character(len=H_SHORT), intent(in) :: CNVUSER_OUT_VARNAME
-    character(len=H_MID),   intent(in) :: CNVUSER_OUT_VARDESC
-    character(len=H_SHORT), intent(in) :: CNVUSER_OUT_VARUNIT
-    character(len=H_SHORT), intent(in) :: CNVUSER_OUT_DTYPE
-    real(DP),               intent(in) :: CNVUSER_OUT_DT
+    class(t_param), intent(in) :: param
 
     real(RP) :: var(IA, JA)
 
     integer :: fid, vid
     integer :: step
 
-    call FILE_CARTESC_create( CNVUSER_OUT_BASENAME,             & ! [IN]
-                              CNVUSER_OUT_TITLE,                & ! [IN]
-                              CNVUSER_OUT_DTYPE,                & ! [IN]
+    call FILE_CARTESC_create( param%OUT_BASENAME,               & ! [IN]
+                              param%OUT_TITLE,                  & ! [IN]
+                              param%OUT_DTYPE,                  & ! [IN]
                               fid,                              & ! [OUT]
                               date = TIME_NOWDATE,              & ! [IN]
                               haszcoord = .false.,              & ! [IN]
                               aggregate = CNVUSER_OUT_AGGREGATE ) ! [IN]
 
-    call FILE_CARTESC_def_var( fid,                       & ! [IN]
-                               CNVUSER_OUT_VARNAME,       & ! [IN]
-                               CNVUSER_OUT_VARDESC,       & ! [IN]
-                               CNVUSER_OUT_VARUNIT,       & ! [IN]
-                               'XYT',                     & ! [IN]
-                               CNVUSER_OUT_DTYPE,         & ! [IN]
-                               vid,                       & ! [OUT]
-                               timeintv = CNVUSER_OUT_DT, & ! [IN]
-                               nsteps = CNVUSER_NSTEPS    ) ! [IN]
+    call FILE_CARTESC_def_var( fid,                     & ! [IN]
+                               param%OUT_VARNAME,       & ! [IN]
+                               param%OUT_VARDESC,       & ! [IN]
+                               param%OUT_VARUNIT,       & ! [IN]
+                               'XYT',                   & ! [IN]
+                               param%OUT_DTYPE,         & ! [IN]
+                               vid,                     & ! [OUT]
+                               timeintv = param%OUT_DT, & ! [IN]
+                               nsteps = param%NSTEPS    ) ! [IN]
 
     call FILE_CARTESC_enddef(fid)
 
-    do step = 1, CNVUSER_NSTEPS
+    do step = 1, param%NSTEPS
        LOG_PROGRESS(*) 'step = ', step
 
        call CNV2D_exec( var(:,:), step = step )
 
-       call CNVUSER_write( CNVUSER_OUT_VARNAME, fid, vid, var(:,:), CNVUSER_OUT_DT, step )
+       call CNVUSER_write( param%OUT_VARNAME, fid, vid, var(:,:), param%OUT_DT, step )
 
     end do
 
