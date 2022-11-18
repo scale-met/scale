@@ -59,6 +59,9 @@ contains
        rm_prep
     use mod_rm_driver, only: &
        rm_driver
+#ifdef _OPENACC
+    use openacc
+#endif
     implicit none
 
     logical, intent(in) :: EXECUTE_PREPROCESS ! execute preprocess tools?
@@ -126,6 +129,18 @@ contains
                               universal_nprocs, & ! [OUT]
                               universal_myrank, & ! [OUT]
                               universal_master  ) ! [OUT]
+
+#ifdef _OPENACC
+    block
+      integer :: ngpus, gpuid
+      ngpus = acc_get_num_devices(acc_device_nvidia)
+      if( universal_master ) write(*,*) "*** Number of GPUs: ", ngpus
+      if ( ngpus > 0 ) then
+         gpuid = mod(universal_myrank, ngpus)
+         call acc_set_device_num(gpuid, acc_device_nvidia)
+      end if
+    end block
+#endif
 
     if( universal_master ) write(*,*) '*** Start Launch System for SCALE-RM'
 
