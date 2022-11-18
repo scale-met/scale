@@ -837,7 +837,11 @@ contains
     character(len=*), intent(in) :: units
     character(len=*), intent(in) :: dim_names(:)
     integer,          intent(in) :: dtype
+#ifdef NVIDIA
+    real(SP),    intent(in) :: val(:)
+#else
     real(SP),    intent(in), target, contiguous :: val(:)
+#endif
 
     type(c_ptr) :: dim_names_(size(dim_names))
     !character(:,c_char), allocatable, target :: cptr(:)
@@ -859,12 +863,19 @@ contains
        dim_names_(i) = c_loc(cptr(i))
     end do
 
+#ifdef NVIDIA
+    block
+    real(SP), allocatable, target :: work(:)
+    allocate(work, source=val)
+#endif
     error = file_put_associatedcoordinate_c( &
          FILE_files(fid)%fid,                 & ! (in)
          cstr(name), cstr(desc), cstr(units), & ! (in)
          dim_names_, size(dim_names), dtype,  & ! (in)
 #if defined(__GFORTRAN__) && __GNUC__ < 7
          cloc(val(1)), SP                  ) ! (in)
+#elif defined(NVIDIA)
+         c_loc(work), SP                  ) ! (in)
 #else
          c_loc(val), SP                  ) ! (in)
 #endif
@@ -872,6 +883,10 @@ contains
        LOG_ERROR("FILE_put_associatedCoordinate_realSP_1D",*) 'failed to put associated coordinate: '//trim(name)
        call PRC_abort
     end if
+
+#ifdef NVIDIA
+    end block
+#endif
 
     return
   end subroutine FILE_put_associatedCoordinate_realSP_1D
@@ -886,7 +901,11 @@ contains
     character(len=*), intent(in) :: units
     character(len=*), intent(in) :: dim_names(:)
     integer,          intent(in) :: dtype
+#ifdef NVIDIA
+    real(DP),    intent(in) :: val(:)
+#else
     real(DP),    intent(in), target, contiguous :: val(:)
+#endif
 
     type(c_ptr) :: dim_names_(size(dim_names))
     !character(:,c_char), allocatable, target :: cptr(:)
@@ -908,12 +927,19 @@ contains
        dim_names_(i) = c_loc(cptr(i))
     end do
 
+#ifdef NVIDIA
+    block
+    real(DP), allocatable, target :: work(:)
+    allocate(work, source=val)
+#endif
     error = file_put_associatedcoordinate_c( &
          FILE_files(fid)%fid,                 & ! (in)
          cstr(name), cstr(desc), cstr(units), & ! (in)
          dim_names_, size(dim_names), dtype,  & ! (in)
 #if defined(__GFORTRAN__) && __GNUC__ < 7
          cloc(val(1)), DP                  ) ! (in)
+#elif defined(NVIDIA)
+         c_loc(work), DP                  ) ! (in)
 #else
          c_loc(val), DP                  ) ! (in)
 #endif
@@ -921,6 +947,10 @@ contains
        LOG_ERROR("FILE_put_associatedCoordinate_realDP_1D",*) 'failed to put associated coordinate: '//trim(name)
        call PRC_abort
     end if
+
+#ifdef NVIDIA
+    end block
+#endif
 
     return
   end subroutine FILE_put_associatedCoordinate_realDP_1D
@@ -935,7 +965,11 @@ contains
     character(len=*), intent(in) :: units
     character(len=*), intent(in) :: dim_names(:)
     integer,          intent(in) :: dtype
+#ifdef NVIDIA
+    real(SP),    intent(in) :: val(:,:)
+#else
     real(SP),    intent(in), target, contiguous :: val(:,:)
+#endif
 
     type(c_ptr) :: dim_names_(size(dim_names))
     !character(:,c_char), allocatable, target :: cptr(:)
@@ -957,12 +991,19 @@ contains
        dim_names_(i) = c_loc(cptr(i))
     end do
 
+#ifdef NVIDIA
+    block
+    real(SP), allocatable, target :: work(:,:)
+    allocate(work, source=val)
+#endif
     error = file_put_associatedcoordinate_c( &
          FILE_files(fid)%fid,                 & ! (in)
          cstr(name), cstr(desc), cstr(units), & ! (in)
          dim_names_, size(dim_names), dtype,  & ! (in)
 #if defined(__GFORTRAN__) && __GNUC__ < 7
          cloc(val(1,1)), SP                  ) ! (in)
+#elif defined(NVIDIA)
+         c_loc(work), SP                  ) ! (in)
 #else
          c_loc(val), SP                  ) ! (in)
 #endif
@@ -970,6 +1011,10 @@ contains
        LOG_ERROR("FILE_put_associatedCoordinate_realSP_2D",*) 'failed to put associated coordinate: '//trim(name)
        call PRC_abort
     end if
+
+#ifdef NVIDIA
+    end block
+#endif
 
     return
   end subroutine FILE_put_associatedCoordinate_realSP_2D
@@ -984,7 +1029,11 @@ contains
     character(len=*), intent(in) :: units
     character(len=*), intent(in) :: dim_names(:)
     integer,          intent(in) :: dtype
+#ifdef NVIDIA
+    real(DP),    intent(in) :: val(:,:)
+#else
     real(DP),    intent(in), target, contiguous :: val(:,:)
+#endif
 
     type(c_ptr) :: dim_names_(size(dim_names))
     !character(:,c_char), allocatable, target :: cptr(:)
@@ -1006,12 +1055,19 @@ contains
        dim_names_(i) = c_loc(cptr(i))
     end do
 
+#ifdef NVIDIA
+    block
+    real(DP), allocatable, target :: work(:,:)
+    allocate(work, source=val)
+#endif
     error = file_put_associatedcoordinate_c( &
          FILE_files(fid)%fid,                 & ! (in)
          cstr(name), cstr(desc), cstr(units), & ! (in)
          dim_names_, size(dim_names), dtype,  & ! (in)
 #if defined(__GFORTRAN__) && __GNUC__ < 7
          cloc(val(1,1)), DP                  ) ! (in)
+#elif defined(NVIDIA)
+         c_loc(work), DP                  ) ! (in)
 #else
          c_loc(val), DP                  ) ! (in)
 #endif
@@ -1019,6 +1075,10 @@ contains
        LOG_ERROR("FILE_put_associatedCoordinate_realDP_2D",*) 'failed to put associated coordinate: '//trim(name)
        call PRC_abort
     end if
+
+#ifdef NVIDIA
+    end block
+#endif
 
     return
   end subroutine FILE_put_associatedCoordinate_realDP_2D
@@ -1033,7 +1093,11 @@ contains
     character(len=*), intent(in) :: units
     character(len=*), intent(in) :: dim_names(:)
     integer,          intent(in) :: dtype
+#ifdef NVIDIA
+    real(SP),    intent(in) :: val(:,:,:)
+#else
     real(SP),    intent(in), target, contiguous :: val(:,:,:)
+#endif
 
     type(c_ptr) :: dim_names_(size(dim_names))
     !character(:,c_char), allocatable, target :: cptr(:)
@@ -1055,12 +1119,19 @@ contains
        dim_names_(i) = c_loc(cptr(i))
     end do
 
+#ifdef NVIDIA
+    block
+    real(SP), allocatable, target :: work(:,:,:)
+    allocate(work, source=val)
+#endif
     error = file_put_associatedcoordinate_c( &
          FILE_files(fid)%fid,                 & ! (in)
          cstr(name), cstr(desc), cstr(units), & ! (in)
          dim_names_, size(dim_names), dtype,  & ! (in)
 #if defined(__GFORTRAN__) && __GNUC__ < 7
          cloc(val(1,1,1)), SP                  ) ! (in)
+#elif defined(NVIDIA)
+         c_loc(work), SP                  ) ! (in)
 #else
          c_loc(val), SP                  ) ! (in)
 #endif
@@ -1068,6 +1139,10 @@ contains
        LOG_ERROR("FILE_put_associatedCoordinate_realSP_3D",*) 'failed to put associated coordinate: '//trim(name)
        call PRC_abort
     end if
+
+#ifdef NVIDIA
+    end block
+#endif
 
     return
   end subroutine FILE_put_associatedCoordinate_realSP_3D
@@ -1082,7 +1157,11 @@ contains
     character(len=*), intent(in) :: units
     character(len=*), intent(in) :: dim_names(:)
     integer,          intent(in) :: dtype
+#ifdef NVIDIA
+    real(DP),    intent(in) :: val(:,:,:)
+#else
     real(DP),    intent(in), target, contiguous :: val(:,:,:)
+#endif
 
     type(c_ptr) :: dim_names_(size(dim_names))
     !character(:,c_char), allocatable, target :: cptr(:)
@@ -1104,12 +1183,19 @@ contains
        dim_names_(i) = c_loc(cptr(i))
     end do
 
+#ifdef NVIDIA
+    block
+    real(DP), allocatable, target :: work(:,:,:)
+    allocate(work, source=val)
+#endif
     error = file_put_associatedcoordinate_c( &
          FILE_files(fid)%fid,                 & ! (in)
          cstr(name), cstr(desc), cstr(units), & ! (in)
          dim_names_, size(dim_names), dtype,  & ! (in)
 #if defined(__GFORTRAN__) && __GNUC__ < 7
          cloc(val(1,1,1)), DP                  ) ! (in)
+#elif defined(NVIDIA)
+         c_loc(work), DP                  ) ! (in)
 #else
          c_loc(val), DP                  ) ! (in)
 #endif
@@ -1117,6 +1203,10 @@ contains
        LOG_ERROR("FILE_put_associatedCoordinate_realDP_3D",*) 'failed to put associated coordinate: '//trim(name)
        call PRC_abort
     end if
+
+#ifdef NVIDIA
+    end block
+#endif
 
     return
   end subroutine FILE_put_associatedCoordinate_realDP_3D
@@ -1131,7 +1221,11 @@ contains
     character(len=*), intent(in) :: units
     character(len=*), intent(in) :: dim_names(:)
     integer,          intent(in) :: dtype
+#ifdef NVIDIA
+    real(SP),    intent(in) :: val(:,:,:,:)
+#else
     real(SP),    intent(in), target, contiguous :: val(:,:,:,:)
+#endif
 
     type(c_ptr) :: dim_names_(size(dim_names))
     !character(:,c_char), allocatable, target :: cptr(:)
@@ -1153,12 +1247,19 @@ contains
        dim_names_(i) = c_loc(cptr(i))
     end do
 
+#ifdef NVIDIA
+    block
+    real(SP), allocatable, target :: work(:,:,:,:)
+    allocate(work, source=val)
+#endif
     error = file_put_associatedcoordinate_c( &
          FILE_files(fid)%fid,                 & ! (in)
          cstr(name), cstr(desc), cstr(units), & ! (in)
          dim_names_, size(dim_names), dtype,  & ! (in)
 #if defined(__GFORTRAN__) && __GNUC__ < 7
          cloc(val(1,1,1,1)), SP                  ) ! (in)
+#elif defined(NVIDIA)
+         c_loc(work), SP                  ) ! (in)
 #else
          c_loc(val), SP                  ) ! (in)
 #endif
@@ -1166,6 +1267,10 @@ contains
        LOG_ERROR("FILE_put_associatedCoordinate_realSP_4D",*) 'failed to put associated coordinate: '//trim(name)
        call PRC_abort
     end if
+
+#ifdef NVIDIA
+    end block
+#endif
 
     return
   end subroutine FILE_put_associatedCoordinate_realSP_4D
@@ -1180,7 +1285,11 @@ contains
     character(len=*), intent(in) :: units
     character(len=*), intent(in) :: dim_names(:)
     integer,          intent(in) :: dtype
+#ifdef NVIDIA
+    real(DP),    intent(in) :: val(:,:,:,:)
+#else
     real(DP),    intent(in), target, contiguous :: val(:,:,:,:)
+#endif
 
     type(c_ptr) :: dim_names_(size(dim_names))
     !character(:,c_char), allocatable, target :: cptr(:)
@@ -1202,12 +1311,19 @@ contains
        dim_names_(i) = c_loc(cptr(i))
     end do
 
+#ifdef NVIDIA
+    block
+    real(DP), allocatable, target :: work(:,:,:,:)
+    allocate(work, source=val)
+#endif
     error = file_put_associatedcoordinate_c( &
          FILE_files(fid)%fid,                 & ! (in)
          cstr(name), cstr(desc), cstr(units), & ! (in)
          dim_names_, size(dim_names), dtype,  & ! (in)
 #if defined(__GFORTRAN__) && __GNUC__ < 7
          cloc(val(1,1,1,1)), DP                  ) ! (in)
+#elif defined(NVIDIA)
+         c_loc(work), DP                  ) ! (in)
 #else
          c_loc(val), DP                  ) ! (in)
 #endif
@@ -1215,6 +1331,10 @@ contains
        LOG_ERROR("FILE_put_associatedCoordinate_realDP_4D",*) 'failed to put associated coordinate: '//trim(name)
        call PRC_abort
     end if
+
+#ifdef NVIDIA
+    end block
+#endif
 
     return
   end subroutine FILE_put_associatedCoordinate_realDP_4D
@@ -1273,7 +1393,11 @@ contains
        ndims         )
     integer,          intent(in)           :: fid
     character(len=*), intent(in)           :: name
+#ifdef NVIDIA
+    real(SP),    intent(in) :: val(:)
+#else
     real(SP),    intent(in), target, contiguous :: val(:)
+#endif
     integer,          intent(in), optional :: start(:)
     integer,          intent(in), optional :: count(:)  ! in case val has been reshaped
     integer,          intent(in), optional :: ndims     ! in case val has been reshaped
@@ -1317,19 +1441,31 @@ contains
        end do
     end if
 
+#ifdef NVIDIA
+    block
+    real(SP), allocatable, target :: work(:)
+    allocate(work, source=val)
+#endif
     error = file_write_associatedcoordinate_c( &
          FILE_files(fid)%fid, cstr(name), & ! (in)
 #if defined(__GFORTRAN__) && __GNUC__ < 7
-         cloc(val(1)), ndims_, SP,     & ! (in)
+         cloc(val(1)), & ! (in)
+#elif defined(NVIDIA)
+         c_loc(work), & ! (in)
 #else
-         c_loc(val), ndims_, SP,     & ! (in)
+         c_loc(val), & ! (in)
 #endif
+         ndims_, SP,     & ! (in)
          start_, count_                   ) ! (in)
 
     if ( error /= FILE_SUCCESS_CODE .and. error /= FILE_ALREADY_EXISTED_CODE ) then
        LOG_ERROR("FILE_write_associatedCoordinate_realSP_1D",*) 'failed to write associated coordinate: '//trim(name)
        call PRC_abort
     end if
+
+#ifdef NVIDIA
+    end block
+#endif
 
     return
   end subroutine FILE_write_associatedCoordinate_realSP_1D
@@ -1341,7 +1477,11 @@ contains
        ndims         )
     integer,          intent(in)           :: fid
     character(len=*), intent(in)           :: name
+#ifdef NVIDIA
+    real(DP),    intent(in) :: val(:)
+#else
     real(DP),    intent(in), target, contiguous :: val(:)
+#endif
     integer,          intent(in), optional :: start(:)
     integer,          intent(in), optional :: count(:)  ! in case val has been reshaped
     integer,          intent(in), optional :: ndims     ! in case val has been reshaped
@@ -1385,19 +1525,31 @@ contains
        end do
     end if
 
+#ifdef NVIDIA
+    block
+    real(DP), allocatable, target :: work(:)
+    allocate(work, source=val)
+#endif
     error = file_write_associatedcoordinate_c( &
          FILE_files(fid)%fid, cstr(name), & ! (in)
 #if defined(__GFORTRAN__) && __GNUC__ < 7
-         cloc(val(1)), ndims_, DP,     & ! (in)
+         cloc(val(1)), & ! (in)
+#elif defined(NVIDIA)
+         c_loc(work), & ! (in)
 #else
-         c_loc(val), ndims_, DP,     & ! (in)
+         c_loc(val), & ! (in)
 #endif
+         ndims_, DP,     & ! (in)
          start_, count_                   ) ! (in)
 
     if ( error /= FILE_SUCCESS_CODE .and. error /= FILE_ALREADY_EXISTED_CODE ) then
        LOG_ERROR("FILE_write_associatedCoordinate_realDP_1D",*) 'failed to write associated coordinate: '//trim(name)
        call PRC_abort
     end if
+
+#ifdef NVIDIA
+    end block
+#endif
 
     return
   end subroutine FILE_write_associatedCoordinate_realDP_1D
@@ -1409,7 +1561,11 @@ contains
        ndims         )
     integer,          intent(in)           :: fid
     character(len=*), intent(in)           :: name
+#ifdef NVIDIA
+    real(SP),    intent(in) :: val(:,:)
+#else
     real(SP),    intent(in), target, contiguous :: val(:,:)
+#endif
     integer,          intent(in), optional :: start(:)
     integer,          intent(in), optional :: count(:)  ! in case val has been reshaped
     integer,          intent(in), optional :: ndims     ! in case val has been reshaped
@@ -1453,19 +1609,31 @@ contains
        end do
     end if
 
+#ifdef NVIDIA
+    block
+    real(SP), allocatable, target :: work(:,:)
+    allocate(work, source=val)
+#endif
     error = file_write_associatedcoordinate_c( &
          FILE_files(fid)%fid, cstr(name), & ! (in)
 #if defined(__GFORTRAN__) && __GNUC__ < 7
-         cloc(val(1,1)), ndims_, SP,     & ! (in)
+         cloc(val(1,1)), & ! (in)
+#elif defined(NVIDIA)
+         c_loc(work), & ! (in)
 #else
-         c_loc(val), ndims_, SP,     & ! (in)
+         c_loc(val), & ! (in)
 #endif
+         ndims_, SP,     & ! (in)
          start_, count_                   ) ! (in)
 
     if ( error /= FILE_SUCCESS_CODE .and. error /= FILE_ALREADY_EXISTED_CODE ) then
        LOG_ERROR("FILE_write_associatedCoordinate_realSP_2D",*) 'failed to write associated coordinate: '//trim(name)
        call PRC_abort
     end if
+
+#ifdef NVIDIA
+    end block
+#endif
 
     return
   end subroutine FILE_write_associatedCoordinate_realSP_2D
@@ -1477,7 +1645,11 @@ contains
        ndims         )
     integer,          intent(in)           :: fid
     character(len=*), intent(in)           :: name
+#ifdef NVIDIA
+    real(DP),    intent(in) :: val(:,:)
+#else
     real(DP),    intent(in), target, contiguous :: val(:,:)
+#endif
     integer,          intent(in), optional :: start(:)
     integer,          intent(in), optional :: count(:)  ! in case val has been reshaped
     integer,          intent(in), optional :: ndims     ! in case val has been reshaped
@@ -1521,19 +1693,31 @@ contains
        end do
     end if
 
+#ifdef NVIDIA
+    block
+    real(DP), allocatable, target :: work(:,:)
+    allocate(work, source=val)
+#endif
     error = file_write_associatedcoordinate_c( &
          FILE_files(fid)%fid, cstr(name), & ! (in)
 #if defined(__GFORTRAN__) && __GNUC__ < 7
-         cloc(val(1,1)), ndims_, DP,     & ! (in)
+         cloc(val(1,1)), & ! (in)
+#elif defined(NVIDIA)
+         c_loc(work), & ! (in)
 #else
-         c_loc(val), ndims_, DP,     & ! (in)
+         c_loc(val), & ! (in)
 #endif
+         ndims_, DP,     & ! (in)
          start_, count_                   ) ! (in)
 
     if ( error /= FILE_SUCCESS_CODE .and. error /= FILE_ALREADY_EXISTED_CODE ) then
        LOG_ERROR("FILE_write_associatedCoordinate_realDP_2D",*) 'failed to write associated coordinate: '//trim(name)
        call PRC_abort
     end if
+
+#ifdef NVIDIA
+    end block
+#endif
 
     return
   end subroutine FILE_write_associatedCoordinate_realDP_2D
@@ -1545,7 +1729,11 @@ contains
        ndims         )
     integer,          intent(in)           :: fid
     character(len=*), intent(in)           :: name
+#ifdef NVIDIA
+    real(SP),    intent(in) :: val(:,:,:)
+#else
     real(SP),    intent(in), target, contiguous :: val(:,:,:)
+#endif
     integer,          intent(in), optional :: start(:)
     integer,          intent(in), optional :: count(:)  ! in case val has been reshaped
     integer,          intent(in), optional :: ndims     ! in case val has been reshaped
@@ -1589,19 +1777,31 @@ contains
        end do
     end if
 
+#ifdef NVIDIA
+    block
+    real(SP), allocatable, target :: work(:,:,:)
+    allocate(work, source=val)
+#endif
     error = file_write_associatedcoordinate_c( &
          FILE_files(fid)%fid, cstr(name), & ! (in)
 #if defined(__GFORTRAN__) && __GNUC__ < 7
-         cloc(val(1,1,1)), ndims_, SP,     & ! (in)
+         cloc(val(1,1,1)), & ! (in)
+#elif defined(NVIDIA)
+         c_loc(work), & ! (in)
 #else
-         c_loc(val), ndims_, SP,     & ! (in)
+         c_loc(val), & ! (in)
 #endif
+         ndims_, SP,     & ! (in)
          start_, count_                   ) ! (in)
 
     if ( error /= FILE_SUCCESS_CODE .and. error /= FILE_ALREADY_EXISTED_CODE ) then
        LOG_ERROR("FILE_write_associatedCoordinate_realSP_3D",*) 'failed to write associated coordinate: '//trim(name)
        call PRC_abort
     end if
+
+#ifdef NVIDIA
+    end block
+#endif
 
     return
   end subroutine FILE_write_associatedCoordinate_realSP_3D
@@ -1613,7 +1813,11 @@ contains
        ndims         )
     integer,          intent(in)           :: fid
     character(len=*), intent(in)           :: name
+#ifdef NVIDIA
+    real(DP),    intent(in) :: val(:,:,:)
+#else
     real(DP),    intent(in), target, contiguous :: val(:,:,:)
+#endif
     integer,          intent(in), optional :: start(:)
     integer,          intent(in), optional :: count(:)  ! in case val has been reshaped
     integer,          intent(in), optional :: ndims     ! in case val has been reshaped
@@ -1657,19 +1861,31 @@ contains
        end do
     end if
 
+#ifdef NVIDIA
+    block
+    real(DP), allocatable, target :: work(:,:,:)
+    allocate(work, source=val)
+#endif
     error = file_write_associatedcoordinate_c( &
          FILE_files(fid)%fid, cstr(name), & ! (in)
 #if defined(__GFORTRAN__) && __GNUC__ < 7
-         cloc(val(1,1,1)), ndims_, DP,     & ! (in)
+         cloc(val(1,1,1)), & ! (in)
+#elif defined(NVIDIA)
+         c_loc(work), & ! (in)
 #else
-         c_loc(val), ndims_, DP,     & ! (in)
+         c_loc(val), & ! (in)
 #endif
+         ndims_, DP,     & ! (in)
          start_, count_                   ) ! (in)
 
     if ( error /= FILE_SUCCESS_CODE .and. error /= FILE_ALREADY_EXISTED_CODE ) then
        LOG_ERROR("FILE_write_associatedCoordinate_realDP_3D",*) 'failed to write associated coordinate: '//trim(name)
        call PRC_abort
     end if
+
+#ifdef NVIDIA
+    end block
+#endif
 
     return
   end subroutine FILE_write_associatedCoordinate_realDP_3D
@@ -1681,7 +1897,11 @@ contains
        ndims         )
     integer,          intent(in)           :: fid
     character(len=*), intent(in)           :: name
+#ifdef NVIDIA
+    real(SP),    intent(in) :: val(:,:,:,:)
+#else
     real(SP),    intent(in), target, contiguous :: val(:,:,:,:)
+#endif
     integer,          intent(in), optional :: start(:)
     integer,          intent(in), optional :: count(:)  ! in case val has been reshaped
     integer,          intent(in), optional :: ndims     ! in case val has been reshaped
@@ -1725,19 +1945,31 @@ contains
        end do
     end if
 
+#ifdef NVIDIA
+    block
+    real(SP), allocatable, target :: work(:,:,:,:)
+    allocate(work, source=val)
+#endif
     error = file_write_associatedcoordinate_c( &
          FILE_files(fid)%fid, cstr(name), & ! (in)
 #if defined(__GFORTRAN__) && __GNUC__ < 7
-         cloc(val(1,1,1,1)), ndims_, SP,     & ! (in)
+         cloc(val(1,1,1,1)), & ! (in)
+#elif defined(NVIDIA)
+         c_loc(work), & ! (in)
 #else
-         c_loc(val), ndims_, SP,     & ! (in)
+         c_loc(val), & ! (in)
 #endif
+         ndims_, SP,     & ! (in)
          start_, count_                   ) ! (in)
 
     if ( error /= FILE_SUCCESS_CODE .and. error /= FILE_ALREADY_EXISTED_CODE ) then
        LOG_ERROR("FILE_write_associatedCoordinate_realSP_4D",*) 'failed to write associated coordinate: '//trim(name)
        call PRC_abort
     end if
+
+#ifdef NVIDIA
+    end block
+#endif
 
     return
   end subroutine FILE_write_associatedCoordinate_realSP_4D
@@ -1749,7 +1981,11 @@ contains
        ndims         )
     integer,          intent(in)           :: fid
     character(len=*), intent(in)           :: name
+#ifdef NVIDIA
+    real(DP),    intent(in) :: val(:,:,:,:)
+#else
     real(DP),    intent(in), target, contiguous :: val(:,:,:,:)
+#endif
     integer,          intent(in), optional :: start(:)
     integer,          intent(in), optional :: count(:)  ! in case val has been reshaped
     integer,          intent(in), optional :: ndims     ! in case val has been reshaped
@@ -1793,19 +2029,31 @@ contains
        end do
     end if
 
+#ifdef NVIDIA
+    block
+    real(DP), allocatable, target :: work(:,:,:,:)
+    allocate(work, source=val)
+#endif
     error = file_write_associatedcoordinate_c( &
          FILE_files(fid)%fid, cstr(name), & ! (in)
 #if defined(__GFORTRAN__) && __GNUC__ < 7
-         cloc(val(1,1,1,1)), ndims_, DP,     & ! (in)
+         cloc(val(1,1,1,1)), & ! (in)
+#elif defined(NVIDIA)
+         c_loc(work), & ! (in)
 #else
-         c_loc(val), ndims_, DP,     & ! (in)
+         c_loc(val), & ! (in)
 #endif
+         ndims_, DP,     & ! (in)
          start_, count_                   ) ! (in)
 
     if ( error /= FILE_SUCCESS_CODE .and. error /= FILE_ALREADY_EXISTED_CODE ) then
        LOG_ERROR("FILE_write_associatedCoordinate_realDP_4D",*) 'failed to write associated coordinate: '//trim(name)
        call PRC_abort
     end if
+
+#ifdef NVIDIA
+    end block
+#endif
 
     return
   end subroutine FILE_write_associatedCoordinate_realDP_4D
@@ -3683,7 +3931,11 @@ contains
 
     integer,          intent( in)           :: fid
     character(len=*), intent( in)           :: varname
+#ifdef NVIDIA
+    real(SP),    intent(out), target :: var(:)
+#else
     real(SP),    intent(out), target, contiguous :: var(:)
+#endif
     integer,          intent( in), optional :: step
     logical,          intent( in), optional :: allow_missing !> if data is missing, set value to missing_value
     real(SP),    intent( in), optional :: missing_value !> default is zero
@@ -3770,12 +4022,24 @@ contains
 #endif
             dinfo, SP, ntypes, dtype, start(:), count(:) ) ! (in)
     else if ( present(start) .and. present(count) ) then
+#ifdef NVIDIA
+       block
+       real(SP), allocatable, target :: work(:)
+       allocate(work, mold=var)
+#endif
+       error = file_read_data_c( &
 #if defined(__GFORTRAN__) && __GNUC__ < 7
-       error = file_read_data_c( cloc(var(1)),         & ! (out)
+            cloc(var(1)), & ! (out)
+#elif defined(NVIDIA)
+            c_loc(work), & ! (out)
 #else
-       error = file_read_data_c( c_loc(var),         & ! (out)
+            c_loc(var), & ! (out)
 #endif
             dinfo, SP, 0, 0, start(:), count(:) ) ! (in)
+#ifdef NVIDIA
+       var = work
+       end block
+#endif
     else
        dim_size(:) = shape(var)
        do n = 1, 1
@@ -3784,12 +4048,24 @@ contains
              call PRC_abort
           end if
        end do
+#ifdef NVIDIA
+       block
+       real(SP), allocatable, target :: work(:)
+       allocate(work, mold=var)
+#endif
+       error = file_read_data_c( &
 #if defined(__GFORTRAN__) && __GNUC__ < 7
-       error = file_read_data_c( cloc(var(1)),   & ! (out)
+            loc(var(1)), & ! (out)
+#elif defined(NVIDIA)
+            c_loc(work), & ! (out)
 #else
-       error = file_read_data_c( c_loc(var),   & ! (out)
+            c_loc(var), & ! (out)
 #endif
             dinfo, SP, 0, 0, (/0/), (/0/) ) ! (in)
+#ifdef NVIDIA
+       var = work
+       end block
+#endif
     end if
     if ( error /= FILE_SUCCESS_CODE ) then
        LOG_ERROR("FILE_read_var_realSP_1D",*) 'failed to get data value: ', trim(varname)
@@ -3810,7 +4086,11 @@ contains
 
     integer,          intent( in)           :: fid
     character(len=*), intent( in)           :: varname
+#ifdef NVIDIA
+    real(DP),    intent(out), target :: var(:)
+#else
     real(DP),    intent(out), target, contiguous :: var(:)
+#endif
     integer,          intent( in), optional :: step
     logical,          intent( in), optional :: allow_missing !> if data is missing, set value to missing_value
     real(DP),    intent( in), optional :: missing_value !> default is zero
@@ -3897,12 +4177,24 @@ contains
 #endif
             dinfo, DP, ntypes, dtype, start(:), count(:) ) ! (in)
     else if ( present(start) .and. present(count) ) then
+#ifdef NVIDIA
+       block
+       real(DP), allocatable, target :: work(:)
+       allocate(work, mold=var)
+#endif
+       error = file_read_data_c( &
 #if defined(__GFORTRAN__) && __GNUC__ < 7
-       error = file_read_data_c( cloc(var(1)),         & ! (out)
+            cloc(var(1)), & ! (out)
+#elif defined(NVIDIA)
+            c_loc(work), & ! (out)
 #else
-       error = file_read_data_c( c_loc(var),         & ! (out)
+            c_loc(var), & ! (out)
 #endif
             dinfo, DP, 0, 0, start(:), count(:) ) ! (in)
+#ifdef NVIDIA
+       var = work
+       end block
+#endif
     else
        dim_size(:) = shape(var)
        do n = 1, 1
@@ -3911,12 +4203,24 @@ contains
              call PRC_abort
           end if
        end do
+#ifdef NVIDIA
+       block
+       real(DP), allocatable, target :: work(:)
+       allocate(work, mold=var)
+#endif
+       error = file_read_data_c( &
 #if defined(__GFORTRAN__) && __GNUC__ < 7
-       error = file_read_data_c( cloc(var(1)),   & ! (out)
+            loc(var(1)), & ! (out)
+#elif defined(NVIDIA)
+            c_loc(work), & ! (out)
 #else
-       error = file_read_data_c( c_loc(var),   & ! (out)
+            c_loc(var), & ! (out)
 #endif
             dinfo, DP, 0, 0, (/0/), (/0/) ) ! (in)
+#ifdef NVIDIA
+       var = work
+       end block
+#endif
     end if
     if ( error /= FILE_SUCCESS_CODE ) then
        LOG_ERROR("FILE_read_var_realDP_1D",*) 'failed to get data value: ', trim(varname)
@@ -3937,7 +4241,11 @@ contains
 
     integer,          intent( in)           :: fid
     character(len=*), intent( in)           :: varname
+#ifdef NVIDIA
+    real(SP),    intent(out), target :: var(:,:)
+#else
     real(SP),    intent(out), target, contiguous :: var(:,:)
+#endif
     integer,          intent( in), optional :: step
     logical,          intent( in), optional :: allow_missing !> if data is missing, set value to missing_value
     real(SP),    intent( in), optional :: missing_value !> default is zero
@@ -4024,12 +4332,24 @@ contains
 #endif
             dinfo, SP, ntypes, dtype, start(:), count(:) ) ! (in)
     else if ( present(start) .and. present(count) ) then
+#ifdef NVIDIA
+       block
+       real(SP), allocatable, target :: work(:,:)
+       allocate(work, mold=var)
+#endif
+       error = file_read_data_c( &
 #if defined(__GFORTRAN__) && __GNUC__ < 7
-       error = file_read_data_c( cloc(var(1,1)),         & ! (out)
+            cloc(var(1,1)), & ! (out)
+#elif defined(NVIDIA)
+            c_loc(work), & ! (out)
 #else
-       error = file_read_data_c( c_loc(var),         & ! (out)
+            c_loc(var), & ! (out)
 #endif
             dinfo, SP, 0, 0, start(:), count(:) ) ! (in)
+#ifdef NVIDIA
+       var = work
+       end block
+#endif
     else
        dim_size(:) = shape(var)
        do n = 1, 2
@@ -4038,12 +4358,24 @@ contains
              call PRC_abort
           end if
        end do
+#ifdef NVIDIA
+       block
+       real(SP), allocatable, target :: work(:,:)
+       allocate(work, mold=var)
+#endif
+       error = file_read_data_c( &
 #if defined(__GFORTRAN__) && __GNUC__ < 7
-       error = file_read_data_c( cloc(var(1,1)),   & ! (out)
+            loc(var(1,1)), & ! (out)
+#elif defined(NVIDIA)
+            c_loc(work), & ! (out)
 #else
-       error = file_read_data_c( c_loc(var),   & ! (out)
+            c_loc(var), & ! (out)
 #endif
             dinfo, SP, 0, 0, (/0/), (/0/) ) ! (in)
+#ifdef NVIDIA
+       var = work
+       end block
+#endif
     end if
     if ( error /= FILE_SUCCESS_CODE ) then
        LOG_ERROR("FILE_read_var_realSP_2D",*) 'failed to get data value: ', trim(varname)
@@ -4064,7 +4396,11 @@ contains
 
     integer,          intent( in)           :: fid
     character(len=*), intent( in)           :: varname
+#ifdef NVIDIA
+    real(DP),    intent(out), target :: var(:,:)
+#else
     real(DP),    intent(out), target, contiguous :: var(:,:)
+#endif
     integer,          intent( in), optional :: step
     logical,          intent( in), optional :: allow_missing !> if data is missing, set value to missing_value
     real(DP),    intent( in), optional :: missing_value !> default is zero
@@ -4151,12 +4487,24 @@ contains
 #endif
             dinfo, DP, ntypes, dtype, start(:), count(:) ) ! (in)
     else if ( present(start) .and. present(count) ) then
+#ifdef NVIDIA
+       block
+       real(DP), allocatable, target :: work(:,:)
+       allocate(work, mold=var)
+#endif
+       error = file_read_data_c( &
 #if defined(__GFORTRAN__) && __GNUC__ < 7
-       error = file_read_data_c( cloc(var(1,1)),         & ! (out)
+            cloc(var(1,1)), & ! (out)
+#elif defined(NVIDIA)
+            c_loc(work), & ! (out)
 #else
-       error = file_read_data_c( c_loc(var),         & ! (out)
+            c_loc(var), & ! (out)
 #endif
             dinfo, DP, 0, 0, start(:), count(:) ) ! (in)
+#ifdef NVIDIA
+       var = work
+       end block
+#endif
     else
        dim_size(:) = shape(var)
        do n = 1, 2
@@ -4165,12 +4513,24 @@ contains
              call PRC_abort
           end if
        end do
+#ifdef NVIDIA
+       block
+       real(DP), allocatable, target :: work(:,:)
+       allocate(work, mold=var)
+#endif
+       error = file_read_data_c( &
 #if defined(__GFORTRAN__) && __GNUC__ < 7
-       error = file_read_data_c( cloc(var(1,1)),   & ! (out)
+            loc(var(1,1)), & ! (out)
+#elif defined(NVIDIA)
+            c_loc(work), & ! (out)
 #else
-       error = file_read_data_c( c_loc(var),   & ! (out)
+            c_loc(var), & ! (out)
 #endif
             dinfo, DP, 0, 0, (/0/), (/0/) ) ! (in)
+#ifdef NVIDIA
+       var = work
+       end block
+#endif
     end if
     if ( error /= FILE_SUCCESS_CODE ) then
        LOG_ERROR("FILE_read_var_realDP_2D",*) 'failed to get data value: ', trim(varname)
@@ -4191,7 +4551,11 @@ contains
 
     integer,          intent( in)           :: fid
     character(len=*), intent( in)           :: varname
+#ifdef NVIDIA
+    real(SP),    intent(out), target :: var(:,:,:)
+#else
     real(SP),    intent(out), target, contiguous :: var(:,:,:)
+#endif
     integer,          intent( in), optional :: step
     logical,          intent( in), optional :: allow_missing !> if data is missing, set value to missing_value
     real(SP),    intent( in), optional :: missing_value !> default is zero
@@ -4278,12 +4642,24 @@ contains
 #endif
             dinfo, SP, ntypes, dtype, start(:), count(:) ) ! (in)
     else if ( present(start) .and. present(count) ) then
+#ifdef NVIDIA
+       block
+       real(SP), allocatable, target :: work(:,:,:)
+       allocate(work, mold=var)
+#endif
+       error = file_read_data_c( &
 #if defined(__GFORTRAN__) && __GNUC__ < 7
-       error = file_read_data_c( cloc(var(1,1,1)),         & ! (out)
+            cloc(var(1,1,1)), & ! (out)
+#elif defined(NVIDIA)
+            c_loc(work), & ! (out)
 #else
-       error = file_read_data_c( c_loc(var),         & ! (out)
+            c_loc(var), & ! (out)
 #endif
             dinfo, SP, 0, 0, start(:), count(:) ) ! (in)
+#ifdef NVIDIA
+       var = work
+       end block
+#endif
     else
        dim_size(:) = shape(var)
        do n = 1, 3
@@ -4292,12 +4668,24 @@ contains
              call PRC_abort
           end if
        end do
+#ifdef NVIDIA
+       block
+       real(SP), allocatable, target :: work(:,:,:)
+       allocate(work, mold=var)
+#endif
+       error = file_read_data_c( &
 #if defined(__GFORTRAN__) && __GNUC__ < 7
-       error = file_read_data_c( cloc(var(1,1,1)),   & ! (out)
+            loc(var(1,1,1)), & ! (out)
+#elif defined(NVIDIA)
+            c_loc(work), & ! (out)
 #else
-       error = file_read_data_c( c_loc(var),   & ! (out)
+            c_loc(var), & ! (out)
 #endif
             dinfo, SP, 0, 0, (/0/), (/0/) ) ! (in)
+#ifdef NVIDIA
+       var = work
+       end block
+#endif
     end if
     if ( error /= FILE_SUCCESS_CODE ) then
        LOG_ERROR("FILE_read_var_realSP_3D",*) 'failed to get data value: ', trim(varname)
@@ -4318,7 +4706,11 @@ contains
 
     integer,          intent( in)           :: fid
     character(len=*), intent( in)           :: varname
+#ifdef NVIDIA
+    real(DP),    intent(out), target :: var(:,:,:)
+#else
     real(DP),    intent(out), target, contiguous :: var(:,:,:)
+#endif
     integer,          intent( in), optional :: step
     logical,          intent( in), optional :: allow_missing !> if data is missing, set value to missing_value
     real(DP),    intent( in), optional :: missing_value !> default is zero
@@ -4405,12 +4797,24 @@ contains
 #endif
             dinfo, DP, ntypes, dtype, start(:), count(:) ) ! (in)
     else if ( present(start) .and. present(count) ) then
+#ifdef NVIDIA
+       block
+       real(DP), allocatable, target :: work(:,:,:)
+       allocate(work, mold=var)
+#endif
+       error = file_read_data_c( &
 #if defined(__GFORTRAN__) && __GNUC__ < 7
-       error = file_read_data_c( cloc(var(1,1,1)),         & ! (out)
+            cloc(var(1,1,1)), & ! (out)
+#elif defined(NVIDIA)
+            c_loc(work), & ! (out)
 #else
-       error = file_read_data_c( c_loc(var),         & ! (out)
+            c_loc(var), & ! (out)
 #endif
             dinfo, DP, 0, 0, start(:), count(:) ) ! (in)
+#ifdef NVIDIA
+       var = work
+       end block
+#endif
     else
        dim_size(:) = shape(var)
        do n = 1, 3
@@ -4419,12 +4823,24 @@ contains
              call PRC_abort
           end if
        end do
+#ifdef NVIDIA
+       block
+       real(DP), allocatable, target :: work(:,:,:)
+       allocate(work, mold=var)
+#endif
+       error = file_read_data_c( &
 #if defined(__GFORTRAN__) && __GNUC__ < 7
-       error = file_read_data_c( cloc(var(1,1,1)),   & ! (out)
+            loc(var(1,1,1)), & ! (out)
+#elif defined(NVIDIA)
+            c_loc(work), & ! (out)
 #else
-       error = file_read_data_c( c_loc(var),   & ! (out)
+            c_loc(var), & ! (out)
 #endif
             dinfo, DP, 0, 0, (/0/), (/0/) ) ! (in)
+#ifdef NVIDIA
+       var = work
+       end block
+#endif
     end if
     if ( error /= FILE_SUCCESS_CODE ) then
        LOG_ERROR("FILE_read_var_realDP_3D",*) 'failed to get data value: ', trim(varname)
@@ -4445,7 +4861,11 @@ contains
 
     integer,          intent( in)           :: fid
     character(len=*), intent( in)           :: varname
+#ifdef NVIDIA
+    real(SP),    intent(out), target :: var(:,:,:,:)
+#else
     real(SP),    intent(out), target, contiguous :: var(:,:,:,:)
+#endif
     integer,          intent( in), optional :: step
     logical,          intent( in), optional :: allow_missing !> if data is missing, set value to missing_value
     real(SP),    intent( in), optional :: missing_value !> default is zero
@@ -4532,12 +4952,24 @@ contains
 #endif
             dinfo, SP, ntypes, dtype, start(:), count(:) ) ! (in)
     else if ( present(start) .and. present(count) ) then
+#ifdef NVIDIA
+       block
+       real(SP), allocatable, target :: work(:,:,:,:)
+       allocate(work, mold=var)
+#endif
+       error = file_read_data_c( &
 #if defined(__GFORTRAN__) && __GNUC__ < 7
-       error = file_read_data_c( cloc(var(1,1,1,1)),         & ! (out)
+            cloc(var(1,1,1,1)), & ! (out)
+#elif defined(NVIDIA)
+            c_loc(work), & ! (out)
 #else
-       error = file_read_data_c( c_loc(var),         & ! (out)
+            c_loc(var), & ! (out)
 #endif
             dinfo, SP, 0, 0, start(:), count(:) ) ! (in)
+#ifdef NVIDIA
+       var = work
+       end block
+#endif
     else
        dim_size(:) = shape(var)
        do n = 1, 4
@@ -4546,12 +4978,24 @@ contains
              call PRC_abort
           end if
        end do
+#ifdef NVIDIA
+       block
+       real(SP), allocatable, target :: work(:,:,:,:)
+       allocate(work, mold=var)
+#endif
+       error = file_read_data_c( &
 #if defined(__GFORTRAN__) && __GNUC__ < 7
-       error = file_read_data_c( cloc(var(1,1,1,1)),   & ! (out)
+            loc(var(1,1,1,1)), & ! (out)
+#elif defined(NVIDIA)
+            c_loc(work), & ! (out)
 #else
-       error = file_read_data_c( c_loc(var),   & ! (out)
+            c_loc(var), & ! (out)
 #endif
             dinfo, SP, 0, 0, (/0/), (/0/) ) ! (in)
+#ifdef NVIDIA
+       var = work
+       end block
+#endif
     end if
     if ( error /= FILE_SUCCESS_CODE ) then
        LOG_ERROR("FILE_read_var_realSP_4D",*) 'failed to get data value: ', trim(varname)
@@ -4572,7 +5016,11 @@ contains
 
     integer,          intent( in)           :: fid
     character(len=*), intent( in)           :: varname
+#ifdef NVIDIA
+    real(DP),    intent(out), target :: var(:,:,:,:)
+#else
     real(DP),    intent(out), target, contiguous :: var(:,:,:,:)
+#endif
     integer,          intent( in), optional :: step
     logical,          intent( in), optional :: allow_missing !> if data is missing, set value to missing_value
     real(DP),    intent( in), optional :: missing_value !> default is zero
@@ -4659,12 +5107,24 @@ contains
 #endif
             dinfo, DP, ntypes, dtype, start(:), count(:) ) ! (in)
     else if ( present(start) .and. present(count) ) then
+#ifdef NVIDIA
+       block
+       real(DP), allocatable, target :: work(:,:,:,:)
+       allocate(work, mold=var)
+#endif
+       error = file_read_data_c( &
 #if defined(__GFORTRAN__) && __GNUC__ < 7
-       error = file_read_data_c( cloc(var(1,1,1,1)),         & ! (out)
+            cloc(var(1,1,1,1)), & ! (out)
+#elif defined(NVIDIA)
+            c_loc(work), & ! (out)
 #else
-       error = file_read_data_c( c_loc(var),         & ! (out)
+            c_loc(var), & ! (out)
 #endif
             dinfo, DP, 0, 0, start(:), count(:) ) ! (in)
+#ifdef NVIDIA
+       var = work
+       end block
+#endif
     else
        dim_size(:) = shape(var)
        do n = 1, 4
@@ -4673,12 +5133,24 @@ contains
              call PRC_abort
           end if
        end do
+#ifdef NVIDIA
+       block
+       real(DP), allocatable, target :: work(:,:,:,:)
+       allocate(work, mold=var)
+#endif
+       error = file_read_data_c( &
 #if defined(__GFORTRAN__) && __GNUC__ < 7
-       error = file_read_data_c( cloc(var(1,1,1,1)),   & ! (out)
+            loc(var(1,1,1,1)), & ! (out)
+#elif defined(NVIDIA)
+            c_loc(work), & ! (out)
 #else
-       error = file_read_data_c( c_loc(var),   & ! (out)
+            c_loc(var), & ! (out)
 #endif
             dinfo, DP, 0, 0, (/0/), (/0/) ) ! (in)
+#ifdef NVIDIA
+       var = work
+       end block
+#endif
     end if
     if ( error /= FILE_SUCCESS_CODE ) then
        LOG_ERROR("FILE_read_var_realDP_4D",*) 'failed to get data value: ', trim(varname)
@@ -4700,7 +5172,11 @@ contains
     implicit none
 
     integer,  intent(in)           :: vid
+#ifdef NVIDIA
+    real(SP), intent(in) :: var(:)
+#else
     real(SP), intent(in), target, contiguous :: var(:)
+#endif
     real(DP), intent(in)           :: t_start
     real(DP), intent(in)           :: t_end
     integer,  intent(in), optional :: ndims    ! when var has been reshaped to 1D
@@ -4753,13 +5229,24 @@ contains
        else
           start_(:) = 1
        end if
+#ifdef NVIDIA
+       block
+       real(SP), allocatable, target :: work(:)
+       allocate(work, source=var)
+#endif
        error = file_write_data_c( FILE_files(fid)%fid, FILE_vars(vid)%vid, & ! (in)
 #if defined(__GFORTRAN__) && __GNUC__ < 7
-                                  cloc(var(1)), ts, te, 1, SP,     & ! (in)
+                                  cloc(var(1)), & ! (in)
+#elif defined(NVIDIA)
+                                  c_loc(work), & ! (in)
 #else
-                                  c_loc(var), ts, te, 1, SP,     & ! (in)
+                                  c_loc(var), & ! (in)
 #endif
+                                  ts, te, 1, SP,     & ! (in)
                                   start_, shape(var)                       ) ! (in)
+#ifdef NVIDIA
+       end block
+#endif
     end if
     if ( error /= FILE_SUCCESS_CODE ) then
        LOG_ERROR("FILE_write_realSP_1D",*) 'failed to write data: ', trim(FILE_vars(vid)%name)
@@ -4777,7 +5264,11 @@ contains
     implicit none
 
     integer,  intent(in)           :: vid
+#ifdef NVIDIA
+    real(DP), intent(in) :: var(:)
+#else
     real(DP), intent(in), target, contiguous :: var(:)
+#endif
     real(DP), intent(in)           :: t_start
     real(DP), intent(in)           :: t_end
     integer,  intent(in), optional :: ndims    ! when var has been reshaped to 1D
@@ -4830,13 +5321,24 @@ contains
        else
           start_(:) = 1
        end if
+#ifdef NVIDIA
+       block
+       real(DP), allocatable, target :: work(:)
+       allocate(work, source=var)
+#endif
        error = file_write_data_c( FILE_files(fid)%fid, FILE_vars(vid)%vid, & ! (in)
 #if defined(__GFORTRAN__) && __GNUC__ < 7
-                                  cloc(var(1)), ts, te, 1, DP,     & ! (in)
+                                  cloc(var(1)), & ! (in)
+#elif defined(NVIDIA)
+                                  c_loc(work), & ! (in)
 #else
-                                  c_loc(var), ts, te, 1, DP,     & ! (in)
+                                  c_loc(var), & ! (in)
 #endif
+                                  ts, te, 1, DP,     & ! (in)
                                   start_, shape(var)                       ) ! (in)
+#ifdef NVIDIA
+       end block
+#endif
     end if
     if ( error /= FILE_SUCCESS_CODE ) then
        LOG_ERROR("FILE_write_realDP_1D",*) 'failed to write data: ', trim(FILE_vars(vid)%name)
@@ -4852,7 +5354,11 @@ contains
     implicit none
 
     integer,  intent(in)           :: vid
+#ifdef NVIDIA
+    real(SP), intent(in) :: var(:,:)
+#else
     real(SP), intent(in), target, contiguous :: var(:,:)
+#endif
     real(DP), intent(in)           :: t_start
     real(DP), intent(in)           :: t_end
     integer,  intent(in), optional :: start(:)
@@ -4882,13 +5388,24 @@ contains
        else
           start_(:) = 1
        end if
+#ifdef NVIDIA
+       block
+       real(SP), allocatable, target :: work(:,:)
+       allocate(work, source=var)
+#endif
        error = file_write_data_c( FILE_files(fid)%fid, FILE_vars(vid)%vid, & ! (in)
 #if defined(__GFORTRAN__) && __GNUC__ < 7
-                                  cloc(var(1,1)), ts, te, 2, SP,     & ! (in)
+                                  cloc(var(1,1)), & ! (in)
+#elif defined(NVIDIA)
+                                  c_loc(work), & ! (in)
 #else
-                                  c_loc(var), ts, te, 2, SP,     & ! (in)
+                                  c_loc(var), & ! (in)
 #endif
+                                  ts, te, 2, SP,     & ! (in)
                                   start_, shape(var)                       ) ! (in)
+#ifdef NVIDIA
+       end block
+#endif
     if ( error /= FILE_SUCCESS_CODE ) then
        LOG_ERROR("FILE_write_realSP_2D",*) 'failed to write data: ', trim(FILE_vars(vid)%name)
        call PRC_abort
@@ -4903,7 +5420,11 @@ contains
     implicit none
 
     integer,  intent(in)           :: vid
+#ifdef NVIDIA
+    real(DP), intent(in) :: var(:,:)
+#else
     real(DP), intent(in), target, contiguous :: var(:,:)
+#endif
     real(DP), intent(in)           :: t_start
     real(DP), intent(in)           :: t_end
     integer,  intent(in), optional :: start(:)
@@ -4933,13 +5454,24 @@ contains
        else
           start_(:) = 1
        end if
+#ifdef NVIDIA
+       block
+       real(DP), allocatable, target :: work(:,:)
+       allocate(work, source=var)
+#endif
        error = file_write_data_c( FILE_files(fid)%fid, FILE_vars(vid)%vid, & ! (in)
 #if defined(__GFORTRAN__) && __GNUC__ < 7
-                                  cloc(var(1,1)), ts, te, 2, DP,     & ! (in)
+                                  cloc(var(1,1)), & ! (in)
+#elif defined(NVIDIA)
+                                  c_loc(work), & ! (in)
 #else
-                                  c_loc(var), ts, te, 2, DP,     & ! (in)
+                                  c_loc(var), & ! (in)
 #endif
+                                  ts, te, 2, DP,     & ! (in)
                                   start_, shape(var)                       ) ! (in)
+#ifdef NVIDIA
+       end block
+#endif
     if ( error /= FILE_SUCCESS_CODE ) then
        LOG_ERROR("FILE_write_realDP_2D",*) 'failed to write data: ', trim(FILE_vars(vid)%name)
        call PRC_abort
@@ -4954,7 +5486,11 @@ contains
     implicit none
 
     integer,  intent(in)           :: vid
+#ifdef NVIDIA
+    real(SP), intent(in) :: var(:,:,:)
+#else
     real(SP), intent(in), target, contiguous :: var(:,:,:)
+#endif
     real(DP), intent(in)           :: t_start
     real(DP), intent(in)           :: t_end
     integer,  intent(in), optional :: start(:)
@@ -4984,13 +5520,24 @@ contains
        else
           start_(:) = 1
        end if
+#ifdef NVIDIA
+       block
+       real(SP), allocatable, target :: work(:,:,:)
+       allocate(work, source=var)
+#endif
        error = file_write_data_c( FILE_files(fid)%fid, FILE_vars(vid)%vid, & ! (in)
 #if defined(__GFORTRAN__) && __GNUC__ < 7
-                                  cloc(var(1,1,1)), ts, te, 3, SP,     & ! (in)
+                                  cloc(var(1,1,1)), & ! (in)
+#elif defined(NVIDIA)
+                                  c_loc(work), & ! (in)
 #else
-                                  c_loc(var), ts, te, 3, SP,     & ! (in)
+                                  c_loc(var), & ! (in)
 #endif
+                                  ts, te, 3, SP,     & ! (in)
                                   start_, shape(var)                       ) ! (in)
+#ifdef NVIDIA
+       end block
+#endif
     if ( error /= FILE_SUCCESS_CODE ) then
        LOG_ERROR("FILE_write_realSP_3D",*) 'failed to write data: ', trim(FILE_vars(vid)%name)
        call PRC_abort
@@ -5005,7 +5552,11 @@ contains
     implicit none
 
     integer,  intent(in)           :: vid
+#ifdef NVIDIA
+    real(DP), intent(in) :: var(:,:,:)
+#else
     real(DP), intent(in), target, contiguous :: var(:,:,:)
+#endif
     real(DP), intent(in)           :: t_start
     real(DP), intent(in)           :: t_end
     integer,  intent(in), optional :: start(:)
@@ -5035,13 +5586,24 @@ contains
        else
           start_(:) = 1
        end if
+#ifdef NVIDIA
+       block
+       real(DP), allocatable, target :: work(:,:,:)
+       allocate(work, source=var)
+#endif
        error = file_write_data_c( FILE_files(fid)%fid, FILE_vars(vid)%vid, & ! (in)
 #if defined(__GFORTRAN__) && __GNUC__ < 7
-                                  cloc(var(1,1,1)), ts, te, 3, DP,     & ! (in)
+                                  cloc(var(1,1,1)), & ! (in)
+#elif defined(NVIDIA)
+                                  c_loc(work), & ! (in)
 #else
-                                  c_loc(var), ts, te, 3, DP,     & ! (in)
+                                  c_loc(var), & ! (in)
 #endif
+                                  ts, te, 3, DP,     & ! (in)
                                   start_, shape(var)                       ) ! (in)
+#ifdef NVIDIA
+       end block
+#endif
     if ( error /= FILE_SUCCESS_CODE ) then
        LOG_ERROR("FILE_write_realDP_3D",*) 'failed to write data: ', trim(FILE_vars(vid)%name)
        call PRC_abort
@@ -5056,7 +5618,11 @@ contains
     implicit none
 
     integer,  intent(in)           :: vid
+#ifdef NVIDIA
+    real(SP), intent(in) :: var(:,:,:,:)
+#else
     real(SP), intent(in), target, contiguous :: var(:,:,:,:)
+#endif
     real(DP), intent(in)           :: t_start
     real(DP), intent(in)           :: t_end
     integer,  intent(in), optional :: start(:)
@@ -5086,13 +5652,24 @@ contains
        else
           start_(:) = 1
        end if
+#ifdef NVIDIA
+       block
+       real(SP), allocatable, target :: work(:,:,:,:)
+       allocate(work, source=var)
+#endif
        error = file_write_data_c( FILE_files(fid)%fid, FILE_vars(vid)%vid, & ! (in)
 #if defined(__GFORTRAN__) && __GNUC__ < 7
-                                  cloc(var(1,1,1,1)), ts, te, 4, SP,     & ! (in)
+                                  cloc(var(1,1,1,1)), & ! (in)
+#elif defined(NVIDIA)
+                                  c_loc(work), & ! (in)
 #else
-                                  c_loc(var), ts, te, 4, SP,     & ! (in)
+                                  c_loc(var), & ! (in)
 #endif
+                                  ts, te, 4, SP,     & ! (in)
                                   start_, shape(var)                       ) ! (in)
+#ifdef NVIDIA
+       end block
+#endif
     if ( error /= FILE_SUCCESS_CODE ) then
        LOG_ERROR("FILE_write_realSP_4D",*) 'failed to write data: ', trim(FILE_vars(vid)%name)
        call PRC_abort
@@ -5107,7 +5684,11 @@ contains
     implicit none
 
     integer,  intent(in)           :: vid
+#ifdef NVIDIA
+    real(DP), intent(in) :: var(:,:,:,:)
+#else
     real(DP), intent(in), target, contiguous :: var(:,:,:,:)
+#endif
     real(DP), intent(in)           :: t_start
     real(DP), intent(in)           :: t_end
     integer,  intent(in), optional :: start(:)
@@ -5137,13 +5718,24 @@ contains
        else
           start_(:) = 1
        end if
+#ifdef NVIDIA
+       block
+       real(DP), allocatable, target :: work(:,:,:,:)
+       allocate(work, source=var)
+#endif
        error = file_write_data_c( FILE_files(fid)%fid, FILE_vars(vid)%vid, & ! (in)
 #if defined(__GFORTRAN__) && __GNUC__ < 7
-                                  cloc(var(1,1,1,1)), ts, te, 4, DP,     & ! (in)
+                                  cloc(var(1,1,1,1)), & ! (in)
+#elif defined(NVIDIA)
+                                  c_loc(work), & ! (in)
 #else
-                                  c_loc(var), ts, te, 4, DP,     & ! (in)
+                                  c_loc(var), & ! (in)
 #endif
+                                  ts, te, 4, DP,     & ! (in)
                                   start_, shape(var)                       ) ! (in)
+#ifdef NVIDIA
+       end block
+#endif
     if ( error /= FILE_SUCCESS_CODE ) then
        LOG_ERROR("FILE_write_realDP_4D",*) 'failed to write data: ', trim(FILE_vars(vid)%name)
        call PRC_abort
