@@ -72,6 +72,8 @@ module scale_io
   character(len=6),      public            :: IO_DOMAINID         = "UNKNWN"!< nesting domain id for error log
   character(len=6),      public            :: IO_LOCALRANK        = "UNKNWN"!< local     rank    for error log
 
+  !$acc declare create(IO_L, IO_UNIVERSALRANK, IO_JOBID, IO_DOMAINID, IO_LOCALRANK)
+
   !-----------------------------------------------------------------------------
   !
   !++ Private procedure
@@ -323,6 +325,8 @@ contains
 
     write(IO_LOCALRANK,'(I6.6)') myrank
 
+    !$acc update device(IO_L, IO_LOCALRANK)
+
     return
   end subroutine IO_LOG_setup
 
@@ -390,6 +394,8 @@ contains
     write(IO_UNIVERSALRANK,'(I6.6)') myrank
     write(IO_JOBID        ,'(I6.6)') jobid
     write(IO_DOMAINID     ,'(I6.6)') domainid
+
+    !$acc update device(IO_UNIVERSALRANK, IO_JOBID, IO_DOMAINID)
 
     return
   end subroutine IO_set_universalrank
