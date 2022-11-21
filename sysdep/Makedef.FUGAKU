@@ -18,7 +18,7 @@ FFLAGS_FAST  = -Kfast,parallel,ocl,preex,array_private,noalias=s,mfunc=2 \
                -Kauto,threadsafe                                         \
                -Nfjomplib
 
-FFLAGS_AGGRESSIVE = -Kinstance=12,swp_strong
+FFLAGS_AGGRESSIVE = -Kinstance=12,swp_weak
 
 FFLAGS_QUICKDEBUG = -Nquickdbg -NRtrap
 
@@ -39,6 +39,14 @@ CFLAGS_FAST  = -Kfast,parallel,ocl,preex,array_private,region_extension,restp=al
 CFLAGS_DEBUG = -O0
 
 
+#### Vector length
+ifeq ($(SCALE_USE_SINGLEFP),T)
+   VECTLEN = 16
+else
+   VECTLEN = 8
+endif
+CACHELINESIZE = 256
+
 
 ##### Special setting
 
@@ -48,11 +56,11 @@ FFLAGS_OPENMP = -Kopenmp
 
 ### Performance monitor
 # disable
-#PERF_MONIT = -Nnofjprof -UFIPP -UFAPP
+#PERF_MONIT ?= -Nnofjprof -UFIPP -UFAPP
 # fipp
-PERF_MONIT = -Nfjprof -DFIPP -UFAPP
+PERF_MONIT ?= -Nfjprof -DFIPP
 # fapp
-#PERF_MONIT = -Nfjprof -UFIPP -DFAPP
+#PERF_MONIT ?= -Nfjprof -DFAPP
 
 FFLAGS_SYSDEPEND = $(PERF_MONIT)
 CFLAGS_SYSDEPEND = $(PERF_MONIT)
@@ -74,7 +82,7 @@ LDFLAGS = $(FFLAGS)
 # example:
 # export SCALE_NETCDF_INCLUDE="-I/home/user/tool/cross-K/include"
 # export SCALE_NETCDF_LIBS="-L/home/user/tool/cross-K/lib -lnetcdff -lnetcdf -lhdf5_hl -lhdf5 -lsz -lz"
-SPACK_FJVER ?= 4.7.0
+SPACK_FJVER ?= 4.8.0
 SCALE_NETCDF_C = $(shell spack location --install-dir netcdf-c%fj@$(SPACK_FJVER))
 SCALE_NETCDF_F = $(shell spack location --install-dir netcdf-fortran%fj@$(SPACK_FJVER))
 SCALE_PNETCDF = $(shell spack location --install-dir parallel-netcdf%fj@$(SPACK_FJVER))

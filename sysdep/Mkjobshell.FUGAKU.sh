@@ -94,7 +94,7 @@ cat << EOF1 > ./run.sh
 #PJM -g xxxxxxx
 #PJM -L freq=2200
 #PJM -L eco_state=2
-#PJM -L rscgrp="small"
+#PJM -L rscgrp="small:torus"
 #PJM -L node=$(((TPROC+3)/4))
 #PJM -L elapse=01:00:00
 #PJM --mpi "max-proc-per-node=4"
@@ -116,6 +116,8 @@ spack load --first netcdf-c%fj
 spack load --first netcdf-fortran%fj
 spack load --first parallel-netcdf%fj
 
+export LD_LIBRARY_PATH=\`/home/system/tool/sort_libp\`
+
 /home/system/tool/sort_libp -s
 if [ \$? -eq 0 ]; then
     :
@@ -123,7 +125,6 @@ else
     echo "[ERROR] Error in sort_libp."
     exit 1
 fi
-export LD_LIBRARY_PATH=\`/home/system/tool/sort_libp\`
 
 EOF1
 
