@@ -98,6 +98,7 @@ contains
        valW,             &
        mflx, val, GSQRT, &
        CDZ               )
+    !$acc routine vector
     implicit none
 
     real(RP), intent(out) :: valW (KA)
