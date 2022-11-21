@@ -330,6 +330,25 @@ contains
     if ( BND_S ) JFS_OFF = 0
 
 
+    !$acc data &
+    !$acc copy(mflx_hi) &
+    !$acc copyout(DENS_RK,MOMZ_RK,MOMX_RK,MOMY_RK,RHOT_RK,PROG_RK, &
+    !$acc         tflx_hi) &
+#ifdef HIST_TEND
+    !$acc copyout(advch_t,advcv_t,wdmp_t,ddiv_t,pg_t,cf_t) &
+#endif
+    !$acc copyin(DENS0,MOMZ0,MOMX0,MOMY0,RHOT0, &
+    !$acc        DENS,MOMZ,MOMX,MOMY,RHOT,DENS_t,MOMZ_t,MOMX_t,MOMY_t,RHOT_t, &
+    !$acc        PROG0,PROG, &
+    !$acc        DPRES0,RT2P,CORIOLI,num_diff,wdamp_coef,divdmp_coef,DDIV, &
+    !$acc        FLAG_FCT_MOMENTUM,FLAG_FCT_T,FLAG_FCT_ALONG_STREAM, &
+    !$acc        CDZ,FDZ,FDX,FDY,RCDZ,RCDX,RCDY,RFDZ,RFDX,RFDY, &
+    !$acc        PHI,GSQRT,J13G,J23G,J33G,MAPF,REF_dens,REF_rhot, &
+    !$acc        BND_W,BND_E,BND_S,BND_N,TwoD,dtrk,last) &
+    !$acc create(POTT,DPRES, &
+    !$acc        qflx_hi,qflx_J13,qflx_J23, &
+    !$acc        Sr,Sw,St)
+
     do JJS = JS, JE, JBLOCK
     JJE = JJS+JBLOCK-1
     do IIS = IS, IE, IBLOCK
@@ -338,6 +357,7 @@ contains
        PROFILE_START("hevi_pres")
        !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
        !$omp shared(JJS,JJE,IIS,IIE,IA,KS,KE,DPRES0,RT2P,RHOT,REF_rhot,DPRES,DENS,PHI)
+       !$acc kernels
        do j = JJS, JJE+1
        do i = IIS, min(IIE+1,IA)
           do k = KS, KE
@@ -353,6 +373,7 @@ contains
           DPRES(KE+1,i,j) = DPRES0(KE+1,i,j) - DENS(KE,i,j) * ( PHI(KE+1,i,j) - PHI(KE-1,i,j) )
        enddo
        enddo
+       !$acc end kernels
        PROFILE_STOP("hevi_pres")
 
        !##### continuity equation #####
@@ -362,6 +383,7 @@ contains
        if ( TwoD ) then
           !$omp parallel do default(none) private(j,k) OMP_SCHEDULE_ &
           !$omp shared(JJS,JJE,IS,KS,KE,GSQRT,I_XYW,MOMY,J23G,mflx_hi,MAPF,I_XY,num_diff)
+          !$acc kernels
           do j = JJS, JJE
              mflx_hi(KS-1,IS,j,ZDIR) = 0.0_RP
              do k = KS, KE-1
@@ -378,9 +400,11 @@ contains
              enddo
              mflx_hi(KE,IS,j,ZDIR) = 0.0_RP
           enddo
+          !$acc end kernels
        else
           !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
           !$omp shared(JJS,JJE,IIS,IIE,KS,KE,GSQRT,I_XYW,MOMX,MOMY,J13G,J23G,mflx_hi,MAPF,I_XY,num_diff)
+          !$acc kernels
           do j = JJS, JJE
           do i = IIS-1, IIE
              mflx_hi(KS-1,i,j,ZDIR) = 0.0_RP
@@ -406,6 +430,7 @@ contains
              mflx_hi(KE  ,i,j,ZDIR) = 0.0_RP
           enddo
           enddo
+          !$acc end kernels
        end if
 #ifdef DEBUG
        k = IUNDEF; i = IUNDEF; j = IUNDEF
@@ -419,6 +444,7 @@ contains
           ! at (u, y, z)
           !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
           !$omp shared(JJS,JJE,iss,iee,KS,KE,GSQRT,I_UYZ,MOMX,num_diff,mflx_hi,MAPF,I_UY)
+          !$acc kernels
           do j = JJS, JJE
           do i = iss, iee
           do k = KS, KE
@@ -432,6 +458,7 @@ contains
           enddo
           enddo
           enddo
+          !$acc end kernels
 #ifdef DEBUG
           k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
@@ -441,6 +468,7 @@ contains
        ! at (x, v, z)
        !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
        !$omp shared(JJS,JS,JFS_OFF,JJE,JEH,IIS,IIE,KS,KE,GSQRT,I_XVZ,MOMY,num_diff,mflx_hi,MAPF,I_XV)
+       !$acc kernels
        do j = max(JJS-1,JS-JFS_OFF), min(JJE,JEH)
        do i = IIS, IIE
        do k = KS, KE
@@ -454,6 +482,7 @@ contains
        enddo
        enddo
        enddo
+       !$acc end kernels
 #ifdef DEBUG
        k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
@@ -469,6 +498,7 @@ contains
           !$omp shared(JJS,JJE,IS,KS,KE) &
           !$omp shared(DENS0,Sr,mflx_hi,DENS_t) &
           !$omp shared(RCDZ,RCDY,MAPF,GSQRT,I_XY,I_XYZ)
+          !$acc kernels
           do j = JJS, JJE
           do k = KS, KE
 #ifdef DEBUG
@@ -487,6 +517,7 @@ contains
 #endif
           enddo
           enddo
+          !$acc end kernels
        else
           !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
           !$omp private(i,j,k,advcv,advch) &
@@ -496,6 +527,7 @@ contains
           !$omp shared(JJS,JJE,IIS,IIE,KS,KE) &
           !$omp shared(DENS0,Sr,mflx_hi,DENS_t) &
           !$omp shared(RCDZ,RCDX,RCDY,MAPF,GSQRT,I_XY,I_XYZ)
+          !$acc kernels
           do j = JJS, JJE
           do i = IIS, IIE
           do k = KS, KE
@@ -519,6 +551,7 @@ contains
           enddo
           enddo
           enddo
+          !$acc end kernels
        end if
 #ifdef DEBUG
        k = IUNDEF; i = IUNDEF; j = IUNDEF
@@ -536,6 +569,7 @@ contains
             num_diff(:,:,:,I_MOMZ,ZDIR), & ! (in)
             CDZ, FDZ, dtrk, &
             IIS, IIE, JJS, JJE ) ! (in)
+       !$acc update device( qflx_hi(:,:,:,ZDIR) )
        PROFILE_STOP("hevi_momz_qflxhi_z")
 
        PROFILE_START("hevi_momz_qflxj")
@@ -545,11 +579,13 @@ contains
             GSQRT(:,:,:,I_XYZ), J13G(:,:,:,I_XYZ), MAPF(:,:,:,I_XY), & ! (in)
             CDZ, TwoD, &
             IIS, IIE, JJS, JJE ) ! (in)
+       !$acc update device( qflx_J13 )
        call ATMOS_DYN_FVM_fluxJ23_XYW( qflx_J23, & ! (out)
             MOMY, MOMZ, DENS, & ! (in)
             GSQRT(:,:,:,I_XYZ), J23G(:,:,:,I_XYZ), MAPF(:,:,:,I_XY), & ! (in)
             CDZ, TwoD, &
             IIS, IIE, JJS, JJE ) ! (in)
+       !$acc update device( qflx_J23 )
        PROFILE_STOP("hevi_momz_qflxj")
 
        ! at (u, y, w)
@@ -561,6 +597,7 @@ contains
             num_diff(:,:,:,I_MOMZ,XDIR), & ! (in)
             CDZ, TwoD, & ! (in)
             IIS, IIE, JJS, JJE ) ! (in)
+       !$acc update device( qflx_hi(:,:,:,XDIR) )
        PROFILE_STOP("hevi_momz_qflxhi_x")
        end if
 
@@ -572,6 +609,7 @@ contains
             num_diff(:,:,:,I_MOMZ,YDIR), & ! (in)
             CDZ, TwoD, & ! (in)
             IIS, IIE, JJS, JJE ) ! (in)
+       !$acc update device( qflx_hi(:,:,:,YDIR) )
        PROFILE_STOP("hevi_momz_qflxhi_y")
 
        !--- update momentum(z)
@@ -586,6 +624,7 @@ contains
           !$omp shared(qflx_hi,qflx_J23,DDIV,MOMZ0,MOMZ_t,Sw) &
           !$omp shared(RFDZ,RCDY,FDZ,dtrk,wdamp_coef,divdmp_coef) &
           !$omp shared(MAPF,GSQRT,I_XY,I_XYW)
+          !$acc kernels
           do j = JJS, JJE
           do k = KS, KE-1
 #ifdef DEBUG
@@ -618,6 +657,7 @@ contains
 #endif
           enddo
           enddo
+          !$acc end kernels
        else
           !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
           !$omp private(i,j,k,advcv,advch,cf,wdmp,div) &
@@ -628,6 +668,7 @@ contains
           !$omp shared(qflx_hi,qflx_J13,qflx_J23,DDIV,MOMZ0,MOMZ_t,Sw) &
           !$omp shared(RFDZ,RCDX,RCDY,FDZ,dtrk,wdamp_coef,divdmp_coef) &
           !$omp shared(MAPF,GSQRT,I_XY,I_XYW)
+          !$acc kernels
           do j = JJS, JJE
           do i = IIS, IIE
           do k = KS, KE-1
@@ -668,6 +709,7 @@ contains
           enddo
           enddo
           enddo
+          !$acc end kernels
        end if
        PROFILE_STOP("hevi_sw")
 #ifdef DEBUG
@@ -679,6 +721,7 @@ contains
 
        !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
        !$omp shared(JJS,JJE,IIS,IIE,KS,KE,JHALO,IHALO,RHOT,DENS,POTT)
+       !$acc kernels
        do j = JJS-JHALO, JJE+JHALO
        do i = IIS-IHALO, IIE+IHALO
        do k = KS, KE
@@ -690,31 +733,39 @@ contains
        enddo
        enddo
        enddo
+       !$acc end kernels
 #ifdef DEBUG
        k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
+       !$acc update host( POTT )
 
        ! at (x, y, w)
+       !$acc update host( mflx_hi(:,:,:,ZDIR) )
        call ATMOS_DYN_FVM_fluxZ_XYZ( tflx_hi(:,:,:,ZDIR), & ! (out)
             mflx_hi(:,:,:,ZDIR), POTT, GSQRT(:,:,:,I_XYW), & ! (in)
             num_diff(:,:,:,I_RHOT,ZDIR), & ! (in)
             CDZ, & ! (in)
             IIS, IIE, JJS, JJE ) ! (in)
+       !$acc update device( tflx_hi(:,:,:,ZDIR) )
 
        ! at (u, y, z)
+       !$acc update host( mflx_hi(:,:,:,XDIR) )
        if ( .not. TwoD ) &
        call ATMOS_DYN_FVM_fluxX_XYZ( tflx_hi(:,:,:,XDIR), & ! (out)
             mflx_hi(:,:,:,XDIR), POTT, GSQRT(:,:,:,I_UYZ), & ! (in)
             num_diff(:,:,:,I_RHOT,XDIR), & ! (in)
             CDZ, & ! (in)
             IIS, IIE, JJS, JJE ) ! (in)
+       !$acc update device( tflx_hi(:,:,:,XDIR) )
 
        ! at (x, v, z)
+       !$acc update host( mflx_hi(:,:,:,YDIR) )
        call ATMOS_DYN_FVM_fluxY_XYZ( tflx_hi(:,:,:,YDIR), & ! (out)
             mflx_hi(:,:,:,YDIR), POTT, GSQRT(:,:,:,I_XVZ), & ! (in)
             num_diff(:,:,:,I_RHOT,YDIR), & ! (in)
             CDZ, & ! (in)
             IIS, IIE, JJS, JJE ) ! (in)
+       !$acc update device( tflx_hi(:,:,:,YDIR) )
 
 
        PROFILE_START("hevi_st")
@@ -727,6 +778,7 @@ contains
           !$omp shared(JJS,JJE,IS,KS,KE) &
           !$omp shared(tflx_hi,RHOT_t,St,RCDZ,RCDY) &
           !$omp shared(MAPF,GSQRT,I_XY,I_XYZ)
+          !$acc kernels
           do j = JJS, JJE
           do k = KS, KE
 #ifdef DEBUG
@@ -746,6 +798,7 @@ contains
 #endif
           enddo
           enddo
+          !$acc end kernels
        else
           !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
           !$omp private(i,j,k,advcv,advch) &
@@ -755,6 +808,7 @@ contains
           !$omp shared(JJS,JJE,IIS,IIE,KS,KE) &
           !$omp shared(tflx_hi,RHOT_t,St,RCDZ,RCDX,RCDY) &
           !$omp shared(MAPF,GSQRT,I_XY,I_XYZ)
+          !$acc kernels
           do j = JJS, JJE
           do i = IIS, IIE
           do k = KS, KE
@@ -779,6 +833,7 @@ contains
           enddo
           enddo
           enddo
+          !$acc end kernels
        end if
 #ifdef DEBUG
        k = IUNDEF; i = IUNDEF; j = IUNDEF
@@ -813,7 +868,10 @@ contains
        !$omp parallel do default(shared) private(i,j,k,ii,l) OMP_SCHEDULE_ &
        !$omp private(A,B,C,F1,F2,F3,PT,pg,advcv)
 #endif
+       !$acc kernels
+       !$acc loop independent
        do j = JJS, JJE
+       !$acc loop independent private(F1,F2,F3,PT,C)
        do ii = IIS, IIE, LSIZE
 
 #if defined DEBUG || defined QUICKDEBUG
@@ -825,20 +883,24 @@ contains
     F3(:,:) = 0.0_RP
 #endif
 
+          !$acc loop independent private(A)
           do l = 1, LSIZE
              i = ii + l - 1
-             if ( i > IIE ) exit
+!             if ( i > IIE ) exit
+             if ( i <= IIE ) then
 
              call ATMOS_DYN_FVM_flux_valueW_Z( PT(:,l), & ! (out)
                   MOMZ(:,i,j), POTT(:,i,j), GSQRT(:,i,j,I_XYZ), & ! (in)
                   CDZ )
 
+             !$acc loop independent
              do k = KS, KE
                 A(k) = dtrk**2 * J33G * RCDZ(k) * RT2P(k,i,j) * J33G / GSQRT(k,i,j,I_XYZ)
              enddo
              B = GRAV * dtrk**2 * J33G / ( CDZ(KS+1) + CDZ(KS) )
              F1(KS,l) =        - ( PT(KS+1,l) * RFDZ(KS) *   A(KS+1)         + B ) / GSQRT(KS,i,j,I_XYW)
              F2(KS,l) = 1.0_RP + ( PT(KS  ,l) * RFDZ(KS) * ( A(KS+1)+A(KS) )     ) / GSQRT(KS,i,j,I_XYW)
+             !$acc loop independent
              do k = KS+1, KE-2
                 B = GRAV * dtrk**2 * J33G / ( CDZ(k+1) + CDZ(k) )
                 F1(k,l) =        - ( PT(k+1,l) * RFDZ(k) *   A(k+1)        + B ) / GSQRT(k,i,j,I_XYW)
@@ -848,6 +910,7 @@ contains
              B = GRAV * dtrk**2 * J33G / ( CDZ(KE) + CDZ(KE-1) )
              F2(KE-1,l) = 1.0_RP + ( PT(KE-1,l) * RFDZ(KE-1) * ( A(KE)+A(KE-1) )    ) / GSQRT(KE-1,i,j,I_XYW)
              F3(KE-1,l) =        - ( PT(KE-2,l) * RFDZ(KE-1) *         A(KE-1)  - B ) / GSQRT(KE-1,i,j,I_XYW)
+             !$acc loop independent
              do k = KS, KE-1
                 ! use not density at the half level but mean density between CZ(k) and C(k+1)
                 pg = - ( DPRES(k+1,i,j) + RT2P(k+1,i,j)*dtrk*St(k+1,i,j) &
@@ -862,16 +925,21 @@ contains
 #endif
              enddo
 
+            end if
           end do
 
           call solve_direct( &
+               KA, KS, KE, KMAX, &
                C(:,:),                   & ! (inout)
                F1(:,:), F2(:,:), F3(:,:) ) ! (in)
 
+          !$acc loop independent
           do l = 1, LSIZE
              i = ii + l - 1
-             if ( i > IIE ) exit
+!             if ( i > IIE ) exit
+             if ( i <= IIE ) then
 
+             !$acc loop independent
              do k = KS, KE-1
 #ifdef DEBUG_HEVI2HEVE
                 ! for debug (change to explicit integration)
@@ -911,6 +979,7 @@ contains
 #ifdef HIST_TEND
              if ( lhist ) advcv_t(KS,i,j,I_RHOT) = advcv
 #endif
+             !$acc loop independent
              do k = KS+1, KE-1
                 advcv = - ( C(k-KS+1,l)         - C(k-KS,l) ) &
                       * J33G * RCDZ(k) / GSQRT(k,i,j,I_XYZ)
@@ -947,10 +1016,12 @@ contains
                   dtrk, i, j )
 #endif
 
+             end if
           end do
 
        enddo
        enddo
+       !$acc end kernels
 #ifdef DEBUG
        k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
@@ -968,17 +1039,20 @@ contains
             num_diff(:,:,:,I_MOMX,ZDIR), & ! (in)
             CDZ, TwoD, & ! (in)
             IIS, IIE, JJS, JJE ) ! (in)
+       !$acc update device( qflx_hi(:,:,:,ZDIR) )
        if ( .not. TwoD ) &
        call ATMOS_DYN_FVM_fluxJ13_UYZ( qflx_J13, & ! (out)
             MOMX, MOMX, DENS, & ! (in)
             GSQRT(:,:,:,I_UYZ), J13G(:,:,:,I_UYW), MAPF(:,:,:,I_UY), & ! (in)
             CDZ, TwoD, & ! (in)
             IIS, IIE, JJS, JJE ) ! (in)
+       !$acc update device( qflx_J13 )
        call ATMOS_DYN_FVM_fluxJ23_UYZ( qflx_J23, & ! (out)
             MOMY, MOMX, DENS, & ! (in)
             GSQRT(:,:,:,I_UYZ), J23G(:,:,:,I_UYW), MAPF(:,:,:,I_UY), & ! (in)
             CDZ, TwoD, & ! (in)
             IIS, IIE, JJS, JJE ) ! (in)
+       !$acc update device( qflx_J23 )
 
        ! at (x, y, z)
        ! note that x-index is added by -1
@@ -989,6 +1063,7 @@ contains
             num_diff(:,:,:,I_MOMX,XDIR), & ! (in)
             CDZ, TwoD, & ! (in)
             IIS, IIE, JJS, JJE ) ! (in)
+       !$acc update device( qflx_hi(:,:,:,XDIR) )
 
        ! at (u, v, z)
        call ATMOS_DYN_FVM_fluxY_UYZ( qflx_hi(:,:,:,YDIR), & ! (out)
@@ -997,6 +1072,7 @@ contains
             num_diff(:,:,:,I_MOMX,YDIR), & ! (in)
             CDZ, TwoD, & ! (in)
             IIS, IIE, JJS, JJE ) ! (in)
+       !$acc update device( qflx_hi(:,:,:,YDIR) )
 
        !--- update momentum(x)
        if ( TwoD ) then
@@ -1011,6 +1087,7 @@ contains
           !$omp shared(RCDZ,RCDY,CDZ) &
           !$omp shared(MAPF,GSQRT,I_XY,I_UY,I_XYZ,I_UYZ) &
           !$omp shared(dtrk,CORIOLI)
+          !$acc kernels
           do j = JJS, JJE
           do k = KS, KE
 #ifdef DEBUG
@@ -1041,6 +1118,7 @@ contains
 #endif
           enddo
           enddo
+          !$acc end kernels
        else
           iee = min(IIE,IEH)
           !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
@@ -1054,6 +1132,7 @@ contains
           !$omp shared(RCDZ,RCDY,RFDX,CDZ,FDX) &
           !$omp shared(MAPF,GSQRT,J13G,I_XY,I_UY,I_UV,I_XYZ,I_UYW,I_UYZ) &
           !$omp shared(dtrk,CORIOLI,divdmp_coef)
+          !$acc kernels
           do j = JJS, JJE
           do i = IIS, iee
           do k = KS, KE
@@ -1119,6 +1198,7 @@ contains
           enddo
           enddo
           enddo
+          !$acc end kernels
        end if
        PROFILE_STOP("hevi_momx")
 #ifdef DEBUG
@@ -1134,17 +1214,20 @@ contains
             num_diff(:,:,:,I_MOMY,ZDIR), & ! (in)
             CDZ, TwoD, & ! (in)
             IIS, IIE, JJS, JJE ) ! (in)
+       !$acc update device( qflx_hi(:,:,:,ZDIR) )
        if ( .not. TwoD ) &
        call ATMOS_DYN_FVM_fluxJ13_XVZ( qflx_J13, & ! (out)
             MOMX, MOMY, DENS, & ! (in)
             GSQRT(:,:,:,I_XVZ), J13G(:,:,:,I_XVW), MAPF(:,:,:,I_XV), & ! (in)
             CDZ, TwoD, & ! (in)
             IIS, IIE, JJS, JJE ) ! (in)
+       !$acc update device( qflx_J13 )
        call ATMOS_DYN_FVM_fluxJ23_XVZ( qflx_J23, & ! (out)
             MOMY, MOMY, DENS, & ! (in)
             GSQRT(:,:,:,I_XVZ), J23G(:,:,:,I_XVW), MAPF(:,:,:,I_XV), & ! (in)
             CDZ, TwoD, & ! (in)
             IIS, IIE, JJS, JJE ) ! (in)
+       !$acc update device( qflx_J23 )
 
        ! at (u, v, z)
        if ( .not. TwoD ) &
@@ -1154,6 +1237,7 @@ contains
             num_diff(:,:,:,I_MOMY,XDIR), & ! (in)
             CDZ, TwoD, & ! (in)
             IIS, IIE, JJS, JJE ) ! (in)
+       !$acc update device( qflx_hi(:,:,:,XDIR) )
 
        ! at (x, y, z)
        ! note that y-index is added by -1
@@ -1163,6 +1247,7 @@ contains
             num_diff(:,:,:,I_MOMY,YDIR), & ! (in
             CDZ, TwoD, & ! (in)
             IIS, IIE, JJS, JJE ) ! (in)
+       !$acc update device( qflx_hi(:,:,:,YDIR) )
 
        !--- update momentum(y)
        if ( TwoD ) then
@@ -1178,6 +1263,7 @@ contains
           !$omp shared(RCDZ,RFDY,CDZ,FDY) &
           !$omp shared(MAPF,GSQRT,J23G,I_XV,I_XYZ,I_XVW,I_XVZ) &
           !$omp shared(dtrk,CORIOLI,divdmp_coef)
+          !$acc kernels
           do j = JJS, min(JJE,JEH)
           do k = KS, KE
 #ifdef DEBUG
@@ -1228,6 +1314,7 @@ contains
 #endif
           enddo
           enddo
+          !$acc end kernels
        else
           !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
           !$omp private(i,j,k,advch,advcv,pg,cf,div) &
@@ -1240,6 +1327,7 @@ contains
           !$omp shared(RCDZ,RCDX,RFDY,CDZ,FDY) &
           !$omp shared(MAPF,GSQRT,J23G,I_XY,I_XV,I_UV,I_XYZ,I_XVW,I_XVZ) &
           !$omp shared(dtrk,CORIOLI,divdmp_coef)
+          !$acc kernels
           do j = JJS, min(JJE,JEH)
           do i = IIS, IIE
           do k = KS, KE
@@ -1306,6 +1394,7 @@ contains
           enddo
           enddo
           enddo
+          !$acc end kernels
        end if
        PROFILE_STOP("hevi_momy")
 #ifdef DEBUG
@@ -1314,6 +1403,8 @@ contains
 
     enddo
     enddo
+
+    !$acc end data
 
 #ifdef PROFILE_FIPP
        call fipp_stop()
@@ -1354,11 +1445,14 @@ contains
 
 !OCL SERIAL
   subroutine solve_direct( &
+       KA, KS, KE, KMAX, &
        C,         & ! (inout)
        F1, F2, F3 ) ! (in)
+    !$acc routine vector
     use scale_prc, only: &
        PRC_abort
     implicit none
+    integer,  intent(in)    :: KA, KS, KE, KMAX
     real(RP), intent(inout) :: C(KMAX-1,LSIZE)
     real(RP), intent(in)    :: F1(KA,LSIZE)
     real(RP), intent(in)    :: F2(KA,LSIZE)
@@ -1378,6 +1472,7 @@ contains
        f(l,1) = C(1,l) * rdenom
     end do
 
+    !$acc loop seq
     do k = 2, KMAX-2
        do l = 1, LSIZE
           rdenom = 1.0_RP / ( F2(k+KS-1,l) + F3(k+KS-1,l) * e(l,k-1) )
@@ -1391,6 +1486,7 @@ contains
        work(l,KMAX-1) = ( C(KMAX-1,l) - F3(KE-1,l) * f(l,KMAX-2) ) &
                       / ( F2(KE-1,l) + F3(KE-1,l) * e(l,KMAX-2) ) ! work(KMAX-1) = f(KMAX-1)
     end do
+    !$acc loop seq
     do k = KMAX-2, 1, -1
        do l = 1, LSIZE
           work(l,k) = e(l,k) * work(l,k+1) + f(l,k)
