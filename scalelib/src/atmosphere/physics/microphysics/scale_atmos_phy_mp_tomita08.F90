@@ -2141,7 +2141,7 @@ contains
     use scale_const, only: &
        TEM00 => CONST_TEM00
     implicit none
-    integer,  intent(in)  :: KA, KS, KE
+    integer,  intent(in), value :: KA, KS, KE
 
     real(RP), intent(in)  :: DENS0(KA)
     real(RP), intent(in)  :: TEMP0(KA)

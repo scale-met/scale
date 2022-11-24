@@ -500,7 +500,7 @@ contains
        RHOT,  &
        QTRC
     use mod_atmos_phy_mp_vars, only: &
-       QA_MP
+       QE_MP
     use scale_time, only: &
        dt => TIME_DTSEC
     use scale_file_history, only: &
@@ -521,6 +521,8 @@ contains
     integer :: k, i, j, iq
 
     if ( MP_do_negative_fixer .and. (.not. ATMOS_HYDROMETEOR_dry) ) then
+
+       !$acc data copy(DENS, TEMP, CVtot, CPtot, QTRC(:,:,:,I_QV:QE_MP)) create(RHOH, DENS_d, ENGI_d) copyout(RHOT)
 
        call FILE_HISTORY_query( hist_nf_rhoh_id, do_put_rhoh )
        call FILE_HISTORY_query( hist_nf_dens_id, do_put_dens )
@@ -548,18 +550,24 @@ contains
        !$omp parallel private(Rtot)
 
        !$omp do
+       !$acc kernels async
+       !$acc loop independent
        do j = JS, JE
+       !$acc loop independent
        do i = IS, IE
+       !$acc loop independent
        do k = KS, KE
           Rtot = CPtot(k,i,j) - CVtot(k,i,j)
           RHOT(k,i,j) = PRE00 / Rtot * ( DENS(k,i,j) * TEMP(k,i,j) * Rtot / PRE00 )**( CVtot(k,i,j) / CPtot(k,i,j) )
        end do
        end do
        end do
+       !$acc end kernels
        !$omp end do nowait
 
        ! for non-mass tracers, such as number density
-       do iq = QHE+1, QA_MP
+       !$acc kernels async
+       do iq = QHE+1, QE_MP
        !$omp do
        do j = JS, JE
        do i = IS, IE
@@ -569,11 +577,13 @@ contains
        end do
        end do
        end do
+       !$acc end kernels
 
        !$omp end parallel
 
        if ( do_put_rhoh ) then
           !$omp parallel do
+          !$acc kernels async
           do j = JS, JE
           do i = IS, IE
           do k = KS, KE
@@ -581,10 +591,13 @@ contains
           end do
           end do
           end do
+          !$acc end kernels
+          !$acc update host(RHOH)
           call FILE_HISTORY_put( hist_nf_rhoh_id, RHOH(:,:,:) )
        end if
        if ( monit_nf_mass_id > 0 .or. do_put_dens ) then
           !$omp parallel do
+          !$acc kernels async
           do j = JS, JE
           do i = IS, IE
           do k = KS, KE
@@ -592,11 +605,14 @@ contains
           end do
           end do
           end do
+          !$acc end kernels
+          !$acc update host(DENS_d)
           call FILE_HISTORY_put( hist_nf_dens_id, DENS_d(:,:,:) )
           call MONITOR_put( monit_nf_mass_id, DENS_d(:,:,:) )
        end if
        if ( monit_nf_engi_id > 0 .or. do_put_engi ) then
           !$omp parallel do
+          !$acc kernels async
           do j = JS, JE
           do i = IS, IE
           do k = KS, KE
@@ -604,9 +620,15 @@ contains
           end do
           end do
           end do
+          !$acc end kernels
+          !$acc update host(ENGI_d)
           call FILE_HISTORY_put( hist_nf_engi_id, ENGI_d(:,:,:) )
           call MONITOR_put( monit_nf_engi_id, ENGI_d(:,:,:) )
        end if
+
+       !$acc wait
+
+       !$acc end data
 
     end if
 
@@ -684,8 +706,6 @@ contains
        MOMZ   => MOMZ_av, &
        U, &
        V, &
-       W, &
-       POTT, &
        QTRC   => QTRC_av, &
        DENS_t => DENS_tp, &
        MOMZ_t => MOMZ_tp, &
@@ -696,13 +716,9 @@ contains
        RHOH   => RHOH_p, &
        TEMP, &
        PRES, &
-       Qdry, &
        CVtot, &
-       CPtot, &
-       EXNER, &
-       RHOT   => RHOT_av
+       CPtot
     use mod_atmos_phy_mp_vars, only: &
-       QA_MP, &
        QS_MP, &
        QE_MP, &
        DENS_t_MP => ATMOS_PHY_MP_DENS_t,    &
@@ -763,9 +779,7 @@ contains
 
     real(RP) :: precip   (IA,JA)
 
-    real(RP) :: Qe(KA,IA,JA,N_HYD)
     logical  :: HIST_sw(N_HYD)
-    real(RP) :: Qecrg(KA,IA,JA,N_HYD)
     logical  :: HIST_crg_sw(N_HYD)
 
     ! for history output
@@ -782,12 +796,25 @@ contains
     real(RP) :: mflux_crg(KA), sflux_crg(2), eflux_crg
     real(RP) :: QSPLT_in(KA,IA,JA,3)
     real(RP) :: dqcrg(KA,IA,JA), beta_crg(KA,IA,JA)
-    real(RP) :: dummy(KA)
     !---------------------------------------------------------------------------
+
+    !$acc data copy(DENS_t, MOMZ_t, RHOU_t, RHOV_t, RHOQ_t(:,:,:,:), RHOH, &
+    !$acc           DENS_t_MP, MOMZ_t_MP, RHOU_t_MP, RHOV_t_MP, RHOQ_t_MP, RHOC_t_MP, RHOH_MP, &
+    !$acc           EVAPORATE, SFLX_rain, SFLX_snow, SFLX_ENGI, &
+    !$acc           Sarea) &
+    !$acc      copyin(DENS(:,:,:), MOMZ(:,:,:), U, V, TEMP, QTRC(:,:,:,:), PRES, CVtot, CPtot, &
+    !$acc             REAL_CZ, REAL_FZ, &
+    !$acc             ATMOS_PHY_MP_TYPE, ATMOS_PHY_PRECIP_TYPE) &
+    !$acc      create(RHOE_t, TEMP1, CPtot1, CVtot1, CCN, QTRC1, CPtot_t, CVtot_t, precip, &
+    !$acc             QTRC1_crg, QSPLT_in, dqcrg, beta_crg, &
+    !$acc             hist_vterm_idx, vterm_hist)
+
 
     if ( update_flag ) then
 
+       !$acc kernels
        CCN(:,:,:) = CCN_t(:,:,:) * dt_MP
+       !$acc end kernels
 
        select case ( ATMOS_PHY_MP_TYPE )
        case ( 'KESSLER' )
@@ -827,58 +854,89 @@ contains
 
        case ( 'TOMITA08' )
 !OCL XFILL
+          !$acc kernels async
+          !$acc loop gang
           do j = JS, JE
+          !$acc loop gang vector
           do i = IS, IE
+          !$acc loop gang vector
           do k = KS, KE
              TEMP1(k,i,j) = TEMP(k,i,j)
           end do
           end do
           end do
+          !$acc end kernels
 !OCL XFILL
+          !$acc kernels async
+          !$acc loop seq
           do iq = QS_MP, QE_MP
+          !$acc loop gang
           do j = JS, JE
+          !$acc loop gang vector
           do i = IS, IE
+          !$acc loop gang vector
           do k = KS, KE
              QTRC1(k,i,j,iq) = QTRC(k,i,j,iq)
           end do
           end do
           end do
           end do
+          !$acc end kernels
 !OCL XFILL
+          !$acc kernels async
+          !$acc loop gang
           do j = JS, JE
+          !$acc loop gang vector
           do i = IS, IE
+          !$acc loop gang vector
           do k = KS, KE
              CVtot1(k,i,j) = CVtot(k,i,j)
           end do
           end do
           end do
+          !$acc end kernels
 !OCL XFILL
+          !$acc kernels async
+          !$acc loop gang
           do j = JS, JE
+          !$acc loop gang vector
           do i = IS, IE
+          !$acc loop gang vector
           do k = KS, KE
              CPtot1(k,i,j) = CPtot(k,i,j)
           end do
           end do
           end do
+          !$acc end kernels
+
+          !$acc wait
 
           if( flg_lt ) then
 !OCL XFILL
+             !$acc kernels
+             !$acc loop seq
              do iq = QS_LT, QE_LT
+             !$acc loop gang
              do j = JS, JE
+             !$acc loop gang vector
              do i = IS, IE
+             !$acc loop gang vector
              do k = KS, KE
                 QTRC1_crg(k,i,j,iq) = QTRC(k,i,j,iq)
              end do
              end do
              end do
              end do
+             !$acc end kernels
 
+             !$acc update host(TEMP1, QTRC1(:,:,:,QLS:QLE))
              call ATMOS_PHY_LT_sato2019_select_dQCRG_from_LUT( &
                   KA, KS, KE, IA, IS, IE, JA, JS, JE, & ! [IN]
                   QLA,                                & ! [IN]
                   TEMP1(:,:,:), DENS(:,:,:),          & ! [IN]
                   QTRC1(:,:,:,QLS:QLE),               & ! [IN]
                   dqcrg(:,:,:), beta_crg(:,:,:)       ) ! [OUT]
+             !$acc update device(dqcrg, beta_crg)
              call ATMOS_PHY_MP_tomita08_adjustment( &
                   KA, KS, KE, IA, IS, IE, JA, JS, JE, &
                   DENS(:,:,:), PRES(:,:,:), CCN(:,:,:), dt_MP,                          & ! [IN]
@@ -895,36 +953,55 @@ contains
                   RHOE_t(:,:,:), EVAPORATE(:,:,:)                                       ) ! [OUT]
           endif
 
+          !$acc kernels async
+          !$acc loop seq
           do iq = QS_MP, QE_MP
+          !$acc loop gang
           do j = JS, JE
+          !$acc loop gang vector
           do i = IS, IE
+          !$acc loop gang vector
           do k = KS, KE
              RHOQ_t_MP(k,i,j,iq) = ( QTRC1(k,i,j,iq) - QTRC(k,i,j,iq) ) * DENS(k,i,j) / dt_MP
           enddo
           enddo
           enddo
           enddo
+          !$acc end kernels
 
+          !$acc kernels async
+          !$acc loop gang
           do j = JS, JE
+          !$acc loop gang vector
           do i = IS, IE
+          !$acc loop gang vector
           do k = KS, KE
              CPtot_t(k,i,j) = ( CPtot1(k,i,j) - CPtot(k,i,j) ) / dt_MP
              CVtot_t(k,i,j) = ( CVtot1(k,i,j) - CVtot(k,i,j) ) / dt_MP
           end do
           end do
           end do
+          !$acc end kernels
 
           if( flg_lt ) then
+             !$acc kernels async
+             !$acc loop seq
              do iq = QS_LT, QE_LT
+             !$acc loop gang
              do j = JS, JE
+             !$acc loop gang vector
              do i = IS, IE
+             !$acc loop gang vector
              do k = KS, KE
                 RHOC_t_MP(k,i,j,iq) = ( QTRC1_crg(k,i,j,iq) - QTRC(k,i,j,iq) ) * DENS(k,i,j) / dt_MP
              enddo
              enddo
              enddo
              enddo
+             !$acc end kernels
           endif
+
+          !$acc wait
 
        case ( 'SN14' )
 
@@ -1022,8 +1099,12 @@ contains
        end select
 
 
+       !$acc kernels
+       !$acc loop gang
        do j = JS, JE
+       !$acc loop gang vector
        do i = IS, IE
+       !$acc loop gang vector
        do k = KS, KE
           RHOH_MP(k,i,j) = RHOE_t(k,i,j) &
                   - ( CPtot_t(k,i,j) + log( PRES(k,i,j) / PRE00 ) * ( CVtot(k,i,j) / CPtot(k,i,j) * CPtot_t(k,i,j) - CVtot_t(k,i,j) ) ) &
@@ -1035,6 +1116,7 @@ contains
        end do
        end do
        end do
+       !$acc end kernels
 
        if ( MP_do_precipitation ) then
 
@@ -1050,9 +1132,12 @@ contains
                 hist_vterm_idx(iq) = ih
              end if
           end do
+          !$acc update device(hist_vterm_idx)
           if ( ih > 0 ) then
              allocate( vterm_hist(KA,IA,JA,ih) )
+             !$acc kernels
              vterm_hist(:,:,:,:) = 0.0_RP
+             !$acc end kernels
           end if
 
           !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
@@ -1065,7 +1150,6 @@ contains
           !$omp         DENS,MOMZ,U,V,RHOT,TEMP,PRES,QTRC,CPtot,CVtot,EXNER, &
           !$omp         DENS_t_MP,MOMZ_t_MP,RHOU_t_MP,RHOV_t_MP,RHOQ_t_MP,RHOH_MP, &
           !$omp         SFLX_rain,SFLX_snow,SFLX_ENGI, &
-          !$omp         REFSTATE_dens, &
           !$omp         flg_lt,RHOC_t_MP, &
           !$omp         vterm_hist,hist_vterm_idx) &
           !$omp private(i,j,k,iq,step, &
@@ -1073,7 +1157,14 @@ contains
           !$omp         DENS2,TEMP2,PRES2,CPtot2,CVtot2,RHOE,RHOE2,RHOQ,RHOQ2, &
           !$omp         RHOQ2_crg,mflux_crg,sflux_crg,eflux_crg, &
           !$omp         vterm,mflux,sflux,eflux,FLX_hydro,CP_t,CV_t)
+          !$acc kernels
+          !$acc loop independent
           do j = JS, JE
+          !$acc loop independent &
+          !$acc private(FZ, FDZ, RFDZ, RCDZ, &
+          !$acc         DENS2, TEMP2, PRES2, CPtot2, CVtot2, RHOE, RHOE2, RHOQ, RHOQ2, &
+          !$acc         vterm, FLX_hydro, mflux, sflux, eflux, &
+          !$acc         RHOQ2_crg, mflux_crg, sflux_crg, eflux_crg)
           do i = IS, IE
 
              FZ(1:KA) = REAL_FZ(1:KA,i,j)
@@ -1114,6 +1205,7 @@ contains
              SFLX_snow(i,j) = 0.0_RP
              SFLX_ENGI(i,j) = 0.0_RP
              FLX_hydro(:) = 0.0_RP
+             !$acc loop seq
              do step = 1, MP_NSTEP_SEDIMENTATION
 
                 select case ( ATMOS_PHY_MP_TYPE )
@@ -1142,6 +1234,7 @@ contains
                 end select
 
                 ! store to history output
+                !$acc loop seq
                 do iq = QS_MP+1, QE_MP
                    if ( hist_vterm_idx(iq) > 0 ) then
                       do k = KS, KE
@@ -1276,24 +1369,30 @@ contains
 
           enddo
           enddo
+          !$acc end kernels
 
           ! history output
           do iq = QS_MP+1, QE_MP
-             if ( hist_vterm_idx(iq) > 0 ) &
+             if ( hist_vterm_idx(iq) > 0 ) then
                 call FILE_HISTORY_put( hist_vterm_id(iq), vterm_hist(:,:,:,hist_vterm_idx(iq)) )
+             end if
           end do
-          if ( allocated( vterm_hist ) ) deallocate( vterm_hist )
+          if ( allocated( vterm_hist ) ) then
+             deallocate( vterm_hist )
+          end if
 
           call PROF_rapend  ('MP_Precipitation', 2)
 
        end if
 
 !OCL XFILL
+       !$acc kernels
        do j = JS, JE
        do i = IS, IE
           precip(i,j) = SFLX_rain(i,j) + SFLX_snow(i,j)
        end do
        end do
+       !$acc end kernels
 
        call FILE_HISTORY_in( SFLX_rain(:,:),   'RAIN_MP',   'surface rain rate by MP',          'kg/m2/s',  fill_halo=.true. )
        call FILE_HISTORY_in( SFLX_snow(:,:),   'SNOW_MP',   'surface snow rate by MP',          'kg/m2/s',  fill_halo=.true. )
@@ -1329,6 +1428,7 @@ contains
     !$omp shared(KS,KE,IS,IE,JS,JE, &
     !$omp        DENS_t_MP,MOMZ_t_MP,RHOU_t_MP,RHOV_t_MP,RHOH_MP, &
     !$omp        DENS_t,MOMZ_t,RHOU_t,RHOV_t,RHOH)
+    !$acc kernels
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -1341,10 +1441,12 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
 
     !$omp parallel do default(none) OMP_SCHEDULE_ collapse(3) &
     !$omp private(iq,i,j,k) &
     !$omp shared(QS_MP,QE_MP,JS,JE,IS,IE,KS,KE,RHOQ_t,RHOQ_t_MP)
+    !$acc kernels
     do iq = QS_MP, QE_MP
     do j = JS, JE
     do i = IS, IE
@@ -1354,8 +1456,10 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
 
     if( flg_lt ) then
+       !$acc kernels
        do iq = QS_LT, QE_LT
        do j = JS, JE
        do i = IS, IE
@@ -1366,6 +1470,7 @@ contains
        enddo
        enddo
        enddo
+       !$acc end kernels
     endif
 
     if ( STATISTICS_checktotal ) then
@@ -1393,6 +1498,8 @@ contains
                                  ATMOS_GRID_CARTESC_REAL_TOTVOL                       )
        enddo
     endif
+
+    !$acc end data
 
     return
   end subroutine ATMOS_PHY_MP_driver_calc_tendency
@@ -1431,6 +1538,8 @@ contains
 
     integer :: k, i, j
 
+    !$acc data copyin(QV, QHYD) copyout(QTRC)
+
     select case( ATMOS_PHY_MP_TYPE )
     case ( "NONE" )
        if ( associated( ATMOS_PHY_MP_USER_qhyd2qtrc ) ) then
@@ -1453,6 +1562,7 @@ contains
                                             QTRC(:,:,:,2:)  ) ! [OUT]
     case ( "TOMITA08" )
        !$omp parallel do OMP_SCHEDULE_
+       !$acc kernels
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
@@ -1460,6 +1570,7 @@ contains
        end do
        end do
        end do
+       !$acc end kernels
        call ATMOS_PHY_MP_TOMITA08_qhyd2qtrc( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
                                              QHYD(:,:,:,:),  & ! [IN]
                                              QTRC(:,:,:,2:)  ) ! [OUT]
@@ -1494,6 +1605,8 @@ contains
        call PRC_abort
     end select
 
+    !$acc end data
+
     return
   end subroutine ATMOS_PHY_MP_driver_qhyd2qtrc
 
@@ -1520,6 +1633,7 @@ contains
     integer :: k, i, j
 
     !$omp parallel do
+    !$acc kernels copyin(QV) copyout(QTRC(:,:,:,1))
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -1527,6 +1641,7 @@ contains
     end do
     end do
     end do
+    !$acc end kernels
 
     return
   end subroutine ATMOS_PHY_MP_driver_qhyd2qtrc_onlyqv

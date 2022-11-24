@@ -459,14 +459,14 @@ contains
        CV_WATER, &
        CV_ICE
     implicit none
-    integer,  intent(in) :: KA, KS, KE
-    integer,  intent(in) :: QHA, QLA, QIA
+    integer,  intent(in), value :: KA, KS, KE
+    integer,  intent(in), value :: QHA, QLA, QIA
 
     real(RP), intent(in) :: TEMP (KA)
     real(RP), intent(in) :: vterm(KA,QHA) ! terminal velocity of cloud mass
     real(RP), intent(in) :: FDZ  (KA)
     real(RP), intent(in) :: RCDZ (KA)
-    real(DP), intent(in) :: dt
+    real(DP), intent(in), value :: dt
     integer,  intent(in) :: i, j         ! for debug
 
     real(RP), intent(inout) :: DENS (KA)
@@ -585,15 +585,15 @@ contains
        CV_WATER, &
        CV_ICE
     implicit none
-    integer,  intent(in) :: KA, KS, KE
-    integer,  intent(in) :: QHA, QLA, QIA
+    integer,  intent(in), value :: KA, KS, KE
+    integer,  intent(in), value :: QHA, QLA, QIA
 
     real(RP), intent(in) :: TEMP (KA)
     real(RP), intent(in) :: vterm(KA,QHA) ! terminal velocity of cloud mass
     real(RP), intent(in) :: FZ   (KA)
     real(RP), intent(in) :: FDZ  (KA)
     real(RP), intent(in) :: RCDZ (KA)
-    real(DP), intent(in) :: dt
+    real(DP), intent(in), value :: dt
     integer,  intent(in) :: i, j         ! for debug
 
     real(RP), intent(inout) :: DENS (KA)
@@ -711,9 +711,7 @@ contains
           CV = CV_WATER
        end if
 
-       !$acc loop seq
        do k_dst = KS-1, KE-1
-          !$acc loop independent
           do k = k_dst, k_src(k_dst)-1
              flx = RHOQ(k+1,iq) * CDZ(k+1) / dt               ! sum column mass rhoq*dz
              qflx(k_dst) = qflx(k_dst) - flx
@@ -792,7 +790,7 @@ contains
     !$acc routine vector
     implicit none
 
-    integer,  intent(in)  :: KA, KS, KE
+    integer,  intent(in), value :: KA, KS, KE
     real(RP), intent(in)  :: DENS  (KA)
     real(RP), intent(in)  :: MOMZ  (KA)
     real(RP), intent(in)  :: U     (KA)
