@@ -19,6 +19,9 @@ module scale_statistics
   use scale_prof
   use scale_prc, only: &
      PRC_LOCAL_COMM_WORLD
+#ifdef _OPENACC
+  use openacc
+#endif
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -160,11 +163,14 @@ contains
     statval = 0.0_DP
     if ( var(IS,JS) /= UNDEF ) then
        !$omp parallel do private(i,j) OMP_SCHEDULE_ collapse(2) reduction(+:statval)
+       !$acc kernels copyin(var, area) copy(statval)
        do j = JS, JE
+       !$acc loop reduction(+:statval)
        do i = IS, IE
           statval = statval + var(i,j) * area(i,j)
        end do
        end do
+       !$acc end kernels
     end if
 
     if ( .NOT. ( statval > -1.0_DP .OR. statval < 1.0_DP ) ) then ! must be NaN
@@ -277,15 +283,24 @@ contains
     if ( var(KS,IS,JS) /= UNDEF ) then
        !$omp parallel do OMP_SCHEDULE_ reduction(+:statval) &
        !$omp private(work)
+       !$acc kernels copyin(var, vol) copy(statval)
        do j = JE, JS, -1
        do i = IE, IS, -1
+#ifdef _OPENACC
+          !$acc loop reduction(statval)
+          do k = KE, KS, -1
+             statval = statval + var(k,i,j) * vol(k,i,j)
+          enddo
+#else
           work = 0.0_RP
           do k = KE, KS, -1
              work = work + var(k,i,j) * vol(k,i,j)
           enddo
           statval = statval + work
+#endif
        enddo
        enddo
+       !$acc end kernels
     end if
 
     if ( .NOT. ( statval > -1.0_DP .OR. statval < 1.0_DP ) ) then ! must be NaN
@@ -368,21 +383,41 @@ contains
 
     real(DP) :: statval   (2)
     real(DP) :: allstatval(2)
+#ifdef _OPENACC
+    real(DP) :: s1, s2
+#endif
 
     integer :: ierr
     integer :: i, j
     !---------------------------------------------------------------------------
 
+#ifdef _OPENACC
+    s1 = 0.0_DP
+    s2 = 0.0_DP
+#else
     statval(:) = 0.0_DP
+#endif
 !    !$omp parallel do reduction(+:statval)
+    !$acc kernels copyin(area, var) copyout(s1,s2)
     do j = JS, JE
+    !$acc loop reduction(+:s1,s2)
     do i = IS, IE
        if ( var(i,j) /= UNDEF ) then
+#ifdef _OPENACC
+          s1 = statval(1) + area(i,j) * var(i,j)
+          s2 = statval(2) + area(i,j)
+#else
           statval(1) = statval(1) + area(i,j) * var(i,j)
           statval(2) = statval(2) + area(i,j)
+#endif
        endif
     enddo
     enddo
+    !$acc end kernels
+#ifdef _OPENACC
+    statval(1) = s1
+    statval(2) = s2
+#endif
 
     call PROF_rapstart('COMM_Allreduce', 2)
     ! All reduce
@@ -418,30 +453,39 @@ contains
     real(RP), intent(in)  :: area(   IA,JA)
     real(RP), intent(out) :: varmean(KA)
 
-    real(DP) :: statval   (2,KA)
-    real(DP) :: allstatval(2,KA)
+    real(DP) :: statval   (KS:KE,2)
+    real(DP) :: allstatval(KS:KE,2)
 
     integer :: ierr
     integer :: k, i, j
     !---------------------------------------------------------------------------
 
     statval(:,:) = 0.0_DP
+
 !    !$omp parallel do reduction(+:statval)
+    !$acc kernels copyin(var, area) copy(statval)
+    !$acc loop independent
     do j = JS, JE
+    !$acc loop independent
     do i = IS, IE
     do k = KS, KE
        if ( var(k,i,j) /= UNDEF ) then
-          statval(1,k) = statval(1,k) + area(i,j) * var(k,i,j)
-          statval(2,k) = statval(2,k) + area(i,j)
+          !$acc atomic update
+          statval(k,1) = statval(k,1) + area(i,j) * var(k,i,j)
+          !$acc end atomic
+          !$acc atomic update
+          statval(k,2) = statval(k,2) + area(i,j)
+          !$acc end atomic
        endif
     enddo
     enddo
     enddo
+    !$acc end kernels
 
     call PROF_rapstart('COMM_Allreduce', 2)
     ! All reduce
-    call MPI_Allreduce( statval   (:,KS:KE),  &
-                        allstatval(:,KS:KE),  &
+    call MPI_Allreduce( statval   (:,:),      &
+                        allstatval(:,:),      &
                         (KE-KS+1)*2,          &
                         MPI_DOUBLE_PRECISION, &
                         MPI_SUM,              &
@@ -450,8 +494,8 @@ contains
     call PROF_rapend  ('COMM_Allreduce', 2)
 
     do k = KS, KE
-       if ( allstatval(2,k) > 0.0_DP ) then
-          varmean(k) = allstatval(1,k) / allstatval(2,k)
+       if ( allstatval(k,2) > 0.0_DP ) then
+          varmean(k) = allstatval(k,1) / allstatval(k,2)
        else
           varmean(k) = UNDEF
        end if
@@ -492,13 +536,16 @@ contains
 
     statval = HUGE
     !$omp parallel do reduction(min:statval)
+    !$acc kernels copyin(var) copy(statval)
     do j = JS, JE
+    !$acc loop reduction(min:statval)
     do i = IS, IE
        if ( var(i,j) /= UNDEF .and. var(i,j) < statval ) then
           statval = var(i,j)
        endif
     enddo
     enddo
+    !$acc end kernels
 
     call PROF_rapstart('COMM_Allreduce', 2)
     ! All reduce
@@ -545,15 +592,27 @@ contains
 
     statval(:) = HUGE
 !    !$omp parallel do reduction(min:statval)
+    !$acc kernels copyin(var) copy(statval)
+    !$acc loop independent
     do j = JS, JE
+    !$acc loop independent
     do i = IS, IE
     do k = KS, KE
+#ifdef _OPENACC
+       if ( var(k,i,j) /= UNDEF )then
+          !$acc atomic update
+          statval(k) = min( var(k,i,j), statval(k) )
+          !$acc end atomic
+       endif
+#else
        if ( var(k,i,j) /= UNDEF .and. var(k,i,j) < statval(k) ) then
           statval(k) = var(k,i,j)
        endif
+#endif
     enddo
     enddo
     enddo
+    !$acc end kernels
 
     call PROF_rapstart('COMM_Allreduce', 2)
     ! All reduce
@@ -609,6 +668,8 @@ contains
 
     statval = - HUGE
     !$omp parallel do reduction(max:statval)
+    !$acc kernels copyin(var) copy(statval)
+    !$acc loop reduction(max:statval)
     do j = JS, JE
     do i = IS, IE
        if ( var(i,j) /= UNDEF .and. var(i,j) > statval ) then
@@ -616,6 +677,7 @@ contains
        endif
     enddo
     enddo
+    !$acc end kernels
 
     call PROF_rapstart('COMM_Allreduce', 2)
     ! All reduce
@@ -662,15 +724,27 @@ contains
 
     statval(:) = - HUGE
 !    !$omp parallel do reduction(max:statval)
+    !$acc kernels copyin(var) copy(statval)
+    !$acc loop independent
     do j = JS, JE
+    !$acc loop independent
     do i = IS, IE
     do k = KS, KE
+#ifdef _OPENACC
+       if ( var(k,i,j) /= UNDEF ) then
+          !$acc atomic update
+          statval(k) = max( var(k,i,j), statval(k) )
+          !$acc end atomic
+       endif
+#else
        if ( var(k,i,j) /= UNDEF .and. var(k,i,j) > statval(k) ) then
           statval(k) = var(k,i,j)
        endif
+#endif
     enddo
     enddo
     enddo
+    !$acc end kernels
 
     call PROF_rapstart('COMM_Allreduce', 2)
     ! All reduce
@@ -737,6 +811,8 @@ contains
 
     do_globalcomm = STATISTICS_use_globalcomm
     if ( present(local) ) do_globalcomm = ( .not. local )
+
+    !$acc update host(var) if ( acc_is_present(var) )
 
     LOG_NEWLINE
     LOG_INFO("STATISTICS_detail_3D",*) 'Variable Statistics '
@@ -873,6 +949,8 @@ contains
 
     do_globalcomm = STATISTICS_use_globalcomm
     if ( present(local) ) do_globalcomm = ( .not. local )
+
+    !$acc update host(var) if ( acc_is_present(var) )
 
     LOG_NEWLINE
     LOG_INFO("STATISTICS_detail_2D",*) 'Variable Statistics '
