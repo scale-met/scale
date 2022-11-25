@@ -49,11 +49,10 @@ module mod_snoplugin_vgridope
   !
   !++ Private parameters & variables
   !
-  character(len=H_SHORT), private              :: SNOPLGIN_vgridope_type        = 'OFF'
-                                                                                ! 'OFF'               : disable
-                                                                                ! 'model','MDL'       : remap to model grid
-                                                                                ! 'z','ZLEV'          : remap to z-level grid
-                                                                                ! 'pressure','PLEV'   : remap to pressure-level grid
+  character(len=H_SHORT), private              :: SNOPLGIN_vgridope_type        = 'OFF'   ! type of average
+                                                                                ! 'OFF'    : disable
+                                                                                ! 'ZLEV'   : remap to z-level grid
+                                                                                ! 'PLEV'   : remap to pressure-level grid
   integer,                private              :: SNOPLGIN_vgridope_lev_num             = -1
   real(RP),               private              :: SNOPLGIN_vgridope_lev_data(lev_limit) = -1.0_RP
 
@@ -74,14 +73,6 @@ module mod_snoplugin_vgridope
 
   real(RP),               private, allocatable :: Z_ref (:)
   real(RP),               private, allocatable :: Zh_ref(:)
-
-  integer,                private, allocatable :: idx_H (:,:,:,:)
-  integer,                private, allocatable :: idx_Hh(:,:,:,:)
-  real(RP),               private, allocatable :: Hfact (:,:,:)
-  real(RP),               private, allocatable :: Hhfact(:,:,:)
-
-  real(RP),               private, allocatable :: HGT_ref (:,:,:)
-  real(RP),               private, allocatable :: HGTh_ref(:,:,:)
 
   integer,                private, allocatable :: idx_P (:,:,:,:)
   integer,                private, allocatable :: idx_Ph(:,:,:,:)
@@ -146,21 +137,7 @@ contains
        LOG_INFO("SNOPLGIN_vgridope_setup",*) 'SNOPLGIN_vgridope_type     : OFF'
        enable_plugin = .false.
 
-    case('model','MDL')
-
-       LOG_INFO("SNOPLGIN_vgridope_setup",*) 'SNOPLGIN_vgridope_type     : remap to model-level'
-       enable_plugin = .true.
-
-       if ( SNOPLGIN_vgridope_lev_num <= 0 ) then
-          LOG_ERROR("SNOPLGIN_vgridope_setup",*) 'The number of vertical layers for interpolation should be positive: SNOPLGIN_vgridope_lev_num'
-          call PRC_abort
-       endif
-       if ( all( SNOPLGIN_vgridope_lev_data(:) < 0.0_RP ) ) then
-          LOG_ERROR("SNOPLGIN_vgridope_setup",*) 'At least one vertical layer for interpolation should be specified: SNOPLGIN_vgridope_lev_data'
-          call PRC_abort
-       endif
-
-    case('z','ZLEV')
+    case('ZLEV')
 
        LOG_INFO("SNOPLGIN_vgridope_setup",*) 'SNOPLGIN_vgridope_type     : remap to z-level'
        enable_plugin = .true.
@@ -174,7 +151,7 @@ contains
           call PRC_abort
        endif
 
-    case('pressure','PLEV')
+    case('PLEV')
 
        LOG_INFO("SNOPLGIN_vgridope_setup",*) 'SNOPLGIN_vgridope_type     : remap to pressure-level'
        enable_plugin = .true.
@@ -190,7 +167,7 @@ contains
 
     case default
        LOG_ERROR("SNOPLGIN_vgridope_setup",*) 'the name of SNOPLGIN_vgridope_type is not appropriate : ', trim(SNOPLGIN_vgridope_type)
-       LOG_ERROR_CONT(*) 'you can choose OFF, model (MDL), z (ZLEV), pressure (PLEV).'
+       LOG_ERROR_CONT(*) 'you can choose OFF,ZLEV,PLEV'
        call PRC_abort
     end select
 
@@ -234,7 +211,7 @@ contains
     type(axisinfo), intent(in)  :: ainfo   (naxis)                       ! axis information                   (input)
     logical,        intent(in)  :: debug
 
-    integer  :: i, j, k, n
+    integer  :: k, n
     !---------------------------------------------------------------------------
 
     ! set region size
@@ -245,10 +222,10 @@ contains
     kmax_new = SNOPLGIN_vgridope_lev_num
 
     select case( trim(SNOPLGIN_vgridope_type ) )
-    case('model','MDL')
+    case('ZLEV')
 
        LOG_NEWLINE
-       LOG_INFO("SNOPLGIN_vgridope_setcoef",*) 'Setup remapping coefficient (model height)'
+       LOG_INFO("SNOPLGIN_vgridope_setcoef",*) 'Setup remapping coefficient (height)'
 
        allocate( Z_ref (  kmax_ref) )
        allocate( Zh_ref(0:kmax_ref) )
@@ -302,77 +279,7 @@ contains
                              Zhfact(:),                 & ! [OUT]
                              flag_extrap = .false.      ) ! [IN]
 
-    case('z','ZLEV')
-
-       LOG_NEWLINE
-       LOG_INFO("SNOPLGIN_vgridope_setcoef",*) 'Setup remapping coefficient (actual height)'
-
-       allocate( HGT_ref (  kmax_ref,imax_ref,jmax_ref) )
-       allocate( HGTh_ref(0:kmax_ref,imax_ref,jmax_ref) )
-
-       HGT_ref (:,:,:) = -1.0_RP
-       HGTh_ref(:,:,:) = -1.0_RP
-
-       allocate( idx_H (kmax_new,2,imax_ref,jmax_ref) )
-       allocate( idx_Hh(kmax_new,2,imax_ref,jmax_ref) )
-       allocate( Hfact (kmax_new,  imax_ref,jmax_ref) )
-       allocate( Hhfact(kmax_new,  imax_ref,jmax_ref) )
-
-       ! set basic axis
-       naxis_v = naxis
-       allocate( ainfo_v( naxis_v ) )
-       ainfo_v(:) = ainfo(:)
-
-       do n = 1, naxis
-          select case( trim(ainfo(n)%varname) )
-          case('z')
-             znum = n
-
-             ! rewrite axis
-             if( allocated( ainfo_v(znum)%AXIS_1d ) ) deallocate( ainfo_v(znum)%AXIS_1d )
-             ainfo_v(znum)%dim_size(1) = kmax_new
-             allocate( ainfo_v(znum)%AXIS_1d(kmax_new) )
-
-             do k = 1, kmax_new
-                ainfo_v(znum)%AXIS_1d(k) = SNOPLGIN_vgridope_lev_data(k)
-             enddo
-          endselect
-       enddo
-
-       ! geopotential height
-       do n = 1, naxis
-          select case( trim(ainfo(n)%varname) )
-          case('height')
-             HGT_ref(:,:,:) = ainfo(n)%AXIS_3d(:,:,:)
-          case('height_xyw')
-             HGTh_ref(:,:,:) = ainfo(n)%AXIS_3d(:,:,:)
-          endselect
-       enddo
-
-       ! set remapping coefficient
-       call INTERP_setup( 2 ) ! [IN] not used
-
-       do j = 1, jmax_ref
-       do i = 1, imax_ref
-          call INTERP_factor1d( kmax_ref, 1, kmax_ref,    & ! [IN]
-                                kmax_new, 1, kmax_new,    & ! [IN]
-                                HGT_ref(:,i,j),           & ! [IN]
-                                ainfo_v(znum)%AXIS_1d(:), & ! [IN]
-                                idx_H(:,:,i,j),           & ! [OUT]
-                                Hfact(:,i,j),             & ! [OUT]
-                                flag_extrap = .false.     ) ! [IN]
-
-          call INTERP_factor1d( kmax_ref+1, 1, kmax_ref+1, & ! [IN]
-                                kmax_new,   1, kmax_new,   & ! [IN]
-                                HGTh_ref(:,i,j),           & ! [IN]
-                                ainfo_v(znum)%AXIS_1d(:),  & ! [IN]
-                                idx_Hh(:,:,i,j),           & ! [OUT]
-                                Hhfact(:,i,j),             & ! [OUT]
-                                flag_extrap = .false.      ) ! [IN]
-       enddo
-       enddo
-
-    case('pressure','PLEV')
+    case('PLEV')
 
        LOG_NEWLINE
        LOG_INFO("SNOPLGIN_vgridope_setcoef",*) 'Setup remapping coefficient (pressure)'
@@ -588,7 +495,7 @@ contains
     endif
 
     select case( trim(SNOPLGIN_vgridope_type) )
-    case('pressure','PLEV')
+    case('PLEV')
 
        ! update PRES and SFC_PRES
        do v = 1, nvars
@@ -818,7 +725,7 @@ contains
 
        select case( trim(SNOPLGIN_vgridope_type) )
 
-       case('model','MDL')
+       case('ZLEV')
 
           select case( trim(zaxis_orgname) )
           case('z')
@@ -868,57 +775,7 @@ contains
 
           end select
 
-       case('z','ZLEV')
-
-          select case( trim(zaxis_orgname) )
-          case('z')
-
-             dinfo_v%dim_name(3) = 'z'
-             dinfo_v%dim_size(3) = kmax_new
-
-             do j = 1, jmax_ref
-             do i = 1, imax_ref
-                call INTERP_interp1d( kmax_ref, 1, kmax_ref,    & ! [IN]
-                                      kmax_new, 1, kmax_new,    & ! [IN]
-                                      idx_H(:,:,i,j),           & ! [IN]
-                                      Hfact(:,i,j),             & ! [IN]
-                                      HGT_ref(:,i,j),           & ! [IN]
-                                      ainfo_v(znum)%AXIS_1d(:), & ! [IN]
-                                      dinfo%VAR_3d  (:,i,j),    & ! [IN]
-                                      dinfo_v%VAR_3d(:,i,j),    & ! [OUT]
-                                      logwgt = .false.          ) ! [IN]
-             end do
-             end do
-
-          case('zh')
-
-             dinfo_v%dim_name(3) = 'z'
-             dinfo_v%dim_size(3) = kmax_new
-
-             do j = 1, jmax_ref
-             do i = 1, imax_ref
-                call INTERP_interp1d( kmax_ref+1, 1, kmax_ref+1, & ! [IN]
-                                      kmax_new,   1, kmax_new,   & ! [IN]
-                                      idx_Hh(:,:,i,j),           & ! [IN]
-                                      Hhfact(:,i,j),             & ! [IN]
-                                      HGTh_ref(:,i,j),           & ! [IN]
-                                      ainfo_v(znum)%AXIS_1d(:),  & ! [IN]
-                                      dinfo%VAR_3d  (:,i,j),     & ! [IN]
-                                      dinfo_v%VAR_3d(:,i,j),     & ! [OUT]
-                                      logwgt = .false.           ) ! [IN]
-             end do
-             end do
-
-          case default
-
-             dinfo_v%dim_name(3) = zaxis_orgname
-             dinfo_v%dim_size(3) = zaxis_orgsize
-
-             dinfo_v%VAR_3d(:,:,:) = dinfo%VAR_3d(:,:,:)
-
-          end select
-
-       case('pressure','PLEV')
+       case('PLEV')
 
           select case( trim(zaxis_orgname) )
           case('z')
