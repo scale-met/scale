@@ -774,6 +774,8 @@ contains
     real(RP) :: RFDZ(KA)
     real(RP) :: RCDZ(KA)
 
+    real(RP) :: dt_sedim
+
     real(RP) :: CPtot_t(KA,IA,JA), CVtot_t(KA,IA,JA)
     real(RP) :: CP_t, CV_t
 
@@ -1140,12 +1142,14 @@ contains
              !$acc end kernels
           end if
 
+          dt_sedim = MP_DTSEC_SEDIMENTATION
+
           !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
           !$omp shared (KA,KS,KE,IS,IE,JS,JE,QS_MP,QE_MP,QHA,QHS,QHE,QLA,QIA, &
           !$omp         QA_LT,QS_LT,QE_LT, &
           !$omp         PRE00,LHF, &
           !$omp         ATMOS_PHY_MP_TYPE, ATMOS_PHY_PRECIP_TYPE, &
-          !$omp         dt_MP,MP_NSTEP_SEDIMENTATION,MP_DTSEC_SEDIMENTATION,MP_RNSTEP_SEDIMENTATION, &
+          !$omp         dt_MP,MP_NSTEP_SEDIMENTATION,MP_RNSTEP_SEDIMENTATION, &
           !$omp         REAL_CZ,REAL_FZ, &
           !$omp         DENS,MOMZ,U,V,RHOT,TEMP,PRES,QTRC,CPtot,CVtot,EXNER, &
           !$omp         DENS_t_MP,MOMZ_t_MP,RHOU_t_MP,RHOV_t_MP,RHOQ_t_MP,RHOH_MP, &
@@ -1250,7 +1254,7 @@ contains
                         KA, KS, KE, QE_MP-QS_MP, QLA, QIA, &
                         TEMP2(:), vterm(:,:),   & ! [IN]
                         FDZ(:), RCDZ(:),        & ! [IN]
-                        MP_DTSEC_SEDIMENTATION, & ! [IN]
+                        dt_sedim,               & ! [IN]
                         i, j,                   & ! [IN]
                         DENS2(:), RHOQ2(:,:),   & ! [INOUT]
                         CPtot2(:), CVtot2(:),   & ! [INOUT]
@@ -1262,7 +1266,7 @@ contains
                         KA, KS, KE, QE_MP-QS_MP, QLA, QIA, &
                         TEMP2(:), vterm(:,:),   & ! [IN]
                         FZ(:), FDZ(:), RCDZ(:), & ! [IN]
-                        MP_DTSEC_SEDIMENTATION, & ! [IN]
+                        dt_sedim,               & ! [IN]
                         i, j,                   & ! [IN]
                         DENS2(:), RHOQ2(:,:),   & ! [INOUT]
                         CPtot2(:), CVtot2(:),   & ! [INOUT]
@@ -1283,7 +1287,7 @@ contains
                            KA, KS, KE, QA_LT, 0, 0,    & ! no mass tracer for charge density
                            TEMP2(:), vterm(:,QHS:QHE), & ! [IN]
                            FDZ(:), RCDZ(:),            & ! [IN]
-                           MP_DTSEC_SEDIMENTATION,     & ! [IN]
+                           dt_sedim,                   & ! [IN]
                            i, j,                       & ! [IN]
                            DENS2(:), RHOQ2_crg(:,:),   & ! [INOUT]
                            CPtot2(:), CVtot2(:),       & ! [INOUT]
@@ -1295,7 +1299,7 @@ contains
                            KA, KS, KE, QA_LT, 0, 0,    & ! no mass tracer for charge density
                            TEMP2(:), vterm(:,QHS:QHE), & ! [IN]
                            FZ(:), FDZ(:), RCDZ(:),     & ! [IN]
-                           MP_DTSEC_SEDIMENTATION,     & ! [IN]
+                           dt_sedim,                   & ! [IN]
                            i, j,                       & ! [IN]
                            DENS2(:), RHOQ2_crg(:,:),   & ! [INOUT]
                            CPtot2(:), CVtot2(:),       & ! [INOUT]

@@ -466,7 +466,7 @@ contains
     real(RP), intent(in) :: vterm(KA,QHA) ! terminal velocity of cloud mass
     real(RP), intent(in) :: FDZ  (KA)
     real(RP), intent(in) :: RCDZ (KA)
-    real(DP), intent(in), value :: dt
+    real(RP), intent(in) :: dt
     integer,  intent(in) :: i, j         ! for debug
 
     real(RP), intent(inout) :: DENS (KA)
@@ -593,7 +593,7 @@ contains
     real(RP), intent(in) :: FZ   (KA)
     real(RP), intent(in) :: FDZ  (KA)
     real(RP), intent(in) :: RCDZ (KA)
-    real(DP), intent(in), value :: dt
+    real(RP), intent(in) :: dt
     integer,  intent(in) :: i, j         ! for debug
 
     real(RP), intent(inout) :: DENS (KA)
