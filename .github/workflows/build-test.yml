@@ -1,0 +1,90 @@
+name: Build Test CI
+
+on:
+  pull_request:
+
+jobs:
+
+  check:
+    runs-on: ubuntu-latest
+    outputs:
+      any_changed: ${{ steps.changed-files.outputs.any_changed }}
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+    - name: Get changed files
+      id: changed-files
+      uses: tj-actions/changed-files@v34
+      with:
+        files: |
+          scalelib/src/**
+          scale-rm/src/**
+          scale-gm/src/**
+  build:
+    needs: check
+    if: needs.check.outputs.any_changed == 'true'
+    runs-on: ubuntu-latest
+    env:
+      SCALE_SYS: Linux64-gnu-ompi
+    steps:
+    - uses: actions/checkout@v3
+    - name: apt
+      run: sudo apt-get install -y -qq libopenmpi-dev gfortran libnetcdf-dev libnetcdff-dev
+    - name: make
+      run: make -j 4
+    - name: make single
+      run: make -j 4 SCALE_USE_SINGLEFP=T
+    - name: unit test
+      run: |
+        make makedir
+        make makelib
+        make makebin
+        mpirun --allow-run-as-root --oversubscribe -n 4 ./unit run.conf
+      working-directory: ./scalelib/test/unit
+    - name: allclean
+      run: make allclean
+    - name: make openmp
+      run: make -j 4 SCALE_ENABLE_OPENMP=T
+    - name: make openmp single
+      run: make -j 4 SCALE_ENABLE_OPENMP=T SCALE_USE_SINGLEFP=T
+      
+  doc:
+    runs-on: ubuntu-latest
+    env:
+      SCALE_SYS: Linux64-gnu-ompi
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+    - name: Get changed files ug-en
+      id: changed-files-ug-en
+      uses: tj-actions/changed-files@v34
+      with:
+        files: doc/users-guide/en/**
+    - name: Get changed files ug-jp
+      id: changed-files-ug-jp
+      uses: tj-actions/changed-files@v34
+      with:
+        files: doc/users-guide/jp/**
+    - name: Get changed files description
+      id: changed-files-desc
+      uses: tj-actions/changed-files@v34
+      with:
+        files: doc/descriptions/**
+    - name: apt
+      if: ( steps.changed-files-ug-en.outputs.any_changed == 'true' || steps.changed-files-ug-jp.outputs.any_changed == 'true' || steps.changed-files-desc.outputs.any_changed == 'true' )
+      run: sudo apt-get install -y -qq texlive-latex-base texlive-lang-japanese texlive-latex-recommended texlive-latex-extra texlive-science
+    - name: ug-en
+      run: make
+      if: steps.changed-files-ug-en.outputs.any_changed == 'true'
+      working-directory: doc/users-guide/en
+    - name: ug-jp
+      run: make
+      if: steps.changed-files-ug-jp.outputs.any_changed == 'true'
+      working-directory: doc/users-guide/jp
+    - name: descriptions
+      run: make
+      if: steps.changed-files-desc.outputs.any_changed == 'true'
+      working-directory: doc/descriptions
+
