@@ -5,17 +5,31 @@
 ################################################################################
 
 TOPDIR     = $(abspath ../../..)
-BUILD_DIR  = ./.libs
 SYSDEP_DIR = ../../../sysdep
 
 include $(SYSDEP_DIR)/Makedef.$(SCALE_SYS)
 include $(TOPDIR)/Mkinclude
 
+
 BINNAME = sno
 
-LIBS = $(LIBDIR)/libscale*.a
+BINS = $(BINDIR)/$(BINNAME)$(POSTFIX)
+LIBS = $(LIBDIR)/libscale$(POSTFIX).a
 
-VPATH = plugin:
+ifneq ($(SCALE_IGNORE_SRCDEP),T)
+  DEPENDLIB = $(LIBS)
+endif
+
+VPATH = $(BUILD_DIR): \
+        base:         \
+        plugin:
+
+VERSION = $(shell git rev-parse --short HEAD 2> /dev/null)
+ifeq ($(VERSION),)
+  VERSION  = $(shell cat VERSION)
+else
+  VERSION := $(VERSION)
+endif
 
 OBJS = mod_sno_h.o     \
        mod_sno.o       \
@@ -34,42 +48,55 @@ all:
 	$(MAKE) install
 
 build:
+	$(MAKE) info
+	$(MAKE) makelib
+	@echo;echo "Entering SNO...";echo "Current version is " $(VERSION)
 	mkdir -p $(BUILD_DIR)
-	$(MAKE) $(BUILD_DIR)/$(BINNAME)$(POSTFIX)
+	$(MAKE) makebin
+	@echo "Complete making SNO."
 
 install:
 	mkdir -p $(BINDIR)
-	$(INSTALL) $(BUILD_DIR)/$(BINNAME)$(POSTFIX) $(BINDIR)/$(BINNAME)$(POSTFIX)
+	$(MAKE) $(BINS)
 
-$(OBJECT): $(MODS)
-	$(FC) $(FFLAGS) -o $@ $^ $(LIBS)
-	@mv *.mod inc/; mv *.o inc/;
+info:
+	@$(MAKE) -C $(SCALELIBDIR)/src --no-print-directory info
+	@echo
+	@echo "SNO"
+	@$(MAKE) --no-print-directory conflog
 
-$(BUILD_DIR)/$(BINNAME)$(POSTFIX) : $(BUILD_DIR)/prg_$(BINNAME).o  $(patsubst %,$(BUILD_DIR)/%,$(OBJS))
-	$(LD) $(LDFLAGS) $(ADDITIONAL_FFLAGS) -o $@ $^ $(LIBS) $(SCALE_NETCDF_LIBS) $(SCALE_MATHLIB_LIBS) $(SCALE_PAPI_LIBS) $(CONTRIB_LIBS)
+makelib:
+	$(MAKE) -C $(SCALELIBDIR)/src
 
-$(BUILD_DIR)/prg_$(BINNAME).o : prg_$(BINNAME).F90 $(patsubst %,$(BUILD_DIR)/%,$(OBJS))
+makebin: $(BUILD_DIR)/$(BINNAME)$(POSTFIX)
 
-$(BUILD_DIR)/mod_sno_h.o     : mod_sno_h.F90
-$(BUILD_DIR)/mod_sno.o       : mod_sno.F90       $(BUILD_DIR)/mod_sno_h.o
-$(BUILD_DIR)/mod_sno_map.o   : mod_sno_map.F90   $(BUILD_DIR)/mod_sno_h.o
-$(BUILD_DIR)/mod_sno_axis.o  : mod_sno_axis.F90  $(BUILD_DIR)/mod_sno_h.o $(BUILD_DIR)/mod_sno.o
-$(BUILD_DIR)/mod_sno_grads.o : mod_sno_grads.F90 $(BUILD_DIR)/mod_sno_h.o
-$(BUILD_DIR)/mod_sno_comm.o  : mod_sno_comm.F90  $(BUILD_DIR)/mod_sno_h.o $(BUILD_DIR)/mod_sno.o $(BUILD_DIR)/mod_sno_axis.o
-$(BUILD_DIR)/mod_sno_vars.o  : mod_sno_vars.F90  $(BUILD_DIR)/mod_sno_h.o $(BUILD_DIR)/mod_sno.o $(BUILD_DIR)/mod_sno_axis.o $(BUILD_DIR)/mod_sno_grads.o $(BUILD_DIR)/mod_sno_comm.o
+$(BUILD_DIR)/$(BINNAME) : $(BUILD_DIR)/prg_$(BINNAME).o  $(patsubst %,$(BUILD_DIR)/%,$(OBJS)) $(LIBS)
+	$(LD) $(LDFLAGS) $(ADDITIONAL_FFLAGS) -o $@ $^ $(SCALE_NETCDF_LIBS) $(SCALE_MATHLIB_LIBS) $(SCALE_PAPI_LIBS) $(CONTRIB_LIBS)
 
-$(BUILD_DIR)/mod_snoplugin_timeave.o  : mod_snoplugin_timeave.F90  $(BUILD_DIR)/mod_sno_h.o $(BUILD_DIR)/mod_sno_vars.o
-$(BUILD_DIR)/mod_snoplugin_hgridope.o : mod_snoplugin_hgridope.F90 $(BUILD_DIR)/mod_sno_h.o $(BUILD_DIR)/mod_sno_vars.o
-$(BUILD_DIR)/mod_snoplugin_vgridope.o : mod_snoplugin_vgridope.F90 $(BUILD_DIR)/mod_sno_h.o $(BUILD_DIR)/mod_sno_vars.o
+$(BINDIR)/$(BINNAME)$(POSTFIX)  : $(BUILD_DIR)/$(BINNAME)$(POSTFIX)
+	install $< $@
 
 
+ifneq ($(SCALE_IGNORE_SRCDEP),T)
+  $(BUILD_DIR)/prg_$(BINNAME).o : $(LIBS) $(patsubst %,$(BUILD_DIR)/%,$(OBJS))
+endif
+
+
+allclean: distclean
+	$(MAKE) -C $(SCALELIBDIR)/src allclean
+	rm -f $(BINDIR)/$(BINNAME)*
+	rm -rf $(TOPDIR)/bin
 
 distclean: clean
 	rm -f $(BINDIR)/$(BINNAME)$(POSTFIX)
+	rm -rf ./.libs*
 
 clean:
 	rm -rf $(BUILD_DIR)
+	rm -f *.o *.mod *.lst *~
 
+dependency:
+	./makedepend .
 
 
 .SUFFIXES:
@@ -81,6 +108,10 @@ clean:
 $(BUILD_DIR)/%.o : %.F90
 	$(FC) $(FFLAGS) $(ADDITIONAL_FFLAGS) -DVERSION_MACRO=\"$(VERSION)\" -I$(BUILD_DIR) -I$(MODDIR) $(CONTRIB_INCLUDE) -I$(SCALELIBDIR)/include -I$(SCALERMDIR)/include $(SCALE_PAPI_INCLUDE) $(MODDIROPT) $(BUILD_DIR) -o $@ -c $<
 
-.PHONY : clean distclean allclean
+.PHONY : clean distclean allclean scalelib depend dependency
 
 include $(TOPDIR)/utils/make/Make_environments
+
+ifneq ($(SCALE_IGNORE_SRCDEP),T)
+-include depend
+endif

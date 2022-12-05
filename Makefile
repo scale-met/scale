@@ -8,7 +8,9 @@ all: build
 build:
 	$(MAKE) -C $(SCALELIBDIR) build
 	$(MAKE) -C $(SCALELIBDIR) install
-	$(MAKE) build-rm build-sno build-gm
+	$(MAKE) build-rm
+	$(MAKE) build-gm
+	$(MAKE) build-sno
 
 install: install-rm install-sno install-gm
 
