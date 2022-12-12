@@ -352,6 +352,8 @@ contains
     use scale_const, only: &
        EPSvap => CONST_EPSvap, &
        Pstd => CONST_Pstd
+    use scale_prc, only: &
+       PRC_abort
     use scale_atmos_profile, only: &
        PROFILE_isa => ATMOS_PROFILE_isa
     use scale_atmos_hydrostatic, only: &
@@ -386,7 +388,8 @@ contains
     real(RP) :: qsat(KA)
     real(RP) :: psat_sfc
 
-    integer  :: k
+    logical :: converged
+    integer :: k
     !---------------------------------------------------------------------------
 
     pott_sfc = ATMOS_REFSTATE_TEMP_SFC
@@ -408,7 +411,13 @@ contains
                                pres_sfc, pott_sfc, qv_sfc, qc_sfc, & ! [IN]
                                CZ(:), FZ(:),                       & ! [IN]
                                dens(:), temp(:), pres(:),          & ! [OUT]
-                               temp_sfc                            ) ! [OUT]
+                               temp_sfc,                           & ! [OUT]
+                               converged                           ) ! [OUT]
+
+    if ( .not. converged ) then
+       LOG_ERROR("ATMOS_REFSTATE_generate_isa",*) "not converged"
+       call PRC_abort
+    end if
 
     ! calc QV from RH
     call SATURATION_psat_all( temp_sfc, psat_sfc )
@@ -428,7 +437,13 @@ contains
                                pres_sfc, pott_sfc, qv_sfc, qc_sfc, & ! [IN]
                                CZ(:), FZ(:),                       & ! [IN]
                                dens(:), temp(:), pres(:),          & ! [OUT]
-                               temp_sfc                            ) ! [OUT]
+                               temp_sfc,                           & ! [OUT]
+                               converged                           )
+
+    if ( .not. converged ) then
+       LOG_ERROR("ATMOS_REFSTATE_generate_isa",*) "not converged"
+       call PRC_abort
+    end if
 
     ATMOS_REFSTATE1D_pres(:) = pres(:)
     ATMOS_REFSTATE1D_temp(:) = temp(:)
@@ -450,6 +465,8 @@ contains
     use scale_const, only: &
        EPSvap => CONST_EPSvap, &
        Pstd   => CONST_Pstd
+    use scale_prc, only: &
+       PRC_abort
     use scale_atmos_hydrostatic, only: &
        HYDROSTATIC_buildrho => ATMOS_HYDROSTATIC_buildrho
     use scale_atmos_saturation, only: &
@@ -482,7 +499,8 @@ contains
     real(RP) :: qsat(KA)
     real(RP) :: psat_sfc
 
-    integer  :: k
+    logical :: converged
+    integer :: k
     !---------------------------------------------------------------------------
 
     pres_sfc = Pstd
@@ -502,7 +520,12 @@ contains
                                pres_sfc, pott_sfc, qv_sfc, qc_sfc, & ! [IN]
                                CZ(:), FZ(:),                       & ! [IN]
                                dens(:), temp(:), pres(:),          & ! [OUT]
-                               temp_sfc                            ) ! [OUT]
+                               temp_sfc,                           & ! [OUT]
+                               converged                           ) ! [OUT]
+    if ( .not. converged ) then
+       LOG_ERROR("ATMOS_REFSTATE_generate_uniform",*) "not converged"
+       call PRC_abort
+    end if
 
     ! calc QV from RH
     call SATURATION_psat_all( temp_sfc, psat_sfc )
@@ -522,7 +545,12 @@ contains
                                pres_sfc, pott_sfc, qv_sfc, qc_sfc, & ! [IN]
                                CZ(:), FZ(:),                       & ! [IN]
                                dens(:), temp(:), pres(:),          & ! [OUT]
-                               temp_sfc                            ) ! [OUT]
+                               temp_sfc,                           & ! [OUT]
+                               converged                           ) ! [OUT]
+    if ( .not. converged ) then
+       LOG_ERROR("ATMOS_REFSTATE_generate_uniform",*) "not converged"
+       call PRC_abort
+    end if
 
     ATMOS_REFSTATE1D_pres(:) = pres(:)
     ATMOS_REFSTATE1D_temp(:) = temp(:)
@@ -701,6 +729,8 @@ contains
        Rdry  => CONST_Rdry,  &
        CPdry => CONST_CPdry, &
        P00   => CONST_PRE00
+    use scale_prc, only: &
+       PRC_abort
     use scale_comm_cartesC, only: &
        COMM_vars8, &
        COMM_wait
@@ -736,7 +766,9 @@ contains
 
     real(RP) :: work(KA,IA,JA)
     real(RP) :: RovCP
-    integer  :: k, i, j
+
+    logical :: converged
+    integer :: k, i, j
     !---------------------------------------------------------------------------
 
     RovCP = Rdry / CPdry
@@ -781,7 +813,13 @@ contains
                                      KE+1,                      & ! [IN]
                                      dens_toa_1D,               & ! [OUT]
                                      temp_toa_1D,               & ! [OUT]
-                                     pres_toa_1D                ) ! [OUT]
+                                     pres_toa_1D,               & ! [OUT]
+                                     converged                  ) ! [OUT]
+
+    if ( .not. converged ) then
+       LOG_ERROR("ATMOS_REFSTATE_calc3D",*) "not converged"
+       call PRC_abort
+    end if
 
     ! build down density from TOA (3D)
     do j = JS, JE

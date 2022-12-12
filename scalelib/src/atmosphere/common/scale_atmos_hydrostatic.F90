@@ -107,6 +107,7 @@ module scale_atmos_hydrostatic
   logical,  private            :: HYDROSTATIC_uselapserate  = .false. !< use lapse rate?
   integer,  private            :: HYDROSTATIC_buildrho_real_kref = 1
   integer,  private            :: HYDROSTATIC_barometric_law_mslp_kref = 1 !< reference layer for MSLP calculation
+  !$acc declare create(criteria, HYDROSTATIC_uselapserate, HYDROSTATIC_barometric_law_mslp_kref)
 
   !-----------------------------------------------------------------------------
 contains
@@ -147,6 +148,8 @@ contains
     LOG_INFO("ATMOS_HYDROSTATIC_setup",*) 'Use lapse rate for estimation of surface temperature? : ', HYDROSTATIC_uselapserate
     LOG_INFO("ATMOS_HYDROSTATIC_setup",*) 'Buildrho conversion criteria                          : ', criteria
 
+    !$acc update device(criteria, HYDROSTATIC_uselapserate, HYDROSTATIC_barometric_law_mslp_kref)
+
     return
   end subroutine ATMOS_HYDROSTATIC_setup
 
@@ -159,7 +162,9 @@ contains
        pres_sfc, pott_sfc, qv_sfc, qc_sfc, &
        cz, fz,                             &
        dens, temp, pres,                   &
-       temp_sfc                            )
+       temp_sfc,                           &
+       converged                           )
+    !$acc routine seq
     use scale_prc, only: &
        PRC_abort
     use scale_atmos_hydrometeor, only: &
@@ -183,6 +188,7 @@ contains
     real(RP), intent(out) :: temp(KA)        !< temperature           [K]
     real(RP), intent(out) :: pres(KA)        !< pressure              [Pa]
     real(RP), intent(out) :: temp_sfc        !< surface temperature           [K]
+    logical,  intent(out) :: converged
 
     real(RP) :: dens_sfc
     real(RP) :: Rtot_sfc
@@ -195,6 +201,7 @@ contains
     real(RP) :: CPovCV
     real(RP) :: dz(KA)
 
+    logical  :: error
     integer  :: k
     !---------------------------------------------------------------------------
 
@@ -236,24 +243,32 @@ contains
        pres(KS) = P00 * ( temp(KS)/pott(KS) )**(CPtot/Rtot)
        dens(KS) = P00 / Rtot / pott(KS) * ( pres(KS)/P00 )**(CVtot/CPtot)
 
+       converged = .true.
+
     else ! use itelation
 
        call ATMOS_HYDROSTATIC_buildrho_atmos_0D( pott(KS), qv(KS), qc(KS),           & ! [IN]
                                                  dens_sfc, pott_sfc, qv_sfc, qc_sfc, & ! [IN]
                                                  dz(KS-1), KS-1,                     & ! [IN]
-                                                 dens(KS), temp(KS), pres(KS)        ) ! [OUT]
+                                                 dens(KS), temp(KS), pres(KS),       & ! [OUT]
+                                                 converged                           ) ! [OUT]
 
     endif
 
-    !--- from lowermost atmosphere to top of atmosphere
-    call ATMOS_HYDROSTATIC_buildrho_atmos_1D( KA, KS, KE, &
-                                              pott(:), qv(:), qc(:), & ! [IN]
-                                              dz(:),                 & ! [IN]
-                                              dens(:),               & ! [INOUT]
-                                              temp(:), pres(:)       ) ! [OUT]
-    ! fill dummy
-    dens(   1:KS-1) = 0.0_RP
-    dens(KE+1:KA  ) = 0.0_RP
+    if ( converged ) then
+       !--- from lowermost atmosphere to top of atmosphere
+       call ATMOS_HYDROSTATIC_buildrho_atmos_1D( KA, KS, KE, &
+                                                 pott(:), qv(:), qc(:), & ! [IN]
+                                                 dz(:),                 & ! [IN]
+                                                 dens(:),               & ! [INOUT]
+                                                 temp(:), pres(:),      & ! [OUT]
+                                                 converged              ) ! [OUT]
+       if ( converged ) then
+          ! fill dummy
+          dens(   1:KS-1) = 0.0_RP
+          dens(KE+1:KA  ) = 0.0_RP
+       end if
+    end if
 
     return
   end subroutine ATMOS_HYDROSTATIC_buildrho_1D
@@ -268,6 +283,8 @@ contains
        cz, fz, area,       &
        dens, temp, pres,   &
        temp_sfc            )
+    use scale_prc, only: &
+       PRC_abort
     use scale_statistics, only: &
        STATISTICS_horizontal_mean
     implicit none
@@ -304,23 +321,42 @@ contains
 
     real(RP) :: dens_mean
 
+    logical  :: converged
     integer  :: k, i, j
     !---------------------------------------------------------------------------
 
+    !$acc data copyin(pott, qv, qc, pres_sfc, pott_sfc, qv_sfc, qc_sfc, cz, fz, area) &
+    !$acc      copyout(dens, temp, pres, temp_sfc) &
+    !$acc      create(dz, dz_top, pott_toa, qv_toa, qc_toa, dens_toa, temp_toa, pres_toa)
+
+
+    converged = .true.
+
     !--- from surface to lowermost atmosphere
     !$omp parallel do OMP_SCHEDULE_ collapse(2)
+    !$acc kernels
+    !$acc loop reduction(.and.: converged)
     do j = JS, JE
+    !$acc loop reduction(.and.: converged)
     do i = IS, IE
        call ATMOS_HYDROSTATIC_buildrho_1D( KA, KS, KE, &
                                            pott(:,i,j), qv(:,i,j), qc(:,i,j),                      & ! [IN]
                                            pres_sfc(i,j), pott_sfc(i,j), qv_sfc(i,j), qc_sfc(i,j), & ! [IN]
                                            cz(:,i,j), fz(:,i,j),                                   & ! [IN]
                                            dens(:,i,j), temp(:,i,j), pres(:,i,j),                  & ! [OUT]
-                                           temp_sfc(i,j)                                           ) ! [OUT]
+                                           temp_sfc(i,j),                                          & ! [OUT]
+                                           converged                                               ) ! [OUT]
     end do
     end do
+    !$acc end kernels
+
+    if ( .not. converged ) then
+       LOG_ERROR("ATMOS_HYDROSTATIC_buildrho_3D",*) "not converged"
+       call PRC_abort
+    end if
 
     !$omp parallel do OMP_SCHEDULE_ collapse(2)
+    !$acc kernels
     do j = JS, JE
     do i = IS, IE
        do k = KS, KE-1
@@ -334,6 +370,7 @@ contains
        qc_toa  (i,j) = qc  (KE,i,j)
     end do
     end do
+    !$acc end kernels
 
     call ATMOS_HYDROSTATIC_buildrho_atmos_2D( IA, IS, IE, JA, JS, JE, &
                                               pott_toa(:,:), qv_toa(:,:), qc_toa(:,:),            & ! [IN]
@@ -346,11 +383,13 @@ contains
                                      dens_mean                 ) ! [OUT]
 
     !$omp parallel do OMP_SCHEDULE_ collapse(2)
+    !$acc kernels
     do j = JS, JE
     do i = IS, IE
        dens_toa(i,j) = dens_mean
     enddo
     enddo
+    !$acc end kernels
 
     call ATMOS_HYDROSTATIC_buildrho_atmos_rev_2D( IA, IS, IE, JA, JS, JE, &
                                                   pott(KE,:,:), qv(KE,:,:), qc(KE,:,:),                   & ! [IN]
@@ -364,6 +403,8 @@ contains
                                                   dz(:,:,:),                         & ! [IN]
                                                   dens(:,:,:),                       & ! [INOUT]
                                                   temp(:,:,:), pres(:,:,:)           ) ! [OUT]
+
+    !$acc end data
 
     return
   end subroutine ATMOS_HYDROSTATIC_buildrho_3D
@@ -412,9 +453,12 @@ contains
     integer  :: k, i, j
     !---------------------------------------------------------------------------
 
+    !$acc data copyin(pott, qv, qc, cz) copy(pres), copyout(dens, temp) create(dz, pott_toa, qv_toa, qc_toa, kref)
+
     !--- from surface to lowermost atmosphere
 
     !$omp parallel do OMP_SCHEDULE_ collapse(2)
+    !$acc kernels
     do j = JS, JE
     do i = IS, IE
        do k = KS, KE-1
@@ -422,8 +466,10 @@ contains
        enddo
     enddo
     enddo
+    !$acc end kernels
 
     !$omp parallel do OMP_SCHEDULE_ collapse(2)
+    !$acc kernels
     do j = JS, JE
     do i = IS, IE
        pott_toa(i,j) = pott(KE,i,j)
@@ -431,11 +477,14 @@ contains
        qc_toa  (i,j) = qc  (KE,i,j)
     enddo
     enddo
+    !$acc end kernels
 
     !$omp parallel do OMP_SCHEDULE_ collapse(2)
+    !$acc kernels
     do j = JS, JE
     do i = IS, IE
        kref(i,j) = HYDROSTATIC_buildrho_real_kref + KS - 1
+       !$acc loop seq
        do k = kref(i,j), KE
           if ( pres(k,i,j) .ne. UNDEF ) then
              kref(i,j) = k
@@ -444,10 +493,12 @@ contains
        end do
     end do
     end do
+    !$acc end kernels
 
     ! calc density at reference level
     !$omp parallel do OMP_SCHEDULE_ collapse(2) &
     !$omp private(Rtot,CVtot,CPtot,k)
+    !$acc kernels
     do j = JS, JE
     do i = IS, IE
        k = kref(i,j)
@@ -462,6 +513,7 @@ contains
        dens(k,i,j) = P00 / ( Rtot * pott(k,i,j) ) * ( pres(k,i,j)/P00 )**(CVtot/CPtot)
     enddo
     enddo
+    !$acc end kernels
 
     !--- from lowermost atmosphere to top of atmosphere
     call ATMOS_HYDROSTATIC_buildrho_atmos_3D( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
@@ -485,9 +537,13 @@ contains
 !!$                                              dens_toa(:,:), temp_toa(:,:), pres_toa(:,:) ) ! [OUT]
 
     ! density at TOA
+    !$acc kernels
     dens(   1:KS-1,:,:) = 0.0_RP ! fill dummy
 !!$    dens(KE+2:KA  ,:,:) = 0.0_RP ! fill dummy
     dens(KE+1:KA  ,:,:) = 0.0_RP ! fill dummy
+    !$acc end kernels
+
+    !$acc end data
 
     return
   end subroutine ATMOS_HYDROSTATIC_buildrho_real_3D
@@ -500,7 +556,8 @@ contains
        pott_L2, qv_L2, qc_L2,          &
        dens_L1, pott_L1, qv_L1, qc_L1, &
        dz, k,                          &
-       dens_L2, temp_L2, pres_L2       )
+       dens_L2, temp_L2, pres_L2,      &
+       converged                       )
     use scale_prc, only: &
        PRC_abort
     use scale_atmos_hydrometeor, only: &
@@ -508,6 +565,7 @@ contains
        CV_WATER, &
        CP_VAPOR, &
        CP_WATER
+    !$acc routine seq
     implicit none
     real(RP), intent(in)  :: pott_L2 !< potential temperature at layer 2 [K]
     real(RP), intent(in)  :: qv_L2   !< water vapor           at layer 2 [kg/kg]
@@ -522,6 +580,7 @@ contains
     real(RP), intent(out) :: dens_L2 !< density               at layer 2 [kg/m3]
     real(RP), intent(out) :: temp_L2 !< temperature           at layer 2 [K]
     real(RP), intent(out) :: pres_L2 !< pressure              at layer 2 [Pa]
+    logical,  intent(out) :: converged
 
     real(RP) :: Rtot_L1  , Rtot_L2
     real(RP) :: CVtot_L1 , CVtot_L2
@@ -531,7 +590,6 @@ contains
     real(RP) :: pres_L1
     real(RP) :: dens_s, dhyd, dgrd
     integer  :: ite
-    logical  :: converged
     !---------------------------------------------------------------------------
 
     Rtot_L1   = Rdry  * ( 1.0_RP - qv_L1 - qc_L1 ) &
@@ -580,14 +638,16 @@ contains
        if ( dens_L2*0.0_RP /= 0.0_RP ) exit
     enddo
 
-    if ( .NOT. converged ) then
+    if ( converged ) then
+       pres_L2 = P00 * ( dens_L2 * Rtot_L2 * pott_L2 / P00 )**CPovCV_L2
+       temp_L2 = pres_L2 / ( dens_L2 * Rtot_L2 )
+#ifndef _OPENACC
+    else
        LOG_ERROR("ATMOS_HYDROSTATIC_buildrho_atmos_0D",*) 'iteration not converged!', &
                   k,dens_L2,ite,dens_s,dhyd,dgrd
        call PRC_abort
+#endif
     endif
-
-    pres_L2 = P00 * ( dens_L2 * Rtot_L2 * pott_L2 / P00 )**CPovCV_L2
-    temp_L2 = pres_L2 / ( dens_L2 * Rtot_L2 )
 
     return
   end subroutine ATMOS_HYDROSTATIC_buildrho_atmos_0D
@@ -600,7 +660,9 @@ contains
        pott, qv, qc, &
        dz,           &
        dens,         &
-       temp, pres    )
+       temp, pres,   &
+       converged     )
+    !$acc routine seq
     use scale_const, only: &
        UNDEF => CONST_UNDEF
     use scale_prc, only: &
@@ -622,6 +684,7 @@ contains
 
     real(RP), intent(out)   :: temp(KA) !< temperature           [K]
     real(RP), intent(out)   :: pres(KA) !< pressure              [Pa]
+    logical,  intent(out)   :: converged
 
     real(RP) :: Rtot  (KA)
     real(RP) :: CPovCV(KA)
@@ -630,7 +693,6 @@ contains
 
     real(RP) :: dens_s, dhyd, dgrd
     integer  :: ite
-    logical  :: converged
 
     integer :: k
     !---------------------------------------------------------------------------
@@ -676,22 +738,27 @@ contains
        enddo
 
        if ( .NOT. converged ) then
+#ifndef _OPENACC
           LOG_ERROR("ATMOS_HYDROSTATIC_buildrho_atmos_1D",*) 'iteration not converged!', &
                      k,dens(k),ite,dens_s,dhyd,dgrd
           call PRC_abort
+#endif
+          exit
        endif
 
        pres(k) = P00 * ( dens(k) * Rtot(k) * pott(k) / P00 )**CPovCV(k)
 
     enddo
 
-    do k = KS, KE
-       temp(k) = pres(k) / ( dens(k) * Rtot(k) )
-    enddo
+    if ( converged ) then
+       do k = KS, KE
+          temp(k) = pres(k) / ( dens(k) * Rtot(k) )
+       enddo
 
-    dens(KE+1:KA  ) = dens(KE)
-    pres(KE+1:KA  ) = pres(KE)
-    temp(KE+1:KA  ) = temp(KE)
+       dens(KE+1:KA  ) = dens(KE)
+       pres(KE+1:KA  ) = pres(KE)
+       temp(KE+1:KA  ) = temp(KE)
+    end if
 
     return
   end subroutine ATMOS_HYDROSTATIC_buildrho_atmos_1D
@@ -704,7 +771,9 @@ contains
        pott, qv, qc, &
        dz,           &
        dens,         &
-       temp, pres    )
+       temp, pres,   &
+       converged     )
+    !$acc routine seq
     use scale_const, only: &
        UNDEF => CONST_UNDEF
     use scale_prc, only: &
@@ -726,6 +795,7 @@ contains
 
     real(RP), intent(out)   :: temp(KA) !< temperature           [K]
     real(RP), intent(out)   :: pres(KA) !< pressure              [Pa]
+    logical,  intent(out)   :: converged
 
     real(RP) :: Rtot  (KA)
     real(RP) :: CPovCV(KA)
@@ -734,7 +804,6 @@ contains
 
     real(RP) :: dens_s, dhyd, dgrd
     integer  :: ite
-    logical  :: converged
 
     integer :: k
     !---------------------------------------------------------------------------
@@ -780,22 +849,27 @@ contains
        enddo
 
        if ( .NOT. converged ) then
+#ifndef _OPENACC
           LOG_ERROR("ATMOS_HYDROSTATIC_buildrho_atmos_rev_1D",*) 'iteration not converged!', &
                      k,dens(k),ite,dens_s,dhyd,dgrd
           call PRC_abort
+#endif
+          exit
        endif
 
        pres(k) = P00 * ( dens(k) * Rtot(k) * pott(k) / P00 )**CPovCV(k)
 
     enddo
 
-    do k = KS, KE
-       temp(k) = pres(k) / ( dens(k) * Rtot(k) )
-    enddo
+    if ( converged ) then
+       do k = KS, KE
+          temp(k) = pres(k) / ( dens(k) * Rtot(k) )
+       enddo
 
-    dens(   1:KS-1) = dens(KS)
-    pres(   1:KS-1) = pres(KS)
-    temp(   1:KS-1) = temp(KS)
+       dens(   1:KS-1) = dens(KS)
+       pres(   1:KS-1) = pres(KS)
+       temp(   1:KS-1) = temp(KS)
+    end if
 
     return
   end subroutine ATMOS_HYDROSTATIC_buildrho_atmos_rev_1D
@@ -808,6 +882,8 @@ contains
        dens_L1, pott_L1, qv_L1, qc_L1, &
        dz, k,                          &
        dens_L2, temp_L2, pres_L2       )
+    use scale_prc, only: &
+       PRC_abort
     implicit none
     integer, intent(in) :: IA, IS, IE
     integer, intent(in) :: JA, JS, JE
@@ -826,19 +902,32 @@ contains
     real(RP), intent(out) :: temp_L2(IA,JA) !< temperature           at layer 2 [K]
     real(RP), intent(out) :: pres_L2(IA,JA) !< pressure              at layer 2 [Pa]
 
-    integer  :: i, j
+    logical :: converged
+    integer :: i, j
     !---------------------------------------------------------------------------
 
+    converged = .true.
+
     !$omp parallel do OMP_SCHEDULE_ collapse(2)
+    !$acc kernels copyin(pott_L2, qv_l2, qc_l2, dens_l1, pott_L1, qv_L1, qc_L1, dz) copyout(dens_L2, temp_L2, pres_L2)
+    !$acc loop reduction(.and.: converged)
     do j = JS, JE
+    !$acc loop reduction(.and.: converged)
     do i = IS, IE
        call ATMOS_HYDROSTATIC_buildrho_atmos_0D( &
             pott_L2(i,j), qv_L2(i,j), qc_L2(i,j),               & ! [IN]
             dens_L1(i,j), pott_L1(i,j), qv_L1(i,j), qc_L1(i,j), & ! [IN]
             dz(i,j), k,                                         & ! [IN]
-            dens_L2(i,j), temp_L2(i,j), pres_L2(i,j)            ) ! [OUT]
+            dens_L2(i,j), temp_L2(i,j), pres_L2(i,j),           & ! [OUT]
+            converged                                           ) ! [OUT]
     enddo
     enddo
+    !$acc end kernels
+
+    if ( .not. converged ) then
+       LOG_ERROR("ATMOS_HYDROSTATIC_buildrho_atmos_2D",*) "not converged"
+       call PRC_abort
+    end if
 
     return
   end subroutine ATMOS_HYDROSTATIC_buildrho_atmos_2D
@@ -851,6 +940,8 @@ contains
        dens_L2, pott_L2, qv_L2, qc_L2, &
        dz, k,                          &
        dens_L1, temp_L1, pres_L1       )
+    use scale_prc, only: &
+       PRC_abort
     implicit none
     integer, intent(in) :: IA, IS, IE
     integer, intent(in) :: JA, JS, JE
@@ -869,19 +960,32 @@ contains
     real(RP), intent(out) :: temp_L1(IA,JA) !< temperature           at layer 1 [K]
     real(RP), intent(out) :: pres_L1(IA,JA) !< pressure              at layer 1 [Pa]
 
-    integer  :: i, j
+    logical :: converged
+    integer :: i, j
     !---------------------------------------------------------------------------
 
+    converged = .true.
+
     !$omp parallel do OMP_SCHEDULE_ collapse(2)
+    !$acc kernels copyin(pott_L1, qv_L1, qc_L1, dens_L2, pott_L2, qv_L2, qc_L2, dz) copyout(dens_L1, temp_L1, pres_L1)
+    !$acc loop reduction(.and.: converged)
     do j = JS, JE
+    !$acc loop reduction(.and.: converged)
     do i = IS, IE
        call ATMOS_HYDROSTATIC_buildrho_atmos_0D( &
             pott_L1(i,j), qv_L1(i,j), qc_L1(i,j),               & ! [IN]
             dens_L2(i,j), pott_L2(i,j), qv_L2(i,j), qc_L2(i,j), & ! [IN]
             -dz(i,j), k,                                        & ! [IN]
-            dens_L1(i,j), temp_L1(i,j), pres_L1(i,j)            ) ! [OUT]
+            dens_L1(i,j), temp_L1(i,j), pres_L1(i,j),           & ! [OUT]
+            converged                                           ) ! [OUT]
     enddo
     enddo
+    !$acc end kernels
+
+    if ( .not. converged ) then
+       LOG_ERROR("ATMOS_HYDROSTATIC_buildrho_atmos_rev_2D",*) "not converged"
+       call PRC_abort
+    end if
 
     return
   end subroutine ATMOS_HYDROSTATIC_buildrho_atmos_rev_2D
@@ -895,6 +999,8 @@ contains
        dens,         &
        temp, pres,   &
        kref          )
+    use scale_prc, only: &
+       PRC_abort
     implicit none
     integer, intent(in) :: KA, KS, KE
     integer, intent(in) :: IA, IS, IE
@@ -914,34 +1020,50 @@ contains
 
     integer, pointer :: kref_(:,:)
 
-    integer  :: i, j
+    logical :: converged
+    integer :: i, j
     !---------------------------------------------------------------------------
 
     if ( present(kref) ) then
        kref_ => kref
     else
        allocate( kref_(IA,JA) )
+       !$acc enter data create(kref_)
        !$omp parallel do OMP_SCHEDULE_ collapse(2)
+       !$acc kernels
        do j = JS, JE
        do i = IS, IE
           kref_(i,j) = KS
        end do
        end do
+       !$acc end kernels
     end if
 
+    converged = .true.
 
     !$omp parallel do OMP_SCHEDULE_ collapse(2)
+    !$acc kernels copyin(pott, qv, qc, dz, kref_) copy(dens) copyout(temp, pres)
+    !$acc loop reduction(.and.: converged)
     do j = JS, JE
+    !$acc loop reduction(.and.: converged)
     do i = IS, IE
        call ATMOS_HYDROSTATIC_buildrho_atmos_1D( KA, kref_(i,j), KE, &
                                                  pott(:,i,j), qv(:,i,j), qc(:,i,j), & ! [IN]
                                                  dz(:,i,j),                         & ! [IN]
                                                  dens(:,i,j),                       & ! [INOUT]
-                                                 temp(:,i,j), pres(:,i,j)           ) ! [OUT]
+                                                 temp(:,i,j), pres(:,i,j),          & ! [OUT]
+                                                 converged                          ) ! [OUT]
     enddo
     enddo
+    !$acc end kernels
+
+    if ( .not. converged ) then
+       LOG_ERROR("ATMOS_HYDROSTATIC_buildrho_atmos_3D",*) "not converged"
+       call PRC_abort
+    end if
 
     if ( .not. present(kref) ) then
+       !$acc exit data delete(kref_)
        deallocate( kref_ )
     end if
 
@@ -957,6 +1079,8 @@ contains
        dens,         &
        temp, pres,   &
        kref          )
+    use scale_prc, only: &
+       PRC_abort
     implicit none
 
     integer,  intent(in)    :: KA, KS, KE
@@ -972,33 +1096,52 @@ contains
     integer,  intent(in), optional, target :: kref(IA,JA)
 
     integer, pointer :: kref_(:,:)
-    integer  :: i, j
+    logical :: converged
+    integer :: i, j
     !---------------------------------------------------------------------------
+
+    converged = .true.
 
     if ( present(kref) ) then
        kref_ => kref
 
        !$omp parallel do OMP_SCHEDULE_ collapse(2)
+       !$acc kernels copyin(pott, qv, qc, dz, kref_) copy(dens) copyout(temp, pres)
+       !$acc loop reduction(.and.: converged)
        do j = JS, JE
+       !$acc loop reduction(.and.: converged)
        do i = IS, IE
           call ATMOS_HYDROSTATIC_buildrho_atmos_rev_1D( KA, KS, kref_(i,j), &
                                                         pott(:,i,j), qv(:,i,j), qc(:,i,j), & ! [IN]
                                                         dz(:,i,j),                         & ! [IN]
                                                         dens(:,i,j),                       & ! [INOUT]
-                                                        temp(:,i,j), pres(:,i,j)           ) ! [OUT]
+                                                        temp(:,i,j), pres(:,i,j),          & ! [OUT]
+                                                        converged                          ) ! [OUT]
        enddo
        enddo
+       !$acc end kernels
+
     else
        !$omp parallel do OMP_SCHEDULE_ collapse(2)
+       !$acc kernels copyin(pott, qv, qc, dz) copy(dens) copyout(temp, pres)
+       !$acc loop reduction(.and.: converged)
        do j = JS, JE
+       !$acc loop reduction(.and.: converged)
        do i = IS, IE
           call ATMOS_HYDROSTATIC_buildrho_atmos_rev_1D( KA, KS, KE,                        &
                                                         pott(:,i,j), qv(:,i,j), qc(:,i,j), & ! [IN]
                                                         dz(:,i,j),                         & ! [IN]
                                                         dens(:,i,j),                       & ! [INOUT]
-                                                        temp(:,i,j), pres(:,i,j)           ) ! [OUT]
+                                                        temp(:,i,j), pres(:,i,j),          & ! [OUT]
+                                                        converged                          ) ! [OUT]
        enddo
        enddo
+       !$acc end kernels
+    end if
+
+    if ( .not. converged ) then
+       LOG_ERROR("ATMOS_HYDROSTATIC_buildrho_atmos_rev_3D",*) "not converged"
+       call PRC_abort
     end if
 
     return
@@ -1012,7 +1155,9 @@ contains
        temp, qv, qc,                       &
        pres_sfc, temp_sfc, qv_sfc, qc_sfc, &
        cz, fz,                             &
-       dens, pott, pres, pott_sfc          )
+       dens, pott, pres, pott_sfc,         &
+       converged                           )
+    !$acc routine seq
     use scale_prc, only: &
        PRC_abort
     use scale_atmos_hydrometeor, only: &
@@ -1037,6 +1182,7 @@ contains
     real(RP), intent(out) :: pott(KA) !< potential temperature [K]
     real(RP), intent(out) :: pres(KA) !< pressure              [Pa]
     real(RP), intent(out) :: pott_sfc !< surface potential temperature [K]
+    logical,  intent(out) :: converged
 
     real(RP) :: dens_sfc
 
@@ -1050,7 +1196,6 @@ contains
     real(RP) :: RovCP_sfc
     real(RP) :: dens_s, dhyd, dgrd
     integer  :: ite
-    logical  :: converged
 
     real(RP) :: dz(KA)
 
@@ -1111,18 +1256,23 @@ contains
        if ( dens(KS)*0.0_RP /= 0.0_RP ) exit
     enddo
 
-    if ( .NOT. converged ) then
+    if ( converged ) then
+       !--- from lowermost atmosphere to top of atmosphere
+       call ATMOS_HYDROSTATIC_buildrho_bytemp_atmos_1D( KA, KS, KE, &
+                                                        temp(:), qv(:), qc(:), & ! [IN]
+                                                        dz  (:),               & ! [IN]
+                                                        dens(:),               & ! [INOUT]
+                                                        pott(:), pres(:),      & ! [OUT]
+                                                        converged              ) ! [OUT]
+    end if
+
+#ifndef _OPENACC
+    if ( .not. converged ) then
        LOG_ERROR("ATMOS_HYDROSTATIC_buildrho_bytemp_1D",*) 'iteration not converged!', &
                   dens(KS),ite,dens_s,dhyd,dgrd
        call PRC_abort
     endif
-
-    !--- from lowermost atmosphere to top of atmosphere
-    call ATMOS_HYDROSTATIC_buildrho_bytemp_atmos_1D( KA, KS, KE, &
-                                                     temp(:), qv(:), qc(:), & ! [IN]
-                                                     dz  (:),               & ! [IN]
-                                                     dens(:),               & ! [INOUT]
-                                                     pott(:), pres(:)       ) ! [OUT]
+#endif
 
     return
   end subroutine ATMOS_HYDROSTATIC_buildrho_bytemp_1D
@@ -1136,6 +1286,8 @@ contains
        cz, fz,                             &
        dens, pott, pres,                   &
        pott_sfc                            )
+    use scale_prc, only: &
+       PRC_abort
     implicit none
     integer, intent(in) :: KA, KS, KE
     integer, intent(in) :: IA, IS, IE
@@ -1156,21 +1308,35 @@ contains
     real(RP), intent(out) :: pres(KA,IA,JA)  !< pressure              [Pa]
     real(RP), intent(out) :: pott_sfc(IA,JA) !< surface potential temperature [K]
 
+    logical :: converged
+
     integer  :: i, j
     !---------------------------------------------------------------------------
 
+    converged = .true.
+
     !--- from surface to lowermost atmosphere
     !$omp parallel do OMP_SCHEDULE_ collapse(2)
+    !$acc kernels copyin(temp, qv, qc, pres_sfc, temp_sfc, qv_sfc, qc_sfc, cz, fz) copyout(dens, pott, pres, pott_sfc)
+    !$acc loop reduction(.and.: converged)
     do j = JS, JE
+    !$acc loop reduction(.and.: converged)
     do i = IS, IE
        call ATMOS_HYDROSTATIC_buildrho_bytemp_1D( KA, KS, KE, &
                                                   temp(:,i,j), qv(:,i,j), qc(:,i,j),                      & ! [IN]
                                                   pres_sfc(i,j), temp_sfc(i,j), qv_sfc(i,j), qc_sfc(i,j), & ! [IN]
                                                   cz(:,i,j), fz(:,i,j),                                   & ! [IN]
                                                   dens(:,i,j), pott(:,i,j), pres(:,i,j),                  & ! [OUT]
-                                                  pott_sfc(i,j)                                           ) ! [OUT]
+                                                  pott_sfc(i,j),                                          & ! [OUT]
+                                                  converged                                               ) ! [OUT]
     enddo
     enddo
+    !$acc end kernels
+
+    if ( .not. converged ) then
+       LOG_ERROR("ATMOS_HYDROSTATIC_buildrho_bytemp_3D",*) "not converged"
+       call PRC_abort
+    end if
 
     return
   end subroutine ATMOS_HYDROSTATIC_buildrho_bytemp_3D
@@ -1183,7 +1349,8 @@ contains
        temp, qv, qc, &
        dz,           &
        dens,         &
-       pott, pres    )
+       pott, pres,   &
+       converged     )
     use scale_prc, only: &
        PRC_abort
     use scale_atmos_hydrometeor, only: &
@@ -1191,6 +1358,7 @@ contains
        CV_WATER, &
        CP_VAPOR, &
        CP_WATER
+    !$acc routine seq
     implicit none
     integer, intent(in) :: KA, KS, KE
 
@@ -1203,6 +1371,7 @@ contains
 
     real(RP), intent(out)   :: pott(KA) !< potential temperature [K]
     real(RP), intent(out)   :: pres(KA) !< pressure              [Pa]
+    logical,  intent(out)   :: converged
 
     real(RP) :: Rtot  (KA)
     real(RP) :: CVtot (KA)
@@ -1211,7 +1380,6 @@ contains
     real(RP) :: RovCP
     real(RP) :: dens_s, dhyd, dgrd
     integer  :: ite
-    logical  :: converged
 
     integer  :: k
     !---------------------------------------------------------------------------
@@ -1255,19 +1423,24 @@ contains
        enddo
 
        if ( .NOT. converged ) then
+#ifndef _OPENACC
           LOG_ERROR("ATMOS_HYDROSTATIC_buildrho_bytemp_atmos_1D",*) 'iteration not converged!', &
                      k,dens(k),ite,dens_s,dhyd,dgrd
           call PRC_abort
+#endif
+          exit
        endif
 
        pres(k) = dens(k) * Rtot(k) * temp(k)
 
     enddo
 
-    do k = KS, KE
-       RovCP   = Rtot(k) / CPtot(k)
-       pott(k) = temp(k) * ( P00 / pres(k) )**RovCP
-    enddo
+    if ( converged ) then
+       do k = KS, KE
+          RovCP   = Rtot(k) / CPtot(k)
+          pott(k) = temp(k) * ( P00 / pres(k) )**RovCP
+       enddo
+    end if
 
     return
   end subroutine ATMOS_HYDROSTATIC_buildrho_bytemp_atmos_1D
@@ -1280,7 +1453,8 @@ contains
        temp, qv, qc, &
        dz,           &
        dens,         &
-       pott, pres    )
+       pott, pres,   &
+       converged     )
     use scale_prc, only: &
        PRC_abort
     use scale_atmos_hydrometeor, only: &
@@ -1288,6 +1462,7 @@ contains
        CV_WATER, &
        CP_VAPOR, &
        CP_WATER
+    !$acc routine seq
     implicit none
     integer, intent(in) :: KA, KS, KE
 
@@ -1300,6 +1475,7 @@ contains
 
     real(RP), intent(out)   :: pott(KA) !< potential temperature [K]
     real(RP), intent(out)   :: pres(KA) !< pressure              [Pa]
+    logical,  intent(out)   :: converged
 
     real(RP) :: Rtot  (KA)
     real(RP) :: CVtot (KA)
@@ -1308,7 +1484,6 @@ contains
     real(RP) :: RovCP
     real(RP) :: dens_s, dhyd, dgrd
     integer  :: ite
-    logical  :: converged
 
     integer  :: k
     !---------------------------------------------------------------------------
@@ -1352,19 +1527,24 @@ contains
        enddo
 
        if ( .NOT. converged ) then
+#ifdef _OPENACC
           LOG_ERROR("ATMOS_HYDROSTATIC_buildrho_bytemp_atmos_rev_1D",*) 'iteration not converged!', &
                      k,dens(k),ite,dens_s,dhyd,dgrd
           call PRC_abort
+#endif
+          exit
        endif
 
        pres(k) = dens(k) * Rtot(k) * temp(k)
 
     enddo
 
-    do k = KS, KE
-       RovCP   = Rtot(k) / CPtot(k)
-       pott(k) = temp(k) * ( P00 / pres(k) )**RovCP
-    enddo
+    if ( converged ) then
+       do k = KS, KE
+          RovCP   = Rtot(k) / CPtot(k)
+          pott(k) = temp(k) * ( P00 / pres(k) )**RovCP
+       enddo
+    end if
 
     return
   end subroutine ATMOS_HYDROSTATIC_buildrho_bytemp_atmos_rev_1D
@@ -1377,6 +1557,8 @@ contains
        dz,           &
        dens,         &
        pott, pres    )
+    use scale_prc, only: &
+       PRC_abort
     implicit none
     integer, intent(in) :: KA, KS, KE
     integer, intent(in) :: IA, IS, IE
@@ -1391,19 +1573,33 @@ contains
     real(RP), intent(out)   :: pott(KA,IA,JA) !< potential temperature [K]
     real(RP), intent(out)   :: pres(KA,IA,JA) !< pressure              [Pa]
 
+    logical :: converged
+
     integer  :: i, j
     !---------------------------------------------------------------------------
 
+    converged = .true.
+
     !$omp parallel do OMP_SCHEDULE_ collapse(2)
+    !$acc kernels copyin(temp, qv, qc, dz) copy(dens) copyout(pott, pres)
+    !$acc loop reduction(.and.: converged)
     do j = JS, JE
+    !$acc loop reduction(.and.: converged)
     do i = IS, IE
        call ATMOS_HYDROSTATIC_buildrho_bytemp_atmos_1D( KA, KS, KE, &
                                                         temp(:,i,j), qv(:,i,j), qc(:,i,j), & ! [IN]
                                                         dz(:,i,j),                         & ! [IN]
                                                         dens(:,i,j),                       & ! [INOUT]
-                                                        pott(:,i,j), pres(:,i,j)           ) ! [OUT]
+                                                        pott(:,i,j), pres(:,i,j),          & ! [OUT]
+                                                        converged                          ) ! [OUT]
     enddo
     enddo
+    !$acc end kernels
+
+    if ( .not. converged ) then
+       LOG_ERROR("ATMOS_HYDROSTATIC_buildrho_bytemp_atmos_3D",*) "iteration not converged"
+       call PRC_abort
+    end if
 
     return
   end subroutine ATMOS_HYDROSTATIC_buildrho_bytemp_atmos_3D
@@ -1417,6 +1613,7 @@ contains
        pres, temp, qv, &
        cz,             &
        mslp            )
+    !$acc routine seq
     implicit none
     integer,  intent(in)  :: KA, KS, KE
 
@@ -1466,6 +1663,7 @@ contains
     !---------------------------------------------------------------------------
 
     !$omp parallel do OMP_SCHEDULE_ collapse(2)
+    !$acc kernels copyin(pres, temp, qv, cz) copyout(mslp)
     do j = JS, JE
     do i = IS, IE
        call ATMOS_HYDROSTATIC_barometric_law_mslp_0D( KA, KS, KE, &
@@ -1474,6 +1672,7 @@ contains
                                                       mslp(i,j)                            ) ! [OUT]
     enddo
     enddo
+    !$acc end kernels
 
     return
   end subroutine ATMOS_HYDROSTATIC_barometric_law_mslp_2D
@@ -1486,6 +1685,7 @@ contains
        mslp, temp, &
        dz,         &
        pres        )
+    !$acc routine seq
     implicit none
     real(RP), intent(in)  :: mslp !< mean sea-level pressure [Pa]
     real(RP), intent(in)  :: temp !< surface air temperature [K]
@@ -1526,12 +1726,14 @@ contains
     !---------------------------------------------------------------------------
 
     !$omp parallel do OMP_SCHEDULE_ collapse(2)
+    !$acc kernels copyin(mslp, temp, dz) copyout(pres)
     do j = JS, JE
     do i = IS, IE
        call ATMOS_HYDROSTATIC_barometric_law_pres_0D( mslp(i,j), temp(i,j), dz(i,j), & ! [IN]
                                                       pres(i,j)                      ) ! [OUT]
     enddo
     enddo
+    !$acc end kernels
 
     return
   end subroutine ATMOS_HYDROSTATIC_barometric_law_pres_2D

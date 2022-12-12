@@ -171,6 +171,7 @@ contains
        QA, &
        q, q_mass, &
        qdry       )
+    !$acc routine seq
     implicit none
     integer, intent(in) :: QA
 
@@ -211,16 +212,19 @@ contains
     !$omp parallel do default(none) OMP_SCHEDULE_ &
     !$omp private(i,j,iqw) &
     !$omp shared(IS,IE,JS,JE,QA,qdry,q,q_mass)
+    !$acc kernels copyin(q, q_mass) copyout(qdry)
     do j = JS, JE
        do i = IS, IE
           qdry(i,j) = 1.0_RP
        end do
+       !$acc loop seq
        do iqw = 1, QA
        do i = IS, IE
           qdry(i,j) = qdry(i,j) - q(i,j,iqw) * q_mass(iqw)
        enddo
        enddo
     enddo
+    !$acc end kernels
 
     return
   end subroutine ATMOS_THERMODYN_qdry_2D
@@ -247,11 +251,13 @@ contains
     !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
     !$omp private(i,j,k,iqw) &
     !$omp shared(KS,KE,IS,IE,JS,JE,QA,qdry,q,q_mass)
+    !$acc kernels copyin(q, q_mass) copyout(qdry)
     do j = JS, JE
     do i = IS, IE
        do k = KS, KE
           qdry(k,i,j) = 1.0_RP
        end do
+       !$acc loop seq
        do iqw = 1, QA
        do k = KS, KE
           qdry(k,i,j) = qdry(k,i,j) - q(k,i,j,iqw) * q_mass(iqw)
@@ -259,6 +265,7 @@ contains
        enddo
     enddo
     enddo
+    !$acc end kernels
 
     return
   end subroutine ATMOS_THERMODYN_qdry_3D
@@ -271,6 +278,7 @@ contains
        QA, &
        q, CVq, qdry, &
        CVtot         )
+    !$acc routine seq
     implicit none
     integer, intent(in) :: QA
 
@@ -315,11 +323,13 @@ contains
     !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
     !$omp private(i,j,k) &
     !$omp shared(KS,KE,IS,IE,JS,JE,QA,cvtot,qdry,q,CVdry,CVq)
+    !$acc kernels copyin(q, CVq, qdry) copyout(CVtot)
     do j = JS, JE
     do i = IS, IE
        do k = KS, KE
           CVtot(k,i,j) = qdry(k,i,j) * CVdry
        end do
+       !$acc loop seq
        do iqw = 1, QA
        do k = KS, KE
           CVtot(k,i,j) = CVtot(k,i,j) + q(k,i,j,iqw) * CVq(iqw)
@@ -327,6 +337,7 @@ contains
        enddo
     enddo
     enddo
+    !$acc end kernels
 
     return
   end subroutine ATMOS_THERMODYN_cv_3D
@@ -339,6 +350,7 @@ contains
        QA, &
        q, CPq, qdry, &
        CPtot         )
+    !$acc routine seq
     implicit none
     integer, intent(in) :: QA
 
@@ -382,11 +394,13 @@ contains
 
     !$omp parallel do OMP_SCHEDULE_ collapse(2) &
     !$omp private(i,j,k,iqw)
+    !$acc kernels copyin(q, CPq, qdry) copyout(CPtot)
     do j = JS, JE
     do i = IS, IE
        do k = KS, KE
           CPtot(k,i,j) = qdry(k,i,j) * CPdry
        end do
+       !$acc loop seq
        do iqw = 1, QA
        do k = KS, KE
           CPtot(k,i,j) = CPtot(k,i,j) + q(k,i,j,iqw) * CPq(iqw)
@@ -394,6 +408,7 @@ contains
        enddo
     enddo
     enddo
+    !$acc end kernels
 
     return
   end subroutine ATMOS_THERMODYN_cp_3D
@@ -406,6 +421,7 @@ contains
        QA, &
        q, Rq, qdry, &
        Rtot         )
+    !$acc routine seq
     implicit none
     integer, intent(in) :: QA
 
@@ -449,11 +465,13 @@ contains
 
     !$omp parallel do OMP_SCHEDULE_ collapse(2) &
     !$omp private(i,j,k,iqw)
+    !$acc kernels copyin(q, Rq, qdry) copyout(Rtot)
     do j = JS, JE
     do i = IS, IE
        do k = KS, KE
           Rtot(k,i,j) = qdry(k,i,j) * Rdry
        end do
+       !$acc loop seq
        do iqw = 1, QA
        do k = KS, KE
           Rtot(k,i,j) = Rtot(k,i,j) + q(k,i,j,iqw) * Rq(iqw)
@@ -461,6 +479,7 @@ contains
        enddo
     enddo
     enddo
+    !$acc end kernels
 
     return
   end subroutine ATMOS_THERMODYN_r_3D
@@ -475,6 +494,7 @@ contains
        QA, &
        q, Mq, Rq, CVq, CPq,     &
        Qdry, Rtot, CVtot, CPtot )
+    !$acc routine seq
     integer, intent(in) :: QA
 
     real(RP), intent(in)  :: q  (QA) !< mass concentration      [kg/kg]
@@ -518,6 +538,7 @@ contains
        QA,         &
        q, Mq, Rq, CVq, CPq,     &
        Qdry, Rtot, CVtot, CPtot )
+    !$acc routine vector
     integer, intent(in) :: KA, KS, KE
     integer, intent(in) :: QA
 
@@ -587,6 +608,7 @@ contains
 
     !$omp parallel do OMP_SCHEDULE_ &
     !$omp private(i,j,iqw)
+    !$acc kernels copyin(q, Mq, Rq, CVq, CPq) copyout(Qdry, Rtot, CVtot, CPtot)
     do j = JS, JE
        do i = IS, IE
           qdry (i,j) = 1.0_RP
@@ -594,6 +616,7 @@ contains
           CVtot(i,j) = 0.0_RP
           CPtot(i,j) = 0.0_RP
        end do
+       !$acc loop seq
        do iqw = 1, QA
        do i = IS, IE
           qdry (i,j) = qdry (i,j) - q(i,j,iqw) * Mq(iqw)
@@ -608,6 +631,7 @@ contains
           CPtot(i,j) = CPtot(i,j) + qdry(i,j) * CPdry
        end do
     end do
+    !$acc end kernels
 
     return
   end subroutine ATMOS_THERMODYN_specific_heat_2D
@@ -642,6 +666,7 @@ contains
 
     !$omp parallel do OMP_SCHEDULE_ collapse(2) &
     !$omp private(i,j,k,iqw)
+    !$acc kernels copyin(q, Mq, Rq, CVq, CPq) copyout(Qdry, Rtot, CVtot, CPtot)
     do j = JS, JE
     do i = IS, IE
        do k = KS, KE
@@ -650,6 +675,7 @@ contains
           CVtot(k,i,j) = 0.0_RP
           CPtot(k,i,j) = 0.0_RP
        end do
+       !$acc loop seq
        do iqw = 1, QA
        do k = KS, KE
           qdry (k,i,j) = qdry (k,i,j) - q(k,i,j,iqw) * Mq(iqw)
@@ -665,6 +691,7 @@ contains
        end do
     end do
     end do
+    !$acc end kernels
 
     return
   end subroutine ATMOS_THERMODYN_specific_heat_3D
@@ -674,6 +701,7 @@ contains
   subroutine ATMOS_THERMODYN_rhot2pres_0D( &
        rhot, CVtot, CPtot, Rtot, &
        pres                )
+    !$acc routine seq
     implicit none
     real(RP), intent(in) :: rhot
     real(RP), intent(in) :: CVtot
@@ -712,6 +740,7 @@ contains
     !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
     !$omp shared(JS,JE,IS,IE,KS,KE, &
     !$omp        rhot,CVtot,CPtot,Rtot,pres)
+    !$acc kernels copyin(rhot, CVtot, CPtot, Rtot) copyout(pres)
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -719,6 +748,7 @@ contains
     end do
     end do
     end do
+    !$acc end kernels
 
     return
   end subroutine ATMOS_THERMODYN_rhot2pres_3D
@@ -728,6 +758,7 @@ contains
   subroutine ATMOS_THERMODYN_rhot2rhoe_0D( &
        rhot, CVtot, CPtot, Rtot, &
        rhoe               )
+    !$acc routine seq
     implicit none
     real(RP), intent(in)  :: rhot  !< density * potential temperature [kg/m3*K]
     real(RP), intent(in)  :: CVtot !< specific heat                   [J/kg/K]
@@ -770,6 +801,7 @@ contains
     !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
     !$omp shared(JS,JE,IS,IE,KS,KE, &
     !$omp        rhot,CVtot,CPtot,Rtot,rhoe)
+    !$acc kernels copyin(rhot, CVtot, CPtot, Rtot) copyout(rhoe)
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -777,6 +809,7 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
 
     return
   end subroutine ATMOS_THERMODYN_rhot2rhoe_3D
@@ -786,6 +819,7 @@ contains
   subroutine ATMOS_THERMODYN_rhoe2rhot_0D( &
        rhoe, CVtot, CPtot, Rtot, &
        rhot                      )
+    !$acc routine seq
     implicit none
     real(RP), intent(in)  :: rhoe  !< density * internal energy       [J/m3]
     real(RP), intent(in)  :: CVtot !< specific heat                   [J/kg/K]
@@ -828,6 +862,7 @@ contains
     !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
     !$omp shared(JS,JE,IS,IE,KS,KE,&
     !$omp        rhoe,CVtot,CPtot,Rtot,rhot)
+    !$acc kernels copyin(rhoe, CVtot, CPtot, Rtot) copyout(rhot)
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -835,6 +870,7 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
 
     return
   end subroutine ATMOS_THERMODYN_rhoe2rhot_3D
@@ -844,6 +880,7 @@ contains
   subroutine ATMOS_THERMODYN_rhot2temp_pres_0D( &
        dens, rhot, Rtot, CVtot, CPtot, &
        temp, pres                      )
+    !$acc routine seq
     implicit none
     real(RP), intent(in)  :: dens  !< density                         [kg/m3]
     real(RP), intent(in)  :: rhot  !< density * potential temperature [kg/m3*K]
@@ -868,6 +905,7 @@ contains
        KA, KS, KE, &
        dens, rhot, Rtot, CVtot, CPtot, &
        temp, pres                      )
+    !$acc routine vector
     integer,  intent(in)  :: KA, KS, KE
 
     real(RP), intent(in)  :: dens (KA) !< density              [kg/m3]
@@ -916,6 +954,7 @@ contains
     !$omp private(i,j,k) &
     !$omp shared(KS,KE,IS,IE,JS,JE) &
     !$omp shared(temp,pres,dens,rhot,Rtot,CVtot,CPtot)
+    !$acc kernels copyin(dens, rhot, Rtot, CVtot, CPtot) copyout(temp, pres)
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -924,6 +963,8 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
+
     return
   end subroutine ATMOS_THERMODYN_rhot2temp_pres_3D
 
@@ -933,6 +974,7 @@ contains
   subroutine ATMOS_THERMODYN_rhoe2temp_pres_0D( &
        dens, rhoe, CVtot, Rtot, &
        temp, pres               )
+    !$acc routine seq
     implicit none
     real(RP), intent(in)  :: dens  !< density                   [kg/m3]
     real(RP), intent(in)  :: rhoe  !< density * internal energy [J/m3]
@@ -973,6 +1015,7 @@ contains
     !$omp parallel do default(none) private(i,j) OMP_SCHEDULE_ &
     !$omp shared(JS,JE,IS,IE,&
     !$omp        dens,rhoe,CVtot,Rtot,temp,pres)
+    !$acc kernels copyin(dens, rhoe, CVtot, Rtot) copyout(temp, pres)
     do j = JS, JE
     do i = IS, IE
 !       call ATMOS_THERMODYN_rhoe2temp_pres_0D( dens(i,j), rhoe(i,j), CVtot(i,j), Rtot(i,j), temp(i,j), pres(i,j) )
@@ -980,6 +1023,7 @@ contains
        pres(i,j) = dens(i,j) * Rtot(i,j) * temp(i,j)
     enddo
     enddo
+    !$acc end kernels
 
     return
   end subroutine ATMOS_THERMODYN_rhoe2temp_pres_2D
@@ -1009,6 +1053,7 @@ contains
     !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
     !$omp shared(JS,JE,IS,IE,KS,KE,&
     !$omp        dens,rhoe,CVtot,Rtot,temp,pres)
+    !$acc kernels copyin(dens, rhoe, CVtot, Rtot) copyout(temp, pres)
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -1018,6 +1063,7 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
 
     return
   end subroutine ATMOS_THERMODYN_rhoe2temp_pres_3D
@@ -1027,6 +1073,7 @@ contains
   subroutine ATMOS_THERMODYN_ein2temp_pres_0D( &
        Ein,  dens, CVtot, Rtot, &
        temp, pres               )
+    !$acc routine seq
     implicit none
     real(RP), intent(in)  :: Ein   ! internal energy
     real(RP), intent(in)  :: dens  ! density
@@ -1065,11 +1112,13 @@ contains
     !---------------------------------------------------------------------------
 
     !$omp parallel do private(i,j) OMP_SCHEDULE_
+    !$acc kernels copyin(Ein, dens, CVtot, Rtot) copyout(temp, pres)
     do j = JS, JE
     do i = IS, IE
        call ATMOS_THERMODYN_ein2temp_pres( Ein(i,j), dens(i,j), CVtot(i,j), Rtot(i,j), temp(i,j), pres(i,j) )
     enddo
     enddo
+    !$acc end kernels
 
     return
   end subroutine ATMOS_THERMODYN_ein2temp_pres_2D
@@ -1097,6 +1146,7 @@ contains
     !---------------------------------------------------------------------------
 
     !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+    !$acc kernels copyin(Ein, dens, CVtot, Rtot) copyout(temp, pres)
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -1104,6 +1154,7 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
 
     return
   end subroutine ATMOS_THERMODYN_ein2temp_pres_3D
@@ -1113,6 +1164,7 @@ contains
   subroutine ATMOS_THERMODYN_pott2temp_pres_0D( &
        dens, pott, CVtot, CPtot, Rtot, &
        temp, pres                      )
+    !$acc routine seq
     implicit none
 
     real(RP), intent(in)  :: dens  ! density
@@ -1155,6 +1207,7 @@ contains
     !---------------------------------------------------------------------------
 
     !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+    !$acc kernels copyin(dens, pott, CVtot, CPtot, Rtot) copyout(temp, pres)
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -1162,6 +1215,7 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
 
     return
   end subroutine ATMOS_THERMODYN_pott2temp_pres_3D
@@ -1170,6 +1224,7 @@ contains
   subroutine ATMOS_THERMODYN_temp_pres2pott_0D( &
        temp, pres, CPtot, Rtot, &
        pott                     )
+    !$acc routine seq
     implicit none
     real(RP), intent(in)  :: temp  ! temperature           [K]
     real(RP), intent(in)  :: pres  ! pressure              [Pa]
@@ -1190,6 +1245,7 @@ contains
        KA, KS, KE, &
        temp, pres, CPtot, Rtot, &
        pott              )
+    !$acc routine vector
     implicit none
     integer, intent(in) :: KA, KS, KE
 
@@ -1231,11 +1287,13 @@ contains
 
     !$omp parallel do OMP_SCHEDULE_ &
     !$omp private(i,j)
+    !$acc kernels copyin(temp, pres, CPtot, Rtot) copyout(pott)
     do j = JS, JE
     do i = IS, IE
        call ATMOS_THERMODYN_temp_pres2pott( temp(i,j), pres(i,j), CPtot(i,j), Rtot(i,j), pott(i,j) )
     enddo
     enddo
+    !$acc end kernels
 
     return
   end subroutine ATMOS_THERMODYN_temp_pres2pott_2D
@@ -1262,6 +1320,7 @@ contains
 
     !$omp parallel do OMP_SCHEDULE_ collapse(2) &
     !$omp private(i,j,k)
+    !$acc kernels copyin(temp, pres, CPtot, Rtot) copyout(pott)
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -1269,6 +1328,7 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
 
     return
   end subroutine ATMOS_THERMODYN_temp_pres2pott_3D
@@ -1277,6 +1337,7 @@ contains
   subroutine ATMOS_THERMODYN_temp_pres2ein_0D( &
        temp, pres, CVtot, Rtot, &
        ein, dens                )
+    !$acc routine seq
     implicit none
     real(RP), intent(in)  :: temp  ! temperature           [K]
     real(RP), intent(in)  :: pres  ! pressure              [Pa]
@@ -1299,6 +1360,7 @@ contains
        KA, KS, KE, &
        temp, pres, CVtot, Rtot, &
        ein, dens                )
+    !$acc routine vector
     implicit none
     integer, intent(in) :: KA, KS, KE
 
@@ -1341,12 +1403,14 @@ contains
     !---------------------------------------------------------------------------
 
     !$omp parallel do
+    !$acc kernels copyin(temp, pres, CVtot, Rtot) copyout(ein, dens)
     do j = JS, JE
     do i = IS, IE
        call ATMOS_THERMODYN_temp_pres2ein_0D( temp(i,j), pres(i,j), CVtot(i,j), Rtot(i,j), & ! [IN]
                                               ein(i,j), dens(i,j)                          ) ! [OUT]
     end do
     end do
+    !$acc end kernels
 
     return
   end subroutine ATMOS_THERMODYN_temp_pres2ein_2D
@@ -1373,6 +1437,7 @@ contains
     !---------------------------------------------------------------------------
 
     !$omp parallel do
+    !$acc kernels copyin(temp, pres, CVtot, Rtot) copyout(ein, dens)
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -1381,6 +1446,7 @@ contains
     end do
     end do
     end do
+    !$acc end kernels
 
     return
   end subroutine ATMOS_THERMODYN_temp_pres2ein_3D
@@ -1390,6 +1456,8 @@ contains
   subroutine ATMOS_THERMODYN_ein_pres2enth_0D( &
        Ein, PRES, DENS, &
        ENTH             )
+    !$acc routine seq
+    implicit none
     real(RP), intent(in) :: Ein
     real(RP), intent(in) :: PRES
     real(RP), intent(in) :: DENS
@@ -1406,6 +1474,8 @@ contains
        KA, KS, KE, &
        Ein, PRES, DENS, &
        ENTH             )
+    !$acc routine vector
+    implicit none
     integer, intent(in) :: KA, KS, KE
 
     real(RP), intent(in) :: Ein (KA)
@@ -1428,6 +1498,7 @@ contains
        IA, IS, IE, JA, JS, JE, &
        Ein, PRES, DENS, &
        ENTH             )
+    implicit none
     integer, intent(in) :: IA, IS, IE
     integer, intent(in) :: JA, JS, JE
 
@@ -1440,12 +1511,14 @@ contains
     integer :: i, j
 
     !$omp parallel do
+    !$acc kernels copyin(Ein, PRES, DENS) copyout(ENTH)
     do j = JS, JE
     do i = IS, IE
        call ATMOS_THERMODYN_ein_pres2enth_0D( Ein(i,j), PRES(i,j), DENS(i,j), & ! [IN]
                                               ENTH(i,j)                       ) ! [OUT]
     end do
     end do
+    !$acc end kernels
 
     return
   end subroutine ATMOS_THERMODYN_ein_pres2enth_2D
@@ -1454,6 +1527,7 @@ contains
        KA, KS, KE, IA, IS, IE, JA, JS, JE, &
        Ein, PRES, DENS, &
        ENTH             )
+    implicit none
     integer, intent(in) :: KA, KS, KE
     integer, intent(in) :: IA, IS, IE
     integer, intent(in) :: JA, JS, JE
@@ -1467,6 +1541,7 @@ contains
     integer :: k, i, j
 
     !$omp parallel do
+    !$acc kernels copyin(Ein, PRES, DENS) copyout(ENTH)
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -1475,6 +1550,7 @@ contains
     end do
     end do
     end do
+    !$acc end kernels
 
     return
   end subroutine ATMOS_THERMODYN_ein_pres2enth_3D

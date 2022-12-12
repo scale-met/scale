@@ -1350,6 +1350,8 @@ contains
     integer :: fid
     character(len=H_LONG) :: fname
 
+    logical :: converged
+
     integer :: ierr
 
     namelist / PARAM_MKINIT_SOUNDING / &
@@ -1448,7 +1450,8 @@ contains
                                pott(:), qv(:), qc(:),                                  & ! [IN]
                                pres_sfc(1,1), pott_sfc(1,1), qv_sfc(1,1), qc_sfc(1,1), & ! [IN]
                                CZ(:), FZ(:),                                           & ! [IN]
-                               DENS(:), temp(:), pres(:), temp_sfc(1,1)                ) ! [OUT]
+                               DENS(:), temp(:), pres(:), temp_sfc(1,1),               & ! [OUT]
+                               converged                                               ) ! [OUT]
 
     return
   end subroutine read_sounding
@@ -1648,7 +1651,6 @@ contains
     ! Bubble
     character(len=H_SHORT) :: SHAPE_PTracer = 'BUBBLE' ! BUBBLE or RECT
     real(RP)               :: BBL_PTracer   = 1.0_RP   ! extremum of passive tracer in bubble [kg/kg]
-
     namelist / PARAM_MKINIT_TRACERBUBBLE / &
        SFC_THETA, &
        SFC_PRES,  &
@@ -1659,6 +1661,8 @@ contains
        BBL_PTracer
 
     real(RP), pointer :: shapeFac(:,:,:) => null()
+
+    logical :: converged
 
     integer :: k, i, j
     integer :: ierr
@@ -1696,7 +1700,8 @@ contains
                                pott(:,1,1), qv(:,1,1), qc(:,1,1),                      & ! [IN]
                                pres_sfc(1,1), pott_sfc(1,1), qv_sfc(1,1), qc_sfc(1,1), & ! [IN]
                                CZ(:), FZ(:),                                           & ! [IN]
-                               DENS(:,1,1), temp(:,1,1), pres(:,1,1), temp_sfc(1,1)    ) ! [OUT]
+                               DENS(:,1,1), temp(:,1,1), pres(:,1,1), temp_sfc(1,1),   & ! [OUT]
+                               converged                                               ) ! [OUT]
 
     do j = JSB, JEB
     do i = ISB, IEB
@@ -1765,6 +1770,8 @@ contains
 
     real(RP) :: RovCP
 
+    logical :: converged
+
     integer :: ierr
     integer :: k, i, j
     !---------------------------------------------------------------------------
@@ -1803,7 +1810,8 @@ contains
                                pott(:,1,1), qv(:,1,1), qc(:,1,1),                      & ! [IN]
                                pres_sfc(1,1), pott_sfc(1,1), qv_sfc(1,1), qc_sfc(1,1), & ! [IN]
                                CZ(:), FZ(:),                                           & ! [IN]
-                               DENS(:,1,1), temp(:,1,1), pres(:,1,1), temp_sfc(1,1)    ) ! [OUT]
+                               DENS(:,1,1), temp(:,1,1), pres(:,1,1), temp_sfc(1,1),   & ! [OUT]
+                               converged                                               ) ! [OUT]
 
     do j = 1, JA
     do i = 1, IA
@@ -1912,6 +1920,8 @@ contains
        ENV_BVF,   &
        BBL_THETA
 
+    logical :: converged
+
     integer :: ierr
     integer :: k, i, j
     !---------------------------------------------------------------------------
@@ -1947,7 +1957,8 @@ contains
                                pott(:,1,1), qv(:,1,1), qc(:,1,1),                      & ! [IN]
                                pres_sfc(1,1), pott_sfc(1,1), qv_sfc(1,1), qc_sfc(1,1), & ! [IN]
                                CZ(:), FZ(:),                                           & ! [IN]
-                               DENS(:,1,1), temp(:,1,1), pres(:,1,1), temp_sfc(1,1)    ) ! [OUT]
+                               DENS(:,1,1), temp(:,1,1), pres(:,1,1), temp_sfc(1,1),   & ! [OUT]
+                               converged                                               ) ! [OUT]
 
     do j = JSB, JEB
     do i = ISB, IEB
@@ -1998,6 +2009,8 @@ contains
 
     real(RP) :: fact
 
+    logical :: converged
+
     integer :: ierr
     integer :: k, i, j
     !---------------------------------------------------------------------------
@@ -2037,7 +2050,8 @@ contains
                                pott(:,1,1), qv(:,1,1), qc(:,1,1),                      & ! [IN]
                                pres_sfc(1,1), pott_sfc(1,1), qv_sfc(1,1), qc_sfc(1,1), & ! [IN]
                                CZ(:), FZ(:),                                           & ! [IN]
-                               DENS(:,1,1), temp(:,1,1), pres(:,1,1), temp_sfc(1,1)    ) ! [OUT]
+                               DENS(:,1,1), temp(:,1,1), pres(:,1,1), temp_sfc(1,1),   & ! [OUT]
+                               converged                                               ) ! [OUT]
 
     do j = JSB, JEB
     do i = ISB, IEB
@@ -2105,6 +2119,8 @@ contains
        RANDOM_V,     &
        RANDOM_RH
 
+    logical :: converged
+
     integer :: ierr
     integer :: k, i, j
     !---------------------------------------------------------------------------
@@ -2141,7 +2157,8 @@ contains
                                pott(:,1,1), qv(:,1,1), qc(:,1,1),                      & ! [IN]
                                pres_sfc(1,1), pott_sfc(1,1), qv_sfc(1,1), qc_sfc(1,1), & ! [IN]
                                CZ(:), FZ(:),                                           & ! [IN]
-                               DENS(:,1,1), temp(:,1,1), pres(:,1,1), temp_sfc(1,1)    ) ! [OUT]
+                               DENS(:,1,1), temp(:,1,1), pres(:,1,1), temp_sfc(1,1),   & ! [OUT]
+                               converged                                               ) ! [OUT]
 
     if ( .not. ATMOS_HYDROMETEOR_dry ) then
        ! calc QV from RH
@@ -2448,6 +2465,8 @@ contains
     real(RP) :: temp_vfunc
     real(RP) :: geopot_hvari
 
+    logical :: converged
+
     integer :: ierr
     integer :: k, i, j
 
@@ -2542,7 +2561,8 @@ contains
                                   pott(:,i,j), qv(:,i,j), qc(:,i,j),                      & ! [IN]
                                   pres_sfc(i,j), pott_sfc(i,j), qv_sfc(i,j), qc_sfc(i,j), & ! [IN]
                                   REAL_CZ(:,i,j), REAL_FZ(:,i,j),                         & ! [IN]
-                                  DENS(:,i,j), temp(:,i,j), pres(:,i,j), temp_sfc(i,j)    ) ! [OUT]
+                                  DENS(:,i,j), temp(:,i,j), pres(:,i,j), temp_sfc(i,j),   & ! [OUT]
+                                  converged                                               ) ! [OUT]
     enddo
     enddo
 
@@ -2612,6 +2632,8 @@ contains
        ENV_L3_TLAPS, &
        BBL_THETA
 
+    logical :: converged
+
     integer :: ierr
     integer :: k, i, j
     !---------------------------------------------------------------------------
@@ -2658,7 +2680,8 @@ contains
                                pott(:,1,1), qv(:,1,1), qc(:,1,1),                      & ! [IN]
                                pres_sfc(1,1), pott_sfc(1,1), qv_sfc(1,1), qc_sfc(1,1), & ! [IN]
                                CZ(:), FZ(:),                                           & ! [IN]
-                               DENS(:,1,1), temp(:,1,1), pres(:,1,1), temp_sfc(1,1)    ) ! [OUT]
+                               DENS(:,1,1), temp(:,1,1), pres(:,1,1), temp_sfc(1,1),   & ! [OUT]
+                               converged                                               ) ! [OUT]
 
     ! calc QV from RH
     call SATURATION_psat_all( temp_sfc(1,1), & ! [IN]
@@ -2684,7 +2707,8 @@ contains
                                pott(:,1,1), qv(:,1,1), qc(:,1,1),                      & ! [IN]
                                pres_sfc(1,1), pott_sfc(1,1), qv_sfc(1,1), qc_sfc(1,1), & ! [IN]
                                CZ(:), FZ(:),                                           & ! [IN]
-                               DENS(:,1,1), temp(:,1,1), pres(:,1,1), temp_sfc(1,1)    ) ! [OUT]
+                               DENS(:,1,1), temp(:,1,1), pres(:,1,1), temp_sfc(1,1),   & ! [OUT]
+                               converged                                               ) ! [OUT]
 
     do j = JSB, JEB
     do i = ISB, IEB
@@ -4532,6 +4556,8 @@ contains
        ENV_L3_TLAPS, &
        BBL_THETA
 
+    logical :: converged
+
     integer :: ierr
     integer :: k, i, j
     !---------------------------------------------------------------------------
@@ -4579,7 +4605,8 @@ contains
                                pott(:,1,1), qv(:,1,1), qc(:,1,1),                      & ! [IN]
                                pres_sfc(1,1), pott_sfc(1,1), qv_sfc(1,1), qc_sfc(1,1), & ! [IN]
                                CZ(:), FZ(:),                                           & ! [IN]
-                               DENS(:,1,1), temp(:,1,1), pres(:,1,1), temp_sfc(1,1)    ) ! [OUT]
+                               DENS(:,1,1), temp(:,1,1), pres(:,1,1), temp_sfc(1,1),   & ! [OUT]
+                               converged                                               ) ! [OUT]
 
     ! calc QV from RH
     call SATURATION_psat_all( temp_sfc(1,1), psat_sfc(1,1) ) ! [IN], [OUT]
@@ -4605,7 +4632,8 @@ contains
                                pott(:,1,1), qv(:,1,1), qc(:,1,1),                      & ! [IN]
                                pres_sfc(1,1), pott_sfc(1,1), qv_sfc(1,1), qc_sfc(1,1), & ! [IN]
                                CZ(:), FZ(:),                                           & ! [IN]
-                               DENS(:,1,1), temp(:,1,1), pres(:,1,1), temp_sfc(1,1)    ) ! [OUT]
+                               DENS(:,1,1), temp(:,1,1), pres(:,1,1), temp_sfc(1,1),   & ! [OUT]
+                               converged                                               ) ! [OUT]
 
     do j = JSB, JEB
     do i = ISB, IEB
