@@ -569,7 +569,6 @@ contains
             num_diff(:,:,:,I_MOMZ,ZDIR), & ! (in)
             CDZ, FDZ, dtrk, &
             IIS, IIE, JJS, JJE ) ! (in)
-       !$acc update device( qflx_hi(:,:,:,ZDIR) )
        PROFILE_STOP("hevi_momz_qflxhi_z")
 
        PROFILE_START("hevi_momz_qflxj")
@@ -579,13 +578,11 @@ contains
             GSQRT(:,:,:,I_XYZ), J13G(:,:,:,I_XYZ), MAPF(:,:,:,I_XY), & ! (in)
             CDZ, TwoD, &
             IIS, IIE, JJS, JJE ) ! (in)
-       !$acc update device( qflx_J13 )
        call ATMOS_DYN_FVM_fluxJ23_XYW( qflx_J23, & ! (out)
             MOMY, MOMZ, DENS, & ! (in)
             GSQRT(:,:,:,I_XYZ), J23G(:,:,:,I_XYZ), MAPF(:,:,:,I_XY), & ! (in)
             CDZ, TwoD, &
             IIS, IIE, JJS, JJE ) ! (in)
-       !$acc update device( qflx_J23 )
        PROFILE_STOP("hevi_momz_qflxj")
 
        ! at (u, y, w)
@@ -597,7 +594,6 @@ contains
             num_diff(:,:,:,I_MOMZ,XDIR), & ! (in)
             CDZ, TwoD, & ! (in)
             IIS, IIE, JJS, JJE ) ! (in)
-       !$acc update device( qflx_hi(:,:,:,XDIR) )
        PROFILE_STOP("hevi_momz_qflxhi_x")
        end if
 
@@ -609,7 +605,6 @@ contains
             num_diff(:,:,:,I_MOMZ,YDIR), & ! (in)
             CDZ, TwoD, & ! (in)
             IIS, IIE, JJS, JJE ) ! (in)
-       !$acc update device( qflx_hi(:,:,:,YDIR) )
        PROFILE_STOP("hevi_momz_qflxhi_y")
 
        !--- update momentum(z)
@@ -737,35 +732,28 @@ contains
 #ifdef DEBUG
        k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
-       !$acc update host( POTT )
 
        ! at (x, y, w)
-       !$acc update host( mflx_hi(:,:,:,ZDIR) )
        call ATMOS_DYN_FVM_fluxZ_XYZ( tflx_hi(:,:,:,ZDIR), & ! (out)
             mflx_hi(:,:,:,ZDIR), POTT, GSQRT(:,:,:,I_XYW), & ! (in)
             num_diff(:,:,:,I_RHOT,ZDIR), & ! (in)
             CDZ, & ! (in)
             IIS, IIE, JJS, JJE ) ! (in)
-       !$acc update device( tflx_hi(:,:,:,ZDIR) )
 
        ! at (u, y, z)
-       !$acc update host( mflx_hi(:,:,:,XDIR) )
        if ( .not. TwoD ) &
        call ATMOS_DYN_FVM_fluxX_XYZ( tflx_hi(:,:,:,XDIR), & ! (out)
             mflx_hi(:,:,:,XDIR), POTT, GSQRT(:,:,:,I_UYZ), & ! (in)
             num_diff(:,:,:,I_RHOT,XDIR), & ! (in)
             CDZ, & ! (in)
             IIS, IIE, JJS, JJE ) ! (in)
-       !$acc update device( tflx_hi(:,:,:,XDIR) )
 
        ! at (x, v, z)
-       !$acc update host( mflx_hi(:,:,:,YDIR) )
        call ATMOS_DYN_FVM_fluxY_XYZ( tflx_hi(:,:,:,YDIR), & ! (out)
             mflx_hi(:,:,:,YDIR), POTT, GSQRT(:,:,:,I_XVZ), & ! (in)
             num_diff(:,:,:,I_RHOT,YDIR), & ! (in)
             CDZ, & ! (in)
             IIS, IIE, JJS, JJE ) ! (in)
-       !$acc update device( tflx_hi(:,:,:,YDIR) )
 
 
        PROFILE_START("hevi_st")
@@ -1039,20 +1027,17 @@ contains
             num_diff(:,:,:,I_MOMX,ZDIR), & ! (in)
             CDZ, TwoD, & ! (in)
             IIS, IIE, JJS, JJE ) ! (in)
-       !$acc update device( qflx_hi(:,:,:,ZDIR) )
        if ( .not. TwoD ) &
        call ATMOS_DYN_FVM_fluxJ13_UYZ( qflx_J13, & ! (out)
             MOMX, MOMX, DENS, & ! (in)
             GSQRT(:,:,:,I_UYZ), J13G(:,:,:,I_UYW), MAPF(:,:,:,I_UY), & ! (in)
             CDZ, TwoD, & ! (in)
             IIS, IIE, JJS, JJE ) ! (in)
-       !$acc update device( qflx_J13 )
        call ATMOS_DYN_FVM_fluxJ23_UYZ( qflx_J23, & ! (out)
             MOMY, MOMX, DENS, & ! (in)
             GSQRT(:,:,:,I_UYZ), J23G(:,:,:,I_UYW), MAPF(:,:,:,I_UY), & ! (in)
             CDZ, TwoD, & ! (in)
             IIS, IIE, JJS, JJE ) ! (in)
-       !$acc update device( qflx_J23 )
 
        ! at (x, y, z)
        ! note that x-index is added by -1
@@ -1063,7 +1048,6 @@ contains
             num_diff(:,:,:,I_MOMX,XDIR), & ! (in)
             CDZ, TwoD, & ! (in)
             IIS, IIE, JJS, JJE ) ! (in)
-       !$acc update device( qflx_hi(:,:,:,XDIR) )
 
        ! at (u, v, z)
        call ATMOS_DYN_FVM_fluxY_UYZ( qflx_hi(:,:,:,YDIR), & ! (out)
@@ -1072,7 +1056,6 @@ contains
             num_diff(:,:,:,I_MOMX,YDIR), & ! (in)
             CDZ, TwoD, & ! (in)
             IIS, IIE, JJS, JJE ) ! (in)
-       !$acc update device( qflx_hi(:,:,:,YDIR) )
 
        !--- update momentum(x)
        if ( TwoD ) then
@@ -1214,20 +1197,17 @@ contains
             num_diff(:,:,:,I_MOMY,ZDIR), & ! (in)
             CDZ, TwoD, & ! (in)
             IIS, IIE, JJS, JJE ) ! (in)
-       !$acc update device( qflx_hi(:,:,:,ZDIR) )
        if ( .not. TwoD ) &
        call ATMOS_DYN_FVM_fluxJ13_XVZ( qflx_J13, & ! (out)
             MOMX, MOMY, DENS, & ! (in)
             GSQRT(:,:,:,I_XVZ), J13G(:,:,:,I_XVW), MAPF(:,:,:,I_XV), & ! (in)
             CDZ, TwoD, & ! (in)
             IIS, IIE, JJS, JJE ) ! (in)
-       !$acc update device( qflx_J13 )
        call ATMOS_DYN_FVM_fluxJ23_XVZ( qflx_J23, & ! (out)
             MOMY, MOMY, DENS, & ! (in)
             GSQRT(:,:,:,I_XVZ), J23G(:,:,:,I_XVW), MAPF(:,:,:,I_XV), & ! (in)
             CDZ, TwoD, & ! (in)
             IIS, IIE, JJS, JJE ) ! (in)
-       !$acc update device( qflx_J23 )
 
        ! at (u, v, z)
        if ( .not. TwoD ) &
@@ -1237,7 +1217,6 @@ contains
             num_diff(:,:,:,I_MOMY,XDIR), & ! (in)
             CDZ, TwoD, & ! (in)
             IIS, IIE, JJS, JJE ) ! (in)
-       !$acc update device( qflx_hi(:,:,:,XDIR) )
 
        ! at (x, y, z)
        ! note that y-index is added by -1
@@ -1247,7 +1226,6 @@ contains
             num_diff(:,:,:,I_MOMY,YDIR), & ! (in
             CDZ, TwoD, & ! (in)
             IIS, IIE, JJS, JJE ) ! (in)
-       !$acc update device( qflx_hi(:,:,:,YDIR) )
 
        !--- update momentum(y)
        if ( TwoD ) then
