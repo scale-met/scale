@@ -91,6 +91,7 @@ module scale_atmos_phy_tb_smg
 
   real(RP), private              :: tke_fact
 
+
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
@@ -103,6 +104,7 @@ contains
     use scale_const, only: &
        KARMAN  => CONST_KARMAN
     implicit none
+    !!!$acc routine(mixlen)
 
     real(RP), intent(in) :: FZ  (0:KA,IA,JA)
     real(RP), intent(in) :: CZ  (  KA,IA,JA)
@@ -129,7 +131,7 @@ contains
     integer :: ierr
     integer :: k, i, j
     !---------------------------------------------------------------------------
-
+    !!$acc data copyin(FZ, CZ, CDX, CDY, MAPF) 
     LOG_NEWLINE
     LOG_INFO("ATMOS_PHY_TB_smg_setup",*) 'Setup'
     LOG_INFO("ATMOS_PHY_TB_smg_setup",*) 'Smagorinsky-type Eddy Viscocity Model'
@@ -139,7 +141,6 @@ contains
     ATMOS_PHY_TB_SMG_consistent_tke = .true.
 
     if ( present(horizontal) ) ATMOS_PHY_TB_SMG_horizontal = horizontal
-
     !--- read namelist
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_ATMOS_PHY_TB_SMG,iostat=ierr)
@@ -159,6 +160,7 @@ contains
 
     allocate( lambda0(KA,IA,JA) )
     allocate( lambda (KA,IA,JA) )
+    !!$acc enter data create(lambda0,lambda)
 
 #ifdef DEBUG
     lambda0(:,:,:) = UNDEF
@@ -166,6 +168,8 @@ contains
 #endif
     if ( ATMOS_PHY_TB_SMG_horizontal ) then
        !$omp parallel do collapse(2)
+       !$acc kernels
+       !!$acc loop independent collapse(3)
        do j = JS-1, JE+1
        do i = IS-1, IE+1
        do k = KS, KE
@@ -174,6 +178,8 @@ contains
        enddo
        enddo
        enddo
+       !$acc end kernels
+
 #ifdef DEBUG
        i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
@@ -182,6 +188,8 @@ contains
        ATMOS_PHY_TB_SMG_backscatter    = .false.
     else
        !$omp parallel do collapse(2)
+       !$acc kernels
+       !!$acc loop independent collapse(3)
        do j = JS-1, JE+1
        do i = IS-1, IE+1
        do k = KS, KE
@@ -192,12 +200,14 @@ contains
        enddo
        enddo
        enddo
+       !$acc end kernels
 #ifdef DEBUG
        i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
-
        if ( ATMOS_PHY_TB_SMG_bottom ) then
           !$omp parallel do collapse(2)
+          !$acc kernels
+          !!$acc loop independent collapse(3)
           do j = JS-1, JE+1
           do i = IS-1, IE+1
           do k = KS, KE
@@ -205,11 +215,14 @@ contains
           enddo
           enddo
           enddo
+          !$acc end kernels
 #ifdef DEBUG
           i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
        else
           !$omp parallel do collapse(2)
+          !$acc kernels
+          !!$acc loop independent collapse(3)
           do j = JS-1, JE+1
           do i = IS-1, IE+1
           do k = KS, KE
@@ -217,6 +230,7 @@ contains
           enddo
           enddo
           enddo
+          !$acc end kernels
 #ifdef DEBUG
           i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
@@ -229,6 +243,7 @@ contains
     else
        tke_fact = 0.0_RP ! neglect
     end if
+    !!$acc end data
 
     return
   end subroutine ATMOS_PHY_TB_smg_setup
@@ -267,6 +282,7 @@ contains
        calc_tend_momx     => ATMOS_PHY_TB_calc_tend_momx,     &
        calc_tend_momy     => ATMOS_PHY_TB_calc_tend_momy,     &
        calc_flux_phi      => ATMOS_PHY_TB_calc_flux_phi
+
     use scale_atmos_hydrometeor, only: &
        I_QV
     use scale_random, only: &
@@ -410,10 +426,11 @@ contains
          GSQRT, J13G, J23G, J33G, MAPF ) ! (in)
 
     if ( ATMOS_PHY_TB_SMG_backscatter ) then
-
        call RANDOM_normal( random(:,:,:) )
        ! 1:2:1 filter
        !$omp parallel do collapse(2)
+       !$acc kernels
+       !!$acc loop independent collapse(3)
        do j = JS-1, JE+1
        do i = IS-1, IE+1
           do k = KS+1, KE-1
@@ -432,10 +449,13 @@ contains
                               + random(KE,i,j+1) + random(KE,i,j-1) ) / 7.0_RP
        end do
        end do
+       !$acc end kernels
 
        call RANDOM_normal( random(:,:,:) )
        ! 1:2:1 filter
        !$omp parallel do collapse(2)
+       !$acc kernels
+       !!$acc loop independent collapse(3)
        do j = JS-1, JE+1
        do i = IS-1, IE+1
           do k = KS+1, KE-1
@@ -454,10 +474,13 @@ contains
                               + random(KE,i,j+1) + random(KE,i,j-1) ) / 7.0_RP
        end do
        end do
+       !$acc end kernels
 
        call RANDOM_normal( random(:,:,:) )
        ! 1:2:1 filter
        !$omp parallel do collapse(2)
+       !$acc kernels
+       !!$acc loop independent collapse(3)
        do j = JS-1, JE+1
        do i = IS-1, IE+1
           do k = KS+1, KE-1
@@ -476,10 +499,13 @@ contains
                               + random(KE,i,j+1) + random(KE,i,j-1) ) / 7.0_RP
        end do
        end do
+       !$acc end kernels
 
        call RANDOM_normal( random(:,:,:) )
        ! 1:2:1 filter
        !$omp parallel do collapse(2)
+       !$acc kernels
+       !!$acc loop independent collapse(3)
        do j = JS-1, JE+1
        do i = IS-1, IE+1
           do k = KS+1, KE-1
@@ -498,10 +524,13 @@ contains
                               + random(KE,i,j+1) + random(KE,i,j-1) ) / 7.0_RP
        end do
        end do
+       !$acc end kernels
 
        call RANDOM_normal( random(:,:,:) )
        ! 1:2:1 filter
        !$omp parallel do collapse(2)
+       !$acc kernels
+       !!$acc loop independent collapse(3)
        do j = JS-1, JE+1
        do i = IS-1, IE+1
           do k = KS+1, KE-1
@@ -520,10 +549,13 @@ contains
                               + random(KE,i,j+1) + random(KE,i,j-1) ) / 7.0_RP
        end do
        end do
+       !$acc end kernels
 
        call RANDOM_normal( random(:,:,:) )
        ! 1:2:1 filter
        !$omp parallel do collapse(2)
+       !$acc kernels
+       !!$acc loop independent collapse(3)
        do j = JS-1, JE+1
        do i = IS-1, IE+1
           do k = KS+1, KE-1
@@ -542,16 +574,18 @@ contains
                               + random(KE,i,j+1) + random(KE,i,j-1) ) / 7.0_RP
        end do
        end do
-
+       !$acc end kernels
 
     end if
 
 
     !$omp parallel do collapse(2) &
     !$omp private(fm,Rf,lambda_r,leOvleo5,C1,C2,D2,e,et,fact,dz,dx,dy)
+    !!$acc kernels !!!! long time consuming
+    !!$acc private(fm,Rf,lambda_r,leOvleo5,C1,C2,D2,e,et,fact,dz,dx,dy)
     do j = JS-1, JE+1
+    !!$acc private(fm,Rf,lambda_r,leOvleo5,C1,C2,D2,e,et,fact,dz,dx,dy)
     do i = IS-1, IE+1
-
        ! Ri = N^2 / |S|^2, N^2 = g / theta * dtheta/dz
        do k = KS, KE
           Ri(k,i,j) = N2(k,i,j) / max(S2(k,i,j), EPS)
@@ -559,6 +593,7 @@ contains
 
        ! Nu
        ! Pr = Nu / Kh = fm / fh
+       !!$acc loop private(fm,Rf)
        do k = KS, KE
           if ( Ri(k,i,j) < 0.0_RP ) then ! stable
              fm(k) = sqrt( 1.0_RP - FmC * Ri(k,i,j) )
@@ -587,8 +622,9 @@ contains
 
        enddo
 
-       if ( ATMOS_PHY_TB_SMG_backscatter ) then
 
+       if ( ATMOS_PHY_TB_SMG_backscatter ) then
+          !!$acc loop private(leOvleo5,C1,C2,D2,e,et,fact,dz,dx,dy)
           do k = KS, KE
              lambda_r(k) = min( 1.8_RP * lambda0(k,i,j), lambda_r(k) )
              leOvleo5 = ( lambda_r(k) / lambda0(k,i,j) )**5
@@ -630,11 +666,10 @@ contains
 
     enddo
     enddo
+    !!$acc end kernels !!!! long time consuming
 #ifdef DEBUG
     i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
-
-
 
     do JJS = JS, JE, JBLOCK
     JJE = JJS+JBLOCK-1
@@ -644,7 +679,6 @@ contains
        !##### momentum equation (z) #####
 
        !$omp parallel private(i,j,k)
-
        ! (cell center)
        if ( ATMOS_PHY_TB_SMG_horizontal ) then
           !$omp workshare
@@ -652,6 +686,8 @@ contains
           !$omp end workshare nowait
        else
           !$omp do collapse(2)
+          !!$acc kernels !!!! long time consuming
+          !!$acc loop independent collapse(3)
           do j = JJS, JJE
           do i = IIS, IIE
           do k = KS+1, KE-1
@@ -671,10 +707,13 @@ contains
           enddo
           enddo
           !$omp end do nowait
+          !!$acc end kernels
 #ifdef DEBUG
           i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
           !$omp do
+          !!$acc kernels
+          !!$acc loop independent collapse(2)
           do j = JJS, JJE
           do i = IIS, IIE
              ! momentum will not be conserved
@@ -684,12 +723,15 @@ contains
           enddo
           enddo
           !$omp end do nowait
+          !!$acc end kernels
 #ifdef DEBUG
           i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
        end if
        ! (y edge)
        !$omp do collapse(2)
+       !!$acc kernels
+       !!$acc loop independent collapse(3)
        do j = JJS,   JJE
        do i = IIS-1, IIE
        do k = KS, KE-1
@@ -712,11 +754,14 @@ contains
        enddo
        enddo
        !$omp end do nowait
+       !!$acc end kernels
 #ifdef DEBUG
        i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
        ! (x edge)
        !$omp do collapse(2)
+       !!$acc kernels
+       !!$acc loop independent collapse(3)
        do j = JJS-1, JJE
        do i = IIS,   IIE
        do k = KS, KE-1
@@ -739,6 +784,7 @@ contains
        enddo
        enddo
        !$omp end do nowait
+       !!$acc end kernels
 #ifdef DEBUG
        i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
@@ -756,7 +802,6 @@ contains
           !$omp private (ap,d)
           do j = JJS, JJE
           do i = IIS, IIE
-
              ap = - FourOverThree * dt &
                   * DENS(KS+1,i,j)*Nu(KS+1,i,j) &
                   * RCDZ(KS+1) / GSQRT(KS+1,i,j,I_XYZ)
@@ -806,6 +851,8 @@ contains
           !$omp end workshare nowait
        else
           !$omp do collapse(2)
+          !!$acc kernels
+          !!$acc loop independent collapse(3)
           do j = JJS, JJE
           do i = IIS, IIE
           do k = KS, KE-1
@@ -828,10 +875,13 @@ contains
           enddo
           enddo
           !$omp end do nowait
+          !!$acc end kernels
 #ifdef DEBUG
           i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
           !$omp do
+          !!$acc kernels
+          !!$acc loop independent collapse(2)
           do j = JJS, JJE
           do i = IIS, IIE
              qflx_sgs_momx(KS-1,i,j,ZDIR) = 0.0_RP ! bottom boundary
@@ -839,6 +889,7 @@ contains
           enddo
           enddo
           !$omp end do nowait
+          !!$acc end kernels
 #ifdef DEBUG
           i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
@@ -846,6 +897,8 @@ contains
 
        ! (cell center)
        !$omp do collapse(2)
+       !!$acc kernels
+       !!$acc loop independent collapse(3)
        do j = JJS, JJE
        do i = IIS, IIE+1
        do k = KS, KE
@@ -865,12 +918,15 @@ contains
        enddo
        enddo
        !$omp end do nowait
+       !!$acc end kernels
 #ifdef DEBUG
        i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
 
        ! (z edge)
        !$omp do collapse(2)
+       !!$acc kernels
+       !!$acc loop independent collapse(3)
        do j = JJS-1, JJE
        do i = IIS,   IIE
        do k = KS, KE
@@ -893,6 +949,7 @@ contains
        enddo
        enddo
        !$omp end do nowait
+       !!$acc end kernels
 #ifdef DEBUG
        i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
@@ -966,6 +1023,8 @@ contains
           !$omp end workshare nowait
        else
           !$omp do collapse(2)
+          !!$acc kernels
+          !!$acc loop independent collapse(3)
           do j = JJS, JJE
           do i = IIS, IIE
           do k = KS, KE-1
@@ -988,10 +1047,13 @@ contains
           enddo
           enddo
           !$omp end do nowait
+          !!$acc end kernels
 #ifdef DEBUG
           i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
           !$omp do
+          !!$acc kernels
+          !!$acc loop independent collapse(2)
           do j = JJS, JJE
           do i = IIS, IIE
              qflx_sgs_momy(KS-1,i,j,ZDIR) = 0.0_RP ! bottom boundary
@@ -999,6 +1061,7 @@ contains
           enddo
           enddo
           !$omp end do nowait
+          !!$acc end kernels
 #ifdef DEBUG
           i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
@@ -1006,6 +1069,8 @@ contains
 
        ! (z edge)
        !$omp do collapse(2)
+       !!$acc kernels
+       !!$acc loop independent collapse(3)
        do j = JJS,   JJE
        do i = IIS-1, IIE
        do k = KS, KE
@@ -1028,12 +1093,15 @@ contains
        enddo
        enddo
        !$omp end do nowait
+       !!$acc end kernels
 #ifdef DEBUG
        i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
 
        ! (z-x plane)
        !$omp do collapse(2)
+       !!$acc kernels
+       !!$acc loop independent collapse(3)
        do j = JJS, JJE+1
        do i = IIS, IIE
        do k = KS, KE
@@ -1053,6 +1121,7 @@ contains
        enddo
        enddo
        !$omp end do nowait
+       !!$acc end kernels
 #ifdef DEBUG
        i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
@@ -1123,14 +1192,18 @@ contains
 
           ! MOMZ : dfy/dx - dfx/dy
           !$omp do collapse(2)
+          !!$acc kernels
+          !!$acc loop independent collapse(2)
           do j = JJS, JJE
           do i = IIS, IIE
+             !!$acc loop independent
              do k = KS+1, KE-1
                 flxz(k) = J13G(k,i,j,I_XYZ) * random_my(k,i,j) &
                         - J23G(k,i,j,I_XYZ) * random_mx(k,i,j)
              end do
              flxz(KS) = 0.0_RP
              flxz(KE) = 0.0_RP
+             !!$acc loop independent
              do k = KS, KE-1
                 MOMZ_t(k,i,j) = ( ( GSQRT(k,i+1,j,I_XYW) * ( f2h(k,i+1,j,1) * random_my(k+1,i+1,j) &
                                                            + f2h(k,i+1,j,2) * random_my(k,i+1,j) ) &
@@ -1149,11 +1222,15 @@ contains
           end do
           end do
           !$omp end do nowait
+          !!$acc end kernels
 
           ! MOMX : dfz/dy - dfy/dz
           !$omp do collapse(2)
+          !!$acc kernels
+          !!$acc loop independent collapse(2)
           do j = JJS, JJE
           do i = IIS, IIE
+             !!$acc loop independent
              do k = KS, KE-1
                 flxz(k) = J23G(k,i,j,I_UYW) * ( f2h(k,i+1,j,1) * random_mz(k+1,i+1,j) + f2h(k,i,j+1,2) * random_mz(k,i+1,j) &
                                               + f2h(k,i  ,j,1) * random_mz(k+1,i  ,j) + f2h(k,i  ,j,2) * random_mz(k,i  ,j) ) * 0.5_RP &
@@ -1162,6 +1239,7 @@ contains
              end do
              flxz(KS-1) = 0.0_RP
              flxz(KE  ) = 0.0_RP
+             !!$acc loop independent
              do k = KS, KE
                 MOMX_t(k,i,j) = ( ( GSQRT(k,i,j+1,I_UYZ) * ( random_mz(k,i+1,j+1) + random_mz(k,i,j+1) ) * 0.5_RP &
                                   - GSQRT(k,i,j-1,I_UYZ) * ( random_mz(k,i+1,j-1) + random_mz(k,i,j-1) ) * 0.5_RP ) / ( FDY(j) + FDY(j-1) ) * MAPF(i,j,2,I_UY) &
@@ -1171,11 +1249,15 @@ contains
           end do
           end do
           !$omp end do nowait
+          !!$acc end kernels
 
           ! MOMY : dfx/dz - dfz/dx
           !$omp do collapse(2)
+          !!$acc kernels
+          !!$acc loop independent collapse(2)
           do j = JJS, JJE
           do i = IIS, IIE
+             !!$acc loop independent
              do k = KS, KE-1
                 flxz(k) = J33G * ( f2h(k,i,j+1,1) * random_mx(k+1,i,j+1) + f2h(k,i,j+1,2) * random_mx(k,i,j+1) &
                                  + f2h(k,i,j  ,1) * random_mx(k+1,i,j  ) + f2h(k,i,j  ,2) * random_mx(k,i,j  ) ) * 0.5_RP &
@@ -1184,6 +1266,7 @@ contains
              end do
              flxz(KS-1) = 0.0_RP
              flxz(KE  ) = 0.0_RP
+             !!$acc loop independent
              do k = KS, KE
                 MOMY_t(k,i,j) = ( ( flxz(k) - flxz(k-1) ) * RCDZ(k) &
                                   - ( GSQRT(k,i+1,j,I_XVZ) * ( random_mz(k,i+1,j+1) + random_mz(k,i+1,j) ) * 0.5_RP &
@@ -1193,6 +1276,7 @@ contains
           end do
           end do
           !$omp end do nowait
+          !!$acc end kernels
 
           !$omp end parallel
 
@@ -1202,6 +1286,8 @@ contains
 
 !OCL XFILL
           !$omp do collapse(2)
+          !!$acc kernels !!!! long time consuming
+          !!$acc loop independent collapse(3)
           do j = JJS, JJE
           do i = IIS, IIE
           do k = KS, KE
@@ -1210,9 +1296,12 @@ contains
           end do
           end do
           !$omp end do nowait
+          !!$acc end kernels !!!! long time consuming
 
 !OCL XFILL
           !$omp do collapse(2)
+          !!$acc kernels !!!! long time consuming
+          !!$acc loop independent collapse(3)
           do j = JJS, JJE
           do i = IIS, IIE
           do k = KS, KE
@@ -1221,9 +1310,12 @@ contains
           end do
           end do
           !$omp end do nowait
+          !!$acc end kernels !!!! long time consuming
 
 !OCL XFILL
           !$omp do collapse(2)
+          !!$acc kernels !!!! long time consuming
+          !!$acc loop independent collapse(3)
           do j = JJS, JJE
           do i = IIS, IIE
           do k = KS, KE
@@ -1232,6 +1324,7 @@ contains
           end do
           end do
           !$omp end do nowait
+          !!$acc end kernels !!!! long time consuming
 
           !$omp end parallel
 
@@ -1245,7 +1338,6 @@ contains
           !$omp private (ap,d)
           do j = JJS, JJE
           do i = IIS, IIE
-
              ap = - dt * 0.25_RP * ( DENS(KS,i,j)+DENS(KS+1,i,j) ) &
                                  * ( Kh(KS,i,j)+Kh(KS+1,i,j) ) &
                                  * RFDZ(KS) / GSQRT(KS,i,j,I_XYW)
@@ -1281,9 +1373,11 @@ contains
        if ( ATMOS_PHY_TB_SMG_backscatter ) then
 
           !$omp parallel do collapse(2)
+          !!$acc kernels
+          !!$acc loop independent collapse(2)
           do j = JJS-1, JJE+1
           do i = IIS-1, IIE+1
-
+             !!$acc loop independent
              do k = KS+1, KE-1
                 dd(k,i,j) = sqrt( ( ( POTT(k+1,i,j) - POTT(k-1,i,j) ) * J33G / ( FDZ(k) + FDZ(k-1) ) )**2 &
                                 + ( ( ( GSQRT(k,i+1,j,I_XYZ)*POTT(k,i+1,j) - GSQRT(k,i-1,j,I_XYZ)*POTT(k,i-1,j) ) / ( FDX(i) + FDX(i-1) ) &
@@ -1307,11 +1401,15 @@ contains
 
           end do
           end do
+          !!$acc end kernels
 
           !$omp parallel do collapse(2) &
           !$omp private(flxz)
+          !!$acc kernels
+          !!$acc loop independent collapse(2)
           do j = JJS, JJE
           do i = IIS, IIE
+             !!$acc loop independent
              do k = KS, KE-1
                 flxz(k) = J33G * ( f2h(k,i,j,1) * random_qz(k+1,i,j) * dd(k+1,i,j) + f2h(k,i,j,2) * random_qz(k,i,j) * dd(k,i,j) ) &
                         + J13G(k,i,j,I_XYW) * ( f2h(k,i,j,1) * random_qx(k+1,i,j) * dd(k+1,i,j) + f2h(k,i,j,2) * random_qx(k,i,j) * dd(k,i,j) ) &
@@ -1319,6 +1417,7 @@ contains
              end do
              flxz(KS-1) = 0.0_RP
              flxz(KE  ) = 0.0_RP
+             !!$acc loop independent
              do k = KS, KE
                 RHOT_t(k,i,j) = ( ( flxz(k) - flxz(k-1) ) * RCDZ(k) &
                                 + ( GSQRT(k,i+1,j,I_XYZ) * random_qx(k,i+1,j) * dd(k,i+1,j) - GSQRT(k,i-1,j,I_XYZ) * random_qx(k,i-1,j) * dd(k,i-1,j) ) / ( FDX(i) + FDX(i-1) ) * MAPF(i,j,1,I_XY) &
@@ -1327,10 +1426,13 @@ contains
              end do
           end do
           end do
+          !!$acc end kernels
 
        else
 
           !$omp parallel do collapse(2)
+          !!$acc kernels
+          !!$acc loop independent collapse(3)
 !OCL XFILL
           do j = JJS, JJE
           do i = IIS, IIE
@@ -1339,11 +1441,13 @@ contains
           end do
           end do
           end do
+          !!$acc end kernels
 
        end if
 
     enddo
     enddo
+
 
     !##### Tracers #####
     do iq = 1, QA
@@ -1368,9 +1472,11 @@ contains
           if ( ATMOS_PHY_TB_SMG_backscatter .and. iq == I_QV ) then
 
              !$omp parallel do collapse(2)
+             !!$acc kernels
+             !!$acc loop independent collapse(2)
              do j = JJS-1, JJE+1
              do i = IIS-1, IIE+1
-
+                !!$acc loop independent 
                 do k = KS+1, KE-1
                    dd(k,i,j) = sqrt( ( ( QTRC(k+1,i,j,iq) - QTRC(k-1,i,j,iq) ) * J33G / ( FDZ(k) + FDZ(k-1) ) )**2 &
                                    + ( ( ( GSQRT(k,i+1,j,I_XYZ)*QTRC(k,i+1,j,iq) - GSQRT(k,i-1,j,I_XYZ)*QTRC(k,i-1,j,iq) ) / ( FDX(i) + FDX(i-1) ) &
@@ -1394,11 +1500,15 @@ contains
 
              end do
              end do
+             !!$acc end kernels
 
              !$omp parallel do collapse(2) &
              !$omp private (flxz)
+             !!$acc kernels
+             !!$acc loop independent collapse(2)
              do j = JJS, JJE
              do i = IIS, IIE
+                !!$acc loop independent
                 do k = KS, KE-1
                    flxz(k) = J33G * ( f2h(k,i,j,1) * random_qz(k+1,i,j) * dd(k+1,i,j) + f2h(k,i,j,2) * random_qz(k,i,j) * dd(k,i,j) ) &
                            + J13G(k,i,j,I_XYW) * ( f2h(k,i,j,1) * random_qx(k+1,i,j) * dd(k+1,i,j) + f2h(k,i,j,2) * random_qx(k,i,j) * dd(k,i,j) ) &
@@ -1406,6 +1516,7 @@ contains
                 end do
                 flxz(KS-1) = 0.0_RP
                 flxz(KE  ) = 0.0_RP
+                !!$acc loop independent
                 do k = KS, KE
                    RHOQ_t(k,i,j,iq) = ( ( flxz(k) - flxz(k-1) ) * RCDZ(k) &
                                       + ( GSQRT(k,i+1,j,I_XYZ) * random_qx(k,i+1,j) * dd(k,i+1,j) - GSQRT(k,i-1,j,I_XYZ) * random_qx(k,i-1,j) * dd(k,i-1,j) ) / ( FDX(i) + FDX(i-1) ) * MAPF(i,j,1,I_XY) &
@@ -1414,10 +1525,13 @@ contains
                 end do
              end do
              end do
+             !!$acc end kernels
 
           else
 
              !$omp parallel do collapse(2)
+             !!$acc kernels
+             !!$acc loop independent collapse(3)
 !OCL XFILL
              do j = JJS, JJE
              do i = IIS, IIE
@@ -1426,6 +1540,7 @@ contains
              end do
              end do
              end do
+             !!$acc end kernels
 
           end if
 
@@ -1451,6 +1566,8 @@ contains
     real(RP), intent(in) :: dy
     real(RP), intent(in) :: filter_fact
     real(RP) :: mixlen ! (out)
+    !$acc routine seq
+    !$acc routine(fact)
 
     mixlen = fact(dz, dx, dy) * filter_fact * ( dz * dx * dy )**OneOverThree ! Scotti et al. (1993)
 
@@ -1468,7 +1585,10 @@ contains
     real(RP), parameter :: eot = 11.0_RP/3.0_RP
     real(RP), parameter :: tof = -3.0_RP/4.0_RP
     real(RP) :: a1, a2, b1, b2, dmax
-
+    !$acc routine seq
+    !$acc routine(p1)
+    !$acc routine(p2)
+    !$acc routine(p3)
 
     dmax = max(dz, dx, dy)
     if ( dz == dmax ) then
@@ -1493,6 +1613,7 @@ contains
   function p1(z)
     real(RP), intent(in) :: z
     real(RP) :: p1 ! (out)
+    !$acc routine seq
 
     p1 = 2.5_RP * p2(z) - 1.5_RP * sin(z) * cos(z)**TwoOverThree
     return
@@ -1500,6 +1621,7 @@ contains
   function p2(z)
     real(RP), intent(in) :: z
     real(RP) :: p2 ! (out)
+    !$acc routine seq
 
     p2 = 0.986_RP * z + 0.073_RP * z**2 - 0.418_RP * z**3 + 0.120_RP * z**4
     return
@@ -1507,6 +1629,7 @@ contains
   function p3(z)
     real(RP), intent(in) :: z
     real(RP) :: p3 ! (out)
+    !$acc routine seq
 
     p3 = 0.976_RP * z + 0.188_RP * z**2 - 1.169_RP * z**3 + 0.755_RP * z**4 - 0.151_RP * z**5
     return
