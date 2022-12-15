@@ -134,6 +134,7 @@ contains
     ATMOS_REFSTATE_dens(:,:,:) = UNDEF
     ATMOS_REFSTATE_pott(:,:,:) = UNDEF
     ATMOS_REFSTATE_qv  (:,:,:) = UNDEF
+    !$acc enter data create(ATMOS_REFSTATE_pres, ATMOS_REFSTATE_temp, ATMOS_REFSTATE_dens, ATMOS_REFSTATE_pott, ATMOS_REFSTATE_qv)
 
     allocate( ATMOS_REFSTATE1D_pres(KA) )
     allocate( ATMOS_REFSTATE1D_temp(KA) )
@@ -145,6 +146,7 @@ contains
     ATMOS_REFSTATE1D_dens(:) = UNDEF
     ATMOS_REFSTATE1D_pott(:) = UNDEF
     ATMOS_REFSTATE1D_qv  (:) = UNDEF
+    !$acc enter data create(ATMOS_REFSTATE1D_pres, ATMOS_REFSTATE1D_temp, ATMOS_REFSTATE1D_dens, ATMOS_REFSTATE1D_pott, ATMOS_REFSTATE1D_qv)
 
     LOG_NEWLINE
     LOG_INFO("ATMOS_REFSTATE_setup",*) 'Reference state settings'
@@ -220,6 +222,9 @@ contains
 
   subroutine ATMOS_REFSTATE_finalize
 
+    !$acc exit data delete(ATMOS_REFSTATE_pres, ATMOS_REFSTATE_temp, ATMOS_REFSTATE_dens, ATMOS_REFSTATE_pott, ATMOS_REFSTATE_qv)
+    !$acc exit data delete(ATMOS_REFSTATE1D_pres, ATMOS_REFSTATE1D_temp, ATMOS_REFSTATE1D_dens, ATMOS_REFSTATE1D_pott, ATMOS_REFSTATE1D_qv)
+
     deallocate( ATMOS_REFSTATE_pres )
     deallocate( ATMOS_REFSTATE_temp )
     deallocate( ATMOS_REFSTATE_dens )
@@ -291,6 +296,9 @@ contains
        call PRC_abort
     endif
 
+    !$acc update device(ATMOS_REFSTATE_pres, ATMOS_REFSTATE_temp, ATMOS_REFSTATE_dens, ATMOS_REFSTATE_pott, ATMOS_REFSTATE_qv)
+    !$acc update device(ATMOS_REFSTATE1D_pres, ATMOS_REFSTATE1D_temp, ATMOS_REFSTATE1D_dens, ATMOS_REFSTATE1D_pott, ATMOS_REFSTATE1D_qv)
+
     call ATMOS_REFSTATE_calc3D( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
                                 CZ(:), FZ(:), REAL_CZ(:,:,:), REAL_FZ(:,:,:), REAL_PHI(:,:,:) )
 
@@ -311,6 +319,9 @@ contains
     first = .false.
 
     if ( ATMOS_REFSTATE_OUT_BASENAME /= '' ) then
+
+       !$acc update host(ATMOS_REFSTATE_pres, ATMOS_REFSTATE_temp, ATMOS_REFSTATE_dens, ATMOS_REFSTATE_pott, ATMOS_REFSTATE_qv)
+       !$acc update host(ATMOS_REFSTATE1D_pres, ATMOS_REFSTATE1D_temp, ATMOS_REFSTATE1D_dens, ATMOS_REFSTATE1D_pott, ATMOS_REFSTATE1D_qv)
 
        LOG_NEWLINE
        LOG_INFO("ATMOS_REFSTATE_write",*) 'Output reference state profile '
@@ -451,6 +462,8 @@ contains
     ATMOS_REFSTATE1D_pott(:) = pott(:)
     ATMOS_REFSTATE1D_qv  (:) = qv(:)
 
+    !$acc update device(ATMOS_REFSTATE1D_pres, ATMOS_REFSTATE1D_temp, ATMOS_REFSTATE1D_dens, ATMOS_REFSTATE1D_pott, ATMOS_REFSTATE1D_qv)
+
     call ATMOS_REFSTATE_calc3D( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
                                 CZ(:), FZ(:), REAL_CZ(:,:,:), REAL_FZ(:,:,:), REAL_PHI(:,:,:) )
 
@@ -558,6 +571,8 @@ contains
     ATMOS_REFSTATE1D_pott(:) = pott(:)
     ATMOS_REFSTATE1D_qv  (:) = qv(:)
 
+    !$acc update device(ATMOS_REFSTATE1D_pres, ATMOS_REFSTATE1D_temp, ATMOS_REFSTATE1D_dens, ATMOS_REFSTATE1D_pott, ATMOS_REFSTATE1D_qv)
+
     call ATMOS_REFSTATE_calc3D( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
                                 CZ(:), FZ(:), REAL_CZ(:,:,:), REAL_FZ(:,:,:), REAL_PHI(:,:,:) )
 
@@ -573,6 +588,7 @@ contains
     integer :: k, i, j
     !---------------------------------------------------------------------------
 
+    !$omp parallel do
     do k = 1, KA
        ATMOS_REFSTATE1D_pres(k) = 0.0_RP
        ATMOS_REFSTATE1D_temp(k) = 0.0_RP
@@ -581,6 +597,9 @@ contains
        ATMOS_REFSTATE1D_qv  (k) = 0.0_RP
     end do
 
+    !$acc update device(ATMOS_REFSTATE1D_pres, ATMOS_REFSTATE1D_temp, ATMOS_REFSTATE1D_dens, ATMOS_REFSTATE1D_pott, ATMOS_REFSTATE1D_qv)
+
+    !$omp parallel do collapse(3)
     do j = 1, JA
     do i = 1, IA
     do k = 1, KA
@@ -592,6 +611,8 @@ contains
     enddo
     enddo
     enddo
+
+    !$acc update device(ATMOS_REFSTATE_pres, ATMOS_REFSTATE_temp, ATMOS_REFSTATE_dens, ATMOS_REFSTATE_pott, ATMOS_REFSTATE_qv)
 
     return
   end subroutine ATMOS_REFSTATE_generate_zero
@@ -643,6 +664,8 @@ contains
 
     if ( force_ .or. ( nowsec - last_updated >= ATMOS_REFSTATE_UPDATE_DT ) ) then
 
+       !$acc data copyin(DENS, POTT, TEMP, PRES, QV, CZ, FZ, FDZ, RCDZ, REAL_CZ, REAL_FZ, REAL_PHI, AREA) create(work)
+
        LOG_INFO("ATMOS_REFSTATE_update",*) 'update reference state'
 
        call INTERP_VERT_xi2z( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
@@ -680,6 +703,8 @@ contains
                                         work(:,:,:), area(:,:), & ! [IN]
                                         ATMOS_REFSTATE1D_qv(:)  ) ! [OUT]
 
+!       !$acc update host(ATMOS_REFSTATE1D_pres, ATMOS_REFSTATE1D_temp, ATMOS_REFSTATE1D_dens, ATMOS_REFSTATE1D_pott, ATMOS_REFSTATE1D_qv)
+
        do k = KE-1, KS, -1 ! fill undefined value
           if( ATMOS_REFSTATE1D_dens(k) <= 0.0_RP ) ATMOS_REFSTATE1D_dens(k) = ATMOS_REFSTATE1D_dens(k+1)
           if( ATMOS_REFSTATE1D_temp(k) <= 0.0_RP ) ATMOS_REFSTATE1D_temp(k) = ATMOS_REFSTATE1D_temp(k+1)
@@ -690,6 +715,8 @@ contains
 
        call ATMOS_REFSTATE_smoothing( KA, KS, KE, FDZ(:), RCDZ(:), ATMOS_REFSTATE1D_pott(:) )
        call ATMOS_REFSTATE_smoothing( KA, KS, KE, FDZ(:), RCDZ(:), ATMOS_REFSTATE1D_qv(:) )
+
+       !$acc update device(ATMOS_REFSTATE1D_pres, ATMOS_REFSTATE1D_temp, ATMOS_REFSTATE1D_dens, ATMOS_REFSTATE1D_pott, ATMOS_REFSTATE1D_qv)
 
        call ATMOS_REFSTATE_calc3D( KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
                                    CZ(:), FZ(:), REAL_CZ(:,:,:), REAL_FZ(:,:,:), REAL_PHI(:,:,:) )
@@ -713,6 +740,8 @@ contains
 
        ! output reference profile
        call ATMOS_REFSTATE_write
+
+       !$acc end data
 
     endif
 
@@ -758,6 +787,18 @@ contains
     real(RP) :: qc  (KA,IA,JA)
     real(RP) :: dz  (KA,IA,JA)
 
+    real(RP) :: pott1(IA,JA)
+    real(RP) :: pott2(IA,JA)
+    real(RP) :: dens1(IA,JA)
+    real(RP) :: dens2(IA,JA)
+    real(RP) :: temp1(IA,JA)
+    real(RP) :: pres1(IA,JA)
+    real(RP) :: qv1  (IA,JA)
+    real(RP) :: qv2  (IA,JA)
+    real(RP) :: qc1  (IA,JA)
+    real(RP) :: qc2  (IA,JA)
+    real(RP) :: dz1  (IA,JA)
+
     real(RP) :: dens_toa_1D
     real(RP) :: temp_toa_1D
     real(RP) :: pres_toa_1D
@@ -771,14 +812,19 @@ contains
     integer :: k, i, j
     !---------------------------------------------------------------------------
 
+    !$acc data copyin(CZ, FZ, REAL_CZ, REAL_FZ, REAL_PHI) &
+    !$acc      create(dens, temp, pres, pott, qv, qc, dz, work, pott1, pott2, dens1, dens2, temp1, pres1, qv1, qv2, qc1, qc2, dz1)
+
     RovCP = Rdry / CPdry
 
     !--- potential temperature
+    !$acc kernels
     do j = JS, JE
     do i = IS, IE
        work(:,i,j) = ATMOS_REFSTATE1D_pott(:)
     enddo
     enddo
+    !$acc end kernels
 
     call INTERP_VERT_z2xi( KA, KS, KE, IA, IS, IE, JA, JS, JE, & ! [IN]
                            REAL_CZ(:,:,:), CZ(:), & ! [IN]
@@ -786,11 +832,13 @@ contains
                            pott(:,:,:)            ) ! [OUT]
 
     !--- water vapor
+    !$acc kernels
     do j = JS, JE
     do i = IS, IE
        work(:,i,j) = ATMOS_REFSTATE1D_qv(:)
     enddo
     enddo
+    !$acc end kernels
 
     call INTERP_VERT_z2xi( KA, KS, KE, IA, IS, IE, JA, JS, JE, & ! [IN]
                            REAL_CZ(:,:,:), CZ(:), & ! [IN]
@@ -822,6 +870,7 @@ contains
     end if
 
     ! build down density from TOA (3D)
+    !$acc kernels
     do j = JS, JE
     do i = IS, IE
        dz(KS-1,i,j) = REAL_CZ(KS,i,j) - REAL_FZ(KS-1,i,j) ! distance from surface to cell center
@@ -831,7 +880,9 @@ contains
        dz(KE,i,j) = REAL_FZ(KE,i,j) - REAL_CZ(KE,i,j) ! distance from cell center to TOA
     enddo
     enddo
+    !$acc end kernels
 
+    !$acc kernels
     do j = JS, JE
     do i = IS, IE
        dens(KE+1,i,j) = dens_toa_1D
@@ -841,21 +892,50 @@ contains
        qv  (KE+1,i,j) = qv  (KE,i,j)
     enddo
     enddo
+    !$acc end kernels
 
+    !$acc kernels
     do j = JS, JE
     do i = IS, IE
        pott(KS-1,i,j) = pott(KS,i,j)
        qv  (KS-1,i,j) = qv  (KS,i,j)
     enddo
     enddo
+    !$acc end kernels
 
+    !$acc kernels
     qc(:,:,:) = 0.0_RP
+    !$acc end kernels
 
+
+    !$acc kernels
+    do j = JS, JE
+    do i = IS, IE
+       pott1(i,j) = pott(KE,i,j)
+       qv1  (i,j) = qv  (KE,i,j)
+       qc1  (i,j) = qc  (KE,i,j)
+       dens2(i,j) = dens(KE+1,i,j)
+       pott2(i,j) = pott(KE+1,i,j)
+       qv2  (i,j) = qv  (KE+1,i,j)
+       qc2  (i,j) = qc  (KE+1,i,j)
+       dz1  (i,j) = dz  (KE,i,j)
+    end do
+    end do
+    !$acc end kernels
     call HYDROSTATIC_buildrho_atmos_rev( IA, IS, IE, JA, JS, JE, &
-                                         pott(KE,:,:), qv(KE,:,:), qc(KE,:,:),                       & ! [IN]
-                                         dens(KE+1,:,:), pott(KE+1,:,:), qv(KE+1,:,:), qc(KE+1,:,:), & ! [IN]
-                                         dz(KE,:,:), KE+1,                                           & ! [IN]
-                                         dens(KE  ,:,:), temp(KE  ,:,:), pres(KE  ,:,:)              ) ! [OUT]
+                                         pott1(:,:), qv1(:,:), qc1(:,:),             & ! [IN]
+                                         dens2(:,:), pott2(:,:), qv2(:,:), qc2(:,:), & ! [IN]
+                                         dz1(:,:), KE+1,                             & ! [IN]
+                                         dens1(:,:), temp1(:,:), pres1(:,:)          ) ! [OUT]
+    !$acc kernels
+    do j = JS, JE
+    do i = IS, IE
+       dens(KE,i,j) = dens1(i,j)
+       temp(KE,i,j) = temp1(i,j)
+       pres(KE,i,j) = pres1(i,j)
+    end do
+    end do
+    !$acc end kernels
 
     call HYDROSTATIC_buildrho_atmos_rev( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
                                          pott(:,:,:), qv(:,:,:), qc(:,:,:), & ! [IN]
@@ -863,6 +943,7 @@ contains
                                          dens(:,:,:),                       & ! [INOUT]
                                          temp(:,:,:), pres(:,:,:)           ) ! [OUT]
 
+    !$acc kernels
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -874,8 +955,10 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
 
     ! boundary condition
+    !$acc kernels
     do j = JS, JE
     do i = IS, IE
 
@@ -903,6 +986,7 @@ contains
        ATMOS_REFSTATE_pott(KE+2:KA,i,j) = UNDEF
     enddo
     enddo
+    !$acc end kernels
 
     call COMM_vars8( ATMOS_REFSTATE_dens(:,:,:), 1 )
     call COMM_vars8( ATMOS_REFSTATE_temp(:,:,:), 2 )
@@ -914,6 +998,10 @@ contains
     call COMM_wait ( ATMOS_REFSTATE_pres(:,:,:), 3, .false. )
     call COMM_wait ( ATMOS_REFSTATE_pott(:,:,:), 4, .false. )
     call COMM_wait ( ATMOS_REFSTATE_qv  (:,:,:), 5, .false. )
+
+    !$acc end data
+
+    !$acc update host(ATMOS_REFSTATE_pres, ATMOS_REFSTATE_temp, ATMOS_REFSTATE_dens, ATMOS_REFSTATE_pott, ATMOS_REFSTATE_qv)
 
     return
   end subroutine ATMOS_REFSTATE_calc3D
