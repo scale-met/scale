@@ -115,31 +115,43 @@ contains
     allocate( INTERP_xi2z_coef(KA,  IA,JA) )
     allocate( INTERP_z2xi_idx (KA,2,IA,JA) )
     allocate( INTERP_z2xi_coef(KA,  IA,JA) )
+    !$acc enter data create(INTERP_xi2z_idx, INTERP_xi2z_coef, INTERP_z2xi_idx, INTERP_z2xi_coef)
+
+    !$acc data copyin(Z, Xi)
 
     !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
     !$omp shared(JA,IA,KA,KS,KE,Xi,Z,INTERP_xi2z_idx,INTERP_xi2z_coef)
+    !$acc kernels
+    !$acc loop independent
     do j = 1, JA
+    !$acc loop independent
     do i = 1, IA
        call INTERP_factor1d( KA, KS, KE, KA, KS, KE, &
                              Z(:,i,j), Xi(:),           & ! (in)
-                             INTERP_xi2z_idx (:,:,i,j), & ! (in)
+                             INTERP_xi2z_idx (:,:,i,j), & ! (out)
                              INTERP_xi2z_coef(:,  i,j), & ! (out)
                              flag_extrap = .true.       ) ! (in)
     enddo
     enddo
+    !$acc end kernels
 
     !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
     !$omp shared(JA,IA,KA,KS,KE,Z,Xi,INTERP_z2xi_idx,INTERP_z2xi_coef)
+    !$acc kernels
+    !$acc loop independent
     do j = 1, JA
+    !$acc loop independent
     do i = 1, IA
        call INTERP_factor1d( KA, KS, KE, KA, KS, KE, &
                              Xi(:), Z(:,i,j),           & ! (in)
-                             INTERP_z2xi_idx (:,:,i,j), & ! (in)
+                             INTERP_z2xi_idx (:,:,i,j), & ! (out)
                              INTERP_z2xi_coef(:,  i,j), & ! (out)
                              flag_extrap = .true.       ) ! (in)
     enddo
     enddo
+    !$acc end kernels
 
+    !$acc end data
 
     ! half level
 
@@ -147,31 +159,43 @@ contains
     allocate( INTERP_xih2zh_coef(KA,  IA,JA) )
     allocate( INTERP_zh2xih_idx (KA,2,IA,JA) )
     allocate( INTERP_zh2xih_coef(KA,  IA,JA) )
+    !$acc enter data create(INTERP_xih2zh_idx, INTERP_xih2zh_coef, INTERP_zh2xih_idx, INTERP_zh2xih_coef)
+
+    !$acc data copyin(Zh, Xih)
 
     !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
     !$omp shared(JA,IA,KA,KS,KE,Xih,Zh,INTERP_xih2zh_idx,INTERP_xih2zh_coef)
+    !$acc kernels
+    !$acc loop independent
     do j = 1, JA
+    !$acc loop independent
     do i = 1, IA
        call INTERP_factor1d( KA, KS-1, KE, KA, KS-1, KE, &
                              Zh(1:,i,j), Xih(1:),         & ! (in)
-                             INTERP_xih2zh_idx (:,:,i,j), & ! (in)
+                             INTERP_xih2zh_idx (:,:,i,j), & ! (out)
                              INTERP_xih2zh_coef(:,  i,j), & ! (out)
                              flag_extrap = .false.        ) ! (in)
     enddo
     enddo
+    !$acc end kernels
 
     !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
     !$omp shared(JA,IA,KA,KS,KE,Xih,Zh,INTERP_zh2xih_idx,INTERP_zh2xih_coef)
+    !$acc kernels
+    !$acc loop independent
     do j = 1, JA
+    !$acc loop independent
     do i = 1, IA
        call INTERP_factor1d( KA, KS-1, KE, KA, KS-1, KE, &
                              Xih(1:), Zh(1:,i,j),         & ! (in)
-                             INTERP_zh2xih_idx (:,:,i,j), & ! (in)
+                             INTERP_zh2xih_idx (:,:,i,j), & ! (out)
                              INTERP_zh2xih_coef(:,  i,j), & ! (out)
                              flag_extrap = .true.         ) ! (in)
     enddo
     enddo
+    !$acc end kernels
 
+    !$acc end data
 
     return
   end subroutine INTERP_VERT_setcoef
@@ -203,7 +227,10 @@ contains
     !$omp shared(KA,KS,KE,IS,IE,JS,JE) &
     !$omp shared(Xi,Z,var,var_Z) &
     !$omp shared(INTERP_xi2z_idx,INTERP_xi2z_coef)
+    !$acc kernels copyin(Xi, Z, var) copyout(var_Z)
+    !$acc loop independent
     do j = JS, JE
+    !$acc loop independent
     do i = IS, IE
        call INTERP_interp1d( KA, KS, KE, KA, KS, KE, &
                              INTERP_xi2z_idx (:,:,i,j), & ! (in)
@@ -213,6 +240,7 @@ contains
                              var_Z(:,i,j)               ) ! (out)
     end do
     end do
+    !$acc end kernels
 
     return
   end subroutine INTERP_VERT_xi2z
@@ -244,7 +272,10 @@ contains
     !$omp shared(KA,KS,KE,IS,IE,JS,JE) &
     !$omp shared(Z,Xi,var,var_Xi) &
     !$omp shared(INTERP_z2xi_idx,INTERP_z2xi_coef)
+    !$acc kernels copyin(Z, Xi, var) copyout(var_Xi)
+    !$acc loop independent
     do j = JS, JE
+    !$acc loop independent
     do i = IS, IE
        call INTERP_interp1d( KA, KS, KE, KA, KS, KE, &
                              INTERP_z2xi_idx (:,:,i,j), & ! (in)
@@ -254,6 +285,7 @@ contains
                              var_Xi(:,i,j)              ) ! (out)
     end do
     end do
+    !$acc end kernels
 
     return
   end subroutine INTERP_VERT_z2xi
@@ -285,7 +317,10 @@ contains
     !$omp shared(KA,KS,KE,IS,IE,JS,JE) &
     !$omp shared(Xih,Zh,var,var_Z) &
     !$omp shared(INTERP_xih2zh_idx,INTERP_xih2zh_coef)
+    !$acc kernels copyin(Xih, Zh, var) copyout(var_Z)
+    !$acc loop independent
     do j = JS, JE
+    !$acc loop independent
     do i = IS, IE
        call INTERP_interp1d( KA, KS-1, KE, KA, KS-1, KE, &
                              INTERP_xih2zh_idx (:,:,i,j), & ! (in)
@@ -295,6 +330,7 @@ contains
                              var_Z(:,i,j)                 ) ! (out)
     enddo
     enddo
+    !$acc end kernels
 
     return
   end subroutine INTERP_VERT_xih2zh
@@ -326,7 +362,10 @@ contains
     !$omp shared(KA,KS,KE,IS,IE,JS,JE) &
     !$omp shared(Zh,Xih,var,var_Xi) &
     !$omp shared(INTERP_zh2xih_idx,INTERP_zh2xih_coef)
+    !$acc kernels copyin(Zh, Xih, var) copyout(var_Xi)
+    !$acc loop independent
     do j = JS, JE
+    !$acc loop independent
     do i = IS, IE
        call INTERP_interp1d( KA, KS-1, KE, KA, KS-1, KE, &
                              INTERP_zh2xih_idx (:,:,i,j), & ! (in)
@@ -336,6 +375,7 @@ contains
                              var_Xi(:,i,j)                ) ! (out)
     enddo
     enddo
+    !$acc end kernels
 
     return
   end subroutine INTERP_VERT_zh2xih
@@ -355,10 +395,12 @@ contains
     allocate( INTERP_xi2p_coef (Kpres,  IA,JA) )
     allocate( INTERP_xih2p_idx (Kpres,2,IA,JA) )
     allocate( INTERP_xih2p_coef(Kpres,  IA,JA) )
+    !$acc enter data create(INTERP_xi2p_idx, INTERP_xi2p_coef, INTERP_xih2p_idx, INTERP_xih2p_coef)
 
     allocate( LnPRES (KA,IA,JA) )
     allocate( LnPRESh(KA,IA,JA) )
     allocate( LnPaxis(Kpres)    )
+    !$acc enter data create(LnPRES, LnPRESh, LnPaxis)
 
     return
   end subroutine INTERP_VERT_alloc_pres
@@ -369,11 +411,13 @@ contains
     implicit none
     !---------------------------------------------------------------------------
 
+    !$acc exit data delete(INTERP_xi2p_idx, INTERP_xi2p_coef, INTERP_xih2p_idx, INTERP_xih2p_coef)
     deallocate( INTERP_xi2p_idx   )
     deallocate( INTERP_xi2p_coef  )
     deallocate( INTERP_xih2p_idx  )
     deallocate( INTERP_xih2p_coef )
 
+    !$acc exit data delete(LnPRES, LnPRESh, LnPaxis)
     deallocate( LnPRES  )
     deallocate( LnPRESh )
     deallocate( LnPaxis )
@@ -407,47 +451,60 @@ contains
     integer :: k, i, j
     !---------------------------------------------------------------------------
 
+    !$acc data copyin(PRES, PRESh, SFC_PRES, Paxis)
+
     ! full level
 
 !OCL SERIAL
+    !$acc kernels
     do k = 1, Kpres
        LnPaxis(k) = - log( Paxis(k) )
     end do
+    !$acc end kernels
 
     !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
     !$omp shared(KA,KS,KE,Kpres,IS,IE,JS,JE) &
     !$omp shared(PRES,LnPRES,LnPaxis) &
     !$omp shared(INTERP_xi2p_idx,INTERP_xi2p_coef)
+    !$acc kernels
+    !$acc loop independent
     do j = JS, JE
+    !$acc loop independent
     do i = IS, IE
        do k = KS, KE
           LnPRES(k,i,j) = - log( PRES(k,i,j) )
        end do
        call INTERP_factor1d( KA, KS, KE, Kpres, 1, Kpres, &
                              LnPRES(:,i,j), LnPaxis(:), & ! (in)
-                             INTERP_xi2p_idx (:,:,i,j), & ! (in)
+                             INTERP_xi2p_idx (:,:,i,j), & ! (out)
                              INTERP_xi2p_coef(:,  i,j), & ! (out)
                              flag_extrap = .false.      ) ! (in)
     enddo
     enddo
+    !$acc end kernels
 
     !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
     !$omp shared(KA,KS,KE,Kpres,IS,IE,JS,JE) &
     !$omp shared(PRESh,LnPRESh,LnPaxis) &
     !$omp shared(INTERP_xih2p_idx,INTERP_xih2p_coef)
+    !$acc kernels
+    !$acc loop independent
     do j = JS, JE
+    !$acc loop independent
     do i = IS, IE
        do k = KS-1, KE
           LnPRESh(k,i,j) = - log( PRESh(k,i,j) )
        end do
        call INTERP_factor1d( KA, KS-1, KE, Kpres, 1, Kpres, &
                              LnPRESh(:,i,j), LnPaxis(:), & ! (in)
-                             INTERP_xih2p_idx (:,:,i,j), & ! (in)
+                             INTERP_xih2p_idx (:,:,i,j), & ! (out)
                              INTERP_xih2p_coef(:,  i,j), & ! (out)
                              flag_extrap = .false.       ) ! (in)
     enddo
     enddo
+    !$acc end kernels
 
+    !$acc end data
 
     return
   end subroutine INTERP_VERT_setcoef_pres
@@ -477,7 +534,10 @@ contains
     !$omp shared(KA,KS,KE,Kpres,IS,IE,JS,JE) &
     !$omp shared(LnPRES,LnPaxis,var,var_P) &
     !$omp shared(INTERP_xi2p_idx,INTERP_xi2p_coef)
+    !$acc kernels copyin(var) copyout(var_P)
+    !$acc loop independent
     do j = JS, JE
+    !$acc loop independent
     do i = IS, IE
        call INTERP_interp1d( KA, KS, KE, Kpres, 1, Kpres, &
                              INTERP_xi2p_idx (:,:,i,j), & ! (in)
@@ -487,6 +547,7 @@ contains
                              var_P(:,i,j)               ) ! (out)
     enddo
     enddo
+    !$acc end kernels
 
     return
   end subroutine INTERP_VERT_xi2p
@@ -517,7 +578,10 @@ contains
     !$omp shared(KA,KS,KE,Kpres,IS,IE,JS,JE) &
     !$omp shared(LnPRESh,LnPaxis,var,var_P) &
     !$omp shared(INTERP_xih2p_idx,INTERP_xih2p_coef)
+    !$acc kernels copyin(var) copyout(var_P)
+    !$acc loop independent
     do j = JS, JE
+    !$acc loop independent
     do i = IS, IE
        call INTERP_interp1d( KA, KS-1, KE, Kpres, 1, Kpres, &
                              INTERP_xih2p_idx (:,:,i,j), & ! (in)
@@ -527,6 +591,7 @@ contains
                              var_P(:,i,j)                ) ! (out)
     enddo
     enddo
+    !$acc end kernels
 
     return
   end subroutine INTERP_VERT_xih2p
@@ -537,11 +602,13 @@ contains
     implicit none
     !---------------------------------------------------------------------------
 
+    !$acc exit data delete(INTERP_xi2z_idx, INTERP_xi2z_coef, INTERP_z2xi_idx, INTERP_z2xi_coef)
     deallocate( INTERP_xi2z_idx  )
     deallocate( INTERP_xi2z_coef )
     deallocate( INTERP_z2xi_idx  )
     deallocate( INTERP_z2xi_coef )
 
+    !$acc exit data delete(INTERP_xih2zh_idx, INTERP_xih2zh_coef, INTERP_zh2xih_idx, INTERP_zh2xih_coef)
     deallocate( INTERP_xih2zh_idx  )
     deallocate( INTERP_xih2zh_coef )
     deallocate( INTERP_zh2xih_idx  )
