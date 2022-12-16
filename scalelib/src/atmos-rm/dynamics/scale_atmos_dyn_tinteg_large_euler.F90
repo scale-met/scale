@@ -218,11 +218,25 @@ contains
     real(DP), intent(in)    :: DTL
     real(DP), intent(in)    :: DTS
 
+#ifdef _OPENACC
+    real(RP) :: QTRC0(KA,IA,JA,QA)
+
+    !$acc data copy(QTRC) create(QTRC0)
+
+    !$acc kernels
+    QTRC0(:,:,:,:) = QTRC(:,:,:,:)
+    !$acc end kernels
+#endif
+
     call ATMOS_DYN_tstep_large( &
          DENS, MOMZ, MOMX, MOMY, RHOT, QTRC, PROG,             & ! (inout)
          DENS_av, MOMZ_av, MOMX_av, MOMY_av, RHOT_av, QTRC_av, & ! (inout)
          num_diff, num_diff_q,                                 & ! (out, work)
+#ifdef _OPENACC
+         QTRC0,                                                & ! (in)
+#else
          QTRC,                                                 & ! (in)
+#endif
          DENS_tp, MOMZ_tp, MOMX_tp, MOMY_tp, RHOT_tp, RHOQ_tp, & ! (in)
          CORIOLI,                                              & ! (in)
          CDZ, CDX, CDY, FDZ, FDX, FDY,                         & ! (in)
@@ -247,6 +261,8 @@ contains
          USE_AVERAGE,                                          & ! (in)
          I_QV,                                                 & ! (in)
          DTL, DTS, .true.                                      ) ! (in)
+
+    !$acc end data
 
     return
   end subroutine ATMOS_DYN_tinteg_large_euler

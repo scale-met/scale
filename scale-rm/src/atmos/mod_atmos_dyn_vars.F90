@@ -166,6 +166,8 @@ contains
 
     endif
 
+    !$acc enter data create(PROG)
+
     return
   end subroutine ATMOS_DYN_vars_setup
 
@@ -178,7 +180,10 @@ contains
     LOG_NEWLINE
     LOG_INFO("ATMOS_DYN_vars_finalize",*) 'Finalize'
 
-    if ( allocated( PROG ) ) deallocate( PROG )
+    if ( allocated( PROG ) ) then
+       !$acc exit data delete(PROG)
+       deallocate( PROG )
+    end if
 
     return
   end subroutine ATMOS_DYN_vars_finalize
@@ -195,12 +200,14 @@ contains
     !---------------------------------------------------------------------------
 
     do iv = 1, VA
+       !acc kernels
        do j  = JS, JE
        do i  = IS, IE
           PROG(   1:KS-1,i,j,iv) = PROG(KS,i,j,iv)
           PROG(KE+1:KA,  i,j,iv) = PROG(KE,i,j,iv)
        enddo
        enddo
+       !acc end kernels
 
        call COMM_vars8( PROG(:,:,:,iv), iv )
     enddo
@@ -271,6 +278,7 @@ contains
        do iv = 1, VA
           call FILE_CARTESC_read( restart_fid, VAR_NAME(iv), 'ZXY', & ! [IN]
                                   PROG(:,:,:,iv)                    ) ! [OUT]
+          !$acc update device(PROG(:,:,:,iv))
        enddo
 
        if ( FILE_get_AGGREGATE(restart_fid) ) then
@@ -278,6 +286,7 @@ contains
           ! X/Y halos have been read from file
 
           ! fill K halos
+          !acc kernels copy(PROG)
           do iv = 1, VA
              do j  = 1, JA
              do i  = 1, IA
@@ -286,6 +295,7 @@ contains
              enddo
              enddo
           enddo
+          !acc end kernels
        else
           call ATMOS_DYN_vars_fillhalo
        end if
@@ -412,6 +422,7 @@ contains
 
        call ATMOS_DYN_vars_check
 
+       !$acc update host(PROG)
        do iv = 1, VA
           call FILE_CARTESC_write_var( restart_fid, VAR_ID(iv), PROG(:,:,:,iv), VAR_NAME(iv), 'ZXY' ) ! [IN]
        enddo

@@ -1382,8 +1382,6 @@ contains
     enddo
     enddo
 
-    !$acc end data
-
 #ifdef PROFILE_FIPP
        call fipp_stop()
 #endif
@@ -1418,6 +1416,8 @@ contains
        call FILE_HISTORY_in(cf_t   (:,:,:,2),      'MOMY_t_cf',    'tendency of momentum y (coliolis force) (w/ HIST_TEND)',     'kg/m2/s2', dim_type='ZXYH')
     endif
 #endif
+
+    !$acc end data
 
     return
   end subroutine ATMOS_DYN_Tstep_short_fvm_hevi

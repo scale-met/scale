@@ -344,6 +344,15 @@ contains
 
     if ( do_flag ) then
 
+       !$acc data &
+       !$acc copy(DENS,MOMZ,MOMX,MOMY,RHOT,QTRC) &
+       !$acc copyin(DENS_tp,RHOU_tp,RHOV_tp,RHOT_tp,RHOQ_tp,RHOH_p,MOMZ_tp,MOMX_tp,MOMY_tp, &
+       !$acc        coriolis_f, &
+       !$acc        atmos_boundary_dens,atmos_boundary_velz,atmos_boundary_velx,atmos_boundary_vely,atmos_boundary_pott,atmos_boundary_qtrc, &
+       !$acc        atmos_boundary_alpha_dens,atmos_boundary_alpha_velz,atmos_boundary_alpha_velx,atmos_boundary_alpha_vely,atmos_boundary_alpha_pott,atmos_boundary_alpha_qtrc, &
+       !$acc        atmos_boundary_mflux_offset_x,atmos_boundary_mflux_offset_y)
+
+
        if ( .not. PRC_TwoD ) &
        call COMM_vars8( RHOU_tp, 1 )
        call COMM_vars8( RHOV_tp, 2 )
@@ -356,6 +365,7 @@ contains
        !$omp private(k,i,j) &
        !$omp shared (KA,KS,KE,IS,IE,JS,JE, &
        !$omp         RHOT_tp,RHOH_p,CPtot,EXNER)
+       !$acc kernels
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
@@ -364,6 +374,7 @@ contains
        end do
        end do
        end do
+       !$acc end kernels
        call COMM_vars8( RHOT_tp, 4 )
 
        if ( PRC_TwoD ) then
@@ -371,17 +382,20 @@ contains
           !$omp private(k,j) &
           !$omp shared (KA,KS,KE,IS,JS,JE, &
           !$omp         MOMX_tp,RHOU_tp)
+          !$acc kernels
           do j = JS, JE
           do k = KS, KE
              MOMX_tp(k,IS,j) = MOMX_tp(k,IS,j) + RHOU_tp(k,IS,j)
           end do
           end do
+          !$acc end kernels
        else
           call COMM_wait ( RHOU_tp, 1 )
           !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
           !$omp private(k,i,j) &
           !$omp shared (KA,KS,KE,IS,IE,JS,JE, &
           !$omp         MOMX_tp,RHOU_tp)
+          !$acc kernels
           do j = JS, JE
           do i = IS, IE
           do k = KS, KE
@@ -390,6 +404,7 @@ contains
           end do
           end do
           end do
+          !$acc end kernels
           call COMM_vars8( MOMX_tp, 1 )
        end if
 
@@ -398,6 +413,7 @@ contains
        !$omp private(k,i,j) &
        !$omp shared (KA,KS,KE,IS,IE,JS,JE, &
        !$omp         MOMY_tp,RHOV_tp)
+       !$acc kernels
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
@@ -406,6 +422,7 @@ contains
        end do
        end do
        end do
+       !$acc end kernels
        call COMM_vars8( MOMY_tp, 2 )
 
        call COMM_wait ( MOMZ_tp, 3 )
@@ -464,6 +481,8 @@ contains
                        TIME_DTSEC_ATMOS_DYN                                  ) ! [IN]
 
        call ATMOS_vars_check
+
+       !$acc end data
     endif
 
     return
