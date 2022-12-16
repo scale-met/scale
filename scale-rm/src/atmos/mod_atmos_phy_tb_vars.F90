@@ -115,6 +115,7 @@ contains
     ATMOS_PHY_TB_MOMY_t(:,:,:)   = UNDEF
     ATMOS_PHY_TB_RHOT_t(:,:,:)   = UNDEF
     ATMOS_PHY_TB_RHOQ_t(:,:,:,:) = UNDEF
+    !$acc enter data create(ATMOS_PHY_TB_MOMZ_t, ATMOS_PHY_TB_MOMX_t, ATMOS_PHY_TB_MOMY_t, ATMOS_PHY_TB_RHOT_t, ATMOS_PHY_TB_RHOQ_t)
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -165,6 +166,7 @@ contains
     LOG_NEWLINE
     LOG_INFO("ATMOS_PHY_TB_vars_finalize",*) 'Finalize'
 
+    !$acc exit data delete(ATMOS_PHY_TB_MOMZ_t, ATMOS_PHY_TB_MOMX_t, ATMOS_PHY_TB_MOMY_t, ATMOS_PHY_TB_RHOT_t, ATMOS_PHY_TB_RHOQ_t)
     deallocate( ATMOS_PHY_TB_MOMZ_t )
     deallocate( ATMOS_PHY_TB_MOMX_t )
     deallocate( ATMOS_PHY_TB_MOMY_t )

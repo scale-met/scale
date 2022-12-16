@@ -115,7 +115,14 @@ contains
     integer :: IIS, IIE, JJS, JJE
     integer :: k, i, j
 
+    !$acc data copyout(S33_C, S11_C, S22_C, S31_C, S12_C, S23_C, S12_Z, S23_X, S31_y, S2) &
+    !$acc      copyin(DENS, MOMZ, MOMX, MOMY, GSQRT, J13G, J23G, MAPF, &
+    !$acc             FDZ, FDX, FDY, RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY) &
+    !$acc      create(VELZ_C, VELZ_XY, VELX_C, VELX_YZ, VELY_C, VELY_ZX, &
+    !$acc             WORK_V, WORK_Z, WORK_X, WORK_Y)
+
 #ifdef DEBUG
+    !$acc kernels
     S33_C (:,:,:) = UNDEF
     S11_C (:,:,:) = UNDEF
     S22_C (:,:,:) = UNDEF
@@ -138,10 +145,12 @@ contains
     WORK_Z(:,:,:) = UNDEF
     WORK_X(:,:,:) = UNDEF
     WORK_Y(:,:,:) = UNDEF
+    !$end kernels
 #endif
 
    ! momentum -> velocity
     !$omp parallel do
+    !$acc kernels
     do j = JS-1, JE+1
     do i = IS-1, IE+1
     do k = KS, KE-1
@@ -154,19 +163,23 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
 #ifdef DEBUG
        i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
     !$omp parallel do
+    !$acc kernels
     do j = JS-1, JE+1
     do i = IS-1, IE+1
        VELZ_XY(KE,i,j) = 0.0_RP
     enddo
     enddo
+    !$acc end kernels
 #ifdef DEBUG
        i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
     !$omp parallel do
+    !$acc kernels
     do j = JS-2, JE+2
     do i = IS-2, IE+2
     do k = KS+1, KE
@@ -179,10 +192,12 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
 #ifdef DEBUG
        i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
     !$omp parallel do
+    !$acc kernels
     do j = JS-2, JE+2
     do i = IS-2, IE+2
 #ifdef DEBUG
@@ -191,13 +206,14 @@ contains
 #endif
        VELZ_C(KS,i,j) = 0.5_RP * MOMZ(KS,i,j) / DENS(KS,i,j) ! MOMZ(KS-1,i,j) = 0
     enddo
-
     enddo
+    !$acc end kernels
 #ifdef DEBUG
        i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
 
     !$omp parallel do
+    !$acc kernels
     do j = JS-1, JE+1
     do i = IS-2, IE+1
     do k = KS, KE
@@ -210,19 +226,23 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
 #ifdef DEBUG
        i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
     !$omp parallel do
+    !$acc kernels
     do j = JS-1, JE+1
     do i = IS-2, IE+1
        VELX_YZ(KE+1,i,j) = 0.0_RP
     enddo
     enddo
+    !$acc end kernels
 #ifdef DEBUG
        i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
     !$omp parallel do
+    !$acc kernels
     do j = JS-2, JE+2
     do i = IS-1, IE+2
     do k = KS, KE
@@ -235,12 +255,14 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
 #ifdef DEBUG
        i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
     !$omp parallel do default(none)                   &
     !$omp shared(JS,JE,IS,IE,KS,KE,MOMY,DENS,VELY_ZX) &
     !$omp private(i,j,k) OMP_SCHEDULE_ collapse(2)
+    !$acc kernels
     do j = JS-2, JE+1
     do i = IS-1, IE+1
     do k = KS, KE
@@ -253,19 +275,23 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
 #ifdef DEBUG
        i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
     !$omp parallel do
+    !$acc kernels
     do j = JS-2, JE+1
     do i = IS-1, IE+1
        VELY_ZX(KE+1,i,j) = 0.0_RP
     enddo
     enddo
+    !$acc end kernels
 #ifdef DEBUG
        i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
     !$omp parallel do
+    !$acc kernels
     do j = JS-1, JE+2
     do i = IS-2, IE+2
     do k = KS, KE
@@ -278,6 +304,7 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
 #ifdef DEBUG
        i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
@@ -295,6 +322,7 @@ contains
        ! WORK_Z = VELZ_XY
        ! (y-z plane; u,y,z)
        !$omp parallel do
+       !$acc kernels
        do j = JJS-1, JJE+1
        do i = IIS-1, IIE+1
        do k = KS, KE
@@ -306,20 +334,24 @@ contains
        enddo
        enddo
        enddo
+       !$acc end kernels
 #ifdef DEBUG
        i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
        !$omp parallel do
+       !$acc kernels
        do j = JJS-1, JJE+1
        do i = IIS-1, IIE+1
           WORK_X(KE+1,i,j) = 0.0_RP
        enddo
        enddo
+       !$acc end kernels
 #ifdef DEBUG
        i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
        ! (z-x plane; x,v,z)
        !$omp parallel do
+       !$acc kernels
        do j = JJS-1, JJE+1
        do i = IIS-1, IIE+1
        do k = KS, KE
@@ -331,15 +363,18 @@ contains
        enddo
        enddo
        enddo
+       !$acc end kernels
 #ifdef DEBUG
        i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
        !$omp parallel do
+       !$acc kernels
        do j = JJS-1, JJE+1
        do i = IIS-1, IIE+1
           WORK_Y(KE+1,i,j) = 0.0_RP
        enddo
        enddo
+       !$acc end kernels
 #ifdef DEBUG
        i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
@@ -347,6 +382,7 @@ contains
        ! dw/dz
        ! (cell center; x,y,z)
        !$omp parallel do
+       !$acc kernels
        do j = JJS-1, JJE+1
        do i = IIS-1, IIE+1
        do k = KS+1, KE
@@ -360,10 +396,12 @@ contains
        enddo
        enddo
        enddo
+       !$acc end kernels
 #ifdef DEBUG
        i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
        !$omp parallel do
+       !$acc kernels
        do j = JJS-1, JJE+1
        do i = IIS-1, IIE+1
 #ifdef DEBUG
@@ -375,6 +413,7 @@ contains
                         * J33G / GSQRT(KS,i,j,I_XYZ)
        enddo
        enddo
+       !$acc end kernels
 #ifdef DEBUG
        i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
@@ -382,6 +421,7 @@ contains
        ! 1/2 * dw/dx
        ! (cell center; x,y,z)
        !$omp parallel do
+       !$acc kernels
        do j = JJS-1, JJE+1
        do i = IIS-1, IIE+1
        do k = KS+1, KE-1
@@ -405,10 +445,12 @@ contains
        enddo
        enddo
        enddo
+       !$acc end kernels
 #ifdef DEBUG
        i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
        !$omp parallel do
+       !$acc kernels
        do j = JJS-1, JJE+1
        do i = IIS-1, IIE+1
 #ifdef DEBUG
@@ -437,12 +479,14 @@ contains
                ) * MAPF(i,j,1,I_XY)
        enddo
        enddo
+       !$acc end kernels
 #ifdef DEBUG
        i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
 
        ! (y edge, u,y,w)
        !$omp parallel do
+       !$acc kernels
        do j = JJS  , JJE
        do i = IIS-1, IIE
        do k = KS, KE-1
@@ -458,6 +502,7 @@ contains
        enddo
        enddo
        enddo
+       !$acc end kernels
 #ifdef DEBUG
        i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
@@ -465,6 +510,7 @@ contains
        ! 1/2 * dw/dy
        ! (cell center; x,y,z)
        !$omp parallel do
+       !$acc kernels
        do j = JJS-1, JJE+1
        do i = IIS-1, IIE+1
        do k = KS+1, KE-1
@@ -487,10 +533,12 @@ contains
        enddo
        enddo
        enddo
+       !$acc end kernels
 #ifdef DEBUG
        i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
        !$omp parallel do
+       !$acc kernels
        do j = JJS-1, JJE+1
        do i = IIS-1, IIE+1
 #ifdef DEBUG
@@ -519,12 +567,14 @@ contains
                ) * MAPF(i,j,2,I_XY)
        enddo
        enddo
+       !$acc end kernels
 #ifdef DEBUG
        i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
 
        ! (x edge; x,v,w)
        !$omp parallel do
+       !$acc kernels
        do j = JJS-1, JJE
        do i = IIS  , IIE
        do k = KS, KE-1
@@ -540,6 +590,7 @@ contains
        enddo
        enddo
        enddo
+       !$acc end kernels
 #ifdef DEBUG
        i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
@@ -550,6 +601,7 @@ contains
        ! u
        ! (x-y plane; x,y,w)
        !$omp parallel do
+       !$acc kernels
        do j = JJS-1, JJE+1
        do i = IIS-1, IIE+1
        do k = KS, KE-1
@@ -561,6 +613,7 @@ contains
        enddo
        enddo
        enddo
+       !$acc end kernels
 #ifdef DEBUG
        i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
@@ -568,6 +621,7 @@ contains
        ! WORK_X = VELX_YZ
        ! (z-x plane; x,v,z)
        !$omp parallel do
+       !$acc kernels
        do j = JJS-1, JJE
        do i = IIS-1, IIE+1
        do k = KS, KE
@@ -579,11 +633,13 @@ contains
        enddo
        enddo
        enddo
+       !$acc end kernels
 #ifdef DEBUG
        i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
        ! (vertex; u,v,w)
        !$omp parallel do
+       !$acc kernels
        do j = JJS-1, JJE
        do i = IIS-1, IIE
        do k = KS, KE-1
@@ -605,6 +661,7 @@ contains
        enddo
        enddo
        enddo
+       !$acc end kernels
 #ifdef DEBUG
        i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
@@ -612,6 +669,7 @@ contains
        ! du/dx
        ! (cell center; x,y,z)
        !$omp parallel do
+       !$acc kernels
        do j = JJS-1, JJE+1
        do i = IIS-1, IIE+1
        do k = KS+1, KE-1
@@ -634,10 +692,12 @@ contains
        enddo
        enddo
        enddo
+       !$acc end kernels
 #ifdef DEBUG
        i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
        !$omp parallel do
+       !$acc kernels
        do j = JJS-1, JJE+1
        do i = IIS-1, IIE+1
 #ifdef DEBUG
@@ -671,6 +731,7 @@ contains
                ) * MAPF(i,j,1,I_XY) / GSQRT(KE,i,j,I_XYZ)
        enddo
        enddo
+       !$acc end kernels
 #ifdef DEBUG
        i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
@@ -678,6 +739,7 @@ contains
        ! 1/2 * du/dz
        ! (cell center; x,y,z)
        !$omp parallel do
+       !$acc kernels
        do j = JJS-1, JJE+1
        do i = IIS-1, IIE+1
        do k = KS+1, KE-1
@@ -694,10 +756,12 @@ contains
        enddo
        enddo
        enddo
+       !$acc end kernels
 #ifdef DEBUG
        i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
        !$omp parallel do
+       !$acc kernels
        do j = JJS-1, JJE+1
        do i = IIS-1, IIE+1
 #ifdef DEBUG
@@ -718,11 +782,13 @@ contains
                ) / GSQRT(KE,i,j,I_XYZ)
        enddo
        enddo
+       !$acc end kernels
 #ifdef DEBUG
        i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
        ! (y edge; u,y,w)
        !$omp parallel do
+       !$acc kernels
        do j = JJS  , JJE
        do i = IIS-1, IIE
        do k = KS, KE-1
@@ -738,6 +804,7 @@ contains
        enddo
        enddo
        enddo
+       !$acc end kernels
 #ifdef DEBUG
        i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
@@ -745,6 +812,7 @@ contains
        ! 1/2 * du/dy
        ! (cell center; x,y,z)
        !$omp parallel do
+       !$acc kernels
        do j = JJS-1, JJE+1
        do i = IIS-1, IIE+1
        do k = KS+1, KE-1
@@ -765,10 +833,12 @@ contains
        enddo
        enddo
        enddo
+       !$acc end kernels
 #ifdef DEBUG
        i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
        !$omp parallel do
+       !$acc kernels
        do j = JJS-1, JJE+1
        do i = IIS-1, IIE+1
 #ifdef DEBUG
@@ -803,12 +873,14 @@ contains
                ) * MAPF(i,j,2,I_XY) / GSQRT(KE,i,j,I_XYZ)
        enddo
        enddo
+       !$acc end kernels
 #ifdef DEBUG
        i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
 
        ! (z edge; u,v,z)
        !$omp parallel do
+       !$acc kernels
        do j = JJS-1, JJE
        do i = IIS-1, IIE
        do k = KS+1, KE-1
@@ -826,10 +898,12 @@ contains
        enddo
        enddo
        enddo
+       !$acc end kernels
 #ifdef DEBUG
        i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
        !$omp parallel do
+       !$acc kernels
        do j = JJS-1, JJE
        do i = IIS-1, IIE
 #ifdef DEBUG
@@ -858,6 +932,7 @@ contains
                ) * MAPF(i,j,2,I_UV)
        enddo
        enddo
+       !$acc end kernels
 #ifdef DEBUG
        i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
@@ -868,6 +943,7 @@ contains
        ! v
        ! (x-y plane; x,y,w)
        !$omp parallel do
+       !$acc kernels
        do j = JJS-1, JJE+1
        do i = IIS-1, IIE+1
        do k = KS, KE-1
@@ -879,11 +955,13 @@ contains
        enddo
        enddo
        enddo
+       !$acc end kernels
 #ifdef DEBUG
        i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
        ! (y-z plane; u,y,z)
        !$omp parallel do
+       !$acc kernels
        do j = JJS-1, JJE+1
        do i = IIS-1, IIE
        do k = KS, KE
@@ -895,6 +973,7 @@ contains
        enddo
        enddo
        enddo
+       !$acc end kernels
 #ifdef DEBUG
        i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
@@ -902,6 +981,7 @@ contains
        ! WORK_Y = VELY_ZX
        ! (vertex; u,v,w)
        !$omp parallel do
+       !$acc kernels
        do j = JJS-1, JJE
        do i = IIS-1, IIE
        do k = KS, KE-1
@@ -919,6 +999,7 @@ contains
        enddo
        enddo
        enddo
+       !$acc end kernels
 #ifdef DEBUG
        i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
@@ -926,6 +1007,7 @@ contains
        ! dv/dy
        ! (cell center; x,y,z)
        !$omp parallel do
+       !$acc kernels
        do j = JJS-1, JJE+1
        do i = IIS-1, IIE+1
        do k = KS+1, KE-1
@@ -947,10 +1029,12 @@ contains
        enddo
        enddo
        enddo
+       !$acc end kernels
 #ifdef DEBUG
        i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
        !$omp parallel do
+       !$acc kernels
        do j = JJS-1, JJE+1
        do i = IIS-1, IIE+1
 #ifdef DEBUG
@@ -982,6 +1066,7 @@ contains
                ) * MAPF(i,j,2,I_XY) / GSQRT(KE,i,j,I_XYZ)
        enddo
        enddo
+       !$acc end kernels
 #ifdef DEBUG
        i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
@@ -989,6 +1074,7 @@ contains
        ! 1/2 * dv/dx
        ! (cell center; x,y,z)
        !$omp parallel do
+       !$acc kernels
        do j = JJS-1, JJE+1
        do i = IIS-1, IIE+1
        do k = KS+1, KE-1
@@ -1014,10 +1100,12 @@ contains
        enddo
        enddo
        enddo
+       !$acc end kernels
 #ifdef DEBUG
        i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
        !$omp parallel do
+       !$acc kernels
        do j = JJS-1, JJE+1
        do i = IIS-1, IIE+1
 #ifdef DEBUG
@@ -1058,11 +1146,13 @@ contains
                ) / GSQRT(KE,i,j,I_XYZ)
        enddo
        enddo
+       !$acc end kernels
 #ifdef DEBUG
        i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
        ! (z edge; u,v,z)
        !$omp parallel do
+       !$acc kernels
        do j = JJS-1, JJE
        do i = IIS-1, IIE
        do k = KS+1, KE-1
@@ -1082,10 +1172,12 @@ contains
        enddo
        enddo
        enddo
+       !$acc end kernels
 #ifdef DEBUG
        i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
        !$omp parallel do
+       !$acc kernels
        do j = JJS-1, JJE
        do i = IIS-1, IIE
 #ifdef DEBUG
@@ -1115,6 +1207,7 @@ contains
                ) / GSQRT(KE,i,j,I_UVZ)
        enddo
        enddo
+       !$acc end kernels
 #ifdef DEBUG
        i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
@@ -1122,6 +1215,7 @@ contains
        ! 1/2 * dv/dz
        ! (cell center; x,y,z)
        !$omp parallel do
+       !$acc kernels
        do j = JJS-1, JJE+1
        do i = IIS-1, IIE+1
        do k = KS+1, KE-1
@@ -1138,10 +1232,12 @@ contains
        enddo
        enddo
        enddo
+       !$acc end kernels
 #ifdef DEBUG
        i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
        !$omp parallel do
+       !$acc kernels
        do j = JJS-1, JJE+1
        do i = IIS-1, IIE+1
 #ifdef DEBUG
@@ -1162,12 +1258,14 @@ contains
                ) / GSQRT(KE,i,j,I_XYZ)
        enddo
        enddo
+       !$acc end kernels
 #ifdef DEBUG
        i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
 
        ! (x edge; x,v,w)
        !$omp parallel do
+       !$acc kernels
        do j = JJS-1, JJE
        do i = IIS  , IIE
        do k = KS, KE-1
@@ -1183,6 +1281,7 @@ contains
        enddo
        enddo
        enddo
+       !$acc end kernels
 #ifdef DEBUG
        i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
@@ -1196,6 +1295,7 @@ contains
        !$omp parallel do default(none)                                            &
        !$omp shared(JJS,JJE,IIS,IIE,KS,KE,S11_C,S22_C,S33_C,S31_C,S12_C,S23_C,S2) &
        !$omp private(i,j,k) OMP_SCHEDULE_ collapse(2)
+       !$acc kernels
        do j = JJS-1, JJE+1
        do i = IIS-1, IIE+1
        do k = KS, KE
@@ -1212,12 +1312,15 @@ contains
        enddo
        enddo
        enddo
+       !$acc end kernels
 #ifdef DEBUG
        i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
 
     enddo
     enddo
+
+    !$acc end data
 
     return
   end subroutine ATMOS_PHY_TB_calc_strain_tensor
@@ -1264,13 +1367,24 @@ contains
 
     integer :: k, i, j
 
+    !$acc data copy(qflx_phi) &
+    !$acc      copyin(DENS, PHI, Kh, GSQRT, J13G, J23G, MAPF, a, b, c, &
+    !$acc             RCDZ, RFDZ, RFDX, RFDY) &
+    !$acc      create(TEND)
+
+
     ! (x-y plane; x,y,w)
     if ( horizontal ) then
+       !$omp parallel workshare
+       !$acc kernels
 !XFILL
        qflx_phi(:,:,:,ZDIR) = 0.0_RP
+       !$acc end kernels
+       !$omp end parallel workshare
     else
        !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
        !$omp shared(JJS,JJE,IIS,IIE,KS,KE,DENS,Kh,FACT,PHI,qflx_phi,GSQRT,I_XYW,RFDZ,J33G)
+       !$acc kernels
        do j = JJS, JJE
        do i = IIS, IIE
        do k = KS, KE-1
@@ -1291,16 +1405,19 @@ contains
        enddo
        enddo
        enddo
+       !$acc end kernels
 #ifdef DEBUG
        i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
        !$omp parallel do
+       !$acc kernels
        do j = JJS, JJE
        do i = IIS, IIE
           qflx_phi(KS-1,i,j,ZDIR) = 0.0_RP
           qflx_phi(KE  ,i,j,ZDIR) = 0.0_RP
        enddo
        enddo
+       !$acc end kernels
 #ifdef DEBUG
        i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
@@ -1310,6 +1427,7 @@ contains
     !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
     !$omp shared(JJS,JJE,IIS,IIE,KS,KE,DENS,Kh,FACT,PHI,qflx_phi,GSQRT,I_XYZ,RFDX,J13G,I_UYZ) &
     !$omp shared(RCDZ)
+    !$acc kernels
     do j = JJS,   JJE
     do i = IIS-1, IIE
     do k = KS+1,  KE-1
@@ -1335,10 +1453,12 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
 #ifdef DEBUG
     i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
     !$omp parallel do
+    !$acc kernels
     do j = JJS,   JJE
     do i = IIS-1, IIE
 #ifdef DEBUG
@@ -1372,6 +1492,7 @@ contains
                ) * MAPF(i,j,1,I_UY) / GSQRT(KE,i,j,I_UYZ)
     enddo
     enddo
+    !$acc end kernels
 #ifdef DEBUG
     i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
@@ -1380,6 +1501,7 @@ contains
     !$omp private(i,j,k) &
     !$omp shared(JJS,JJE,IIS,IIE,KS,KE,Kh,FACT,PHI,RFDY,DENS,qflx_phi,GSQRT,I_XYZ,J23G,I_XVZ,RCDZ) &
     !$omp shared(MAPF,I_XV)
+    !$acc kernels
     do j = JJS-1, JJE
     do i = IIS,   IIE
     do k = KS+1,  KE-1
@@ -1405,10 +1527,12 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
 #ifdef DEBUG
     i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
     !$omp parallel do
+    !$acc kernels
     do j = JJS-1, JJE
     do i = IIS,   IIE
 #ifdef DEBUG
@@ -1442,6 +1566,7 @@ contains
                ) * MAPF(i,j,2,I_XV) / GSQRT(KE,i,j,I_XVZ)
     enddo
     enddo
+    !$acc end kernels
 #ifdef DEBUG
     i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
@@ -1454,7 +1579,9 @@ contains
 
        !$omp parallel do &
        !$omp private(d)
+       !$acc kernels
        do j = JJS, JJE
+       !$acc loop private(d)
        do i = IIS, IIE
 
           do k = KS, KE
@@ -1477,8 +1604,11 @@ contains
 
        end do
        end do
+       !$acc end kernels
 
     end if
+
+    !$acc end data
 
     return
   end subroutine ATMOS_PHY_TB_calc_flux_phi
@@ -1489,13 +1619,14 @@ contains
        phi, &
        a, b, c, d, &
        KE_TB )
+    !$acc routine seq
     implicit none
     real(RP), intent(out) :: phi(KA)
     real(RP), intent(in)  :: a(KA)
     real(RP), intent(in)  :: b(KA)
     real(RP), intent(in)  :: c(KA)
     real(RP), intent(in)  :: d(KA)
-    integer,  intent(in)  :: KE_TB
+    integer,  intent(in), value  :: KE_TB
     real(RP) :: e(KA)
     real(RP) :: f(KA)
     real(RP) :: denom
@@ -1558,7 +1689,9 @@ contains
     !$omp         fluxZ) &
     !$omp shared(JJS,JJE,IIS,IIE,KS,KE,I_XYZ,I_XYW,I_UYW,I_XVW,I_XY,I_XV,I_UY, &
     !$omp        MOMZ_t_TB,QFLX_MOMZ,GSQRT,J13G,J23G,J33G,MAPF,RFDZ,RCDX,RCDY)
+    !$acc kernels
     do j = JJS, JJE
+    !$acc loop private(fluxZ)
     do i = IIS, IIE
        do k = KS+1, KE-1
           fluxZ(k) = ( ( QFLX_MOMZ(k  ,i,j,XDIR) + QFLX_MOMZ(k  ,i-1,j,XDIR) &
@@ -1582,6 +1715,7 @@ contains
        enddo
     enddo
     enddo
+    !$acc end kernels
 
     return
   end subroutine ATMOS_PHY_TB_calc_tend_MOMZ
@@ -1617,7 +1751,9 @@ contains
     !$omp        fluxZ) &
     !$omp shared(JJS,JJE,IIS,IIE,KS,KE,I_XYZ,I_UYZ,I_UVZ,I_UYW,I_UY,I_XY,I_UV, &
     !$omp        MOMX_t_TB,QFLX_MOMX,GSQRT,J13G,J23G,J33G,MAPF,RCDZ,RFDX,RCDY)
+    !$acc kernels
     do j = JJS, JJE
+    !$acc loop private(fluxZ)
     do i = IIS, IIE
        do k = KS, KE-1
           fluxZ(k) = ( ( QFLX_MOMX(k+1,i+1,j,XDIR) + QFLX_MOMX(k+1,i,j  ,XDIR) &
@@ -1641,6 +1777,7 @@ contains
        enddo
     enddo
     enddo
+    !$acc end kernels
 
     return
   end subroutine ATMOS_PHY_TB_calc_tend_MOMX
@@ -1677,7 +1814,9 @@ contains
     !$omp         fluxZ) &
     !$omp shared(JJS,JJE,IIS,IIE,KS,KE,I_XVZ,I_UVZ,I_XYZ,I_XVW,I_XV,I_UV,I_XY, &
     !$omp        MOMY_t_TB,QFLX_MOMY,GSQRT,J13G,J23G,J33G,MAPF,RCDZ,RCDX,RFDY)
+    !$acc kernels
     do j = JJS, JJE
+    !$acc loop private(fluxZ)
     do i = IIS, IIE
        do k = KS, KE-1
           fluxZ(k) = ( ( QFLX_MOMY(k+1,i,j  ,XDIR) + QFLX_MOMY(k+1,i-1,j,XDIR) &
@@ -1701,6 +1840,7 @@ contains
        enddo
     enddo
     enddo
+    !$acc end kernels
 
     return
   end subroutine ATMOS_PHY_TB_calc_tend_MOMY
@@ -1739,7 +1879,9 @@ contains
     !$omp shared(JJS,JJE,IIS,IIE,KS,KE,I_XYZ,I_UYZ,I_XVZ,I_XYW,I_XY,I_UY,I_XV, &
     !$omp        phi_t_TB,QFLX_phi,GSQRT,MAPF, &
     !$omp        J13G,J23G,J33G,RCDZ,RCDX,RCDY)
+    !$acc kernels
     do j = JJS, JJE
+    !$acc loop private(fluxZ)
     do i = IIS, IIE
        do k = KS, KE-1
           fluxZ(k) = ( ( QFLX_phi(k+1,i,j,XDIR) + QFLX_phi(k+1,i-1,j,XDIR) &
@@ -1763,6 +1905,7 @@ contains
        enddo
     enddo
     enddo
+    !$acc end kernels
 
     return
   end subroutine ATMOS_PHY_TB_calc_tend_phi
