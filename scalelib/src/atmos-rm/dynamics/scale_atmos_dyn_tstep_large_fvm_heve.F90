@@ -1567,33 +1567,32 @@ contains
        endif
 
        !$omp parallel do default(none) private(i,j,iv) OMP_SCHEDULE_ collapse(2) &
-       !$omp shared(JSB,JEB,ISB,IEB,KS,KA,DENS,MOMZ,MOMX,MOMY,RHOT,VA,PROG,KE)
-       !$acc kernels
-       !$acc loop independent
+       !$omp shared(JSB,JEB,ISB,IEB,KS,KE,KA,MOMZ) !,DENS,MOMX,MOMY,RHOT,VA,PROG)
+       !$acc parallel vector_length(32)
+       !$acc loop collapse(2)
        do j  = JSB, JEB
-       !$acc loop independent
        do i  = ISB, IEB
-          DENS(   1:KS-1,i,j) = DENS(KS,i,j)
+!          DENS(   1:KS-1,i,j) = DENS(KS,i,j)
           MOMZ(   1:KS-1,i,j) = 0.0_RP
-          MOMX(   1:KS-1,i,j) = MOMX(KS,i,j)
-          MOMY(   1:KS-1,i,j) = MOMY(KS,i,j)
-          RHOT(   1:KS-1,i,j) = RHOT(KS,i,j)
-          !$acc loop seq
-          do iv = 1, VA
-             PROG(   1:KS-1,i,j,iv) = PROG(KS,i,j,iv)
-          end do
-          DENS(KE+1:KA,  i,j) = DENS(KE,i,j)
+!!$          MOMX(   1:KS-1,i,j) = MOMX(KS,i,j)
+!!$          MOMY(   1:KS-1,i,j) = MOMY(KS,i,j)
+!!$          RHOT(   1:KS-1,i,j) = RHOT(KS,i,j)
+!!$          !$acc loop seq
+!!$          do iv = 1, VA
+!!$             PROG(   1:KS-1,i,j,iv) = PROG(KS,i,j,iv)
+!!$          end do
+!!$          DENS(KE+1:KA,  i,j) = DENS(KE,i,j)
           MOMZ(KE+1:KA,  i,j) = 0.0_RP
-          MOMX(KE+1:KA,  i,j) = MOMX(KE,i,j)
-          MOMY(KE+1:KA,  i,j) = MOMY(KE,i,j)
-          RHOT(KE+1:KA,  i,j) = RHOT(KE,i,j)
-          !$acc loop seq
-          do iv = 1, VA
-             PROG(KE+1:KA,  i,j,iv) = PROG(KE,i,j,iv)
-          end do
+!!$          MOMX(KE+1:KA,  i,j) = MOMX(KE,i,j)
+!!$          MOMY(KE+1:KA,  i,j) = MOMY(KE,i,j)
+!!$          RHOT(KE+1:KA,  i,j) = RHOT(KE,i,j)
+!!$          !$acc loop seq
+!!$          do iv = 1, VA
+!!$             PROG(KE+1:KA,  i,j,iv) = PROG(KE,i,j,iv)
+!!$          end do
        enddo
        enddo
-       !$acc end kernels
+       !$acc end parallel
 
        call COMM_vars8( DENS(:,:,:), I_COMM_DENS )
        call COMM_vars8( MOMZ(:,:,:), I_COMM_MOMZ )
