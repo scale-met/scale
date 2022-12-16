@@ -187,6 +187,8 @@ contains
     !$omp parallel default(none) private(i,j,k, vel)                    &
     !$omp shared(JJS,JJE,IIS,IIE,KS,KE,mflx,val,flux,GSQRT,num_diff,EPS)
     
+    !$acc data copy(flux) copyin(mflx, val, GSQRT, num_diff, CDZ)
+
     !$omp do OMP_SCHEDULE_ collapse(2)
     !$acc kernels
     do j = JJS, JJE
@@ -259,6 +261,8 @@ contains
     !$acc end kernels
     !$omp end do nowait
     
+    !$acc end data
+
     !$omp end parallel    
 #ifdef DEBUG
     k = IUNDEF; i = IUNDEF; j = IUNDEF
@@ -419,6 +423,8 @@ contains
     !$omp parallel default(none) private(i,j,k,vel)  &
     !$omp shared(JJS,JJE,IIS,IIE,KS,KE,mom,val,flux,J33G,GSQRT,num_diff,DENS,FDZ,dtrk)
 
+    !$acc data copy(flux) copyin(mom, val, DENS, GSQRT, num_diff, CDZ, FDZ)
+
     !$omp do OMP_SCHEDULE_ collapse(2)
     !$acc kernels
     do j = JJS, JJE
@@ -492,6 +498,8 @@ contains
     !$acc end kernels
     !$omp end do nowait
     
+    !$acc end data
+
     !$omp end parallel
 
     return
@@ -525,6 +533,8 @@ contains
 
     !$omp parallel default(none) private(i,j,k,vel) &
     !$omp shared(JJS,JJE,IIS,IIE,KS,KE,mom,val,DENS,flux,J13G,MAPF)
+
+    !$acc data copy(flux) copyin(mom, val, DENS, GSQRT, J13G, MAPF, CDZ)
 
     !$omp do OMP_SCHEDULE_ collapse(2)
     !$acc kernels
@@ -576,6 +586,8 @@ contains
     !$acc end kernels
     !$omp end do nowait
     
+    !$acc end data
+
     !$omp end parallel
 
     return
@@ -608,6 +620,8 @@ contains
 
     !$omp parallel default(none) private(i,j,k,vel) &
     !$omp shared(JJS,JJE,IIS,IIE,KS,KE,mom,val,DENS,flux,J23G,MAPF)
+
+    !$acc data copy(flux) copyin(mom, val, DENS, GSQRT, J23G, MAPF, CDZ)
 
     !$omp do OMP_SCHEDULE_ collapse(2)
     !$acc kernels
@@ -659,6 +673,8 @@ contains
     !$acc end kernels
     !$omp end do nowait
     
+    !$acc end data
+
     !$omp end parallel
 
     return
@@ -694,6 +710,8 @@ contains
     !$omp parallel default(none) private(i,j,k,vel)                           &
     !$omp shared(JJS,JJE,IIS,IIE,KS,KE,mom,val,DENS,flux,GSQRT,MAPF,num_diff) &
     !$omp shared(CDZ)
+
+    !$acc data copy(flux) copyin(mom, val, DENS, GSQRT, MAPF, num_diff, CDZ)
 
     !$omp do OMP_SCHEDULE_ collapse(2)
     !$acc kernels
@@ -746,6 +764,8 @@ contains
     !$acc end kernels
     !$omp end do nowait
     
+    !$acc end data
+
     !$omp end parallel
 #ifdef DEBUG
     k = IUNDEF; i = IUNDEF; j = IUNDEF
@@ -783,6 +803,8 @@ contains
     !$omp parallel default(none) private(i,j,k,vel)                           &
     !$omp shared(JJS,JJE,IIS,IIE,KS,KE,mom,val,DENS,flux,GSQRT,MAPF,num_diff) &
     !$omp shared(CDZ)
+
+    !$acc data copy(flux) copyin(mom, val, DENS, GSQRT, MAPF, num_diff, CDZ)
 
     !$omp do OMP_SCHEDULE_ collapse(2)
     !$acc kernels
@@ -835,6 +857,8 @@ contains
     !$acc end kernels
     !$omp end do nowait
     
+    !$acc end data
+
     !$omp end parallel
 #ifdef DEBUG
     k = IUNDEF; i = IUNDEF; j = IUNDEF
@@ -873,6 +897,8 @@ contains
     !$omp parallel default(none) private(i,j,k,vel)                           &
     !$omp shared(JJS,JJE,IIS,IIE,KS,KE,mom,val,DENS,flux,J33G,GSQRT,num_diff) &
     !$omp shared(CDZ,TwoD)
+
+    !$acc data copy(flux) copyin(mom, val, DENS, GSQRT, num_diff, CDZ)
 
 
     if ( TwoD ) then
@@ -1051,6 +1077,8 @@ contains
     end if    
 
 
+    !$acc end data
+
     !$omp end parallel
 #ifdef DEBUG
     k = IUNDEF; i = IUNDEF; j = IUNDEF
@@ -1088,6 +1116,8 @@ contains
     !$omp shared(JJS,JJE,IIS,IIE,KS,KE,mom,val,DENS,flux,J13G,MAPF) &
     !$omp shared(GSQRT,CDZ,TwoD)
   
+    !$acc data copy(flux) copyin(mom, val, DENS, GSQRT, J13G, MAPF, CDZ)
+
 
 
     !$omp do OMP_SCHEDULE_ collapse(2)
@@ -1166,6 +1196,8 @@ contains
     
 
 
+    !$acc end data
+
     !$omp end parallel
     return
   end subroutine ATMOS_DYN_FVM_fluxJ13_UYZ_ud3Koren1993
@@ -1199,6 +1231,8 @@ contains
     !$omp shared(JJS,JJE,IIS,IIE,KS,KE,mom,val,DENS,flux,J23G,MAPF) &
     !$omp shared(GSQRT,CDZ,TwoD)
   
+    !$acc data copy(flux) copyin(mom, val, DENS, GSQRT, J23G, MAPF, CDZ)
+
 
     if ( TwoD ) then
 
@@ -1353,6 +1387,8 @@ contains
 
     end if
 
+
+    !$acc end data
 
     !$omp end parallel
     return
@@ -1571,6 +1607,8 @@ contains
     !$omp shared(JJS,JJE,IIS,IIE,KS,KE,mom,val,DENS,flux,J33G,GSQRT,num_diff) &
     !$omp shared(CDZ,TwoD)
 
+    !$acc data copy(flux) copyin(mom, val, DENS, GSQRT, num_diff, CDZ)
+
 
     !$omp do OMP_SCHEDULE_ collapse(2) 
     !$acc kernels
@@ -1659,6 +1697,8 @@ contains
     !$omp end do nowait
 
 
+    !$acc end data
+
     !$omp end parallel
 #ifdef DEBUG
     k = IUNDEF; i = IUNDEF; j = IUNDEF
@@ -1696,6 +1736,8 @@ contains
     !$omp shared(JJS,JJE,IIS,IIE,KS,KE,mom,val,DENS,flux,J13G,MAPF) &
     !$omp shared(GSQRT,CDZ,TwoD)
   
+    !$acc data copy(flux) copyin(mom, val, DENS, GSQRT, J13G, MAPF, CDZ)
+
 
 
     !$omp do OMP_SCHEDULE_ collapse(2)
@@ -1774,6 +1816,8 @@ contains
     
 
 
+    !$acc end data
+
     !$omp end parallel
     return
   end subroutine ATMOS_DYN_FVM_fluxJ13_XVZ_ud3Koren1993
@@ -1807,6 +1851,8 @@ contains
     !$omp shared(JJS,JJE,IIS,IIE,KS,KE,mom,val,DENS,flux,J23G,MAPF) &
     !$omp shared(GSQRT,CDZ,TwoD)
   
+    !$acc data copy(flux) copyin(mom, val, DENS, GSQRT, J23G, MAPF, CDZ)
+
 
 
     !$omp do OMP_SCHEDULE_ collapse(2)
@@ -1884,6 +1930,8 @@ contains
     !$omp end do nowait
     
 
+
+    !$acc end data
 
     !$omp end parallel
     return
