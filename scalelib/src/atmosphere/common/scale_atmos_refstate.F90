@@ -703,7 +703,7 @@ contains
                                         work(:,:,:), area(:,:), & ! [IN]
                                         ATMOS_REFSTATE1D_qv(:)  ) ! [OUT]
 
-!       !$acc update host(ATMOS_REFSTATE1D_pres, ATMOS_REFSTATE1D_temp, ATMOS_REFSTATE1D_dens, ATMOS_REFSTATE1D_pott, ATMOS_REFSTATE1D_qv)
+       !$acc update host(ATMOS_REFSTATE1D_pres, ATMOS_REFSTATE1D_temp, ATMOS_REFSTATE1D_dens, ATMOS_REFSTATE1D_pott, ATMOS_REFSTATE1D_qv)
 
        do k = KE-1, KS, -1 ! fill undefined value
           if( ATMOS_REFSTATE1D_dens(k) <= 0.0_RP ) ATMOS_REFSTATE1D_dens(k) = ATMOS_REFSTATE1D_dens(k+1)
