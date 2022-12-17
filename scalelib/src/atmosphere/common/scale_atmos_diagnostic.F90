@@ -76,6 +76,8 @@ contains
     integer :: k, i, j
     !---------------------------------------------------------------------------
 
+    !$acc data copyin(DENS, RHOT, Rtot, CVtot, CPtot) copyout(POTT, TEMP, PRES, EXNER)
+
     call THERMODYN_rhot2temp_pres( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
                                    DENS(:,:,:), RHOT(:,:,:),                & ! (in)
                                    Rtot(:,:,:), CVtot(:,:,:), CPtot(:,:,:), & ! (in)
@@ -97,6 +99,8 @@ contains
     enddo
     enddo
     !$acc end kernels
+
+    !$acc end data
 
     return
   end subroutine ATMOS_DIAGNOSTIC_get_therm_rhot
@@ -183,7 +187,7 @@ contains
     !$omp private(diff) &
     !$omp shared(PHYD,PHYDH,DENS,PRES,CZ,FZ,GRAV,EPS) &
     !$omp shared(KS,KE,IS,IE,JS,JE)
-    !$acc kernels
+    !$acc kernels copyin(DENS, CZ, FZ) copyout(PHYD, PHYDH)
     do j = JS, JE
     do i = IS, IE
        PHYDH(KE,i,j) = PRES(KE,i,j) - DENS(KE,i,j) * GRAV * ( FZ(KE,i,j) - CZ(KE,i,j) )
