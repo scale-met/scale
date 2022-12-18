@@ -301,11 +301,13 @@ contains
 
     call ATMOS_vars_get_diagnostic( "QHYD", QHYD(:,:,:) )
 
+    !$acc update host(DENS, RHOT, QTRC(:,:,:,QS_LT:QE_LT)) ! tentative
     call ATMOS_PHY_LT_sato2019_adjustment( &
          KA, KS, KE, IA, IS, IE, JA, JS, JE, KIJMAX, IMAX, JMAX, QA_LT, & ! [IN]
          DENS(:,:,:), RHOT(:,:,:), QHYD(:,:,:), Sarea(:,:,:,:), & ! [IN]
          dt_LT,                                                 & ! [IN]
          QTRC(:,:,:,QS_LT:QE_LT), Epot(:,:,:)                   ) ! [INOUT]
+    !$acc update device(QTRC(:,:,:,QS_LT:QE_LT)) ! tentative
 
     call history
 

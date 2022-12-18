@@ -317,7 +317,6 @@ contains
        !$acc             Nu, Ri, Pr, N2, tend)
 
        call ATMOS_vars_get_diagnostic( "N2", N2 )
-!$acc update device(N2)
 
        select case( ATMOS_PHY_TB_TYPE )
        case( 'SMAGORINSKY' )

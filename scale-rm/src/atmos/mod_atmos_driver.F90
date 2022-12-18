@@ -249,24 +249,44 @@ contains
 
     !########## calculate tendency ##########
     ! reset tendencies
+    !$omp parallel workshare
+    !$acc kernels
 !OCL XFILL
     DENS_tp(:,:,:)   = 0.0_RP
+    !$acc end kernels
+    !$acc kernels
 !OCL XFILL
     MOMZ_tp(:,:,:)   = 0.0_RP
+    !$acc end kernels
+    !$acc kernels
 !OCL XFILL
     RHOU_tp(:,:,:)   = 0.0_RP
+    !$acc end kernels
+    !$acc kernels
 !OCL XFILL
     RHOV_tp(:,:,:)   = 0.0_RP
+    !$acc end kernels
+    !$acc kernels
 !OCL XFILL
     RHOT_tp(:,:,:)   = 0.0_RP
+    !$acc end kernels
+    !$acc kernels
 !OCL XFILL
     RHOH_p (:,:,:)   = 0.0_RP
+    !$acc end kernels
+    !$acc kernels
 !OCL XFILL
     RHOQ_tp(:,:,:,:) = 0.0_RP
+    !$acc end kernels
+    !$acc kernels
 !OCL XFILL
     MOMX_tp(:,:,:)   = 0.0_RP
+    !$acc end kernels
+    !$acc kernels
 !OCL XFILL
     MOMY_tp(:,:,:)   = 0.0_RP
+    !$acc end kernels
+    !$omp end parallel workshare
 
     ! Microphysics
     if ( ATMOS_sw_phy_mp ) then

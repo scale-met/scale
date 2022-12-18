@@ -404,9 +404,15 @@ contains
 
        else
 
+          !$acc kernels
           SFLX_rain(:,:) = 0.0_RP
+          !$acc end kernels
+          !$acc kernels
           SFLX_snow(:,:) = 0.0_RP
+          !$acc end kernels
+          !$acc kernels
           SFLX_ENGI(:,:) = 0.0_RP
+          !$acc end kernels
 
        end if
 
@@ -433,9 +439,15 @@ contains
 
        LOG_INFO("ATMOS_PHY_MP_driver_setup",*) 'this component is never called.'
        LOG_INFO("ATMOS_PHY_MP_driver_setup",*) 'SFLX_rain and SFLX_snow is set to zero.'
+       !$acc kernels
        SFLX_rain(:,:) = 0.0_RP
+       !$acc end kernels
+       !$acc kernels
        SFLX_snow(:,:) = 0.0_RP
+       !$acc end kernels
+       !$acc kernels
        SFLX_ENGI(:,:) = 0.0_RP
+       !$acc end kernels
 
     endif
 
@@ -864,11 +876,8 @@ contains
        case ( 'TOMITA08' )
 !OCL XFILL
           !$acc kernels async
-          !$acc loop gang
           do j = JS, JE
-          !$acc loop gang vector
           do i = IS, IE
-          !$acc loop gang vector
           do k = KS, KE
              TEMP1(k,i,j) = TEMP(k,i,j)
           end do
@@ -877,13 +886,9 @@ contains
           !$acc end kernels
 !OCL XFILL
           !$acc kernels async
-          !$acc loop seq
           do iq = QS_MP, QE_MP
-          !$acc loop gang
           do j = JS, JE
-          !$acc loop gang vector
           do i = IS, IE
-          !$acc loop gang vector
           do k = KS, KE
              QTRC1(k,i,j,iq) = QTRC(k,i,j,iq)
           end do
@@ -893,11 +898,8 @@ contains
           !$acc end kernels
 !OCL XFILL
           !$acc kernels async
-          !$acc loop gang
           do j = JS, JE
-          !$acc loop gang vector
           do i = IS, IE
-          !$acc loop gang vector
           do k = KS, KE
              CVtot1(k,i,j) = CVtot(k,i,j)
           end do
@@ -906,11 +908,8 @@ contains
           !$acc end kernels
 !OCL XFILL
           !$acc kernels async
-          !$acc loop gang
           do j = JS, JE
-          !$acc loop gang vector
           do i = IS, IE
-          !$acc loop gang vector
           do k = KS, KE
              CPtot1(k,i,j) = CPtot(k,i,j)
           end do
@@ -923,13 +922,9 @@ contains
           if( flg_lt ) then
 !OCL XFILL
              !$acc kernels
-             !$acc loop seq
              do iq = QS_LT, QE_LT
-             !$acc loop gang
              do j = JS, JE
-             !$acc loop gang vector
              do i = IS, IE
-             !$acc loop gang vector
              do k = KS, KE
                 QTRC1_crg(k,i,j,iq) = QTRC(k,i,j,iq)
              end do
@@ -938,14 +933,15 @@ contains
              end do
              !$acc end kernels
 
-             !$acc update host(TEMP1, QTRC1(:,:,:,QLS:QLE))
+!             !$acc update host(TEMP1, DENS, QTRC1(:,:,:,QLS:QLE)) ! tentative
+             !$acc update host(TEMP1, QTRC1(:,:,:,QLS:QLE)) ! tentative
              call ATMOS_PHY_LT_sato2019_select_dQCRG_from_LUT( &
                   KA, KS, KE, IA, IS, IE, JA, JS, JE, & ! [IN]
                   QLA,                                & ! [IN]
                   TEMP1(:,:,:), DENS(:,:,:),          & ! [IN]
                   QTRC1(:,:,:,QLS:QLE),               & ! [IN]
                   dqcrg(:,:,:), beta_crg(:,:,:)       ) ! [OUT]
-             !$acc update device(dqcrg, beta_crg)
+             !$acc update device(dqcrg, beta_crg) ! tentative
              call ATMOS_PHY_MP_tomita08_adjustment( &
                   KA, KS, KE, IA, IS, IE, JA, JS, JE, &
                   DENS(:,:,:), PRES(:,:,:), CCN(:,:,:), dt_MP,                          & ! [IN]
@@ -963,13 +959,9 @@ contains
           endif
 
           !$acc kernels async
-          !$acc loop seq
           do iq = QS_MP, QE_MP
-          !$acc loop gang
           do j = JS, JE
-          !$acc loop gang vector
           do i = IS, IE
-          !$acc loop gang vector
           do k = KS, KE
              RHOQ_t_MP(k,i,j,iq) = ( QTRC1(k,i,j,iq) - QTRC(k,i,j,iq) ) * DENS(k,i,j) / dt_MP
           enddo
@@ -979,11 +971,8 @@ contains
           !$acc end kernels
 
           !$acc kernels async
-          !$acc loop gang
           do j = JS, JE
-          !$acc loop gang vector
           do i = IS, IE
-          !$acc loop gang vector
           do k = KS, KE
              CPtot_t(k,i,j) = ( CPtot1(k,i,j) - CPtot(k,i,j) ) / dt_MP
              CVtot_t(k,i,j) = ( CVtot1(k,i,j) - CVtot(k,i,j) ) / dt_MP
@@ -994,13 +983,9 @@ contains
 
           if( flg_lt ) then
              !$acc kernels async
-             !$acc loop seq
              do iq = QS_LT, QE_LT
-             !$acc loop gang
              do j = JS, JE
-             !$acc loop gang vector
              do i = IS, IE
-             !$acc loop gang vector
              do k = KS, KE
                 RHOC_t_MP(k,i,j,iq) = ( QTRC1_crg(k,i,j,iq) - QTRC(k,i,j,iq) ) * DENS(k,i,j) / dt_MP
              enddo
@@ -1109,11 +1094,8 @@ contains
 
 
        !$acc kernels
-       !$acc loop gang
        do j = JS, JE
-       !$acc loop gang vector
        do i = IS, IE
-       !$acc loop gang vector
        do k = KS, KE
           RHOH_MP(k,i,j) = RHOE_t(k,i,j) &
                   - ( CPtot_t(k,i,j) + log( PRES(k,i,j) / PRE00 ) * ( CVtot(k,i,j) / CPtot(k,i,j) * CPtot_t(k,i,j) - CVtot_t(k,i,j) ) ) &
@@ -1161,6 +1143,7 @@ contains
           !$omp         DENS,MOMZ,U,V,RHOT,TEMP,PRES,QTRC,CPtot,CVtot,EXNER, &
           !$omp         DENS_t_MP,MOMZ_t_MP,RHOU_t_MP,RHOV_t_MP,RHOQ_t_MP,RHOH_MP, &
           !$omp         SFLX_rain,SFLX_snow,SFLX_ENGI, &
+          !$omp         REFSTATE_dens, &
           !$omp         flg_lt,RHOC_t_MP, &
           !$omp         vterm_hist,hist_vterm_idx) &
           !$omp private(i,j,k,iq,step, &
@@ -1550,6 +1533,7 @@ contains
     integer :: k, i, j
 
     !$acc data copyin(QV, QHYD) copyout(QTRC)
+    !$acc data copyin(QNUM) if(present(QNUM))
 
     select case( ATMOS_PHY_MP_TYPE )
     case ( "NONE" )
@@ -1616,6 +1600,7 @@ contains
        call PRC_abort
     end select
 
+    !$acc end data
     !$acc end data
 
     return
