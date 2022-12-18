@@ -201,9 +201,6 @@ contains
     COMM_vsize_max = max( 10 + QA*2, 25 )
     COMM_vsize_max_pc = 50 + QA*2
 
-#ifdef _OPENACC
-    COMM_USE_MPI_PC = .false.
-#endif
     !--- read namelist
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_COMM_CARTESC,iostat=ierr)
@@ -709,6 +706,9 @@ contains
     !---------------------------------------------------------------------------
 
     if ( .not. COMM_USE_MPI_PC ) return
+#ifdef _OPENACC
+    if ( .not. acc_is_present(var) ) return
+#endif
 
     call PROF_rapstart('COMM_init_pers', 2)
 
@@ -774,6 +774,9 @@ contains
     !---------------------------------------------------------------------------
 
     if ( .not. COMM_USE_MPI_PC ) return
+#ifdef _OPENACC
+    if ( .not. acc_is_present(var) ) return
+#endif
 
     call PROF_rapstart('COMM_init_pers', 2)
 
