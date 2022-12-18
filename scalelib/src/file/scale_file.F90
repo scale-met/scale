@@ -24,6 +24,9 @@ module scale_file
   use scale_prc, only: &
      PRC_abort
   use iso_c_binding
+#ifdef _OPENACC
+  use openacc
+#endif
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -643,6 +646,8 @@ contains
     integer :: error
     intrinsic size
 
+    !$acc update host(val) if(acc_is_present(val))
+
     if ( .not. FILE_opened(fid) ) then
        LOG_ERROR("FILE_put_axis_real",*) 'File is not opened. fid = ', fid
        call PRC_abort
@@ -678,6 +683,8 @@ contains
 
     integer :: error
     intrinsic size
+
+    !$acc update host(val) if(acc_is_present(val))
 
     if ( .not. FILE_opened(fid) ) then
        LOG_ERROR("FILE_put_axis_real",*) 'File is not opened. fid = ', fid
@@ -760,6 +767,8 @@ contains
        call PRC_abort
     end if
 
+    !$acc update host(val) if(acc_is_present(val))
+
     if ( present(start) ) then
        error = file_write_axis_c( FILE_files(fid)%fid, cstr(name),         & ! (in)
 #if defined(__GFORTRAN__) && __GNUC__ < 7
@@ -799,6 +808,8 @@ contains
        LOG_ERROR("FILE_write_axis_realDP",*) 'File is not opened. fid = ', fid
        call PRC_abort
     end if
+
+    !$acc update host(val) if(acc_is_present(val))
 
     if ( present(start) ) then
        error = file_write_axis_c( FILE_files(fid)%fid, cstr(name),         & ! (in)
@@ -862,6 +873,8 @@ contains
        cptr(i) = cstr(dim_names(i))
        dim_names_(i) = c_loc(cptr(i))
     end do
+
+    !$acc update host(val) if(acc_is_present(val))
 
 #ifdef NVIDIA
     block
@@ -927,6 +940,8 @@ contains
        dim_names_(i) = c_loc(cptr(i))
     end do
 
+    !$acc update host(val) if(acc_is_present(val))
+
 #ifdef NVIDIA
     block
     real(DP), allocatable, target :: work(:)
@@ -990,6 +1005,8 @@ contains
        cptr(i) = cstr(dim_names(i))
        dim_names_(i) = c_loc(cptr(i))
     end do
+
+    !$acc update host(val) if(acc_is_present(val))
 
 #ifdef NVIDIA
     block
@@ -1055,6 +1072,8 @@ contains
        dim_names_(i) = c_loc(cptr(i))
     end do
 
+    !$acc update host(val) if(acc_is_present(val))
+
 #ifdef NVIDIA
     block
     real(DP), allocatable, target :: work(:,:)
@@ -1118,6 +1137,8 @@ contains
        cptr(i) = cstr(dim_names(i))
        dim_names_(i) = c_loc(cptr(i))
     end do
+
+    !$acc update host(val) if(acc_is_present(val))
 
 #ifdef NVIDIA
     block
@@ -1183,6 +1204,8 @@ contains
        dim_names_(i) = c_loc(cptr(i))
     end do
 
+    !$acc update host(val) if(acc_is_present(val))
+
 #ifdef NVIDIA
     block
     real(DP), allocatable, target :: work(:,:,:)
@@ -1247,6 +1270,8 @@ contains
        dim_names_(i) = c_loc(cptr(i))
     end do
 
+    !$acc update host(val) if(acc_is_present(val))
+
 #ifdef NVIDIA
     block
     real(SP), allocatable, target :: work(:,:,:,:)
@@ -1310,6 +1335,8 @@ contains
        cptr(i) = cstr(dim_names(i))
        dim_names_(i) = c_loc(cptr(i))
     end do
+
+    !$acc update host(val) if(acc_is_present(val))
 
 #ifdef NVIDIA
     block
@@ -1441,6 +1468,8 @@ contains
        end do
     end if
 
+    !$acc update host(val) if(acc_is_present(val))
+
 #ifdef NVIDIA
     block
     real(SP), allocatable, target :: work(:)
@@ -1524,6 +1553,8 @@ contains
           count_(i) = size(val, 1-i+1)
        end do
     end if
+
+    !$acc update host(val) if(acc_is_present(val))
 
 #ifdef NVIDIA
     block
@@ -1609,6 +1640,8 @@ contains
        end do
     end if
 
+    !$acc update host(val) if(acc_is_present(val))
+
 #ifdef NVIDIA
     block
     real(SP), allocatable, target :: work(:,:)
@@ -1692,6 +1725,8 @@ contains
           count_(i) = size(val, 2-i+1)
        end do
     end if
+
+    !$acc update host(val) if(acc_is_present(val))
 
 #ifdef NVIDIA
     block
@@ -1777,6 +1812,8 @@ contains
        end do
     end if
 
+    !$acc update host(val) if(acc_is_present(val))
+
 #ifdef NVIDIA
     block
     real(SP), allocatable, target :: work(:,:,:)
@@ -1860,6 +1897,8 @@ contains
           count_(i) = size(val, 3-i+1)
        end do
     end if
+
+    !$acc update host(val) if(acc_is_present(val))
 
 #ifdef NVIDIA
     block
@@ -1945,6 +1984,8 @@ contains
        end do
     end if
 
+    !$acc update host(val) if(acc_is_present(val))
+
 #ifdef NVIDIA
     block
     real(SP), allocatable, target :: work(:,:,:,:)
@@ -2028,6 +2069,8 @@ contains
           count_(i) = size(val, 4-i+1)
        end do
     end if
+
+    !$acc update host(val) if(acc_is_present(val))
 
 #ifdef NVIDIA
     block
@@ -4065,6 +4108,8 @@ contains
        call PRC_abort
     end if
 
+    !$acc update device(var) if(acc_is_present(var))
+
     return
   end subroutine FILE_read_var_realSP_1D
   subroutine FILE_read_var_realDP_1D( &
@@ -4212,6 +4257,8 @@ contains
        LOG_ERROR("FILE_read_var_realDP_1D",*) 'failed to get data value: ', trim(varname)
        call PRC_abort
     end if
+
+    !$acc update device(var) if(acc_is_present(var))
 
     return
   end subroutine FILE_read_var_realDP_1D
@@ -4361,6 +4408,8 @@ contains
        call PRC_abort
     end if
 
+    !$acc update device(var) if(acc_is_present(var))
+
     return
   end subroutine FILE_read_var_realSP_2D
   subroutine FILE_read_var_realDP_2D( &
@@ -4508,6 +4557,8 @@ contains
        LOG_ERROR("FILE_read_var_realDP_2D",*) 'failed to get data value: ', trim(varname)
        call PRC_abort
     end if
+
+    !$acc update device(var) if(acc_is_present(var))
 
     return
   end subroutine FILE_read_var_realDP_2D
@@ -4657,6 +4708,8 @@ contains
        call PRC_abort
     end if
 
+    !$acc update device(var) if(acc_is_present(var))
+
     return
   end subroutine FILE_read_var_realSP_3D
   subroutine FILE_read_var_realDP_3D( &
@@ -4804,6 +4857,8 @@ contains
        LOG_ERROR("FILE_read_var_realDP_3D",*) 'failed to get data value: ', trim(varname)
        call PRC_abort
     end if
+
+    !$acc update device(var) if(acc_is_present(var))
 
     return
   end subroutine FILE_read_var_realDP_3D
@@ -4953,6 +5008,8 @@ contains
        call PRC_abort
     end if
 
+    !$acc update device(var) if(acc_is_present(var))
+
     return
   end subroutine FILE_read_var_realSP_4D
   subroutine FILE_read_var_realDP_4D( &
@@ -5101,6 +5158,8 @@ contains
        call PRC_abort
     end if
 
+    !$acc update device(var) if(acc_is_present(var))
+
     return
   end subroutine FILE_read_var_realDP_4D
 
@@ -5173,6 +5232,9 @@ contains
        else
           start_(:) = 1
        end if
+
+       !$acc update device(var) if(acc_is_present(var))
+
 #ifdef NVIDIA
        block
        real(SP), allocatable, target :: work(:)
@@ -5265,6 +5327,9 @@ contains
        else
           start_(:) = 1
        end if
+
+       !$acc update device(var) if(acc_is_present(var))
+
 #ifdef NVIDIA
        block
        real(DP), allocatable, target :: work(:)
@@ -5332,6 +5397,9 @@ contains
        else
           start_(:) = 1
        end if
+
+       !$acc update device(var) if(acc_is_present(var))
+
 #ifdef NVIDIA
        block
        real(SP), allocatable, target :: work(:,:)
@@ -5398,6 +5466,9 @@ contains
        else
           start_(:) = 1
        end if
+
+       !$acc update device(var) if(acc_is_present(var))
+
 #ifdef NVIDIA
        block
        real(DP), allocatable, target :: work(:,:)
@@ -5464,6 +5535,9 @@ contains
        else
           start_(:) = 1
        end if
+
+       !$acc update device(var) if(acc_is_present(var))
+
 #ifdef NVIDIA
        block
        real(SP), allocatable, target :: work(:,:,:)
@@ -5530,6 +5604,9 @@ contains
        else
           start_(:) = 1
        end if
+
+       !$acc update device(var) if(acc_is_present(var))
+
 #ifdef NVIDIA
        block
        real(DP), allocatable, target :: work(:,:,:)
@@ -5596,6 +5673,9 @@ contains
        else
           start_(:) = 1
        end if
+
+       !$acc update device(var) if(acc_is_present(var))
+
 #ifdef NVIDIA
        block
        real(SP), allocatable, target :: work(:,:,:,:)
@@ -5662,6 +5742,9 @@ contains
        else
           start_(:) = 1
        end if
+
+       !$acc update device(var) if(acc_is_present(var))
+
 #ifdef NVIDIA
        block
        real(DP), allocatable, target :: work(:,:,:,:)

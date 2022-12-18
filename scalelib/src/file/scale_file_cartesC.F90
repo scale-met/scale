@@ -22,6 +22,9 @@ module scale_file_cartesC
   use scale_urban_grid_cartesC_index
   use scale_file_h, only: &
      FILE_FILE_MAX
+#ifdef _OPENACC
+  use openacc
+#endif
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -1970,6 +1973,7 @@ contains
        call FILE_CARTESC_flush( fid )
 
        !$omp parallel do
+       !$acc kernels if(acc_is_present(var))
        do j = 1, ny
        do i = 1, nx
        do k = 1, nz
@@ -1977,6 +1981,7 @@ contains
        end do
        end do
        end do
+       !$acc end kernels
        deallocate(buf)
     else
        LOG_ERROR("FILE_CARTESC_read_auto_3D",*) 'invalid dimension'
@@ -3827,6 +3832,9 @@ contains
     endif
 
     if ( fill_halo_ ) then
+
+       !$acc update host(var) if(acc_is_present(var))
+
        !$omp parallel do
        do j = JS, JE
        do i = IS, IE
@@ -3976,6 +3984,9 @@ contains
        nowtime = timeofs_ + (timetarg-1) * time_interval
 
        if ( fill_halo_ ) then
+
+          !$acc update host(var) if(acc_is_present(var))
+
           do j = JS, JE
           do i = IS, IE
              varhalo(i,j) = var(i,j,timetarg)
@@ -4017,6 +4028,9 @@ contains
        nowtime = timeofs_
        do n = 1, step
           if ( fill_halo_ ) then
+
+             !$acc update host(var) if(acc_is_present(var))
+
              do j = JS, JE
              do i = IS, IE
                 varhalo(i,j) = var(i,j,n)
@@ -4195,6 +4209,9 @@ contains
        nowtime = timeofs_ + (timetarg-1) * time_interval
 
        if ( fill_halo_ ) then
+
+          !$acc update host(var) if(acc_is_present(var))
+
           do j = JS, JE
           do i = IS, IE
           do k = 1, dim1_max
@@ -4246,6 +4263,9 @@ contains
        nowtime = timeofs_
        do n = 1, step
           if ( fill_halo_ ) then
+
+             !$acc update host(var) if(acc_is_present(var))
+
              do j = JS, JE
              do i = IS, IE
              do k = 1, dim1_max
