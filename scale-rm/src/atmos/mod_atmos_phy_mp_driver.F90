@@ -706,6 +706,8 @@ contains
        MOMZ   => MOMZ_av, &
        U, &
        V, &
+       W, &
+       POTT, &
        QTRC   => QTRC_av, &
        DENS_t => DENS_tp, &
        MOMZ_t => MOMZ_tp, &
@@ -716,8 +718,11 @@ contains
        RHOH   => RHOH_p, &
        TEMP, &
        PRES, &
+       Qdry, &
        CVtot, &
-       CPtot
+       CPtot, &
+       EXNER, &
+       RHOT   => RHOT_av
     use mod_atmos_phy_mp_vars, only: &
        QS_MP, &
        QE_MP, &
@@ -781,7 +786,9 @@ contains
 
     real(RP) :: precip   (IA,JA)
 
+    real(RP) :: Qe(KA,IA,JA,N_HYD)
     logical  :: HIST_sw(N_HYD)
+    real(RP) :: Qecrg(KA,IA,JA,N_HYD)
     logical  :: HIST_crg_sw(N_HYD)
 
     ! for history output
