@@ -1770,12 +1770,10 @@ contains
          TRACER_MASS(:), TRACER_R(:), TRACER_CV(:), TRACER_CP(:), & ! (in)
          Qdry(:,:,:), Rtot(:,:,:), CVtot(:,:,:), CPtot(:,:,:)     ) ! (out)
 
-    !$acc update host(DENS_av, MOMZ_av, MOMX_av, MOMY_av) ! tentative
     call ATMOS_DIAGNOSTIC_CARTESC_get_vel( &
          KA, KS, KE, IA, 1, IA, JA, 1, JA, &
          DENS_av(:,:,:), MOMZ_av(:,:,:), MOMX_av(:,:,:), MOMY_av(:,:,:), & ! (in)
          W(:,:,:), U(:,:,:), V(:,:,:)                                    ) ! (out)
-    !$acc update device(W, U, V) ! tentative
 
     call ATMOS_DIAGNOSTIC_get_therm_rhot( &
          KA, KS, KE, IA, 1, IA, JA, 1, JA, &
