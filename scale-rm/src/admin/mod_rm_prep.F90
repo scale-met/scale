@@ -182,6 +182,8 @@ contains
        ATMOS_vars_finalize
     use mod_atmos_phy_mp_vars, only: &
        QA_MP
+    use mod_atmos_phy_mp_driver, only: &
+       ATMOS_phy_mp_driver_setup
     use mod_ocean_admin, only: &
        OCEAN_admin_setup, &
        OCEAN_do
@@ -394,6 +396,8 @@ contains
     if ( LAND_do  ) call LAND_vars_setup
     if ( URBAN_do ) call URBAN_vars_setup
     if ( CPL_sw   ) call CPL_vars_setup
+
+    if ( ATMOS_do ) call ATMOS_phy_mp_driver_setup
 
     ! setup preprocess converter
     call CONVERT_setup
