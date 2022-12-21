@@ -471,8 +471,8 @@ module scale_atmos_phy_mp_sn14
   real(RP), private, save :: b_m(HYDRO_MAX)
   ! constants for Terminal velocity-Mass relation
   ! vt = alpha * x^beta * f
-  real(RP), private, save :: alpha_v(HYDRO_MAX,2)
-  real(RP), private, save :: beta_v(HYDRO_MAX,2)
+  real(RP), private, save :: alpha_v(HYDRO_MAX,2), log_alpha_v(HYDRO_MAX,2)
+  real(RP), private, save :: beta_v(HYDRO_MAX,2), log_beta_v(HYDRO_MAX,2)
   real(RP), private, save :: alpha_vn(HYDRO_MAX,2)   !
   real(RP), private, save :: beta_vn(HYDRO_MAX,2)    !
   real(RP), private, save :: gamma_v(HYDRO_MAX)
@@ -1807,11 +1807,12 @@ contains
        ! qs [100um:1000um] in diameter
        ! qg [200um:2000um] in diameter
        !                      small branch          , large branch
-       alpha_v (I_mp_QI,:) =(/ 5798.60107421875_RP, 167.347076416016_RP/)
-       alpha_vn(I_mp_QI,:) =(/ 12408.177734375_RP, 421.799865722656_RP/)
        if( opt_M96_column_ice )then
           alpha_v (I_mp_QI,:) = (/2901.0_RP, 32.20_RP/)
           alpha_vn(I_mp_QI,:) = (/9675.2_RP, 64.16_RP/)
+       else
+          alpha_v (I_mp_QI,:) =(/ 5798.60107421875_RP, 167.347076416016_RP/)
+          alpha_vn(I_mp_QI,:) =(/ 12408.177734375_RP, 421.799865722656_RP/)
        end if
        alpha_v (I_mp_QS,:)    =(/ 15173.3916015625_RP, 305.678619384766_RP/)
        alpha_vn(I_mp_QS,:)    =(/ 29257.1601562500_RP, 817.985717773438_RP/)
@@ -2181,10 +2182,13 @@ contains
     ! log
     do ia=1, HYDRO_MAX
        log_a_m(ia) = log( a_m(ia) )
+       log_alpha_v(ia,1) = log( alpha_v(ia,1) )
+       log_alpha_v(ia,2) = log( alpha_v(ia,2) )
+       log_beta_v(ia,1) = log( beta_v(ia,1) )
+       log_beta_v(ia,2) = log( beta_v(ia,2) )
     end do
     log_d0_li = log( d0_li )
     log_d0_ni = log( d0_ni )
-
 
     WLABEL(1) = "CLOUD"
     WLABEL(2) = "RAIN"
@@ -2339,10 +2343,6 @@ contains
     real(RP) :: rrho (KA) !> 1/DENS
     real(RP) :: rhoe (KA)
     real(RP) :: rhoq (KA,I_QV:I_NG)
-    real(RP) :: rhoq_nc(KA)
-    real(RP) :: rhoq_ni(KA)
-    real(RP) :: rhoq_ns(KA)
-    real(RP) :: rhoq_ng(KA)
     !
     real(RP) :: RHOQ0_t (KA,QA_MP)
     real(RP) :: RHOE0_t (KA)
@@ -2358,8 +2358,8 @@ contains
     real(RP) :: esw  (KA) ! saturated vapor pressure(water)
     real(RP) :: esi  (KA) ! saturated vapor pressure(ice)
     !
-    real(RP) :: rho_fac
-    real(RP) :: rho_fac_q(KA,HYDRO_MAX) ! factor for tracers, 1:cloud, 2:rain, 3:ice, 4: snow, 5:graupel
+    real(RP) :: log_rho_fac
+    real(RP) :: log_rho_fac_q(KA,HYDRO_MAX) ! factor for tracers, 1:cloud, 2:rain, 3:ice, 4: snow, 5:graupel
     !
     real(RP) :: drhoqv         ! d (rho*qv)
     real(RP) :: drhoqc, drhonc !        qc, nc
@@ -2559,14 +2559,14 @@ contains
     !$omp        DENS,W,QTRC,TEMP0,PRES0,QDRY,CPtot0,CVtot0,CCN, &
     !$omp        cz,fz,dt, &
     !$omp        RHOQ_t,RHOE_t,CPtot_t,CVtot_t,EVAPORATE, &
-    !$omp        c_ccn,gamma_v,nc_uplim_d,a_m,b_m,alpha_v,beta_v,a_rea,b_rea,ntmax_phase_change, &
+    !$omp        c_ccn,gamma_v,nc_uplim_d,a_m,b_m,alpha_v,log_alpha_v,beta_v,log_beta_v,a_rea,b_rea, &
+    !$omp        ntmax_phase_change, &
     !$omp        opt_collection_bin,opt_nucleation_ice_hom,so22_het, &
     !$omp        w3d,HIST_sw,HIST_idx, &
     !$omp        QTRC_crg,QSPLT_in,RHOQcrg_t_mp,Sarea, &
     !$omp        d0_crg_l,v0_crg_l,beta_crg,dqcrg,flg_lt_l) &
-    !$omp private (pres,temp,rrho,rhoe,rhoq,rhoq_nc,rhoq_ni,rhoq_ns,rhoq_ng, &
-    !$omp          cva,cpa,rhoq0_t,rhoe0_t,cptot0_t,cvtot0_t, &
-    !$omp          xq,dq_xa,vt_xa,wtemp,esw,esi,rho_fac,rho_fac_q, &
+    !$omp private (pres,temp,rrho,rhoe,rhoq,cva,cpa,rhoq0_t,rhoe0_t,cptot0_t,cvtot0_t, &
+    !$omp          xq,dq_xa,vt_xa,wtemp,esw,esi,log_rho_fac,log_rho_fac_q, &
     !$omp          drhoqv,drhoqc,drhonc,drhoqr,drhonr,drhoqi,drhoni,drhoqs,drhons,drhoqg,drhong, &
     !$omp          PQ,Pac,wrm_dqc,wrm_dnc,wrm_dqr,wrm_dnr, &
     !$omp          gc_dqc,gc_dnc,sc_dqc,sc_dnc,ic_dqc,ic_dnc, &
@@ -2623,65 +2623,38 @@ contains
        enddo
        enddo
 
+       do k = KS, KE
+          log_rho_fac              = log(rho_0 / max(DENS(k,i,j),rho_min))
+          log_rho_fac_q(k,I_mp_QC) = log_rho_fac * gamma_v(I_mp_QC)
+          log_rho_fac_q(k,I_mp_QR) = log_rho_fac * gamma_v(I_mp_QR)
+       end do
+
        if( so22_het .or. opt_nucleation_ice_hom) then
 
           do k = KS, KE
-             rho_fac              = rho_0 / max(DENS(k,i,j),rho_min)
-             rho_fac_q(k,I_mp_QC) = rho_fac**gamma_v(I_mp_QC)
-             rho_fac_q(k,I_mp_QR) = rho_fac**gamma_v(I_mp_QR)
-             rho_fac_q(k,I_mp_QI) = (pres(k)/pre0_vt)**a_pre0_vt * (temp(k)/tem0_vt)**a_tem0_vt
-             rho_fac_q(k,I_mp_QS) = rho_fac_q(k,I_mp_QI)
-             rho_fac_q(k,I_mp_QG) = rho_fac_q(k,I_mp_QI)
+             log_rho_fac_q(k,I_mp_QI) = log(pres(k)/pre0_vt) * a_pre0_vt + log(temp(k)/tem0_vt) * a_tem0_vt
+             log_rho_fac_q(k,I_mp_QS) = log_rho_fac_q(k,I_mp_QI)
+             log_rho_fac_q(k,I_mp_QG) = log_rho_fac_q(k,I_mp_QI)
           enddo
 
-          do k = KS, KE
-             xq(k,I_mp_QR)     = max(xr_min,  min(xr_max, rhoq(k,I_QR)/(rhoq(k,I_NR)+nr_min) ))
+          call get_terminal_velocity( &
+               KA, KS, KE, &
+               vt_xa(:,:,:), xq(:,:), & ! (out)
+               rhoq(:,:),             & ! (in)
+               log_rho_fac_q(:,:)     ) ! (in)
 
-             dq_xa(k,I_mp_QR)  = a_m(I_mp_QR)*xq(k,I_mp_QR)**b_m(I_mp_QR)
-             vt_xa(k,I_mp_QR,1) = alpha_v(I_mp_QR,1)*(xq(k,I_mp_QR)**beta_v(I_mp_QR,1))*rho_fac_q(k,I_mp_QR)
-             vt_xa(k,I_mp_QR,2) = vt_xa(k,I_mp_QR,1)
+          call get_diamiter( &
+               KA, KS, KE, &
+               dq_xa(:,:), & ! (out)
+               xq(:,:)     ) ! (in)
 
-             !! Following values shoud be already filtered to be non-zero before sbroutine was called.
-             ! Mass of mean particle [kg]
-             ! SB06(94)
-             !
-             xq(k,I_mp_QC)     = min(xc_max, max(xc_min, rhoq(k,I_QC)/(rhoq(k,I_NC)+nc_min) ))
-             xq(k,I_mp_QI)     = min(xi_max, max(xi_min, rhoq(k,I_QI)/(rhoq(k,I_NI)+ni_min) ))
-             xq(k,I_mp_QS)     = min(xs_max, max(xs_min, rhoq(k,I_QS)/(rhoq(k,I_NS)+ns_min) ))
-             xq(k,I_mp_QG)     = min(xg_max, max(xg_min, rhoq(k,I_QG)/(rhoq(k,I_NG)+ng_min) ))
-             ! diamter of average mass
-             ! SB06(32)
-             dq_xa(k,I_mp_QC)  = a_m(I_mp_QC)*xq(k,I_mp_QC)**b_m(I_mp_QC)
-             dq_xa(k,I_mp_QI)  = a_m(I_mp_QI)*xq(k,I_mp_QI)**b_m(I_mp_QI)
-             dq_xa(k,I_mp_QS)  = a_m(I_mp_QS)*xq(k,I_mp_QS)**b_m(I_mp_QS)
-             dq_xa(k,I_mp_QG)  = a_m(I_mp_QG)*xq(k,I_mp_QG)**b_m(I_mp_QG)
-
-             ! terminal velocity of average mass
-             vt_xa(k,I_mp_QC,1) = alpha_v(I_mp_QC,1)*(xq(k,I_mp_QC)**beta_v(I_mp_QC,1))*rho_fac_q(k,I_mp_QC)
-             vt_xa(k,I_mp_QI,1) = alpha_v(I_mp_QI,1)*(xq(k,I_mp_QI)**beta_v(I_mp_QI,1))*rho_fac_q(k,I_mp_QI)
-             vt_xa(k,I_mp_QS,1) = alpha_v(I_mp_QS,1)*(xq(k,I_mp_QS)**beta_v(I_mp_QS,1))*rho_fac_q(k,I_mp_QS)
-             vt_xa(k,I_mp_QG,1) = alpha_v(I_mp_QG,1)*(xq(k,I_mp_QG)**beta_v(I_mp_QG,1))*rho_fac_q(k,I_mp_QG)
-             vt_xa(k,I_mp_QC,2) = alpha_v(I_mp_QC,2)*(xq(k,I_mp_QC)**beta_v(I_mp_QC,2))*rho_fac_q(k,I_mp_QC)
-             vt_xa(k,I_mp_QI,2) = alpha_v(I_mp_QI,2)*(xq(k,I_mp_QI)**beta_v(I_mp_QI,2))*rho_fac_q(k,I_mp_QI)
-             vt_xa(k,I_mp_QS,2) = alpha_v(I_mp_QS,2)*(xq(k,I_mp_QS)**beta_v(I_mp_QS,2))*rho_fac_q(k,I_mp_QS)
-             vt_xa(k,I_mp_QG,2) = alpha_v(I_mp_QG,2)*(xq(k,I_mp_QG)**beta_v(I_mp_QG,2))*rho_fac_q(k,I_mp_QG)
-          end do
        endif
-!!
-
 
        !----------------------------------------------------------------------------
        !
        ! 1.Nucleation of cloud water and cloud ice
        !
        !----------------------------------------------------------------------------
-       do k = KS, KE
-          rhoq_nc(k) = max( 0.0_RP, rhoq(k,I_NC) )
-          rhoq_ni(k) = max( 0.0_RP, rhoq(k,I_NI) )
-          rhoq_ns(k) = max( 0.0_RP, rhoq(k,I_NS) )
-          rhoq_ng(k) = max( 0.0_RP, rhoq(k,I_NG) )
-       enddo
-
        do k = KS, KE
           rrho (k) = 1.0_RP / DENS(k,i,j)
           rhoe (k) = DENS(k,i,j) * temp(k) * cva(k)
@@ -2694,12 +2667,9 @@ contains
 #endif
 
        do k = KS, KE
-          rho_fac              = rho_0 / max(DENS(k,i,j),rho_min)
-          rho_fac_q(k,I_mp_QC) = rho_fac**gamma_v(I_mp_QC)
-          rho_fac_q(k,I_mp_QR) = rho_fac**gamma_v(I_mp_QR)
-          rho_fac_q(k,I_mp_QI) = (pres(k)/pre0_vt)**a_pre0_vt * (temp(k)/tem0_vt)**a_tem0_vt
-          rho_fac_q(k,I_mp_QS) = rho_fac_q(k,I_mp_QI)
-          rho_fac_q(k,I_mp_QG) = rho_fac_q(k,I_mp_QI)
+          log_rho_fac_q(k,I_mp_QI) = log(pres(k)/pre0_vt) * a_pre0_vt + log(temp(k)/tem0_vt) * a_tem0_vt
+          log_rho_fac_q(k,I_mp_QS) = log_rho_fac_q(k,I_mp_QI)
+          log_rho_fac_q(k,I_mp_QG) = log_rho_fac_q(k,I_mp_QI)
        enddo
 
        sl_PLCdep = 0.0_RP
@@ -2725,9 +2695,7 @@ contains
             cz(:,i,j), fz(:,i,j),               & ! (in)
             w(:,i,j), DENS(:,i,j),              & ! (in)
             wtemp(:), pres(:), qdry(:,i,j),     & ! (in)
-            rhoq(:,I_QV), rhoq_nc(:),           & ! (in)
-            rhoq_ni(:), rhoq_ns(:), rhoq_ng(:), & ! (in)
-            cpa(:), cva(:),                     & ! (in)
+            rhoq(:,:), cpa(:), cva(:),          & ! (in)
             dTdt_equiv_d(:),                    & ! (in)
             qke_d(:),                           & ! (in)
             CCN(:,i,j), nc_uplim_d(1,i,j),      & ! (in)
@@ -2867,38 +2835,16 @@ contains
        ! 2.Phase change: Freezing, Melting, Vapor deposition
        !
        !----------------------------------------------------------------------------
-!OCL LOOP_FISSION_TARGET(LS)
-       do k = KS, KE
-          xq(k,I_mp_QR)     = max(xr_min,  min(xr_max, rhoq(k,I_QR)/(rhoq(k,I_NR)+nr_min) ))
+       call get_terminal_velocity( &
+            KA, KS, KE, &
+            vt_xa(:,:,:), xq(:,:), & ! (out)
+            rhoq(:,:),             & ! (in)
+            log_rho_fac_q(:,:)     ) ! (in)
 
-          dq_xa(k,I_mp_QR)   = a_m(I_mp_QR)*xq(k,I_mp_QR)**b_m(I_mp_QR)
-          vt_xa(k,I_mp_QR,1) = alpha_v(I_mp_QR,1)*(xq(k,I_mp_QR)**beta_v(I_mp_QR,1))*rho_fac_q(k,I_mp_QR)
-          vt_xa(k,I_mp_QR,2) = vt_xa(k,I_mp_QR,1)
-
-          ! Mass of mean particle [kg]
-          ! SB06(94)
-          !
-          xq(k,I_mp_QC)     = min(xc_max, max(xc_min, rhoq(k,I_QC)/(rhoq(k,I_NC)+nc_min) ))
-          xq(k,I_mp_QI)     = min(xi_max, max(xi_min, rhoq(k,I_QI)/(rhoq(k,I_NI)+ni_min) ))
-          xq(k,I_mp_QS)     = min(xs_max, max(xs_min, rhoq(k,I_QS)/(rhoq(k,I_NS)+ns_min) ))
-          xq(k,I_mp_QG)     = min(xg_max, max(xg_min, rhoq(k,I_QG)/(rhoq(k,I_NG)+ng_min) ))
-          ! diamter of average mass
-          ! SB06(32)
-          dq_xa(k,I_mp_QC)  = a_m(I_mp_QC)*xq(k,I_mp_QC)**b_m(I_mp_QC)
-          dq_xa(k,I_mp_QI)  = a_m(I_mp_QI)*xq(k,I_mp_QI)**b_m(I_mp_QI)
-          dq_xa(k,I_mp_QS)  = a_m(I_mp_QS)*xq(k,I_mp_QS)**b_m(I_mp_QS)
-          dq_xa(k,I_mp_QG)  = a_m(I_mp_QG)*xq(k,I_mp_QG)**b_m(I_mp_QG)
-
-          ! terminal velocity of average mass
-          vt_xa(k,I_mp_QC,1) = alpha_v(I_mp_QC,1)*(xq(k,I_mp_QC)**beta_v(I_mp_QC,1))*rho_fac_q(k,I_mp_QC)
-          vt_xa(k,I_mp_QI,1) = alpha_v(I_mp_QI,1)*(xq(k,I_mp_QI)**beta_v(I_mp_QI,1))*rho_fac_q(k,I_mp_QI)
-          vt_xa(k,I_mp_QS,1) = alpha_v(I_mp_QS,1)*(xq(k,I_mp_QS)**beta_v(I_mp_QS,1))*rho_fac_q(k,I_mp_QS)
-          vt_xa(k,I_mp_QG,1) = alpha_v(I_mp_QG,1)*(xq(k,I_mp_QG)**beta_v(I_mp_QG,1))*rho_fac_q(k,I_mp_QG)
-          vt_xa(k,I_mp_QC,2) = alpha_v(I_mp_QC,2)*(xq(k,I_mp_QC)**beta_v(I_mp_QC,2))*rho_fac_q(k,I_mp_QC)
-          vt_xa(k,I_mp_QI,2) = alpha_v(I_mp_QI,2)*(xq(k,I_mp_QI)**beta_v(I_mp_QI,2))*rho_fac_q(k,I_mp_QI)
-          vt_xa(k,I_mp_QS,2) = alpha_v(I_mp_QS,2)*(xq(k,I_mp_QS)**beta_v(I_mp_QS,2))*rho_fac_q(k,I_mp_QS)
-          vt_xa(k,I_mp_QG,2) = alpha_v(I_mp_QG,2)*(xq(k,I_mp_QG)**beta_v(I_mp_QG,2))*rho_fac_q(k,I_mp_QG)
-       end do
+       call get_diamiter( &
+            KA, KS, KE, &
+            dq_xa(:,:), & ! (out)
+            xq(:,:)     ) ! (in)
 
        if (flg_lt_l) then
           do iq = I_QC, I_QG
@@ -2990,14 +2936,11 @@ contains
 
        ! parameter setting
 
-       ! Mass of mean particle [kg]
-       do k = KS, KE
-          xq(k,I_mp_QC) = min(xc_max, max(xc_min, rhoq(k,I_QC)/(rhoq(k,I_NC)+nc_min) ) )
-          xq(k,I_mp_QR) = min(xr_max, max(xr_min, rhoq(k,I_QR)/(rhoq(k,I_NR)+nr_min) ) )
-          xq(k,I_mp_QI) = min(xi_max, max(xi_min, rhoq(k,I_QI)/(rhoq(k,I_NI)+ni_min) ) )
-          xq(k,I_mp_QS) = min(xs_max, max(xs_min, rhoq(k,I_QS)/(rhoq(k,I_NS)+ns_min) ) )
-          xq(k,I_mp_QG) = min(xg_max, max(xg_min, rhoq(k,I_QG)/(rhoq(k,I_NG)+ng_min) ) )
-       end do
+       call get_terminal_velocity( &
+            KA, KS, KE, &
+            vt_xa(:,:,:), xq(:,:), & ! (out)
+            rhoq(:,:),             & ! (in)
+            log_rho_fac_q(:,:)     ) ! (in)
 
        ! effective cross section is assume as area equivalent circle
        do k = KS, KE
@@ -3007,16 +2950,6 @@ contains
           dq_xa(k,I_mp_QS) = 2.0_RP*a_rea(I_mp_QS)*xq(k,I_mp_QS)**b_rea(I_mp_QS)
           dq_xa(k,I_mp_QG) = 2.0_RP*a_rea(I_mp_QG)*xq(k,I_mp_QG)**b_rea(I_mp_QG)
        end do
-
-       ! terminal velocity of average mass
-       ! SB06(33)
-       do k = KS, KE
-          vt_xa(k,I_mp_QC,2) = alpha_v(I_mp_QC,2)*(xq(k,I_mp_QC)**beta_v(I_mp_QC,2))*rho_fac_q(k,I_mp_QC)
-          vt_xa(k,I_mp_QR,2) = alpha_v(I_mp_QR,2)*(xq(k,I_mp_QR)**beta_v(I_mp_QR,2))*rho_fac_q(k,I_mp_QR)
-          vt_xa(k,I_mp_QI,2) = alpha_v(I_mp_QI,2)*(xq(k,I_mp_QI)**beta_v(I_mp_QI,2))*rho_fac_q(k,I_mp_QI)
-          vt_xa(k,I_mp_QS,2) = alpha_v(I_mp_QS,2)*(xq(k,I_mp_QS)**beta_v(I_mp_QS,2))*rho_fac_q(k,I_mp_QS)
-          vt_xa(k,I_mp_QG,2) = alpha_v(I_mp_QG,2)*(xq(k,I_mp_QG)**beta_v(I_mp_QG,2))*rho_fac_q(k,I_mp_QG)
-       enddo
 
        Pcrg1(:,:) = 0.0_RP
        Pcrg2(:,:) = 0.0_RP
@@ -3545,9 +3478,7 @@ contains
        KA, KS, KE, &
        cz, fz, w,                 &
        rho, tem, pre, qdry,       &
-       rhoq_qv, rhoq_nc,          &
-       rhoq_ni, rhoq_ns, rhoq_ng, &
-       cpa, cva,                  &
+       rhoq, cpa, cva,            &
        dTdt_rad,                  &
        qke,                       &
        CCN, nc_uplim_d,           &
@@ -3578,11 +3509,7 @@ contains
     real(RP), intent(in)  :: pre (KA)
     real(RP), intent(in)  :: qdry(KA)
     !
-    real(RP), intent(in)  :: rhoq_qv(KA)
-    real(RP), intent(in)  :: rhoq_nc(KA)
-    real(RP), intent(in)  :: rhoq_ni(KA)
-    real(RP), intent(in)  :: rhoq_ns(KA)
-    real(RP), intent(in)  :: rhoq_ng(KA)
+    real(RP), intent(in)  :: rhoq(KA,I_QV:I_NG)
     !
     real(RP), intent(in) ::  cpa(KA)
     real(RP), intent(in) :: dTdt_rad(KA)
@@ -3711,7 +3638,7 @@ contains
     ssi_max = 1.0_RP
 
     do k = KS, KE
-       pv     = rhoq_qv(k)*Rvap*tem(k)
+       pv     = rhoq(k,I_QV)*Rvap*tem(k)
        ssw(k) = min( MP_ssw_lim, ( pv/esw(k)-1.0_RP ) )*100.0_RP
        ssi(k) = ( pv/esi(k) - 1.00_RP )
 !       ssw_below(k+1) = ssw(k)
@@ -3811,10 +3738,10 @@ contains
           ! effective vertical velocity
           if ( flag_nucleation(k) .AND. & ! large scale upward motion region and saturated
                tem(k) > tem_ccn_low ) then
-             dlcdt_max     = ( rhoq_qv(k) - esw(k) / ( Rvap * tem(k) ) ) * rdt
+             dlcdt_max     = ( rhoq(k,I_QV) - esw(k) / ( Rvap * tem(k) ) ) * rdt
              dlcdt_max     = max( dlcdt_max, 0.0_RP ) ! dlcdt_max can be artificially negative due to truncation error in floating point operation
              dncdt_max     = dlcdt_max/xc_min
-!             dnc_new       = nc_new(k)-rhoq_nc(k)
+!             dnc_new       = nc_new(k)-rhoq(k,I_NC)
              dnc_new       = nc_new(k)
              PQ(k,I_NCccn) = min( dncdt_max, dnc_new*rdt )
              PQ(k,I_LCccn) = min( dlcdt_max, xc_min*PQ(k,I_NCccn) )
@@ -3832,11 +3759,11 @@ contains
              ! effective vertical velocity
              if ( flag_nucleation(k) .AND. & ! large scale upward motion region and saturated
                   tem(k) > tem_ccn_low .AND. &
-                  nc_new(k) > rhoq_nc(k) ) then
-                dlcdt_max     = ( rhoq_qv(k) - esw(k) / ( Rvap * tem(k) ) ) * rdt
+                  nc_new(k) > rhoq(k,I_NC) ) then
+                dlcdt_max     = ( rhoq(k,I_QV) - esw(k) / ( Rvap * tem(k) ) ) * rdt
                 dlcdt_max     = max( dlcdt_max, 0.0_RP ) ! dlcdt_max can be artificially negative due to truncation error in floating point operation
                 dncdt_max     = dlcdt_max/xc_min
-                dnc_new       = nc_new(k)-rhoq_nc(k)
+                dnc_new       = nc_new(k)-rhoq(k,I_NC)
                 PQ(k,I_NCccn) = min( dncdt_max, dnc_new*rdt )
                 PQ(k,I_LCccn) = min( dlcdt_max, xc_min*PQ(k,I_NCccn) )
              else
@@ -3848,11 +3775,11 @@ contains
           do k = KS, KE
              ! effective vertical velocity
              if(  tem(k) > tem_ccn_low .AND. &
-                  nc_new(k) > rhoq_nc(k) ) then
-                dlcdt_max     = ( rhoq_qv(k) - esw(k) / ( Rvap * tem(k) ) ) * rdt
+                  nc_new(k) > rhoq(k,I_NC) ) then
+                dlcdt_max     = ( rhoq(k,I_QV) - esw(k) / ( Rvap * tem(k) ) ) * rdt
                 dlcdt_max     = max( dlcdt_max, 0.0_RP ) ! dlcdt_max can be artificially negative due to truncation error in floating point operation
                 dncdt_max     = dlcdt_max/xc_min
-                dnc_new       = nc_new(k)-rhoq_nc(k)
+                dnc_new       = nc_new(k)-rhoq(k,I_NC)
                 PQ(k,I_NCccn) = min( dncdt_max, dnc_new*rdt )
                 PQ(k,I_LCccn) = min( dlcdt_max, xc_min*PQ(k,I_NCccn) )
              else
@@ -3879,10 +3806,9 @@ contains
             PLIdep_total(:),           & ! out for ice nucleation
             rho(:), tem(:), pre(:),    & ! in 
             qdry(:), esi(:), qsi(:),   & ! in
-            rhoq_qv,                   & ! in
-            rhoq_ni, rhoq_ns, rhoq_ng, & ! in
-            vt_xa,                     & ! in
-            dq_xa, dt                  ) ! in
+            rhoq(:,:),                 & ! in
+            vt_xa, dq_xa,              & ! in
+            dt                         ) ! in
 
        do k = KS, KE
           dTdt_dep(k) = (LHS0+(CV_VAPOR-CV_ICE)*tem(k))*PLIdep_total(k)/(rho(k)*cva(k)) 
@@ -3898,10 +3824,10 @@ contains
     do k = KS, KE
        dzh           = cz(k) - z_below(k)
        w_dssidz(k)   = velz(k) * (ssi(k) - ssi_below(k))/dzh
-       dssidt_rad(k) = -rhoq_qv(k)/(rho(k)*qsi(k)*qsi(k))*dqsidtem_rho(k)*dTdt_rad(k)
-       dli_max       = ( rhoq_qv(k) - esi(k) / ( Rvap * tem(k) ) ) * rdt
+       dssidt_rad(k) = -rhoq(k,I_QV)/(rho(k)*qsi(k)*qsi(k))*dqsidtem_rho(k)*dTdt_rad(k)
+       dli_max       = ( rhoq(k,I_QV) - esi(k) / ( Rvap * tem(k) ) ) * rdt
        dli_max       = max( dli_max, 0.0_RP ) ! dli_max can be artificially negative due to truncation error in floating point operation
-       dni_max       = min( dli_max/xi_ccn, (in_max-rhoq_ni(k))*rdt )
+       dni_max       = min( dli_max/xi_ccn, (in_max-rhoq(k,I_NI))*rdt )
        wdssi         = min( w_dssidz(k)+dssidt_rad(k), 0.01_RP)
        wssi          = min( ssi(k), ssi_max)
 
@@ -3909,9 +3835,9 @@ contains
        if( so22_het ) then
           dssidt_mp(k)  = -PLIdep_total(k)/(rho(k)*qsi(k))
           !!  PLIdep(k) -> PQ(k,I_LIdep)
-          dssidt_rad(k) = -rhoq_qv(k)/(rho(k)*qsi(k)*qsi(k))*dqsidtem_rho(k)*dTdt_rad(k)
+          dssidt_rad(k) = -rhoq(k,I_QV)/(rho(k)*qsi(k)*qsi(k))*dqsidtem_rho(k)*dTdt_rad(k)
           !!
-          dssidt_dyn(k) = +rhoq_qv(k)/(rho(k)*qsi(k)*qsi(k))&
+          dssidt_dyn(k) = +rhoq(k,I_QV)/(rho(k)*qsi(k)*qsi(k))&
                * velz(k)*GRAV*(dqsidtem_pre(k)/cpa(k)+dqsidpre_tem(k)*rho(k))
           !    * w(k)*CNST_GRAV*(dqsidtem_pre(ij,k)/cpa(ij,k)+dqsidpre_tem(ij,k)*rho(ij,k))
           dssidt        = dssidt_mp(k) + dssidt_rad(k) + dssidt_dyn(k)
@@ -3920,13 +3846,13 @@ contains
        ! SB06(34),(35)
 !#       if(  ( wdssi       > eps         ) .AND. & !
 !#            (tem(k)       < 273.15_RP   ) .AND. & !
-!#            (rhoq_ni(k) < in_max      ) .AND. &
+!#            (rhoq(k,I_NI) < in_max      ) .AND. &
 !#            (wssi      >= eps       ) )then   !
 !#          tmp = c_in * nm_M92 * exp( 0.3_RP * bm_M92 * ( wssi - 0.1_RP ) )
 !#          if( inucl_w ) then
 !#             tmp = bm_M92 * 0.3_RP * tmp * wdssi
 !#          else
-!#             tmp = max( tmp - rhoq_ni(k), 0.0_RP ) * rdt
+!#             tmp = max( tmp - rhoq(k,I_NI), 0.0_RP ) * rdt
 !#          endif
 !#          PQ(k,I_NIccn) = min(dni_max, tmp)
 !#          PQ(k,I_LIccn) = min(dli_max, PQ(k,I_NIccn)*xi_ccn )
@@ -3935,7 +3861,7 @@ contains
 !#          PQ(k,I_LIccn) = 0.0_RP
 !#       end if
        if(  (tem(k)     < 273.15_RP   ) .AND. & !
-            (rhoq_ni(k) < in_max      ) .AND. &
+            (rhoq(k,I_NI) < in_max      ) .AND. &
             (wssi        >= eps       ) )then   !
           tmp = c_in * nm_M92 * exp( 0.3_RP * bm_M92 * ( wssi - 0.1_RP ) )
           if( inucl_w .and. wdssi > eps ) then
@@ -3943,7 +3869,7 @@ contains
           elseif( so22_het .and. dssidt > eps ) then
              tmp = bm_M92 * 0.3_RP * tmp * dssidt
           else
-             tmp = max( tmp - rhoq_ni(k), 0.0_RP ) * rdt
+             tmp = max( tmp - rhoq(k,I_NI), 0.0_RP ) * rdt
           endif
           PQ(k,I_NIccn) = min(dni_max, tmp)
           PQ(k,I_LIccn) = min(dli_max, PQ(k,I_NIccn)*xi_ccn )
@@ -3959,7 +3885,7 @@ contains
        call nucleation_ice_hom(   &
             KA, KS, KE,           & !in
             tem, pre, rho,        & !in
-            qdry, rhoq_qv,        & !in
+            qdry, rhoq(:,I_QV),   & !in
             cva, cpa,             & !in
             w,                    & !in
             dTdt_rad,             & !in
@@ -4143,8 +4069,8 @@ contains
              pre_lim = rho_lim*(qd(k)*Rdry + rhoq_qv(k)*Rvap)*(temc_lim+T00)! only for Dw
              Dw      = 0.211e-4_RP* (((temc_lim+T00)/T00)**1.94_RP) *(Pstd/pre_lim)
              ! v_th = sqrt(8*Rv*T/pi) in the paragraph after eq(2) in Karcher etal.(2006)
-             b2      = 0.5_RP/Dw*(Rvap*wtem*r2pi)**0.5_RP
-             b1      = (si-1.0_RP)*0.5_RP*rrhoi*esi*(2.0_RP*PI*Rvap*wtem)**(-0.5_RP)
+             b2      = 0.5_RP/Dw*sqrt(Rvap*wtem*r2pi)
+             b1      = (si-1.0_RP)*0.5_RP*rrhoi*esi/sqrt(2.0_RP*PI*Rvap*wtem)
              a2      = Mw*Rvap*wtem/(Nav*esi)
              a3      = EPSvap*Mw*LHS0*LHS0/(Nav*cpa(k)*pre(k)*wtem)
              delta   = b2*rw
@@ -5355,9 +5281,9 @@ contains
              num_Besti_glx = 2.0_RP*acx*GRAV*rho(k)*di_glx**(bcx+2.0_RP-scx)/(gcx*mua*mua)
              num_Bests_glx = 2.0_RP*as *GRAV*rho(k)*ds_glx**(bs +2.0_RP-ss )/(gs *mua*mua)
              num_Bestg_glx = 2.0_RP*ag *GRAV*rho(k)*dg_glx**(bg +2.0_RP-sg )/(gg *mua*mua)
-             num_Rei_glx   = 0.25_RP*d0*d0*( sqrt(1.0_RP+4.0_RP*sqrt(num_Besti_glx)/(d0*d0*sqrt(c0)))-1.0_RP )**2_RP
-             num_Res_glx   = 0.25_RP*d0*d0*( sqrt(1.0_RP+4.0_RP*sqrt(num_Bests_glx)/(d0*d0*sqrt(c0)))-1.0_RP )**2_RP
-             num_Reg_glx   = 0.25_RP*d0*d0*( sqrt(1.0_RP+4.0_RP*sqrt(num_Bestg_glx)/(d0*d0*sqrt(c0)))-1.0_RP )**2_RP
+             num_Rei_glx   = 0.25_RP*d0*d0*( sqrt(1.0_RP+4.0_RP*sqrt(num_Besti_glx)/(d0*d0*sqrt(c0)))-1.0_RP )**2
+             num_Res_glx   = 0.25_RP*d0*d0*( sqrt(1.0_RP+4.0_RP*sqrt(num_Bests_glx)/(d0*d0*sqrt(c0)))-1.0_RP )**2
+             num_Reg_glx   = 0.25_RP*d0*d0*( sqrt(1.0_RP+4.0_RP*sqrt(num_Bestg_glx)/(d0*d0*sqrt(c0)))-1.0_RP )**2
              !
              vtc_glx = coef_vtr_ar2*dc_glx*(1.d0-exp(-coef_vtr_br2*dc_glx))
              !
@@ -5955,8 +5881,7 @@ contains
        rho, tem, pre,             &
        qd,                        &
        esi,  qsi,                 &
-       rhoq_qv,                   &
-       rhoq_ni, rhoq_ns, rhoq_ng, &
+       rhoq,                      &
        vt_xave, dq_xave,          &
        dt                         )
     use scale_const, only: &
@@ -5982,10 +5907,7 @@ contains
     real(RP), intent(in)  :: qd(KA)      ! mixing ratio of dry air
     real(RP), intent(in)  :: esi(KA)     ! saturation vapor pressure(solid water)
     real(RP), intent(in)  :: qsi(KA)     ! saturation vapor pressure(solid water)
-    real(RP), intent(in)  :: rhoq_qv(KA)      ! mass   of vapor
-    real(RP), intent(in)  :: rhoq_ni(KA)
-    real(RP), intent(in)  :: rhoq_ns(KA)
-    real(RP), intent(in)  :: rhoq_ng(KA)
+    real(RP), intent(in)  :: rhoq(KA,I_QV:I_NG)
     ! Notice following values differ from mean terminal velocity or diameter.
     ! mean(vt(x)) /= vt(mean(x)) and mean(D(x)) /= D(mean(x))
     ! Following ones are vt(mean(x)) and D(mean(x)).
@@ -6049,7 +5971,7 @@ contains
        temc    = tem(k) - T00   ! degC
        temc_lim= max(temc, temc_lim_diff) !
        rho_lim = max(rho(k),rho_min)   !
-       qv      = rhoq_qv(k)/rho_lim
+       qv      = rhoq(k,I_QV)/rho_lim
        pre_lim = rho_lim*(qd(k)*Rdry + qv*Rvap)*(temc_lim+T00)
        !--------------------------------------------------------------------
        ! Diffusion growth part is described in detail
@@ -6102,9 +6024,9 @@ contains
        ventLG  = (1.0_RP-wtg)*ventLG_s + wtg*ventLG_l
        ! SB06(29)
        ssi         = qv/qsi(k) - 1.0_RP  ! supersaturation
-       PLIdep_wrk  = Gii*ssi*rhoq_ni(k)*dq_xave(k,I_mp_QI)*ventLI
-       PLSdep_wrk  = Gis*ssi*rhoq_ns(k)*dq_xave(k,I_mp_QS)*ventLS
-       PLGdep_wrk  = Gig*ssi*rhoq_ng(k)*dq_xave(k,I_mp_QG)*ventLG
+       PLIdep_wrk  = Gii*ssi*max(rhoq(k,I_NI),0.0_RP)*dq_xave(k,I_mp_QI)*ventLI
+       PLSdep_wrk  = Gis*ssi*max(rhoq(k,I_NS),0.0_RP)*dq_xave(k,I_mp_QS)*ventLS
+       PLGdep_wrk  = Gig*ssi*max(rhoq(k,I_NG),0.0_RP)*dq_xave(k,I_mp_QG)*ventLG
        !
        dep_limiter = rho(k)*(qv-qsi(k))/dt
        if      (ssi < -1.e-30_RP)then ! unsaturated
@@ -6998,4 +6920,75 @@ contains
     return
   end subroutine Cross_Section
 
+  subroutine get_terminal_velocity( &
+       KA, KS, KE,   &
+       vt_xa, xq,    &
+       rhoq,         &
+       log_rho_fac_q )
+    implicit none
+    integer,  intent(in)  :: KA, KS, KE
+    real(RP), intent(out) :: vt_xa        (KA,HYDRO_MAX,2) ! terminal velocity of average mass
+    real(RP), intent(out) :: xq           (KA,HYDRO_MAX)   ! Mass of mean particle [kg] SB06(94)
+    real(RP), intent(in)  :: rhoq         (KA,HYDRO_MAX)
+    real(RP), intent(in)  :: log_rho_fac_q(KA,HYDRO_MAX)
+
+    real(RP) :: log_xq
+    integer :: k
+
+!OCL LOOP_FISSION_TARGET(LS)
+    do k = KS, KE
+
+       xq(k,I_mp_QC) = min(xc_max, max(xc_min, rhoq(k,I_QC)/(rhoq(k,I_NC)+nc_min) ))
+
+       log_xq = log(xq(k,I_mp_QC))
+       vt_xa(k,I_mp_QC,1) = exp( log_alpha_v(I_mp_QC,1) + log_xq * beta_v(I_mp_QC,1) + log_rho_fac_q(k,I_mp_QC) )
+       vt_xa(k,I_mp_QC,2) = exp( log_alpha_v(I_mp_QC,2) + log_xq * beta_v(I_mp_QC,2) + log_rho_fac_q(k,I_mp_QC) )
+
+       xq(k,I_mp_QR) = min(xr_max, max(xr_min, rhoq(k,I_QR)/(rhoq(k,I_NR)+nr_min) ))
+       log_xq = log(xq(k,I_mp_QR))
+       vt_xa(k,I_mp_QR,1) = exp( log_alpha_v(I_mp_QR,1) + log_xq * beta_v(I_mp_QR,1) + log_rho_fac_q(k,I_mp_QR) )
+       vt_xa(k,I_mp_QR,2) = vt_xa(k,I_mp_QR,1)
+
+       xq(k,I_mp_QI) = min(xi_max, max(xi_min, rhoq(k,I_QI)/(rhoq(k,I_NI)+ni_min) ))
+       log_xq = log(xq(k,I_mp_QI))
+       vt_xa(k,I_mp_QI,1) = exp( log_alpha_v(I_mp_QI,1) + log_xq * beta_v(I_mp_QI,1) + log_rho_fac_q(k,I_mp_QI) )
+       vt_xa(k,I_mp_QI,2) = exp( log_alpha_v(I_mp_QI,2) + log_xq * beta_v(I_mp_QI,2) + log_rho_fac_q(k,I_mp_QI) )
+
+       xq(k,I_mp_QS) = min(xs_max, max(xs_min, rhoq(k,I_QS)/(rhoq(k,I_NS)+ns_min) ))
+       log_xq = log(xq(k,I_mp_QS))
+       vt_xa(k,I_mp_QS,1) = exp( log_alpha_v(I_mp_QS,1) + log_xq * beta_v(I_mp_QS,1) + log_rho_fac_q(k,I_mp_QS) )
+       vt_xa(k,I_mp_QS,2) = exp( log_alpha_v(I_mp_QS,2) + log_xq * beta_v(I_mp_QS,2) + log_rho_fac_q(k,I_mp_QS) )
+
+       xq(k,I_mp_QG) = min(xg_max, max(xg_min, rhoq(k,I_QG)/(rhoq(k,I_NG)+ng_min) ))
+       log_xq = log(xq(k,I_mp_QG))
+       vt_xa(k,I_mp_QG,1) = exp( log_alpha_v(I_mp_QG,1) + log_xq * beta_v(I_mp_QG,1) + log_rho_fac_q(k,I_mp_QG) )
+       vt_xa(k,I_mp_QG,2) = exp( log_alpha_v(I_mp_QG,2) + log_xq * beta_v(I_mp_QG,2) + log_rho_fac_q(k,I_mp_QG) )
+    end do
+
+    return
+  end subroutine get_terminal_velocity
+
+  subroutine get_diamiter( &
+       KA, KS, KE, &
+       dq_xa, &
+       xq )
+    implicit none
+    integer,  intent(in)  :: KA, KS, KE
+    real(RP), intent(out) :: dq_xa(KA,HYDRO_MAX)
+    real(RP), intent(in)  :: xq   (KA,HYDRO_MAX)
+    integer :: k
+
+    ! diamter of average mass
+    ! SB06(32)
+!OCL LOOP_FISSION_TARGET(LS)
+    do k = KS, KE
+       dq_xa(k,I_mp_QC)  = a_m(I_mp_QC)*xq(k,I_mp_QC)**b_m(I_mp_QC)
+       dq_xa(k,I_mp_QR)  = a_m(I_mp_QR)*xq(k,I_mp_QR)**b_m(I_mp_QR)
+       dq_xa(k,I_mp_QI)  = a_m(I_mp_QI)*xq(k,I_mp_QI)**b_m(I_mp_QI)
+       dq_xa(k,I_mp_QS)  = a_m(I_mp_QS)*xq(k,I_mp_QS)**b_m(I_mp_QS)
+       dq_xa(k,I_mp_QG)  = a_m(I_mp_QG)*xq(k,I_mp_QG)**b_m(I_mp_QG)
+    end do
+
+    return
+  end subroutine get_diamiter
 end module scale_atmos_phy_mp_sn14
