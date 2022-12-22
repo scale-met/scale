@@ -1316,7 +1316,7 @@ contains
        weightk(k) = 0.5_RP * ( 1.0_RP + tanh( PI * log( dq/d_vtr_branch ) ) )
     end do
     do k = KS, KE
-       dq = ( 4.0_RP + mud_r ) * rlambdar(k)
+       dq = ( 1.0_RP + mud_r ) * rlambdar(k)
        velq_s = coef_vtr_ar2 * dq &
               * ( 1.0_RP - ( 1.0_RP + coef_vtr_br2*rlambdar(k) )**(-2.0_RP-mud_r) )
        velq_l = coef_vtr_ar1 - coef_vtr_br1 &
