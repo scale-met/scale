@@ -689,8 +689,8 @@ module scale_atmos_phy_mp_sn14
   ! limitter for vapor diffusivity
   ! this value was suggested in Pruppacher and Klett(1997),(13-3)
   ! although Hall and Pruppacher (1976) extrapolated upto -80 deg
-  real(RP), private, save :: temc_lim_diff = -80.d0 ! HP76
-  !                                         -40.d0 ! PK97
+  real(RP), private, save :: temc_lim_diff = -80.0_RP ! HP76
+  !                                          -40.0_RP ! PK97
 
 
 
@@ -3577,7 +3577,7 @@ contains
     logical :: flag_nucleation(KA)
     !
     real(RP) :: r_gravity
-    real(RP), parameter :: r_sqrt3=0.577350269_RP ! = sqrt(1.d0/3.d0)
+    real(RP), parameter :: r_sqrt3=0.577350269_RP ! = sqrt(1.0/3.0)
     real(RP), parameter :: eps=1.E-30_RP
     !====> ! 09/08/18
     !
@@ -3953,7 +3953,7 @@ contains
     real(RP), parameter :: Mw=18.01528_RP         ! Water Molar Weight
     real(RP), parameter :: Nav=6.0221415e+23_RP      ! Avogadro Number
     real(RP), parameter :: vw=(Mw*1.e-3_RP/Nav)/rhoi ! volume of a water molecule in ice phase
-    !                     18nm*exp( 3.d0*log(1.5)**2 )=29.4760367
+    !                     18nm*exp( 3.0*log(1.5)**2 )=29.4760367
     real(RP), parameter :: r0=29.5e-9_RP          ! aerosol mass(volume) mode radius
     real(RP), parameter :: c_gf =  1.01187_RP     ! dAlmeida
     real(RP), parameter :: g_gf = -0.206449_RP    ! dAlmeida
@@ -4048,7 +4048,7 @@ contains
              a1        = LHS0*GRAV/(cpa(k)*Rvap*tem(k)*tem(k))&
                   - GRAV/(Rdry*tem(k))
 !!$          ! alternative formulation for NICAM-EXACT
-!!$          den1      = (pre(k)-(1.d0-EPSvap)*esi)*(pre(k)-(1.d0-EPSvap)*esi)
+!!$          den1      = (pre(k)-(1.0_RP-EPSvap)*esi)*(pre(k)-(1.0_RP-EPSvap)*esi)
 !!$          den2      = den1*Rvap*wtem*wtem
 !!$          dqsidp_tem=-EPSvap*              esi/den1
 !!$          dqsidt_pre= EPSvap*pre(k)*lhs*esi/den2
@@ -4076,8 +4076,8 @@ contains
              delta   = b2*rw
              kappa   = 2.0_RP*b1*b2/( rtau*(1.0_RP+delta)*(1.0_RP+delta) )
              ! (A9) in RM05
-             Rim_w   = max(1.e-20_RP, 0.5_RP*(1.d0+delta)*(3.0_RP*kappa/(2.d0+sqrt(1.0_RP+9.0_RP/PI*kappa))) &
-                  +                1.0_RP/(1.d0+delta)*(3.0_RP      /(2.d0+sqrt(1.0_RP+9.0_RP/PI*kappa)))+delta-1.0_RP )
+             Rim_w   = max(1.e-20_RP, 0.5_RP*(1.0_RP+delta)*(3.0_RP*kappa/(2.0_RP+sqrt(1.0_RP+9.0_RP/PI*kappa))) &
+                  +                1.0_RP/(1.0_RP+delta)*(3.0_RP      /(2.0_RP+sqrt(1.0_RP+9.0_RP/PI*kappa)))+delta-1.0_RP )
              PNIhom(k)  = min( Scr/(Scr-1.0_RP)*a1*wp/(Rim_w*4.0_RP*PI*Dw/b2), ni_max )* rdt
              ri_wrk        = 1.0_RP+b2*rw
              ri            = ( sqrt(ri_wrk*ri_wrk + 2.0_RP*b1*b2*dt )-1.0_RP )/b2
@@ -4178,7 +4178,7 @@ contains
           a9   = a8*x/(alpha+9.0_RP)  ! n=9
           a10  = a9*x/(alpha+10.0_RP) ! n=10
           igm  = (a0+a1+a2+a3+a4+a5+a6+a7+a8+a9+a10)*exp( -x + alpha*log(x) - lgm )
-       else if(x<alpha*1.d2) then ! continued fraction expansion
+       else if(x<alpha*100.0_RP) then ! continued fraction expansion
           ! 2nd-truncation is enough for cloud droplet.
           ! setup
           b0   = x+1.0_RP-alpha
@@ -5016,7 +5016,7 @@ contains
     real(RP), parameter :: bs = 2.4490_RP
     real(RP), parameter :: gs = 0.131488_RP
     real(RP), parameter :: ss = 1.880000_RP
-    real(RP), save :: ag = 19.5072514_RP !0.049d0*1.d-3*(100.d0**2.8d0)
+    real(RP), save :: ag = 19.5072514_RP !0.049d0*1.d-3*(100.0d0**2.8d0)
     real(RP), save :: bg = 2.8_RP
     real(RP), save :: gg = 0.5_RP
     real(RP), save :: sg = 2.0_RP
@@ -5051,13 +5051,13 @@ contains
     !
     !-------------------------------
     ! cloud
-    ! gauss_range = 2.d0
+    ! gauss_range = 2.0_RP
     ! ngmax = 4
     ! rain,
     ! gauss_range = xxx
     ! ngmax = 4
     ! ice, snow, graupel
-    ! gauss_range = 5.d0
+    ! gauss_range = 5.0_RP
     ! ngmax = 4
     !
     real(RP), parameter :: gauss_rangec=2.0_RP
@@ -5073,7 +5073,7 @@ contains
          0.1265739962562290E+01_RP, &
          0.1816468454535444E+01_RP &
          /)
-    real(RP), parameter :: gauss_ranger=8.d0
+    real(RP), parameter :: gauss_ranger=8.0_RP
     real(RP), parameter :: wr_gl(ngmax)=(/&
          0.723343815453428E+00_RP,&
          1.35609772622641E+00_RP, &
@@ -5086,7 +5086,7 @@ contains
          2.02783902311062E+00_RP, &
          5.99354237846583E+00_RP &
          /)
-    real(RP), parameter :: gauss_range=5.d0
+    real(RP), parameter :: gauss_range=5.0_RP
     real(RP), parameter :: w_gl(ngmax)=(/&
          0.559850775788111E+00_RP, &
          1.04958713664599E+00_RP, &
@@ -5226,7 +5226,7 @@ contains
        do ngy=1, ngmax
           !
           do k= KS, KE
-             mua     = mua0 + dmua_dT*(tem(k)-273.15d0)
+             mua     = mua0 + dmua_dT*(tem(k)-273.15_RP)
              nua     = mua/rho(k)        ! [m2/s]
              lambdac = xq(k,I_mp_QC)**(-mu(I_mp_QC))*coef_lambda(I_mp_QC)
              lambdar = xq(k,I_mp_QR)**(-mu(I_mp_QR))*coef_lambda(I_mp_QR)
@@ -5285,10 +5285,10 @@ contains
              num_Res_glx   = 0.25_RP*d0*d0*( sqrt(1.0_RP+4.0_RP*sqrt(num_Bests_glx)/(d0*d0*sqrt(c0)))-1.0_RP )**2
              num_Reg_glx   = 0.25_RP*d0*d0*( sqrt(1.0_RP+4.0_RP*sqrt(num_Bestg_glx)/(d0*d0*sqrt(c0)))-1.0_RP )**2
              !
-             vtc_glx = coef_vtr_ar2*dc_glx*(1.d0-exp(-coef_vtr_br2*dc_glx))
+             vtc_glx = coef_vtr_ar2*dc_glx*(1.0_RP-exp(-coef_vtr_br2*dc_glx))
              !
              if( dr_glx < d_vtr_branch )then
-                vtr_glx = coef_vtr_ar2*dr_glx*(1.d0-exp(-coef_vtr_br2*dr_glx))
+                vtr_glx = coef_vtr_ar2*dr_glx*(1.0_RP-exp(-coef_vtr_br2*dr_glx))
              else
                 vtr_glx = coef_vtr_ar1-coef_vtr_br1*exp(-coef_vtr_cr1*dr_glx)
              end if
@@ -5329,12 +5329,12 @@ contains
              if( di_gly <= 100.e-6_RP )then
                 acy = 0.1677_RP*1.d-3*(100.0_RP**2.91_RP)
                 bcy = 2.91_RP
-                gcy = (0.684_RP*1.e-4_RP)*10.d0**(2.0_RP*2.0_RP)
+                gcy = (0.684_RP*1.e-4_RP)*10.0_RP**(2.0_RP*2.0_RP)
                 scy = 2.0_RP
              else
-                acy = 0.00166_RP*1.e-3_RP*(100.0_RP**1.91d0)
+                acy = 0.00166_RP*1.e-3_RP*(100.0_RP**1.91_RP)
                 bcy = 1.91_RP
-                gcy = (0.0696d0*1.e-4_RP)*10.0_RP**(2.0_RP*1.5_RP)
+                gcy = (0.0696_RP*1.e-4_RP)*10.0_RP**(2.0_RP*1.5_RP)
                 scy = 1.5_RP
              end if
              num_Besti_gly = 2.0_RP*acy*GRAV*rho(k)*di_gly**(bcy+2.0_RP-scy)/(gcy*mua*mua)
@@ -5479,8 +5479,8 @@ contains
        ! i_iconv2g: option whether partial conversions work or not
        ! ice-cloud => graupel
        if ( dq_xave(k,I_mp_QI) > di_cri ) then
-          wx_cri = cfill_i*RHOw/rho_g*( pi/6.d0*rho_g*dq_xave(k,I_mp_QI)*dq_xave(k,I_mp_QI)*dq_xave(k,I_mp_QI)/xq(k,I_mp_QI) - 1.0_RP )
-          PQ(k,I_LIcon) = i_iconv2g*  Pac(k,I_LIacLC2LI)/max(1.d0, wx_cri)
+          wx_cri = cfill_i*RHOw/rho_g*( pi/6.0_RP*rho_g*dq_xave(k,I_mp_QI)*dq_xave(k,I_mp_QI)*dq_xave(k,I_mp_QI)/xq(k,I_mp_QI) - 1.0_RP )
+          PQ(k,I_LIcon) = i_iconv2g*  Pac(k,I_LIacLC2LI)/max(1.0_RP, wx_cri)
           PQ(k,I_NIcon) = i_iconv2g*  PQ(k,I_LIcon)/xq(k,I_mp_QI)
        else
           wx_cri       = 0.0_RP
@@ -6572,7 +6572,7 @@ contains
     do k = KS, KE
        lvsi    = esi(k)*r_rvaptem(k)
        ddep    = dt*(PQ(k,I_LIdep)+PQ(k,I_LSdep)+PQ(k,I_LGdep))
-       dlvsi   = rhoq(k,I_QV)-lvsi  ! limiter for esi>1.d0
+       dlvsi   = rhoq(k,I_QV)-lvsi  ! limiter for esi>1.0_RP
 
        sw = ( sign(0.5_RP,ddep) + sign(0.5_RP,dlvsi) ) &
           * ( 0.5_RP + sign(0.5_RP,abs(ddep)-eps) ) ! to avoid zero division
