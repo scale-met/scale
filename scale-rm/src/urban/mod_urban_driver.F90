@@ -45,8 +45,9 @@ module mod_urban_driver
   !
   !++ Private parameters & variables
   !
-  real(RP), private, allocatable :: AH_URB (:,:,:)   ! urban grid average of anthropogenic sensible heat [W/m2]
-  real(RP), private, allocatable :: AHL_URB(:,:,:)  ! urban grid average of anthropogenic latent heat [W/m2]
+  real(RP), private, allocatable :: AH_URB (:,:,:) ! urban grid average of anthropogenic sensible heat [W/m2]
+  real(RP), private, allocatable :: AHL_URB(:,:,:) ! urban grid average of anthropogenic latent heat [W/m2]
+  real(RP), private              :: AH_TOFFSET     ! time offset for AH [Hour]
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
@@ -88,7 +89,7 @@ contains
                                          LANDUSE_fact_urban(:,:),                        & ! [IN]
                                          URBAN_Z0M(:,:), URBAN_Z0H(:,:), URBAN_Z0E(:,:), & ! [OUT]
                                          URBAN_ZD(:,:),                                  & ! [OUT]
-                                         AH_URB(:,:,:), AHL_URB(:,:,:)                   ) ! [OUT]
+                                         AH_URB(:,:,:), AHL_URB(:,:,:), AH_TOFFSET       ) ! [OUT]
 
           URBAN_SFC_TYPE = 'KUSAKA01'
        case default
@@ -340,10 +341,10 @@ contains
 
 
        ! universal time
-       tloc = NOWDATE(4)
-       if ( tloc == 0 ) tloc = 24
-       dsec = real( NOWDATE(5)*60.0_RP + NOWDATE(6), kind=RP ) / 3600.0_RP
-
+       dsec = real( NOWDATE(5)*60.0_RP + NOWDATE(6) + AH_TOFFSET, kind=RP ) / 3600.0_RP
+       tloc = NOWDATE(4) + floor(dsec)
+       dsec = dsec - floor(dsec)
+       tloc = modulo(tloc-1,24)+1
        if ( tloc == 24 ) then
          tloc_next = 1
        else
