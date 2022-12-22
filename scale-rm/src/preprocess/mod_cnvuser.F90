@@ -39,6 +39,11 @@ module mod_cnvuser
   !
   !++ Private procedure
   !
+  private :: CNVUSER_prepare_TILE
+  private :: CNVUSER_prepare_GrADS
+  private :: CNVUSER_prepare_GrADS_3D
+  private :: CNVUSER_execute_GrADS_3D
+  private :: CNVUSER_execute_TILE_GrADS
   private :: CNVUSER_write
 
   !-----------------------------------------------------------------------------
@@ -260,6 +265,7 @@ contains
         param%GrADS_VARNAME  = CNVUSER_GrADS_VARNAME
         param%GrADS_LATNAME  = CNVUSER_GrADS_LATNAME
         param%GrADS_LONNAME  = CNVUSER_GrADS_LONNAME
+        if ( param%OUT_VARNAME == '' ) param%OUT_VARNAME = param%GrADS_VARNAME
       type is (t_grads_3d)
         param%GrADS_FILENAME    = CNVUSER_GrADS_FILENAME
         param%GrADS_VARNAME     = CNVUSER_GrADS_VARNAME
@@ -267,6 +273,7 @@ contains
         param%GrADS_LONNAME     = CNVUSER_GrADS_LONNAME
         param%GrADS_LEVNAME     = CNVUSER_GrADS_LEVNAME
         param%GrADS_HEIGHT_PLEV = CNVUSER_GrADS_HEIGHT_PLEV
+        if ( param%OUT_VARNAME == '' ) param%OUT_VARNAME = param%GrADS_VARNAME
       end select
     end do
 
@@ -280,15 +287,6 @@ contains
 
     do i = 1, size(params)
     associate (param => params(i)%param)
-      select type (param)
-      type is (t_tile)
-        call CNVUSER_prepare_TILE(param)
-      type is (t_grads)
-        call CNVUSER_prepare_GrADS(param)
-      type is (t_grads_3d)
-        call CNVUSER_prepare_GrADS_3D(param)
-      end select
-
       if ( param%OUT_BASENAME == '' .or. param%OUT_VARNAME == '' ) then
          LOG_ERROR('CNVUSER',*) 'CNVUSER_OUT_BASENAME and CNVUSER_OUT_VARNAME are required'
          call PRC_abort
@@ -296,12 +294,16 @@ contains
 
       select type (param)
       type is (t_tile)
+        call CNVUSER_prepare_TILE(param)
         call CNVUSER_execute_TILE_GrADS(param)
       type is (t_grads)
+        call CNVUSER_prepare_GrADS(param)
         call CNVUSER_execute_TILE_GrADS(param)
       type is (t_grads_3d)
-        call CNVUSER_execute_TILE_GrADS(param)
+        call CNVUSER_prepare_GrADS_3D(param)
+        call CNVUSER_execute_GrADS_3D(param)
       end select
+
     end associate
     end do
 
@@ -310,10 +312,8 @@ contains
   ! private
 
   subroutine CNVUSER_prepare_TILE(tile)
-
     use mod_cnv2d, only: &
        CNV2D_tile_init
-
     type(t_tile), intent(in) :: tile
 
     call CNV2D_tile_init( tile%TILE_DTYPE,                   &
@@ -325,10 +325,8 @@ contains
   end subroutine CNVUSER_prepare_TILE
 
   subroutine CNVUSER_prepare_GrADS(grads)
-
     use mod_cnv2d, only: &
        CNV2D_grads_init
-
     type(t_grads), intent(inout) :: grads
 
     call CNV2D_grads_init( grads%GrADS_FILENAME, &
@@ -337,18 +335,14 @@ contains
                            grads%GrADS_LONNAME,  &
                            grads%INTERP_TYPE,    &
                            grads%INTERP_LEVEL    )
-    if ( grads%OUT_VARNAME == '' ) grads%OUT_VARNAME = grads%GrADS_VARNAME
   end subroutine CNVUSER_prepare_GrADS
 
   subroutine CNVUSER_prepare_GrADS_3D(grads_3d)
-
     type(t_grads_3d), intent(inout) :: grads_3d
 
-    if ( grads_3d%OUT_VARNAME == '' ) grads_3d%OUT_VARNAME = grads_3d%GrADS_VARNAME
   end subroutine CNVUSER_prepare_GrADS_3D
 
   subroutine CNVUSER_execute_GrADS_3D(grads_3d)
-
     use scale_const, only: &
        PI  => CONST_PI,  &
        D2R => CONST_D2R
@@ -528,7 +522,7 @@ contains
                              var_id,        & ! [IN]
                              LEV_org(:,:,:) ) ! [OUT]
     case default
-       LOG_ERROR("CNVUSER_execute_GrADS_3D",*) 'Invalid proparty in grads_3d%GrADS_LEVNAME: ', trim(grads_3d%GrADS_LEVNAME)
+       LOG_ERROR("CNVUSER_execute_GrADS_3D",*) 'Invalid property in grads_3d%GrADS_LEVNAME: ', trim(grads_3d%GrADS_LEVNAME), ' for ', trim(grads_3d%GrADS_VARNAME)
        call PRC_abort
     end select
 
