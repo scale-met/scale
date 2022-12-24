@@ -4055,7 +4055,7 @@ contains
 #endif
        error = file_read_data_c( &
 #if defined(__GFORTRAN__) && __GNUC__ < 7
-            loc(var(1)), & ! (out)
+            cloc(var(1)), & ! (out)
 #elif defined(NVIDIA)
             c_loc(work), & ! (out)
 #else
@@ -4210,7 +4210,7 @@ contains
 #endif
        error = file_read_data_c( &
 #if defined(__GFORTRAN__) && __GNUC__ < 7
-            loc(var(1)), & ! (out)
+            cloc(var(1)), & ! (out)
 #elif defined(NVIDIA)
             c_loc(work), & ! (out)
 #else
@@ -4365,7 +4365,7 @@ contains
 #endif
        error = file_read_data_c( &
 #if defined(__GFORTRAN__) && __GNUC__ < 7
-            loc(var(1,1)), & ! (out)
+            cloc(var(1,1)), & ! (out)
 #elif defined(NVIDIA)
             c_loc(work), & ! (out)
 #else
@@ -4520,7 +4520,7 @@ contains
 #endif
        error = file_read_data_c( &
 #if defined(__GFORTRAN__) && __GNUC__ < 7
-            loc(var(1,1)), & ! (out)
+            cloc(var(1,1)), & ! (out)
 #elif defined(NVIDIA)
             c_loc(work), & ! (out)
 #else
@@ -4675,7 +4675,7 @@ contains
 #endif
        error = file_read_data_c( &
 #if defined(__GFORTRAN__) && __GNUC__ < 7
-            loc(var(1,1,1)), & ! (out)
+            cloc(var(1,1,1)), & ! (out)
 #elif defined(NVIDIA)
             c_loc(work), & ! (out)
 #else
@@ -4830,7 +4830,7 @@ contains
 #endif
        error = file_read_data_c( &
 #if defined(__GFORTRAN__) && __GNUC__ < 7
-            loc(var(1,1,1)), & ! (out)
+            cloc(var(1,1,1)), & ! (out)
 #elif defined(NVIDIA)
             c_loc(work), & ! (out)
 #else
@@ -4985,7 +4985,7 @@ contains
 #endif
        error = file_read_data_c( &
 #if defined(__GFORTRAN__) && __GNUC__ < 7
-            loc(var(1,1,1,1)), & ! (out)
+            cloc(var(1,1,1,1)), & ! (out)
 #elif defined(NVIDIA)
             c_loc(work), & ! (out)
 #else
@@ -5140,7 +5140,7 @@ contains
 #endif
        error = file_read_data_c( &
 #if defined(__GFORTRAN__) && __GNUC__ < 7
-            loc(var(1,1,1,1)), & ! (out)
+            cloc(var(1,1,1,1)), & ! (out)
 #elif defined(NVIDIA)
             c_loc(work), & ! (out)
 #else
