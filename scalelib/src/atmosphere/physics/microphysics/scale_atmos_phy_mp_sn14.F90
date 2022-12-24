@@ -6929,7 +6929,7 @@ contains
     integer,  intent(in)  :: KA, KS, KE
     real(RP), intent(out) :: vt_xa        (KA,HYDRO_MAX,2) ! terminal velocity of average mass
     real(RP), intent(out) :: xq           (KA,HYDRO_MAX)   ! Mass of mean particle [kg] SB06(94)
-    real(RP), intent(in)  :: rhoq         (KA,HYDRO_MAX)
+    real(RP), intent(in)  :: rhoq         (KA,I_QV:I_NG)
     real(RP), intent(in)  :: log_rho_fac_q(KA,HYDRO_MAX)
 
     real(RP) :: log_xq
