@@ -3903,6 +3903,7 @@ contains
   end subroutine nucleation
   !----------------------------
 
+!OCL SERIAL
   subroutine nucleation_ice_hom(  &
        KA, KS, KE,                &
        tem, pre, rho,             &
@@ -4091,7 +4092,6 @@ contains
     return
   end subroutine nucleation_ice_hom
 
-
 !OCL SERIAL
   subroutine ice_multiplication( &
     KA, KS, KE,    & ! in
@@ -4229,6 +4229,7 @@ contains
     !
     return
   end subroutine ice_multiplication
+
   !----------------------------
 !OCL SERIAL
   subroutine mixed_phase_collection( &
@@ -4861,6 +4862,7 @@ contains
     return
   end subroutine mixed_phase_collection
 
+!OCL SERIAL
   subroutine mixed_phase_collection_bin(   &
     ! collection process
        KA, KS, KE,            & ! in
@@ -5635,6 +5637,7 @@ contains
     !
     return
   end subroutine aut_acc_slc_brk
+
   ! Vapor Deposition, Ice Melting
 !OCL SERIAL
   subroutine dep_vapor_melt_ice( &
@@ -5875,6 +5878,7 @@ contains
   !-----------------------------------------------------------------------------
 
   ! Vapor Deposition [Add] 2022/03/23 T.Seiki for nucleation
+!OCL SERIAL
   subroutine dep_vapor_ice_wrk(  &
        KA, KS, KE,                &
        PLIdep_total,              &
@@ -6861,6 +6865,7 @@ contains
   end subroutine update_by_phase_change
   !-----------------------------------------------------------------------------
   !> Calculate Cross Section
+!OCL SERIAL
   subroutine Cross_Section( &
        KA, KS, KE, &
        QA_MP,      &
@@ -6920,6 +6925,7 @@ contains
     return
   end subroutine Cross_Section
 
+!OCL SERIAL
   subroutine get_terminal_velocity( &
        KA, KS, KE,   &
        vt_xa, xq,    &
@@ -6968,6 +6974,7 @@ contains
     return
   end subroutine get_terminal_velocity
 
+!OCL SERIAL
   subroutine get_diamiter( &
        KA, KS, KE, &
        dq_xa, &
@@ -6991,4 +6998,5 @@ contains
 
     return
   end subroutine get_diamiter
+
 end module scale_atmos_phy_mp_sn14
