@@ -49,7 +49,6 @@ cat << EOF > base.sno.hgridope.conf
  nprocs_x_out    = 1,
  nprocs_y_out    = 1,
  vars            = '',
- output_single   = .true.,
 /
 
 &PARAM_SNOPLGIN_HGRIDOPE

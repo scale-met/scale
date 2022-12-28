@@ -107,7 +107,9 @@ if [ ${NUM_DOMAIN} -ne ${#DX[*]} ];    then echo "Error: Wrong array size (DX)."
 if [ ${NUM_DOMAIN} -ne ${#DY[*]} ];    then echo "Error: Wrong array size (DY).";    exit 1; fi
 if [ ${NUM_DOMAIN} -ne ${#DEF_Z[*]} ]; then echo "Error: Wrong array size (DEF_Z)."; exit 1; fi
 
-if [[ -z ${BUFFER_DZ+x} ]]; then BUFFER_DZ=( $(multiply 0 "${DY[@]}") ); fi
+if [[ $NUM_DOMAIN -gt 1 ]]; then
+  if [[ ${#BUFFER_DZ[@]} -eq 1 ]]; then BUFFER_DZ=( $(replicate "$NUM_DOMAIN" "$BUFFER_DZ") ); fi
+fi
 if [[ -z ${BUFFER_DX+x} ]]; then BUFFER_DX=( $(multiply 20 "${DX[@]}") ); fi
 if [[ -z ${BUFFER_DY+x} ]]; then BUFFER_DY=( $(multiply 20 "${DY[@]}") ); fi
 if [ ${NUM_DOMAIN} -ne ${#BUFFER_DZ[*]} ]; then echo "Error: Wrong array size (BUFFER_DZ)."; exit 1; fi
