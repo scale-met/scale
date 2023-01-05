@@ -152,7 +152,6 @@ module scale_comm_cartesC_nest
 
   integer,  parameter :: I_MIN = 1
   integer,  parameter :: I_MAX = 2
-  integer,  parameter :: I_BNDQA  = 20                      !< tentative approach (prefixed allocate size)
 
   integer,  parameter :: I_SCLR   = 1                       !< interpolation kinds of grid point (scalar)
   integer,  parameter :: I_ZSTG   = 2                       !< interpolation kinds of grid point (z-axis staggered)
@@ -187,7 +186,7 @@ module scale_comm_cartesC_nest
 
   integer,  private   :: INTERCOMM_ID(2)
 
-  integer,  private, parameter   :: max_isu   = 100        ! maximum number of receive/wait issue
+  integer,  private              :: max_isu                ! maximum number of receive/wait issue
   integer,  private              :: max_rq    = 1000       ! maximum number of req: tentative approach
   integer,  private              :: rq_ctl_p               ! for control request id (counting)
   integer,  private              :: rq_ctl_d               ! for control request id (counting)
@@ -299,9 +298,6 @@ contains
     logical :: flag_child
 
     integer :: nprocs
-    integer :: parent_ka
-    integer :: parent_ia
-    integer :: parent_ja
     logical :: parent_periodic_x
     logical :: parent_periodic_y
 
@@ -512,11 +508,6 @@ contains
        LOG_INFO_CONT('(1x,A,I6)'  ) '--- TILEALL_IA      :', TILEAL_IA
        LOG_INFO_CONT('(1x,A,I6)'  ) '--- TILEALL_JA      :', TILEAL_JA
        LOG_INFO_CONT('(1x,A,I6)  ') 'Limit Num. NCOMM req. :', max_rq
-
-       parent_ka = dom_info(I_PARENT)%KMAX + dom_info(I_PARENT)%KHALO * 2
-       parent_ia = dom_info(I_PARENT)%IMAX + dom_info(I_PARENT)%IHALO * 2
-       parent_ja = dom_info(I_PARENT)%JMAX + dom_info(I_PARENT)%JHALO * 2
-       allocate( recvbuf_3D( parent_ka, parent_ia, parent_ja, max_isu ) )
 
        allocate( buffer_ref_LON  (TILEAL_IA,TILEAL_JA) )
        allocate( buffer_ref_LONUY(TILEAL_IA,TILEAL_JA) )
@@ -1622,6 +1613,10 @@ contains
     integer, allocatable :: buffer_LIST   (:)
     integer, allocatable :: buffer_ALLLIST(:)
 
+    integer :: parent_ka
+    integer :: parent_ia
+    integer :: parent_ja
+
     integer :: ireq, ierr, ileng
     integer :: istatus(MPI_STATUS_SIZE)
     integer :: tag, target_rank
@@ -1718,6 +1713,15 @@ contains
           call MPI_ISEND(COMM_CARTESC_NEST_TILE_ALLMAX_d, 1, MPI_INTEGER, PRC_myrank, tag+1, PRC_INTERCOMM_PARENT, ireq, ierr)
           call MPI_WAIT(ireq, istatus, ierr)
        endif
+
+       parent_ka = dom_info(I_PARENT)%KMAX + dom_info(I_PARENT)%KHALO * 2
+       parent_ia = dom_info(I_PARENT)%IMAX + dom_info(I_PARENT)%IHALO * 2
+       parent_ja = dom_info(I_PARENT)%JMAX + dom_info(I_PARENT)%JHALO * 2
+
+       max_isu = 4 + ONLINE_RECV_QA
+       if ( ONLINE_USE_VELZ ) max_isu = max_isu + 1
+       max_isu = COMM_CARTESC_NEST_TILE_ALL * max_isu
+       allocate( recvbuf_3D( parent_ka, parent_ia, parent_ja, max_isu ) )
 
        allocate( buffer_LIST   (COMM_CARTESC_NEST_TILE_ALLMAX_d)            )
        allocate( buffer_ALLLIST(COMM_CARTESC_NEST_TILE_ALLMAX_d*PRC_nprocs)   )
@@ -2065,11 +2069,6 @@ contains
 
     if( .NOT. USE_NESTING ) return
 
-    if ( ONLINE_SEND_QA > I_BNDQA ) then
-       LOG_ERROR("COMM_CARTESC_NEST_nestdown_send",*) 'internal error: ONLINE_SEND_QA is larger than I_BNDQA'
-       call PRC_abort
-    endif
-
     tagcomm = INTERCOMM_ID(HANDLE) * order_tag_comm
 
     if ( COMM_CARTESC_NEST_Filiation( INTERCOMM_ID(HANDLE) ) > 0 ) then
@@ -2265,11 +2264,6 @@ contains
     !---------------------------------------------------------------------------
 
     if( .NOT. USE_NESTING ) return
-
-    if ( ONLINE_RECV_QA > I_BNDQA ) then
-       LOG_ERROR("COMM_CARTESC_NEST_nestdown",*) 'internal error: ONLINE_RECV_QA is larger than I_BNDQA'
-       call PRC_abort
-    endif
 
     tagcomm = INTERCOMM_ID(HANDLE) * order_tag_comm
 
@@ -2526,11 +2520,6 @@ contains
 
     if( .NOT. USE_NESTING ) return
 
-    if ( ONLINE_SEND_QA > I_BNDQA ) then
-       LOG_ERROR("COMM_CARTESC_NEST_recvwait_issue_send",*) 'internal error: about ONLINE_SEND_QA'
-       call PRC_abort
-    endif
-
     tagcomm = INTERCOMM_ID(HANDLE) * order_tag_comm
 
     if ( COMM_CARTESC_NEST_Filiation( INTERCOMM_ID(HANDLE) ) > 0 ) then
@@ -2579,11 +2568,6 @@ contains
     !---------------------------------------------------------------------------
 
     if( .NOT. USE_NESTING ) return
-
-    if ( ONLINE_RECV_QA > I_BNDQA ) then
-       LOG_ERROR("COMM_CARTESC_NEST_recvwait_issue_recv",*) 'internal error: about ONLINE_RECV_QA'
-       call PRC_abort
-    endif
 
     tagcomm = INTERCOMM_ID(HANDLE) * order_tag_comm
 
@@ -2858,14 +2842,14 @@ contains
 
           isu_tag = isu_tag + 1
 
-!OCL XFILL
-          buffer_ref_3D(zs:ze,gxs:gxe,gys:gye) = recvbuf_3D(zs:ze,pxs:pxe,pys:pye,isu_tag)
-
           if ( isu_tag > max_isu ) then
              LOG_ERROR("COMM_CARTESC_NEST_intercomm_nestdown_3D",*) 'Exceeded maximum issue'
              LOG_ERROR_CONT(*) 'isu_tag  = ', isu_tag
              call PRC_abort
           endif
+
+!OCL XFILL
+          buffer_ref_3D(zs:ze,gxs:gxe,gys:gye) = recvbuf_3D(zs:ze,pxs:pxe,pys:pye,isu_tag)
 
        enddo
 
@@ -2972,6 +2956,12 @@ contains
 
           isu_tag = isu_tag + 1
 
+          if ( isu_tag > max_isu ) then
+             LOG_ERROR("COMM_CARTESC_NEST_issuer_of_receive_3D",*) 'Exceeded maximum issue'
+             LOG_ERROR_CONT(*) 'isu_tag  = ', isu_tag
+             call PRC_abort
+          endif
+
           recvbuf_3D(:,:,:,isu_tag) = 0.0_RP
 
           call MPI_IRECV( recvbuf_3D(:,:,:,isu_tag), &
@@ -2984,12 +2974,6 @@ contains
                           ierr                       )
 
        enddo
-
-       if ( isu_tag > max_isu ) then
-          LOG_ERROR("COMM_CARTESC_NEST_issuer_of_receive_3D",*) 'Exceeded maximum issue'
-          LOG_ERROR_CONT(*) 'isu_tag  = ', isu_tag
-          call PRC_abort
-       endif
 
        rq_ctl_d = rq
 
@@ -3175,7 +3159,7 @@ contains
     if ( allocated( buffer_ref_LATXV ) ) deallocate( buffer_ref_LATXV )
     if ( allocated( buffer_ref_CZ ) )    deallocate( buffer_ref_CZ )
     if ( allocated( buffer_ref_FZ ) )    deallocate( buffer_ref_FZ )
-    if ( allocated( buffer_ref_3D ) )     deallocate( buffer_ref_3D )
+    if ( allocated( buffer_ref_3D ) )    deallocate( buffer_ref_3D )
 
     if ( allocated( org_DENS ) ) deallocate( org_DENS )
     if ( allocated( org_MOMZ ) ) deallocate( org_MOMZ )
