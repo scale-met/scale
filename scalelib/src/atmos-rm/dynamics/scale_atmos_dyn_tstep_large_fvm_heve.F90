@@ -1784,7 +1784,7 @@ contains
       do j = JS, JE
       do i = IS, IE
       do k = KS-1, KE
-         flx(k,i,j,ZDIR) = flx(k,i,j,ZDIR) * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) / GSQRT(k,i,j,I_XYW)
+         flx(k,i,j,ZDIR) = flx(k,i,j,ZDIR) * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY)
       end do
       end do
       end do
