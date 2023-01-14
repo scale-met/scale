@@ -948,7 +948,7 @@ contains
              flxT(KS-1,i,j) = 0.0_RP
              do k = KS, KE_PBL-1
                 flxT(k,i,j) = flx(k) &
-                            - RHOKh(k) * ( phi_n(k+1) - phi_n(k) ) / CDZ(k)
+                            - RHOKh(k) * ( phi_n(k+1) - phi_n(k) ) / FDZ(k)
              end do
              do k = KE_PBL, KE
                 flxT(k,i,j) = 0.0_RP
@@ -998,7 +998,7 @@ contains
              flxQ(KS-1,i,j) = 0.0_RP
              do k = KS, KE_PBL-1
                 flxQ(k,i,j) = flx(k) &
-                            - RHOKh(k) * ( phi_n(k+1) - phi_n(k) ) / CDZ(k)
+                            - RHOKh(k) * ( phi_n(k+1) - phi_n(k) ) / FDZ(k)
              end do
              do k = KE_PBL, KE
                 flxQ(k,i,j) = 0.0_RP
