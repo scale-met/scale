@@ -114,7 +114,11 @@ module scale_comm_cartesC
   logical,  private              :: COMM_IsAllPeriodic  !< periodic boundary condition?
 
   logical,  private              :: COMM_USE_MPI_PC       = .true.  !< MPI persistent communication
+#ifdef INTELMPI
   logical,  private              :: COMM_USE_MPI_ONESIDED = .false. !< MPI one-sided communication
+#else
+  logical,  private              :: COMM_USE_MPI_ONESIDED = .true.  !< MPI one-sided communication
+#endif
 
   type ginfo_t
      integer              :: KA
