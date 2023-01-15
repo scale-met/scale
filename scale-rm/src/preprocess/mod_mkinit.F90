@@ -876,6 +876,8 @@ contains
 
     if ( ATMOS_PHY_MP_TYPE /= 'SUZUKI10' ) return
 
+    if ( .not. convert_qtrc ) return
+
     !--- Super saturated air at initial
     do j = JSB, JEB
     do i = ISB, IEB
