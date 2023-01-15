@@ -140,7 +140,8 @@ def flux(vel, order, dir, k="k", i="i", j="j", dim=3)
       fu = flux1(idx0)
     when 2
       if @scheme=="ud3Koren1993"
-        fu = flux1(idx0)
+#        fu = flux1(idx0)
+        fu = flux2(idx1,idx0)
       else
         fu = flux2(idx1,idx0)
       end
@@ -166,7 +167,8 @@ def flux(vel, order, dir, k="k", i="i", j="j", dim=3)
       fd = flux1(idx1)
     when 2
       if @scheme=="ud3Koren1993"
-        fd = flux1(idx1)
+#        fd = flux1(idx1)
+        fd = flux2(idx1,idx0)
       else
         fd = flux2(idx1,idx0)
       end
