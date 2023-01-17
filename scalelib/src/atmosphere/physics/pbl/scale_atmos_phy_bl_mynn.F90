@@ -98,6 +98,19 @@ module scale_atmos_phy_bl_mynn
 
   logical,  private            :: initialize
 
+  ! history
+  integer,  private            :: HIST_Ri
+  integer,  private            :: HIST_Pr
+  integer,  private            :: HIST_TKE_pr
+  integer,  private            :: HIST_TKE_di
+  integer,  private            :: HIST_dudz2
+  integer,  private            :: HIST_Lmix
+  integer,  private            :: HIST_flxU
+  integer,  private            :: HIST_flxV
+  integer,  private            :: HIST_flxT
+  integer,  private            :: HIST_flxQ
+
+  ! namelist
   real(RP), private            :: ATMOS_PHY_BL_MYNN_PBL_MAX    = 1.E+30_RP !> maximum height of the PBL
   real(RP), private            :: ATMOS_PHY_BL_MYNN_TKE_MIN    =  1.E-20_RP
   real(RP), private            :: ATMOS_PHY_BL_MYNN_N2_MAX     =  1.E1_RP
@@ -193,6 +206,8 @@ contains
        PRC_abort
     use scale_const, only: &
        PI => CONST_PI
+    use scale_file_history, only: &
+       FILE_HISTORY_reg
     implicit none
 
     integer,  intent(in) :: KA, KS, KE
@@ -252,6 +267,19 @@ contains
        ATMOS_PHY_BL_MYNN_similarity = .false.
     end select
 
+    ! history
+    call FILE_HISTORY_reg('Ri_MYNN',       'Richardson number', '1',     HIST_Ri,     fill_halo=.true. )
+    call FILE_HISTORY_reg('Pr_MYNN',       'Prandtl number',    '1',     HIST_Pr,     fill_halo=.true., dim_type="ZHXY" )
+    call FILE_HISTORY_reg('TKE_prod_MYNN', 'TKE production',    'm2/s3', HIST_TKE_pr, fill_halo=.true.)
+    call FILE_HISTORY_reg('TKE_diss_MYNN', 'TKE dissipation',   'm2/s3', HIST_TKE_di, fill_halo=.true.)
+    call FILE_HISTORY_reg('dUdZ2_MYNN',    'dudz2',             'm2/s2', HIST_dudz2,  fill_halo=.true.)
+    call FILE_HISTORY_reg('L_mix_MYNN',    'minxing length',    'm',     HIST_Lmix,   fill_halo=.true.)
+
+    call FILE_HISTORY_reg('ZFLX_RHOU_BL', 'Z FLUX of RHOU (MYNN)',  'kg/m/s2',   HIST_flxU, fill_halo=.true., dim_type="ZHXY" )
+    call FILE_HISTORY_reg('ZFLX_RHOV_BL', 'Z FLUX of RHOV (MYNN)',  'kg/m/s2',   HIST_flxV, fill_halo=.true., dim_type="ZHXY" )
+    call FILE_HISTORY_reg('ZFLX_RHOT_BL', 'Z FLUX of RHOT (MYNN)',  'K kg/m2/s', HIST_flxT, fill_halo=.true., dim_type="ZHXY" )
+    call FILE_HISTORY_reg('ZFLX_QV_BL',   'Z FLUX of RHOQV (MYNN)', 'kg/m2/s',   HIST_flxQ, fill_halo=.true., dim_type="ZHXY" )
+
     return
   end subroutine ATMOS_PHY_BL_MYNN_setup
 
@@ -297,7 +325,8 @@ contains
     use scale_matrix, only: &
        MATRIX_SOLVER_tridiagonal
     use scale_file_history, only: &
-       FILE_HISTORY_in
+       FILE_HISTORY_query, &
+       FILE_HISTORY_put
     implicit none
 
     integer, intent(in) :: KA, KS, KE
@@ -436,6 +465,8 @@ contains
     integer  :: kmin
 
     real(RP) :: tmp, sw
+
+    logical :: do_put
 
     integer :: KE_PBL
     integer :: k, i, j
@@ -948,7 +979,7 @@ contains
              flxT(KS-1,i,j) = 0.0_RP
              do k = KS, KE_PBL-1
                 flxT(k,i,j) = flx(k) &
-                            - RHOKh(k) * ( phi_n(k+1) - phi_n(k) ) / CDZ(k)
+                            - RHOKh(k) * ( phi_n(k+1) - phi_n(k) ) / FDZ(k)
              end do
              do k = KE_PBL, KE
                 flxT(k,i,j) = 0.0_RP
@@ -998,7 +1029,7 @@ contains
              flxQ(KS-1,i,j) = 0.0_RP
              do k = KS, KE_PBL-1
                 flxQ(k,i,j) = flx(k) &
-                            - RHOKh(k) * ( phi_n(k+1) - phi_n(k) ) / CDZ(k)
+                            - RHOKh(k) * ( phi_n(k+1) - phi_n(k) ) / FDZ(k)
              end do
              do k = KE_PBL, KE
                 flxQ(k,i,j) = 0.0_RP
@@ -1189,18 +1220,27 @@ contains
     end do
 
 
-    call FILE_HISTORY_in(Ri(:,:,:), 'Ri_MYNN', 'Richardson number', '1',     fill_halo=.true. )
-    call FILE_HISTORY_in(Pr(:,:,:), 'Pr_MYNN', 'Prandtl number',    '1',     fill_halo=.true., dim_type="ZHXY" )
-    call FILE_HISTORY_in(prod(:,:,:), 'TKE_prod_MYNN', 'TKE production',  'm2/s3', fill_halo=.true.)
-    call FILE_HISTORY_in(diss(:,:,:), 'TKE_diss_MYNN', 'TKE dissipation', 'm2/s3', fill_halo=.true.)
-    call FILE_HISTORY_in(dudz2(:,:,:), 'dUdZ2_MYNN', 'dudz2', 'm2/s2', fill_halo=.true.)
-    call FILE_HISTORY_in(l(:,:,:), 'L_mix_MYNN', 'minxing length', 'm', fill_halo=.true.)
+    call FILE_HISTORY_query(HIST_Ri,     do_put)
+    if ( do_put ) call FILE_HISTORY_put(HIST_Ri,     Ri(:,:,:))
+    call FILE_HISTORY_query(HIST_Pr,     do_put)
+    if ( do_put ) call FILE_HISTORY_put(HIST_Pr,     Pr(:,:,:))
+    call FILE_HISTORY_query(HIST_TKE_pr, do_put)
+    if ( do_put ) call FILE_HISTORY_put(HIST_TKE_pr, prod(:,:,:))
+    call FILE_HISTORY_query(HIST_TKE_di, do_put)
+    if ( do_put ) call FILE_HISTORY_put(HIST_TKE_di, diss(:,:,:))
+    call FILE_HISTORY_query(HIST_dudz2,  do_put)
+    if ( do_put ) call FILE_HISTORY_put(HIST_dudz2,  dudz2(:,:,:))
+    call FILE_HISTORY_query(HIST_Lmix,   do_put)
+    if ( do_put ) call FILE_HISTORY_put(HIST_Lmix,   l(:,:,:))
 
-    call FILE_HISTORY_in(flxU(:,:,:), 'ZFLX_RHOU_BL', 'Z FLUX of RHOU (MYNN)', 'kg/m/s2', fill_halo=.true., dim_type="ZHXY" )
-    call FILE_HISTORY_in(flxV(:,:,:), 'ZFLX_RHOV_BL', 'Z FLUX of RHOV (MYNN)', 'kg/m/s2', fill_halo=.true., dim_type="ZHXY" )
-    call FILE_HISTORY_in(flxT(:,:,:), 'ZFLX_RHOT_BL', 'Z FLUX of RHOT (MYNN)', 'K kg/m2/s', fill_halo=.true., dim_type="ZHXY" )
-    call FILE_HISTORY_in(flxQ(:,:,:), 'ZFLX_QV_BL',   'Z FLUX of RHOQV (MYNN)', 'kg/m2/s', fill_halo=.true., dim_type="ZHXY" )
-
+    call FILE_HISTORY_query(HIST_flxU, do_put)
+    if ( do_put ) call FILE_HISTORY_put(HIST_flxU, flxU(1:,:,:))
+    call FILE_HISTORY_query(HIST_flxV, do_put)
+    if ( do_put ) call FILE_HISTORY_put(HIST_flxV, flxV(1:,:,:))
+    call FILE_HISTORY_query(HIST_flxT, do_put)
+    if ( do_put ) call FILE_HISTORY_put(HIST_flxT, flxT(1:,:,:))
+    call FILE_HISTORY_query(HIST_flxQ, do_put)
+    if ( do_put ) call FILE_HISTORY_put(HIST_flxQ, flxQ(1:,:,:))
 
     initialize = .false.
 
