@@ -123,7 +123,7 @@ module scale_atmos_phy_bl_mynn
   logical,  private            :: ATMOS_PHY_BL_MYNN_init_TKE   = .false.
   logical,  private            :: ATMOS_PHY_BL_MYNN_similarity = .true.
 
-  character(len=H_SHORT), private  :: ATMOS_PHY_BL_MYNN_LEVEL = "3" ! "2.5" or "3"
+  character(len=H_SHORT), private  :: ATMOS_PHY_BL_MYNN_LEVEL = "2.5" ! "2.5" or "3"
 
   namelist / PARAM_ATMOS_PHY_BL_MYNN / &
        ATMOS_PHY_BL_MYNN_PBL_MAX,  &
