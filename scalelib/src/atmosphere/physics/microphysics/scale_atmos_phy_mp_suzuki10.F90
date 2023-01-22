@@ -1852,7 +1852,9 @@ contains
                 / ( tmp_hyd + ( 0.50_RP - sign(0.50_RP,tmp_hyd-EPS) ) )
 
           do iq = 1, nbin
+             QTRC(k,i,j,(ic-1)*nbin+iq) = 0.0_RP
              QTRC(k,i,j,(ip-1)*nbin+iq) = coef2 * dummy(iq)
+             QTRC(k,i,j,(id-1)*nbin+iq) = 0.0_RP
           enddo
 
           !--- Snow put into snow bin (gamma)
