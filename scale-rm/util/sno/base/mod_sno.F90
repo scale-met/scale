@@ -374,7 +374,7 @@ contains
             'x_bnds','xh_bnds','y_bnds','yh_bnds',                                                                           &
             'CX','CY','FX','FY','CDX','CDY','FDX','FDY','CBFX','CBFY','FBFX','FBFY',                                         &
             'CXG','CYG','FXG','FYG','CDXG','CDYG','FDXG','FDYG','CBFXG','CBFYG','FBFXG','FBFYG',                             &
-            'lon','lon_uy','lon_xv','lon_uv','lat','lat_uy','lat_xv','lat_uv',                               &
+            'lon_uy','lon_xv','lon_uv','lat_uy','lat_xv','lat_uv',                                                           &
             'cell_area','cell_area_uy','cell_area_xv',                                                                       &
             'cell_area_zuy_x','cell_area_zxv_y','cell_area_wuy_x','cell_area_wxv_y',                                         &
             'cell_area_zxy_x','cell_area_zuv_y','cell_area_zuv_x','cell_area_zxy_y',                                         &
@@ -439,6 +439,29 @@ contains
                                       hinfo%minfo_false_northing                       (:) )
              call FILE_get_attribute( fid, varname_file(n), "longitude_of_central_meridian", &
                                       hinfo%minfo_longitude_of_central_meridian        (:) )
+          endif
+       case('lon','lat')
+          if ( isnormalvar ) then ! treat as normal variable
+             if ( nvars_req == 0 ) then
+                nvars          = nvars + 1
+                varname(nvars) = varname_file(n)
+             else
+                do nn = 1, nvars_req
+                   if ( varname_file(n) == vars(nn) ) then
+                      if ( exist(nn) ) then
+                         LOG_ERROR("SNO_file_getinfo",*) 'variable ', trim(vars(nn)), ' is requested two times. check namelist!'
+                         call PRC_abort
+                      endif
+
+                      nvars          = nvars + 1
+                      varname(nvars) = varname_file(n)
+                      exist(nn)      = .true.
+                   endif
+                enddo
+             endif
+          else ! treat as axis variable
+             naxis           = naxis + 1
+             axisname(naxis) = varname_file(n)
           endif
        case('topo','lsmask')
           if ( isnormalvar ) then ! treat as normal variable
