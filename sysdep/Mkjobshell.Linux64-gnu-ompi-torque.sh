@@ -1,21 +1,19 @@
 #! /bin/bash -x
 
 # Arguments
-BINDIR=${1}
-PPNAME=${2}
-INITNAME=${3}
-BINNAME=${4}
-N2GNAME=${5}
-PPCONF=${6}
-INITCONF=${7}
-RUNCONF=${8}
-N2GCONF=${9}
-PROCS=${10}
-eval DATPARAM=(`echo ${11} | tr -s '[' '"' | tr -s ']' '"'`)
-eval DATDISTS=(`echo ${12} | tr -s '[' '"' | tr -s ']' '"'`)
-
-# System specific
-MPIEXEC="mpirun --mca btl openib,sm,self --bind-to core -np"
+MPIEXEC=${1}
+BINDIR=${2}
+PPNAME=${3}
+INITNAME=${4}
+BINNAME=${5}
+N2GNAME=${6}
+PPCONF=${7}
+INITCONF=${8}
+RUNCONF=${9}
+N2GCONF=${10}
+PROCS=${11}
+eval DATPARAM=(`echo ${12} | tr -s '[' '"' | tr -s ']' '"'`)
+eval DATDISTS=(`echo ${13} | tr -s '[' '"' | tr -s ']' '"'`)
 
 PROCLIST=(`echo ${PROCS} | tr -s ',' ' '`)
 TPROC=${PROCLIST[0]}
@@ -96,7 +94,6 @@ cat << EOF1 > ./run.sh
 #PBS -N SCALE
 #PBS -o OUT.log
 #PBS -e ERR.log
-export FORT_FMT_RECL=500
 export GFORTRAN_UNBUFFERED_ALL=Y
 
 source /etc/profile.d/modules.sh

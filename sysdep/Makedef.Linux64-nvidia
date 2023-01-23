@@ -60,6 +60,12 @@ LDFLAGS = $(FFLAGS)
 
 
 
+##### Execute command
+
+MPIEXEC = "mpiexec --oversubscribe -np"
+
+
+
 ################################################################################
 
 ###### NetCDF library

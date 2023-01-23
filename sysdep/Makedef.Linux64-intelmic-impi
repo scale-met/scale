@@ -60,6 +60,12 @@ LDFLAGS = $(FFLAGS)
 
 
 
+##### Execute command
+
+MPIEXEC = "mpirun -n"
+
+
+
 ################################################################################
 
 ###### NetCDF library

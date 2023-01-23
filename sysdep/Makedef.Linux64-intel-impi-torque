@@ -67,6 +67,12 @@ LDFLAGS = $(FFLAGS)
 
 
 
+##### Execute command
+
+MPIEXEC = "impijob -np"
+
+
+
 ################################################################################
 
 ###### NetCDF library
