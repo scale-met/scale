@@ -505,11 +505,11 @@ contains
        pole_ = .false.
     end if
 
-    ii0 = IA_ref * 0.5_RP
-    jj0 = JA_ref * 0.5_RP
+    ii0 = ( IA_ref + 1 ) / 2
+    jj0 = ( JA_ref + 1 ) / 2
     error = .false.
 
-    ite_max = IA_ref * JA_ref / 4
+    ite_max = IA_ref + JA_ref
 
     !$omp parallel do &
     !$omp private(inc_i,inc_j,ii,jj,i1,i2,i3,i4,j1,j2,j3,j4,u,v,err) &

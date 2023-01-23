@@ -1026,6 +1026,7 @@ contains
     integer :: x_min, x_max
     integer :: y_min, y_max
     logical :: hit(2,2)
+    real(RP) :: dx, dy
     integer :: p, i, j
     !---------------------------------------------------------------------------
 
@@ -1044,22 +1045,24 @@ contains
     hit(:,:) = .false.
 
     do p = 1, nprocs
-       if ( ( (     latlon_local(I_MIN,I_LON) >= dinfo%latlon_catalogue(p,I_MIN,I_LON) &
-              .AND. latlon_local(I_MIN,I_LON) <= dinfo%latlon_catalogue(p,I_MAX,I_LON) ) .OR. &
-              (     latlon_local(I_MAX,I_LON) >= dinfo%latlon_catalogue(p,I_MIN,I_LON) &
-              .AND. latlon_local(I_MAX,I_LON) <= dinfo%latlon_catalogue(p,I_MAX,I_LON) ) .OR. &
-              (     dinfo%latlon_catalogue(p,I_MIN,I_LON) >= latlon_local(I_MIN,I_LON) &
-              .AND. dinfo%latlon_catalogue(p,I_MIN,I_LON) <= latlon_local(I_MAX,I_LON) ) .OR. &
-              (     dinfo%latlon_catalogue(p,I_MAX,I_LON) >= latlon_local(I_MIN,I_LON) &
-              .AND. dinfo%latlon_catalogue(p,I_MAX,I_LON) <= latlon_local(I_MAX,I_LON) ) ) .AND. &
-            ( (     latlon_local(I_MIN,I_LAT) >= dinfo%latlon_catalogue(p,I_MIN,I_LAT) &
-              .AND. latlon_local(I_MIN,I_LAT) <= dinfo%latlon_catalogue(p,I_MAX,I_LAT) ) .OR. &
-              (     latlon_local(I_MAX,I_LAT) >= dinfo%latlon_catalogue(p,I_MIN,I_LAT) &
-              .AND. latlon_local(I_MAX,I_LAT) <= dinfo%latlon_catalogue(p,I_MAX,I_LAT) ) .OR. &
-              (     dinfo%latlon_catalogue(p,I_MIN,I_LAT) >= latlon_local(I_MIN,I_LAT) &
-              .AND. dinfo%latlon_catalogue(p,I_MIN,I_LAT) <= latlon_local(I_MAX,I_LAT) ) .OR. &
-              (     dinfo%latlon_catalogue(p,I_MAX,I_LAT) >= latlon_local(I_MIN,I_LAT) &
-              .AND. dinfo%latlon_catalogue(p,I_MAX,I_LAT) <= latlon_local(I_MAX,I_LAT) ) ) ) then
+       dx = ( dinfo%latlon_catalogue(p,I_MAX,I_LON) - dinfo%latlon_catalogue(p,I_MIN,I_LON) ) / dinfo%IMAX
+       dy = ( dinfo%latlon_catalogue(p,I_MAX,I_LAT) - dinfo%latlon_catalogue(p,I_MIN,I_LAT) ) / dinfo%JMAX
+       if ( ( (     latlon_local(I_MIN,I_LON) >= dinfo%latlon_catalogue(p,I_MIN,I_LON) - dx &
+              .AND. latlon_local(I_MIN,I_LON) <= dinfo%latlon_catalogue(p,I_MAX,I_LON) + dx ) .OR. &
+              (     latlon_local(I_MAX,I_LON) >= dinfo%latlon_catalogue(p,I_MIN,I_LON) - dx &
+              .AND. latlon_local(I_MAX,I_LON) <= dinfo%latlon_catalogue(p,I_MAX,I_LON) + dx ) .OR. &
+              (     dinfo%latlon_catalogue(p,I_MIN,I_LON) >= latlon_local(I_MIN,I_LON) - dx &
+              .AND. dinfo%latlon_catalogue(p,I_MIN,I_LON) <= latlon_local(I_MAX,I_LON) + dx ) .OR. &
+              (     dinfo%latlon_catalogue(p,I_MAX,I_LON) >= latlon_local(I_MIN,I_LON) - dx &
+              .AND. dinfo%latlon_catalogue(p,I_MAX,I_LON) <= latlon_local(I_MAX,I_LON) + dx ) ) .AND. &
+            ( (     latlon_local(I_MIN,I_LAT) >= dinfo%latlon_catalogue(p,I_MIN,I_LAT) - dy &
+              .AND. latlon_local(I_MIN,I_LAT) <= dinfo%latlon_catalogue(p,I_MAX,I_LAT) + dy ) .OR. &
+              (     latlon_local(I_MAX,I_LAT) >= dinfo%latlon_catalogue(p,I_MIN,I_LAT) - dy &
+              .AND. latlon_local(I_MAX,I_LAT) <= dinfo%latlon_catalogue(p,I_MAX,I_LAT) + dy ) .OR. &
+              (     dinfo%latlon_catalogue(p,I_MIN,I_LAT) >= latlon_local(I_MIN,I_LAT) - dy &
+              .AND. dinfo%latlon_catalogue(p,I_MIN,I_LAT) <= latlon_local(I_MAX,I_LAT) + dy ) .OR. &
+              (     dinfo%latlon_catalogue(p,I_MAX,I_LAT) >= latlon_local(I_MIN,I_LAT) - dy &
+              .AND. dinfo%latlon_catalogue(p,I_MAX,I_LAT) <= latlon_local(I_MAX,I_LAT) + dy ) ) ) then
           if ( dinfo%latlon_catalogue(p,I_MIN,I_LON) <= latlon_local(I_MIN,I_LON) ) hit(I_MIN,I_LON) = .true.
           if ( dinfo%latlon_catalogue(p,I_MAX,I_LON) >= latlon_local(I_MAX,I_LON) ) hit(I_MAX,I_LON) = .true.
           if ( dinfo%latlon_catalogue(p,I_MIN,I_LAT) <= latlon_local(I_MIN,I_LAT) ) hit(I_MIN,I_LAT) = .true.
