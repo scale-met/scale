@@ -1690,11 +1690,6 @@ contains
           dtype = centerTypeLAND
           start => startLAND
           count => countLAND
-       elseif ( dim_type == 'LXYT' ) then
-          vsize = LKA * LIA * LJA * step
-          dtype = centerTypeLAND
-          start => startLAND
-          count => countLAND
        elseif ( dim_type == 'UXYT' ) then
           vsize = UKA * UIA * UJA * step
           dtype = centerTypeURBAN
@@ -1751,10 +1746,10 @@ contains
           dim2_E = IEB
           dim3_S = JSB
           dim3_E = JEB
-       elseif ( dim_type == 'OXYT' ) then
-          vsize = LKA * LIA * LJA * step
-          dim1_S = LKS
-          dim1_E = LKE
+       elseif ( dim_type == 'UXYT' ) then
+          vsize = UKA * UIA * UJA * step
+          dim1_S = UKS
+          dim1_E = UKE
           dim2_S = ISB
           dim2_E = IEB
           dim3_S = JSB
