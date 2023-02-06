@@ -58,7 +58,7 @@ FFLAGS_OPENMP = -Kopenmp
 # disable
 #PERF_MONIT ?= -Nnofjprof -UFIPP -UFAPP
 # fipp
-PERF_MONIT ?= -Nfjprof -DFIPP
+#PERF_MONIT ?= -Nfjprof -DFIPP
 # fapp
 #PERF_MONIT ?= -Nfjprof -DFAPP
 
@@ -88,11 +88,12 @@ MPIEXEC = "mpiexec -np"
 # example:
 # export SCALE_NETCDF_INCLUDE="-I/home/user/tool/cross-K/include"
 # export SCALE_NETCDF_LIBS="-L/home/user/tool/cross-K/lib -lnetcdff -lnetcdf -lhdf5_hl -lhdf5 -lsz -lz"
-SPACK_FJVER ?= 4.8.0
-SCALE_NETCDF_C = $(shell spack location --install-dir netcdf-c%fj@$(SPACK_FJVER))
-SCALE_NETCDF_F = $(shell spack location --install-dir netcdf-fortran%fj@$(SPACK_FJVER))
-SCALE_PNETCDF = $(shell spack location --install-dir parallel-netcdf%fj@$(SPACK_FJVER))
-SCALE_HDF = $(shell spack location --install-dir hdf5%fj@$(SPACK_FJVER)+hl~fortran)
+NC_HASH = $(shell spack find -lx netcdf-c%fj | grep netcdf-c | awk '{print $$1}')
+SCALE_NETCDF_C = $(shell spack location --install-dir netcdf-c%fj/${NC_HASH})
+NF_HASH = $(shell spack find -lx netcdf-fortran%fj | grep netcdf-fortran | awk '{print $$1}')
+SCALE_NETCDF_F = $(shell spack location --install-dir netcdf-fortran%fj/${NF_HASH})
+SCALE_PNETCDF = $(shell spack location --install-dir parallel-netcdf%fj)
+SCALE_HDF = $(shell spack location --install-dir hdf5%fj+hl~fortran)
 SCALE_NETCDF_INCLUDE ?= -I$(SCALE_NETCDF_C)/include -I$(SCALE_NETCDF_F)/include
 SCALE_NETCDF_LIBS ?= -L$(SCALE_NETCDF_C)/lib -L$(SCALE_NETCDF_F)/lib -L$(SCALE_HDF)/lib -L$(SCALE_PNETCDF)/lib -lpnetcdf -lnetcdff -lnetcdf -lhdf5_hl -lhdf5 -lfjprofmpi -lmpi_cxx
 SCALE_ENABLE_PNETCDF ?= T

@@ -6,4 +6,6 @@
 
 include $(TOPDIR)/sysdep/Makedef.$(SCALE_SYS)
 
+PERF_MONIT ?= -Nfjprof -DFIPP
+
 MPIEXEC = "fipp -C -Sregion mpiexec -np"
