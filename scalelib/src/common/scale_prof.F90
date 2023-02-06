@@ -292,11 +292,6 @@ contains
 
     if ( PROF_rapcnt(id) > 0 ) return
 
-    PROF_rapttot(id) = PROF_rapttot(id) + ( PRC_MPItime()-PROF_raptstr(id) )
-    PROF_rapnend(id) = PROF_rapnend(id) + 1
-
-    if ( ( .not. disable_barrier_ ) .and. PROF_mpi_barrier ) call PRC_MPIbarrier
-
 #ifdef FAPP
     i = index(rapname," ")
     if ( i == 0 .or. i > len_trim(rapname)) then
@@ -305,6 +300,11 @@ contains
        call FAPP_STOP( rapname(1:i-1)//"_"//trim(rapname(i+1:)), id, level_ )
     end if
 #endif
+
+    PROF_rapttot(id) = PROF_rapttot(id) + ( PRC_MPItime()-PROF_raptstr(id) )
+    PROF_rapnend(id) = PROF_rapnend(id) + 1
+
+    if ( ( .not. disable_barrier_ ) .and. PROF_mpi_barrier ) call PRC_MPIbarrier
 
     return
   end subroutine PROF_rapend

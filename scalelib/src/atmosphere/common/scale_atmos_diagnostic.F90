@@ -186,9 +186,11 @@ contains
           PHYDH(k,i,j) = PHYDH(k+1,i,j) + DENS(k+1,i,j) * GRAV * ( FZ(k+1,i,j) - FZ(k,i,j) )
        end do
        PHYD(KE,i,j) = PRES(KE,i,j)
-       diff = 0.0_RP
        do k = KE-1, KS, -1
           PHYD(k,i,j) = PHYD(k+1,i,j) + ( DENS(k+1,i,j) + DENS(k,i,j) ) * GRAV * ( CZ(k+1,i,j) - CZ(k,i,j) ) * 0.5_RP
+       end do
+       diff = 0.0_RP
+       do k = KS, KE-1
           diff = diff + ( PRES(k,i,j) - PHYD(k,i,j) ) * ( FZ(k,i,j) - FZ(k-1,i,j) )
        end do
        diff = diff / ( FZ(KE,i,j) - FZ(KS-1,i,j) )
