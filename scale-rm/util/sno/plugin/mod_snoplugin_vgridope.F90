@@ -344,7 +344,7 @@ contains
           select case( trim(ainfo(n)%varname) )
           case('height')
              HGT_ref(:,:,:) = ainfo(n)%AXIS_3d(:,:,:)
-          case('height_wxy')
+          case('height_wxy','height_xyw')
              HGTh_ref(:,:,:) = ainfo(n)%AXIS_3d(:,:,:)
           endselect
        enddo
