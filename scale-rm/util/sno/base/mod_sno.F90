@@ -118,6 +118,7 @@ contains
        nvars,           &
        varname,         &
        isnormalvar,     &
+       output_grads,    &
        debug            )
     use mpi
     use scale_file_h, only: &
@@ -160,6 +161,7 @@ contains
     integer,                intent(out) :: nvars                    ! number of variables               (input)
     character(len=H_SHORT), intent(out) :: varname (item_limit)     ! name   of variables               (input)
     logical,                intent(in)  :: isnormalvar              ! if true, some 2d axis var. is treated as normal var.
+    logical,                intent(in)  :: output_grads             ! output grads fortmat file or not?
     logical,                intent(in)  :: debug
 
     integer                :: procsize(2)                   ! total process size        (x:y)
@@ -441,7 +443,7 @@ contains
                                       hinfo%minfo_longitude_of_central_meridian        (:) )
           endif
        case('lon','lat')
-          if ( isnormalvar ) then ! treat as normal variable
+          if ( output_grads ) then ! treat as normal variable for GrADS
              if ( nvars_req == 0 ) then
                 nvars          = nvars + 1
                 varname(nvars) = varname_file(n)
@@ -459,7 +461,7 @@ contains
                    endif
                 enddo
              endif
-          else ! treat as axis variable
+          else ! treat as axis variable for NetCDF
              naxis           = naxis + 1
              axisname(naxis) = varname_file(n)
           endif
