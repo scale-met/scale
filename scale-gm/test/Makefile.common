@@ -6,6 +6,12 @@
 
 ifeq ($(origin SYSDEP_DIR), undefined)
    SYSDEP_DIR = $(TOPDIR)/sysdep
+else
+   ifeq ( "$(shell find -name $(SYSDEP_DIR)/Makedef.$(SCALE_SYS))", "")
+      SYSDEP_DIR=$(TOPDIR)/sysdep
+   else
+      USELOCALBIN = T
+   endif
 endif
 
 msg1 = "\n"
@@ -100,18 +106,18 @@ run: jobshell
 	$(JOBSUB) run.sh
 
 jobshell:
-	@if [ -f ../Mkjobshell.$(SCALE_SYS).sh ]; then \
-		bash ../Mkjobshell.$(SCALE_SYS).sh            $(BINDIR)                                   \
+	@if [ -f $(SYSDEP_DIR)/Mkjobshell.$(SCALE_SYS).sh ]; then \
+		bash $(SYSDEP_DIR)/Mkjobshell.$(SCALE_SYS).sh $(MPIEXEC) $(BINDIR)                           \
 		                                              $(PPNAME) $(INITNAME) $(BINNAME) $(ICO2LLNAME) \
 		                                              $(PPCONF) $(INITCONF) $(RUNCONF) $(ICO2LLCONF) \
-		                                              $(TPROC)                                    \
-		                                              $(DATPARAM) $(DATDISTS);                    \
+		                                              $(TPROC)                                       \
+		                                              $(DATPARAM) $(DATDISTS);                       \
 	else \
-		bash $(SYSDEP_DIR)/Mkjobshell.$(SCALE_SYS).sh $(BINDIR)                                   \
+		bash $(TOPDIR)/sysdep/Mkjobshell.$(SCALE_SYS).sh $(MPIEXEC) $(BINDIR)                        \
 		                                              $(PPNAME) $(INITNAME) $(BINNAME) $(ICO2LLNAME) \
 		                                              $(PPCONF) $(INITCONF) $(RUNCONF) $(ICO2LLCONF) \
-		                                              $(TPROC)                                    \
-		                                              $(DATPARAM) $(DATDISTS);                    \
+		                                              $(TPROC)                                       \
+		                                              $(DATPARAM) $(DATDISTS);                       \
 	fi
 
 vis:

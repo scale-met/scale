@@ -62,6 +62,12 @@ LDFLAGS = $(FFLAGS)
 
 
 
+##### Execute command
+
+MPIEXEC = "mpiexec --mca btl openib,sm,self --bind-to core -np"
+
+
+
 ################################################################################
 
 ###### NetCDF library

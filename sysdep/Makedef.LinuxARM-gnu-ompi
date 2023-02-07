@@ -62,6 +62,12 @@ LDFLAGS = $(FFLAGS)
 
 
 
+##### Execute command
+
+MPIEXEC = "mpiexec -np"
+
+
+
 ################################################################################
 
 ###### NetCDF library
