@@ -80,12 +80,13 @@ the data in halo, which is located outside of a target domain, is also output ex
 The setting of \nmitem{FILE_HISTORY_CARTESC_BOUNDARY} is applied to all output variables.\\
 
 The output variables are set by adding \namelist{HISTORY_ITEM}.
+The list of variables that can be output can be found in the History Variables List on the Reference Manual of SCALE HP (see Section \ref{sec:reference_manual} for details).
 The output format follows the default setting specified at \namelist{PARAM_FILE_HISTORY}.
 By adding namelists with ``(OPTION)'', the format for a specific variable can be changed from the default setting.
 
 \editboxtwo{
 \verb|&HISTORY_ITEM                    | & \\
-\verb| NAME              = "RAIN",     | &  Variable name. List of variables is in the reference manual (See Section \ref{sec:reference_manual}) \\
+\verb| NAME              = "RAIN",     | &  Variable name  \\
 \verb| OUTNAME           = "",         | &  (OPTION) same as \verb|NAME| \\
 \verb| BASENAME          = "rain_d01", | &  (OPTION) same as \verb|FILE_HISTORY_DEFAULT_BASENAME| \\
 \verb| POSTFIX_TIMELABEL = .false.,    | &  (OPTION) same as \verb|FILE_HISTORY_DEFAULT_POSTFIX_TIMELABEL| \\
