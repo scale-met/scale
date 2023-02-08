@@ -92,10 +92,11 @@ module mod_cpl_vars
   real(RP), public, allocatable :: URB_SFLX_MW   (:,:)     ! urban surface w-momentum flux [kg/m/s2]
   real(RP), public, allocatable :: URB_SFLX_MU   (:,:)     ! urban surface u-momentum flux [kg/m/s2]
   real(RP), public, allocatable :: URB_SFLX_MV   (:,:)     ! urban surface v-momentum flux [kg/m/s2]
-  real(RP), public, allocatable :: URB_SFLX_SH   (:,:)     ! urban surface sensible heat flux [J/m2/s]
-  real(RP), public, allocatable :: URB_SFLX_LH   (:,:)     ! urban surface latent heat flux [J/m2/s]
-  real(RP), public, allocatable :: URB_SFLX_SHEX (:,:)     ! urban surface extra sensible heat flux [J/m2/s]
-  real(RP), public, allocatable :: URB_SFLX_QVEX (:,:)     ! urban surface extra latent heat flux [kg/kg/m2/s]
+  real(RP), public, allocatable :: URB_SFLX_SH   (:,:)     ! urban surface sensible heat flux [J/m2/s] (urban grid average)
+  real(RP), public, allocatable :: URB_SFLX_LH   (:,:)     ! urban surface latent heat flux   [J/m2/s] (urban grid average)
+  real(RP), public, allocatable :: URB_SFLX_SHEX (:,:)     ! extra (anthropogenic) sensible heat flux from urban  [J/m2/s]     (grid average value)
+  real(RP), public, allocatable :: URB_SFLX_LHEX (:,:)     ! extra (anthropogenic) latent heat flux from urban    [J/m2/s]     (grid average value)
+  real(RP), public, allocatable :: URB_SFLX_QVEX (:,:)     ! extra (anthropogenic) water vapour flux from urban   [kg/kg/m2/s] (grid average value)
   real(RP), public, allocatable :: URB_SFLX_GH   (:,:)     ! urban surface ground heat flux [J/m2/s]
   real(RP), public, allocatable :: URB_SFLX_QTRC (:,:,:)   ! urban surface tracer flux [kg/m2/s]
   real(RP), public, allocatable :: URB_SFLX_ENGI (:,:)     ! urban surface internal energy flux [J/m2/s]
@@ -174,6 +175,7 @@ contains
   !> Setup
   subroutine CPL_vars_setup
     use scale_const, only: &
+       EPS   => CONST_EPS,  &
        UNDEF => CONST_UNDEF
     use scale_prc, only: &
        PRC_abort
@@ -311,6 +313,7 @@ contains
     allocate( URB_SFLX_SH   (IA,JA)                     )
     allocate( URB_SFLX_LH   (IA,JA)                     )
     allocate( URB_SFLX_SHEX (IA,JA)                     )
+    allocate( URB_SFLX_LHEX (IA,JA)                     )
     allocate( URB_SFLX_QVEX (IA,JA)                     )
     allocate( URB_SFLX_GH   (IA,JA)                     )
     allocate( URB_SFLX_QTRC (IA,JA,QA)                  )
@@ -330,6 +333,7 @@ contains
     URB_SFLX_SH   (:,:)     = UNDEF
     URB_SFLX_LH   (:,:)     = UNDEF
     URB_SFLX_SHEX (:,:)     = UNDEF
+    URB_SFLX_LHEX (:,:)     = UNDEF
     URB_SFLX_QVEX (:,:)     = UNDEF
     URB_SFLX_GH   (:,:)     = UNDEF
     URB_SFLX_QTRC (:,:,:)   = UNDEF
@@ -499,6 +503,7 @@ contains
     deallocate( URB_SFLX_SH    )
     deallocate( URB_SFLX_LH    )
     deallocate( URB_SFLX_SHEX  )
+    deallocate( URB_SFLX_LHEX  )
     deallocate( URB_SFLX_QVEX  )
     deallocate( URB_SFLX_GH    )
     deallocate( URB_SFLX_QTRC  )
@@ -577,7 +582,8 @@ contains
        ATMOS_HYDROMETEOR_dry, &
        CV_WATER, &
        CV_ICE,   &
-       LHF
+       LHF,      &
+       I_QV
     implicit none
 
     real(RP), intent(in) :: TEMP       (IA,JA)
@@ -986,6 +992,7 @@ contains
        SFLX_SH,    &
        SFLX_LH,    &
        SFLX_SHEX,  &
+       SFLX_LHEX,  &
        SFLX_QVEX,  &
        SFLX_GH,    &
        SFLX_QTRC,  &
@@ -1008,6 +1015,7 @@ contains
     real(RP), intent(in) :: SFLX_SH   (IA,JA)
     real(RP), intent(in) :: SFLX_LH   (IA,JA)
     real(RP), intent(in) :: SFLX_SHEX (IA,JA)
+    real(RP), intent(in) :: SFLX_LHEX (IA,JA)
     real(RP), intent(in) :: SFLX_QVEX (IA,JA)
     real(RP), intent(in) :: SFLX_GH   (IA,JA)
     real(RP), intent(in) :: SFLX_QTRC (IA,JA,QA)
@@ -1024,9 +1032,9 @@ contains
     !$omp parallel do default(none)  OMP_SCHEDULE_ &
     !$omp shared(JS,JE,IS,IE,QA, &
     !$omp        URB_SFC_TEMP,URB_SFC_albedo,URB_SFC_Z0M,URB_SFC_Z0H,URB_SFC_Z0E, &
-    !$omp        URB_SFLX_MW,URB_SFLX_MU,URB_SFLX_MV,URB_SFLX_SH,URB_SFLX_LH,URB_SFLX_SHEX,URB_SFLX_QVEX,URB_SFLX_GH, &
+    !$omp        URB_SFLX_MW,URB_SFLX_MU,URB_SFLX_MV,URB_SFLX_SH,URB_SFLX_LH,URB_SFLX_SHEX,URB_SFLX_LHEX,URB_SFLX_QVEX,URB_SFLX_GH, &
     !$omp        URB_SFLX_QTRC,URB_SFLX_ENGI,URB_U10,URB_V10,URB_T2,URB_Q2,CNT_putURB, &
-    !$omp        SFC_TEMP,SFC_albedo,SFC_Z0M,SFC_Z0H,SFC_Z0E,SFLX_MW,SFLX_MU,SFLX_MV,SFLX_SH,SFLX_LH,SFLX_SHEX,SFLX_QVEX,SFLX_GH,SFLX_QTRC,U10,V10,T2,Q2, &
+    !$omp        SFC_TEMP,SFC_albedo,SFC_Z0M,SFC_Z0H,SFC_Z0E,SFLX_MW,SFLX_MU,SFLX_MV,SFLX_SH,SFLX_LH,SFLX_SHEX,SFLX_LHEX,SFLX_QVEX,SFLX_GH,SFLX_QTRC,U10,V10,T2,Q2, &
     !$omp        mask, &
     !$omp        TRACER_CV,TRACER_ENGI0)
     do j = JS, JE
@@ -1042,6 +1050,7 @@ contains
        URB_SFLX_SH  (i,j)   = URB_SFLX_SH  (i,j)   * CNT_putURB + SFLX_SH  (i,j)
        URB_SFLX_LH  (i,j)   = URB_SFLX_LH  (i,j)   * CNT_putURB + SFLX_LH  (i,j)
        URB_SFLX_SHEX(i,j)   = URB_SFLX_SHEX(i,j)   * CNT_putURB + SFLX_SHEX(i,j)
+       URB_SFLX_LHEX(i,j)   = URB_SFLX_LHEX(i,j)   * CNT_putURB + SFLX_LHEX(i,j)
        URB_SFLX_QVEX(i,j)   = URB_SFLX_QVEX(i,j)   * CNT_putURB + SFLX_QVEX(i,j)
        URB_SFLX_GH  (i,j)   = URB_SFLX_GH  (i,j)   * CNT_putURB + SFLX_GH  (i,j)
        URB_SFLX_ENGI(i,j)   = URB_SFLX_ENGI(i,j)   * CNT_putURB
@@ -1069,6 +1078,7 @@ contains
        URB_SFLX_SH  (i,j)   = URB_SFLX_SH  (i,j)   / ( CNT_putURB + 1.0_RP )
        URB_SFLX_LH  (i,j)   = URB_SFLX_LH  (i,j)   / ( CNT_putURB + 1.0_RP )
        URB_SFLX_SHEX(i,j)   = URB_SFLX_SHEX(i,j)   / ( CNT_putURB + 1.0_RP )
+       URB_SFLX_LHEX(i,j)   = URB_SFLX_LHEX(i,j)   / ( CNT_putURB + 1.0_RP )
        URB_SFLX_QVEX(i,j)   = URB_SFLX_QVEX(i,j)   / ( CNT_putURB + 1.0_RP )
        URB_SFLX_GH  (i,j)   = URB_SFLX_GH  (i,j)   / ( CNT_putURB + 1.0_RP )
        URB_SFLX_QTRC(i,j,:) = URB_SFLX_QTRC(i,j,:) / ( CNT_putURB + 1.0_RP )
@@ -1106,6 +1116,7 @@ contains
        SFLX_SH,    &
        SFLX_LH,    &
        SFLX_SHEX,  &
+       SFLX_LHEX,  &
        SFLX_QVEX,  &
        SFLX_GH,    &
        SFLX_QTRC,  &
@@ -1131,6 +1142,7 @@ contains
     real(RP), intent(out) :: SFLX_SH   (IA,JA)
     real(RP), intent(out) :: SFLX_LH   (IA,JA)
     real(RP), intent(out) :: SFLX_SHEX (IA,JA)
+    real(RP), intent(out) :: SFLX_LHEX (IA,JA)
     real(RP), intent(out) :: SFLX_QVEX (IA,JA)
     real(RP), intent(out) :: SFLX_GH   (IA,JA)
     real(RP), intent(out) :: SFLX_QTRC (IA,JA,QA)
@@ -1145,12 +1157,13 @@ contains
 
     !$omp parallel do default(none) &
     !$omp shared(JS,JE,IS,IE,QA,SFLX_QTRC,SFLX_ENGI,SFC_TEMP,SFC_albedo,SFC_Z0M,SFC_Z0H,SFC_Z0E) &
-    !$omp shared(SFLX_MW,SFLX_MU,SFLX_MV,SFLX_SH,SFLX_LH,SFLX_SHEX,SFLX_QVEX,SFLX_GH,U10,V10,T2,Q2) &
+    !$omp shared(SFLX_MW,SFLX_MU,SFLX_MV,SFLX_SH,SFLX_LH,SFLX_SHEX,SFLX_LHEX,SFLX_QVEX,SFLX_GH,U10,V10,T2,Q2) &
     !$omp shared(fact_ocean,fact_land,fact_urban,OCN_SFC_TEMP,LND_SFC_TEMP,URB_SFC_TEMP,OCN_SFC_albedo) &
     !$omp shared(LND_SFC_albedo,URB_SFC_albedo,OCN_SFC_Z0M,LND_SFC_Z0M,URB_SFC_Z0M) &
-    !$omp shared(OCN_SFC_Z0H,LND_SFC_Z0H,URB_SFC_Z0H,OCN_SFC_Z0E,LND_SFC_Z0E,URB_SFC_Z0E,OCN_SFLX_MW) &
-    !$omp shared(LND_SFLX_MW,URB_SFLX_MW,OCN_SFLX_MU,LND_SFLX_MU,URB_SFLX_MU,OCN_SFLX_MV,LND_SFLX_MV) &
-    !$omp shared(URB_SFLX_MV,OCN_SFLX_SH,LND_SFLX_SH,URB_SFLX_SH,URB_SFLX_SHEX,OCN_SFLX_LH,LND_SFLX_LH,URB_SFLX_LH,URB_SFLX_QVEX) &
+    !$omp shared(OCN_SFC_Z0H,LND_SFC_Z0H,URB_SFC_Z0H,OCN_SFC_Z0E,LND_SFC_Z0E,URB_SFC_Z0E) &
+    !$omp shared(OCN_SFLX_MW,LND_SFLX_MW,URB_SFLX_MW,OCN_SFLX_MU,LND_SFLX_MU,URB_SFLX_MU) &
+    !$omp shared(OCN_SFLX_MV,LND_SFLX_MV,URB_SFLX_MV) &
+    !$omp shared(OCN_SFLX_SH,LND_SFLX_SH,URB_SFLX_SH,URB_SFLX_SHEX,OCN_SFLX_LH,LND_SFLX_LH,URB_SFLX_LH,URB_SFLX_LHEX,URB_SFLX_QVEX) &
     !$omp shared(OCN_SFLX_GH,LND_SFLX_GH,URB_SFLX_GH,OCN_SFLX_QTRC,LND_SFLX_QTRC,URB_SFLX_QTRC,OCN_SFLX_ENGI,LND_SFLX_ENGI,URB_SFLX_ENGI) &
     !$omp shared(OCN_U10,LND_U10,URB_U10,OCN_V10,LND_V10,URB_V10,OCN_T2,LND_T2,URB_T2,OCN_Q2,LND_Q2,URB_Q2) &
     !$omp private(i,j,iq) OMP_SCHEDULE_
@@ -1192,17 +1205,21 @@ contains
                              + fact_land (i,j) * LND_SFLX_MV  (i,j) &
                              + fact_urban(i,j) * URB_SFLX_MV  (i,j)
 
+       SFLX_SHEX(i,j)      =   real(ceiling(fact_urban(i,j)-EPS), kind=RP) * URB_SFLX_SHEX(i,j) ! only a grid cell where urban exists
+
+       SFLX_LHEX(i,j)      =   real(ceiling(fact_urban(i,j)-EPS), kind=RP) * URB_SFLX_LHEX(i,j) ! only a grid cell where urban exists
+
+       SFLX_QVEX(i,j)      =   real(ceiling(fact_urban(i,j)-EPS), kind=RP) * URB_SFLX_QVEX(i,j) ! only a grid cell where urban exists
+
        SFLX_SH  (i,j)      =   fact_ocean(i,j) * OCN_SFLX_SH  (i,j) &
                              + fact_land (i,j) * LND_SFLX_SH  (i,j) &
-                             + fact_urban(i,j) * URB_SFLX_SH  (i,j)
+                             + fact_urban(i,j) * URB_SFLX_SH  (i,j) &
+                             + SFLX_SHEX(i,j) ! grid average
 
        SFLX_LH  (i,j)      =   fact_ocean(i,j) * OCN_SFLX_LH  (i,j) &
                              + fact_land (i,j) * LND_SFLX_LH  (i,j) &
-                             + fact_urban(i,j) * URB_SFLX_LH  (i,j)
-
-       SFLX_SHEX(i,j)      = + fact_urban(i,j) * URB_SFLX_SHEX(i,j)
-            
-       SFLX_QVEX(i,j)      = + fact_urban(i,j) * URB_SFLX_QVEX(i,j)
+                             + fact_urban(i,j) * URB_SFLX_LH  (i,j) &
+                             + SFLX_LHEX(i,j) ! grid average
 
        SFLX_GH  (i,j)      =   fact_ocean(i,j) * OCN_SFLX_GH  (i,j) &
                              + fact_land (i,j) * LND_SFLX_GH  (i,j) &
@@ -1213,6 +1230,7 @@ contains
                               + fact_land (i,j) * LND_SFLX_QTRC(i,j,iq) &
                               + fact_urban(i,j) * URB_SFLX_QTRC(i,j,iq)
        enddo
+       SFLX_QTRC(i,j,I_QV)  = SFLX_QTRC(i,j,I_QV) + SFLX_QVEX(i,j)
 
        SFLX_ENGI(i,j)      =   fact_ocean(i,j) * OCN_SFLX_ENGI(i,j) &
                              + fact_land (i,j) * LND_SFLX_ENGI(i,j) &

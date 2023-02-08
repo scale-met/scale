@@ -198,6 +198,7 @@ contains
        URBAN_SFLX_SH,     &
        URBAN_SFLX_LH,     &
        URBAN_SFLX_SHEX,   &
+       URBAN_SFLX_LHEX,   &
        URBAN_SFLX_QVEX,   &
        URBAN_SFLX_QTRC,   &
        URBAN_SFLX_GH,     &
@@ -255,12 +256,12 @@ contains
     real(RP) :: TC(UIA,UJA), QC(UIA,UJA), UC(UIA,UJA)
     real(RP) :: RAINR(UIA,UJA), RAINB(UIA,UJA), RAING(UIA,UJA), ROFF(UIA,UJA)
 
-    real(RP) :: LHV(UIA,UJA) ! latent heat of vaporization [J/kg]
+    real(RP) :: LHV(UIA,UJA)        ! latent heat of vaporization [J/kg]
 
-    real(RP) :: URBAN_SFLX_LHEX(UIA,UJA)
+   ! real(RP) :: URBAN_SFLX_LHEX(UIA,UJA)
 
     integer  :: tloc, tloc_next     ! universal time (1-24h)
-    real(RP) :: dsec     ! second [s]
+    real(RP) :: dsec                ! second [s]
 
     integer :: k, i, j, iq
     !---------------------------------------------------------------------------
@@ -341,9 +342,8 @@ contains
 
 
        ! universal time
-       dsec = real( NOWDATE(5)*60.0_RP + NOWDATE(6) + AH_TOFFSET, kind=RP ) / 3600.0_RP
-       tloc = NOWDATE(4) + floor(dsec)
-       dsec = dsec - floor(dsec)
+       dsec = real( NOWDATE(5)*60.0_RP + NOWDATE(6), kind=RP ) / 3600.0_RP  ! [hour]
+       tloc = NOWDATE(4)                                                    ! [hour]
        tloc = modulo(tloc-1,24)+1
        if ( tloc == 24 ) then
          tloc_next = 1
@@ -398,10 +398,12 @@ contains
        do j = UJS, UJE
        do i = UIS, UIE
        if ( exists_urban(i,j) ) then
-          URBAN_SFLX_SHEX(i,j) = URBAN_AH (i,j) / LANDUSE_fact_urban(i,j) ! Sensible heat flux [W/m2]
-          URBAN_SFLX_LHEX(i,j) = URBAN_AHL(i,j) / LANDUSE_fact_urban(i,j) ! Latent heat flux   [W/m2]
-          URBAN_SFLX_SH  (i,j) = URBAN_SFLX_SH(i,j) + URBAN_SFLX_SHEX(i,j)
-          URBAN_SFLX_LH  (i,j) = URBAN_SFLX_LH(i,j) + URBAN_SFLX_LHEX(i,j)
+          !URBAN_SFLX_SHEX(i,j) = URBAN_AH (i,j) / LANDUSE_fact_urban(i,j) ! Sensible heat flux [W/m2]
+          !URBAN_SFLX_LHEX(i,j) = URBAN_AHL(i,j) / LANDUSE_fact_urban(i,j) ! Latent heat flux   [W/m2]
+          !URBAN_SFLX_SH  (i,j) = URBAN_SFLX_SH(i,j) + URBAN_SFLX_SHEX(i,j)
+          !URBAN_SFLX_LH  (i,j) = URBAN_SFLX_LH(i,j) + URBAN_SFLX_LHEX(i,j)
+          URBAN_SFLX_SHEX(i,j) = URBAN_AH (i,j)     ! Sensible anthropogenic heat flux [W/m2]
+          URBAN_SFLX_LHEX(i,j) = URBAN_AHL(i,j)     ! Latent anthropogenic heat flux [W/m2]
        end if
        end do
        end do
@@ -711,6 +713,7 @@ contains
        URBAN_SFLX_SH,    &
        URBAN_SFLX_LH,    &
        URBAN_SFLX_SHEX,  &
+       URBAN_SFLX_LHEX,  &
        URBAN_SFLX_QVEX,  &
        URBAN_SFLX_GH,    &
        URBAN_SFLX_QTRC,  &
@@ -745,6 +748,7 @@ contains
                         URBAN_SFLX_SH   (:,:),     & ! [IN]
                         URBAN_SFLX_LH   (:,:),     & ! [IN]
                         URBAN_SFLX_SHEX (:,:),     & ! [IN]
+                        URBAN_SFLX_LHEX (:,:),     & ! [IN]
                         URBAN_SFLX_QVEX (:,:),     & ! [IN]
                         URBAN_SFLX_GH   (:,:),     & ! [IN]
                         URBAN_SFLX_QTRC (:,:,:),   & ! [IN]
