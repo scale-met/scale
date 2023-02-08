@@ -175,7 +175,6 @@ contains
   !> Setup
   subroutine CPL_vars_setup
     use scale_const, only: &
-       EPS   => CONST_EPS,  &
        UNDEF => CONST_UNDEF
     use scale_prc, only: &
        PRC_abort
@@ -582,8 +581,7 @@ contains
        ATMOS_HYDROMETEOR_dry, &
        CV_WATER, &
        CV_ICE,   &
-       LHF,      &
-       I_QV
+       LHF
     implicit none
 
     real(RP), intent(in) :: TEMP       (IA,JA)
@@ -1129,6 +1127,10 @@ contains
        fact_ocean => LANDUSE_fact_ocean, &
        fact_land  => LANDUSE_fact_land,  &
        fact_urban => LANDUSE_fact_urban
+    use scale_const, only: &
+       EPS   => CONST_EPS
+    use scale_atmos_hydrometeor, only: &
+       I_QV
     implicit none
 
     real(RP), intent(out) :: SFC_TEMP  (IA,JA)
@@ -1156,7 +1158,7 @@ contains
     !---------------------------------------------------------------------------
 
     !$omp parallel do default(none) &
-    !$omp shared(JS,JE,IS,IE,QA,SFLX_QTRC,SFLX_ENGI,SFC_TEMP,SFC_albedo,SFC_Z0M,SFC_Z0H,SFC_Z0E) &
+    !$omp shared(JS,JE,IS,IE,QA,I_QV,EPS,SFLX_QTRC,SFLX_ENGI,SFC_TEMP,SFC_albedo,SFC_Z0M,SFC_Z0H,SFC_Z0E) &
     !$omp shared(SFLX_MW,SFLX_MU,SFLX_MV,SFLX_SH,SFLX_LH,SFLX_SHEX,SFLX_LHEX,SFLX_QVEX,SFLX_GH,U10,V10,T2,Q2) &
     !$omp shared(fact_ocean,fact_land,fact_urban,OCN_SFC_TEMP,LND_SFC_TEMP,URB_SFC_TEMP,OCN_SFC_albedo) &
     !$omp shared(LND_SFC_albedo,URB_SFC_albedo,OCN_SFC_Z0M,LND_SFC_Z0M,URB_SFC_Z0M) &
