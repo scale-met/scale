@@ -130,19 +130,19 @@ module scale_comm_cartesC
      integer              :: size2D_WE            !< 2D data size (N/S    HALO,   8-direction comm.)
      integer              :: size2D_4C            !< 2D data size (corner HALO,   8-direction comm.)
      integer              :: vars_num = 0         !< numbers of variables for persistent comm.
-     real(RP),    pointer :: recvpack_WE2P(:,:,:) !< packing packet (receive, from W and E)
-     real(RP),    pointer :: sendpack_P2WE(:,:,:) !< packing packet (send,    to   W and E)
-     type(c_ptr), pointer :: recvbuf_WE(:)        !< receive buffer for MPI_Put (from W and E)
-     type(c_ptr), pointer :: recvbuf_NS(:)        !< receive buffer for MPI_Put (from N and S)
-     integer,     pointer :: req_cnt (:)          !< request ID of each MPI send/recv
-     integer,     pointer :: req_list(:,:)        !< request ID set of each variables
-     integer,     pointer :: preq_cnt (:)         !< request ID of each MPI PC
-     integer,     pointer :: preq_list(:,:)       !< request ID set of each variables for MPI PC
-     integer,     pointer :: packid(:)            !< ID of pack
-     integer,     pointer :: win_packWE(:)        !< window ID for MPI onesided
-     integer,     pointer :: win_packNS(:)        !< window ID for MPI onesided
+     real(RP),    allocatable :: recvpack_WE2P(:,:,:) !< packing packet (receive, from W and E)
+     real(RP),    allocatable :: sendpack_P2WE(:,:,:) !< packing packet (send,    to   W and E)
+     type(c_ptr), allocatable :: recvbuf_WE(:)        !< receive buffer for MPI_Put (from W and E)
+     type(c_ptr), allocatable :: recvbuf_NS(:)        !< receive buffer for MPI_Put (from N and S)
+     integer,     allocatable :: req_cnt (:)          !< request ID of each MPI send/recv
+     integer,     allocatable :: req_list(:,:)        !< request ID set of each variables
+     integer,     allocatable :: preq_cnt (:)         !< request ID of each MPI PC
+     integer,     allocatable :: preq_list(:,:)       !< request ID set of each variables for MPI PC
+     integer,     allocatable :: packid(:)            !< ID of pack
+     integer,     allocatable :: win_packWE(:)        !< window ID for MPI onesided
+     integer,     allocatable :: win_packNS(:)        !< window ID for MPI onesided
 #ifdef DEBUG
-     logical,  pointer :: use_packbuf(:)       !< using flag for packing buffer
+     logical,  allocatable :: use_packbuf(:)       !< using flag for packing buffer
 #endif
   end type ginfo_t
 

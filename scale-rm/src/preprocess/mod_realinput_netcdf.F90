@@ -173,8 +173,8 @@ contains
     logical,           intent(out) :: update_coord
     type(mappinginfo), intent(out) :: mapping_info
     logical,           intent(out) :: qtrc_flag(QA)
-    real(RP), pointer, intent(out) :: lon_all(:,:)
-    real(RP), pointer, intent(out) :: lat_all(:,:)
+    real(RP), allocatable, intent(out) :: lon_all(:,:)
+    real(RP), allocatable, intent(out) :: lat_all(:,:)
 
     character(len=*), intent(in) :: basename_org
     character(len=*), intent(in) :: basename_num
@@ -1349,8 +1349,8 @@ contains
 
     integer,           intent(out) :: ldims(3)
     integer,           intent(out) :: timelen
-    real(RP), pointer, intent(out) :: lon_all(:,:)
-    real(RP), pointer, intent(out) :: lat_all(:,:)
+    real(RP), allocatable, intent(out) :: lon_all(:,:)
+    real(RP), allocatable, intent(out) :: lat_all(:,:)
 
     character(len=*), intent(in) :: basename_org
     character(len=*), intent(in) :: basename_num
@@ -1869,8 +1869,8 @@ contains
 
     integer,           intent(out) :: odims(2)
     integer,           intent(out) :: timelen
-    real(RP), pointer, intent(out) :: lon_all(:,:)
-    real(RP), pointer, intent(out) :: lat_all(:,:)
+    real(RP), allocatable, intent(out) :: lon_all(:,:)
+    real(RP), allocatable, intent(out) :: lat_all(:,:)
 
     character(len=*), intent(in)  :: basename_org
     character(len=*), intent(in)  :: basename_num
@@ -2429,6 +2429,7 @@ contains
 
     real(RP), allocatable :: buf3d(:,:,:)
     real(RP), pointer     :: work(:,:,:)
+    real(RP), allocatable, target :: work_t(:,:,:)
 
     integer :: dims(3)
     integer :: tilei, tilej
@@ -2497,7 +2498,8 @@ contains
 
        if ( SCALE_tile ) then
           if ( var%xstg .or. var%ystg ) then
-             allocate( work(KA_org,IA_org+ist,JA_org+jst) )
+             allocate( work_t(KA_org,IA_org+ist,JA_org+jst) )
+             work => work_t
           else
              work => val
           end if
@@ -2599,10 +2601,9 @@ contains
              end do
           end if
           if ( var%xstg .or. var%ystg ) then
-             deallocate( work )
-          else
-             nullify( work )
+             deallocate( work_t )
           end if
+          nullify( work )
        else
           if ( transpose ) then
              allocate( buf3d(IS_org:IE_org+ist,JS_org:JE_org+jst,KS_org:KE_org+kst) )
@@ -2736,6 +2737,7 @@ contains
 
     real(RP), allocatable :: buf2d(:,:)
     real(RP), pointer     :: work(:,:)
+    real(RP), allocatable, target :: work_t(:,:)
 
     integer :: tilei, tilej
     integer :: cxs, cxe, cys, cye
@@ -2795,7 +2797,8 @@ contains
 
        if ( SCALE_DOMID > 0 ) then
           if ( var%xstg .or. var%ystg ) then
-             allocate( work(IA_org+ist,JA_org+jst) )
+             allocate( work_t(IA_org+ist,JA_org+jst) )
+             work => work_t
           else
              work => val
           end if
@@ -2850,13 +2853,13 @@ contains
              end do
           end if
           if ( var%xstg .or. var%ystg ) then
-             deallocate( work )
-          else
-             nullify( work )
+             deallocate( work_t )
           end if
+          nullify( work )
        else
           if ( var%xstg .or. var%ystg ) then
-             allocate( work(IS_org:IE_org+ist,JS_org:JE_org+jst) )
+             allocate( work_t(IS_org:IE_org+ist,JS_org:JE_org+jst) )
+             work => work_t
           else
              work => val
           end if
@@ -2889,10 +2892,9 @@ contains
              end do
           end if
           if ( var%xstg .or. var%ystg ) then
-             deallocate( work )
-          else
-             nullify( work )
+             deallocate( work_t )
           end if
+          nullify( work )
        end if
 
        if ( present(exist) ) exist = .true.

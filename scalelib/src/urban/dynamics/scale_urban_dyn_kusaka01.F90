@@ -18,6 +18,8 @@ module scale_urban_dyn_kusaka01
   use scale_io
   use scale_prof
   use scale_cpl_sfc_index
+  use scale_mapprojection, only: &
+      BASE_LON => MAPPROJECTION_basepoint_lon
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -115,10 +117,11 @@ module scale_urban_dyn_kusaka01
 contains
   !-----------------------------------------------------------------------------
   !> Setup
-  subroutine URBAN_DYN_kusaka01_setup(    &
-       UIA, UIS, UIE, UJA, UJS, UJE,      &
-       fact_urban,                        &
-       Z0M, Z0H, Z0E, ZD, AH_URB, AHL_URB )
+  subroutine URBAN_DYN_kusaka01_setup( &
+       UIA, UIS, UIE, UJA, UJS, UJE,   &
+       fact_urban,                     &
+       Z0M, Z0H, Z0E, ZD,              &
+       AH_URB, AHL_URB, AH_TOFFSET     )
     use scale_prc, only: &
        PRC_myrank,       &
        PRC_abort
@@ -137,6 +140,7 @@ contains
     real(RP), intent(out) :: ZD (UIA,UJA)
     real(RP), intent(out) :: AH_URB  (UIA,UJA,1:24)
     real(RP), intent(out) :: AHL_URB (UIA,UJA,1:24)
+    real(RP), intent(out) :: AH_TOFFSET
 
     character(len=H_LONG) :: URBAN_DYN_KUSAKA01_PARAM_IN_FILENAME       = ''          !< urban parameter table
     character(len=H_LONG) :: URBAN_DYN_KUSAKA01_GRIDDED_Z0M_IN_FILENAME = ''          !< gridded data of Z0M
@@ -162,6 +166,8 @@ contains
 
     real(RP) :: udata(UIA,UJA)
     real(RP) :: udata2(UIA,UJA,24)
+    real(RP) :: rtime
+    integer  :: itime
 
     integer  :: i, j, k
     integer  :: ierr
@@ -189,9 +195,16 @@ contains
     ! set other urban parameters
     call urban_param_setup
 
+    ! Local time: 1 to 24
     ahdiurnal(:) = (/ 0.356, 0.274, 0.232, 0.251, 0.375, 0.647, 0.919, 1.135, 1.249, 1.328, &
                       1.365, 1.363, 1.375, 1.404, 1.457, 1.526, 1.557, 1.521, 1.372, 1.206, &
                       1.017, 0.876, 0.684, 0.512                                            /)
+
+    ! Shift to UTC based on local solar timezone of domain center
+    rtime = modulo(BASE_LON, 360.0_RP) / 15.0_RP
+    itime = nint(rtime)
+    AH_TOFFSET = rtime - itime                 ! currently not used: difference of time from domain center
+    ahdiurnal(:) = cshift(ahdiurnal, -1*itime) ! convert from LT to UTC
 
     do j = UJS, UJE
     do i = UIS, UIE
@@ -199,14 +212,14 @@ contains
        Z0H(i,j) = Z0HC_TBL
        Z0E(i,j) = Z0HC_TBL
        ZD(i,j)  = ZDC_TBL
-       do k = 1, 24
+       do k = 1, 24 ! UTC
           AH_URB (i,j,k) = AH_TBL  * ahdiurnal(k) * fact_urban(i,j)
           AHL_URB(i,j,k) = AHL_TBL * ahdiurnal(k) * fact_urban(i,j)
        enddo
     enddo
     enddo
 
-    !-- read gridded Z0M data from a file
+    !-- replace gridded Z0M data if there is a file
     if( URBAN_DYN_KUSAKA01_GRIDDED_Z0M_IN_FILENAME /= '' ) then
      udata = 0.0_RP
      call read_urban_gridded_data_2D(                   &
@@ -286,23 +299,23 @@ contains
 
     !-- read gridded AH data from a file
     if( URBAN_DYN_KUSAKA01_GRIDDED_AH_IN_FILENAME /= '' ) then
-     udata2 = 0.0_RP
-     call read_urban_gridded_data_3D(                  &
+       udata2 = 0.0_RP
+       call read_urban_gridded_data_3D(                  &
             UIA, UJA,                                  &
             URBAN_DYN_KUSAKA01_GRIDDED_AH_IN_FILENAME, &
             URBAN_DYN_KUSAKA01_GRIDDED_AH_IN_VARNAME,  &
             udata2                                     )
 
-      ! replace to gridded data
-      do k = 1, 24
-      do j = UJS, UJE
-      do i = UIS, UIE
-         if( udata2(i,j,k) /= UNDEF )then
-            AH_URB(i,j,k) = udata2(i,j,k)
-         endif
-      enddo
-      enddo
-      enddo
+       ! replace to gridded data
+       do k = 1, 24
+       do j = UJS, UJE
+       do i = UIS, UIE
+          if( udata2(i,j,k) /= UNDEF )then
+             AH_URB(i,j,k) = udata2(i,j,k)
+          endif
+       enddo
+       enddo
+       enddo
     endif
 
     !-- read gridded AHL data from a file

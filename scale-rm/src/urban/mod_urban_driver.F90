@@ -45,8 +45,9 @@ module mod_urban_driver
   !
   !++ Private parameters & variables
   !
-  real(RP), private, allocatable :: AH_URB (:,:,:)   ! urban grid average of anthropogenic sensible heat [W/m2]
-  real(RP), private, allocatable :: AHL_URB(:,:,:)  ! urban grid average of anthropogenic latent heat [W/m2]
+  real(RP), private, allocatable :: AH_URB (:,:,:) ! urban grid average of anthropogenic sensible heat [W/m2]
+  real(RP), private, allocatable :: AHL_URB(:,:,:) ! urban grid average of anthropogenic latent heat [W/m2]
+  real(RP), private              :: AH_TOFFSET     ! time offset for AH [Hour]
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
@@ -88,7 +89,7 @@ contains
                                          LANDUSE_fact_urban(:,:),                        & ! [IN]
                                          URBAN_Z0M(:,:), URBAN_Z0H(:,:), URBAN_Z0E(:,:), & ! [OUT]
                                          URBAN_ZD(:,:),                                  & ! [OUT]
-                                         AH_URB(:,:,:), AHL_URB(:,:,:)                   ) ! [OUT]
+                                         AH_URB(:,:,:), AHL_URB(:,:,:), AH_TOFFSET       ) ! [OUT]
 
           URBAN_SFC_TYPE = 'KUSAKA01'
        case default
@@ -197,6 +198,7 @@ contains
        URBAN_SFLX_SH,     &
        URBAN_SFLX_LH,     &
        URBAN_SFLX_SHEX,   &
+       URBAN_SFLX_LHEX,   &
        URBAN_SFLX_QVEX,   &
        URBAN_SFLX_QTRC,   &
        URBAN_SFLX_GH,     &
@@ -235,9 +237,6 @@ contains
     use scale_time, only: &
        dt => TIME_DTSEC_URBAN, &
        NOWDATE => TIME_NOWDATE
-    use scale_mapprojection, only: &
-       BASE_LON => MAPPROJECTION_basepoint_lon, &
-       BASE_LAT => MAPPROJECTION_basepoint_lat
     use scale_atmos_grid_cartesC_real, only: &
        REAL_Z1 => ATMOS_GRID_CARTESC_REAL_Z1
     use scale_urban_grid_cartesC, only: &
@@ -257,13 +256,12 @@ contains
     real(RP) :: TC(UIA,UJA), QC(UIA,UJA), UC(UIA,UJA)
     real(RP) :: RAINR(UIA,UJA), RAINB(UIA,UJA), RAING(UIA,UJA), ROFF(UIA,UJA)
 
-    real(RP) :: LHV(UIA,UJA) ! latent heat of vaporization [J/kg]
+    real(RP) :: LHV(UIA,UJA)        ! latent heat of vaporization [J/kg]
 
-    real(RP) :: URBAN_SFLX_LHEX(UIA,UJA)
+   ! real(RP) :: URBAN_SFLX_LHEX(UIA,UJA)
 
-    real(RP) :: LAT, LON ! [deg]
-    integer  :: tloc     ! local time (1-24h)
-    real(RP) :: dsec     ! second [s]
+    integer  :: tloc, tloc_next     ! universal time (1-24h)
+    real(RP) :: dsec                ! second [s]
 
     integer :: k, i, j, iq
     !---------------------------------------------------------------------------
@@ -343,39 +341,26 @@ contains
        end do
 
 
-       ! local time
-       LAT = BASE_LAT
-       LON = BASE_LON
-       if (LON < 0.0_RP )   LON = mod(LON, 360.0_RP) + 360.0_RP
-       if (LON > 360.0_RP ) LON = mod(LON, 360.0_RP)
-       tloc = mod( (NOWDATE(4) + int(LON/15.0_RP)),24 )
-       dsec = real( NOWDATE(5)*60.0_RP + NOWDATE(6), kind=RP ) / 3600.0_RP
-       if( tloc == 0 ) tloc = 24
-
-       !--- Calculate AH at LST
+       ! universal time
+       dsec = real( NOWDATE(5)*60.0_RP + NOWDATE(6), kind=RP ) / 3600.0_RP  ! [hour]
+       tloc = NOWDATE(4)                                                    ! [hour]
+       tloc = modulo(tloc-1,24)+1
        if ( tloc == 24 ) then
-          do j = UJS, UJE
-          do i = UIS, UIE
-          if ( exists_urban(i,j) ) then
-             URBAN_AH(i,j)  = ( 1.0_RP-dsec ) * AH_URB(i,j,tloc  ) &
-                            + (        dsec ) * AH_URB(i,j,1     )
-             URBAN_AHL(i,j) = ( 1.0_RP-dsec ) * AHL_URB(i,j,tloc  ) &
-                            + (        dsec ) * AHL_URB(i,j,1     )
-          end if
-          enddo
-          enddo
+         tloc_next = 1
        else
-          do j = UJS, UJE
-          do i = UIS, UIE
-          if ( exists_urban(i,j) ) then
-             URBAN_AH(i,j)  = ( 1.0_RP-dsec ) * AH_URB(i,j,tloc  ) &
-                            + (        dsec ) * AH_URB(i,j,tloc+1)
-             URBAN_AHL(i,j) = ( 1.0_RP-dsec ) * AHL_URB(i,j,tloc  ) &
-                            + (        dsec ) * AHL_URB(i,j,tloc+1)
-          end if
-          enddo
-          enddo
-       endif
+         tloc_next = tloc + 1
+       end if
+       !--- Calculate AH at UTC
+       do j = UJS, UJE
+       do i = UIS, UIE
+       if ( exists_urban(i,j) ) then
+          URBAN_AH(i,j)  = ( 1.0_RP-dsec ) * AH_URB(i,j, tloc) &
+                         + (        dsec ) * AH_URB(i,j, tloc_next)
+          URBAN_AHL(i,j) = ( 1.0_RP-dsec ) * AHL_URB(i,j, tloc) &
+                         + (        dsec ) * AHL_URB(i,j, tloc_next)
+       end if
+       enddo
+       enddo
 
        call HYDROMETEOR_LHV( UIA, UIS, UIE, UJA, UJS, UJE, &
                              ATMOS_TEMP(:,:), LHV(:,:) )
@@ -413,10 +398,12 @@ contains
        do j = UJS, UJE
        do i = UIS, UIE
        if ( exists_urban(i,j) ) then
-          URBAN_SFLX_SHEX(i,j) = URBAN_AH (i,j) / LANDUSE_fact_urban(i,j) ! Sensible heat flux [W/m2]
-          URBAN_SFLX_LHEX(i,j) = URBAN_AHL(i,j) / LANDUSE_fact_urban(i,j) ! Latent heat flux   [W/m2]
-          URBAN_SFLX_SH  (i,j) = URBAN_SFLX_SH(i,j) + URBAN_SFLX_SHEX(i,j)
-          URBAN_SFLX_LH  (i,j) = URBAN_SFLX_LH(i,j) + URBAN_SFLX_LHEX(i,j)
+          !URBAN_SFLX_SHEX(i,j) = URBAN_AH (i,j) / LANDUSE_fact_urban(i,j) ! Sensible heat flux [W/m2]
+          !URBAN_SFLX_LHEX(i,j) = URBAN_AHL(i,j) / LANDUSE_fact_urban(i,j) ! Latent heat flux   [W/m2]
+          !URBAN_SFLX_SH  (i,j) = URBAN_SFLX_SH(i,j) + URBAN_SFLX_SHEX(i,j)
+          !URBAN_SFLX_LH  (i,j) = URBAN_SFLX_LH(i,j) + URBAN_SFLX_LHEX(i,j)
+          URBAN_SFLX_SHEX(i,j) = URBAN_AH (i,j)     ! Sensible anthropogenic heat flux [W/m2]
+          URBAN_SFLX_LHEX(i,j) = URBAN_AHL(i,j)     ! Latent anthropogenic heat flux [W/m2]
        end if
        end do
        end do
@@ -726,6 +713,7 @@ contains
        URBAN_SFLX_SH,    &
        URBAN_SFLX_LH,    &
        URBAN_SFLX_SHEX,  &
+       URBAN_SFLX_LHEX,  &
        URBAN_SFLX_QVEX,  &
        URBAN_SFLX_GH,    &
        URBAN_SFLX_QTRC,  &
@@ -760,6 +748,7 @@ contains
                         URBAN_SFLX_SH   (:,:),     & ! [IN]
                         URBAN_SFLX_LH   (:,:),     & ! [IN]
                         URBAN_SFLX_SHEX (:,:),     & ! [IN]
+                        URBAN_SFLX_LHEX (:,:),     & ! [IN]
                         URBAN_SFLX_QVEX (:,:),     & ! [IN]
                         URBAN_SFLX_GH   (:,:),     & ! [IN]
                         URBAN_SFLX_QTRC (:,:,:),   & ! [IN]

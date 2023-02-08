@@ -80,6 +80,7 @@ module mod_atmos_phy_sf_vars
   real(RP), public, allocatable :: ATMOS_PHY_SF_SFLX_SH   (:,:)     ! sensible heat flux [J/m2/s]
   real(RP), public, allocatable :: ATMOS_PHY_SF_SFLX_LH   (:,:)     ! latent heat flux [J/m2/s]
   real(RP), public, allocatable :: ATMOS_PHY_SF_SFLX_SHEX (:,:)     ! extra sensible heat flux [J/m2/s]
+  real(RP), public, allocatable :: ATMOS_PHY_SF_SFLX_LHEX (:,:)     ! extra latent heat flux [J/m2/s]
   real(RP), public, allocatable :: ATMOS_PHY_SF_SFLX_QVEX (:,:)     ! extra latent heat flux [kg/kg/m2/s]
   real(RP), public, allocatable :: ATMOS_PHY_SF_SFLX_GH   (:,:)     ! ground heat flux [J/m2/s] (downward)
   real(RP), public, allocatable, target :: ATMOS_PHY_SF_SFLX_QTRC (:,:,:) ! tracer mass flux [kg/m2/s]
@@ -276,6 +277,7 @@ contains
     allocate( ATMOS_PHY_SF_SFLX_SH   (IA,JA) )
     allocate( ATMOS_PHY_SF_SFLX_LH   (IA,JA) )
     allocate( ATMOS_PHY_SF_SFLX_SHEX (IA,JA) )
+    allocate( ATMOS_PHY_SF_SFLX_LHEX (IA,JA) )
     allocate( ATMOS_PHY_SF_SFLX_QVEX (IA,JA) )
     allocate( ATMOS_PHY_SF_SFLX_GH   (IA,JA) )
     allocate( ATMOS_PHY_SF_SFLX_QTRC (IA,JA,max(QA,1)) )
@@ -286,6 +288,7 @@ contains
     ATMOS_PHY_SF_SFLX_SH   (:,:)     = UNDEF
     ATMOS_PHY_SF_SFLX_LH   (:,:)     = UNDEF
     ATMOS_PHY_SF_SFLX_SHEX (:,:)     = UNDEF
+    ATMOS_PHY_SF_SFLX_LHEX (:,:)     = UNDEF
     ATMOS_PHY_SF_SFLX_QVEX (:,:)     = UNDEF
     ATMOS_PHY_SF_SFLX_GH   (:,:)     = UNDEF
     ATMOS_PHY_SF_SFLX_QTRC (:,:,:)   = UNDEF
@@ -383,6 +386,7 @@ contains
     deallocate( ATMOS_PHY_SF_SFLX_SH    )
     deallocate( ATMOS_PHY_SF_SFLX_LH    )
     deallocate( ATMOS_PHY_SF_SFLX_SHEX  )
+    deallocate( ATMOS_PHY_SF_SFLX_LHEX  )
     deallocate( ATMOS_PHY_SF_SFLX_QVEX  )
     deallocate( ATMOS_PHY_SF_SFLX_GH    )
     deallocate( ATMOS_PHY_SF_SFLX_QTRC  )

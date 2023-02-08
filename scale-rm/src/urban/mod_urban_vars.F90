@@ -96,8 +96,9 @@ module mod_urban_vars
   real(RP), public, allocatable :: URBAN_SFLX_MV   (:,:)   ! urban grid average of v-momentum flux [kg/m2/s]
   real(RP), public, allocatable :: URBAN_SFLX_SH   (:,:)   ! urban grid average of sensible heat flux [W/m2]
   real(RP), public, allocatable :: URBAN_SFLX_LH   (:,:)   ! urban grid average of latent heat flux [W/m2]
-  real(RP), public, allocatable :: URBAN_SFLX_SHEX(:,:)    ! urban grid average of extera sensible heat flux [W/m2]
-  real(RP), public, allocatable :: URBAN_SFLX_QVEX(:,:)    ! urban grid average of extera latent heat flux [kg/kg/m2/s]
+  real(RP), public, allocatable :: URBAN_SFLX_SHEX(:,:)    ! grid average of extera (anthropogenic) sensible heat flux [W/m2]
+  real(RP), public, allocatable :: URBAN_SFLX_LHEX(:,:)    ! grid average of extera (anthropogenic) latent heat flux [W/m2]
+  real(RP), public, allocatable :: URBAN_SFLX_QVEX(:,:)    ! grid average of extera (anthropogenic) water vapour flux [kg/kg/m2/s]
   real(RP), public, allocatable :: URBAN_SFLX_QTRC (:,:,:) ! urban grid average of water vapor flux [kg/m2/s]
   real(RP), public, allocatable :: URBAN_SFLX_GH   (:,:)   ! urban grid average of ground heat flux [W/m2]
 
@@ -106,8 +107,8 @@ module mod_urban_vars
   real(RP), public, allocatable :: URBAN_Z0H  (:,:) ! urban grid average of rougness length (heat) [m]
   real(RP), public, allocatable :: URBAN_Z0E  (:,:) ! urban grid average of rougness length (vapor) [m]
   real(RP), public, allocatable :: URBAN_ZD   (:,:) ! urban grid average of displacement height [m]
-  real(RP), public, allocatable :: URBAN_AH   (:,:) ! urban grid average of anthropogenic sensible heat [W/m2]
-  real(RP), public, allocatable :: URBAN_AHL  (:,:) ! urban grid average of anthropogenic latent heat [W/m2]
+  real(RP), public, allocatable :: URBAN_AH   (:,:) ! grid average of anthropogenic sensible heat [W/m2]
+  real(RP), public, allocatable :: URBAN_AHL  (:,:) ! grid average of anthropogenic latent heat [W/m2]
 
   ! diagnostic variables
   real(RP), public, allocatable :: URBAN_Ustar(:,:) ! urban grid average of friction velocity         [m/s]
@@ -393,6 +394,7 @@ contains
     allocate( URBAN_SFLX_SH   (UIA,UJA)                     )
     allocate( URBAN_SFLX_LH   (UIA,UJA)                     )
     allocate( URBAN_SFLX_SHEX (UIA,UJA)                     )
+    allocate( URBAN_SFLX_LHEX (UIA,UJA)                     )
     allocate( URBAN_SFLX_QVEX (UIA,UJA)                     )
     allocate( URBAN_SFLX_GH   (UIA,UJA)                     )
     allocate( URBAN_SFLX_QTRC (UIA,UJA,QA)                  )
@@ -402,6 +404,7 @@ contains
     URBAN_SFLX_SH   (:,:)     = UNDEF
     URBAN_SFLX_LH   (:,:)     = UNDEF
     URBAN_SFLX_SHEX (:,:)     = UNDEF
+    URBAN_SFLX_LHEX (:,:)     = UNDEF
     URBAN_SFLX_QVEX (:,:)     = UNDEF
     URBAN_SFLX_GH   (:,:)     = UNDEF
     URBAN_SFLX_QTRC (:,:,:)   = UNDEF
@@ -594,6 +597,7 @@ contains
     deallocate( URBAN_SFLX_SH   )
     deallocate( URBAN_SFLX_LH   )
     deallocate( URBAN_SFLX_SHEX )
+    deallocate( URBAN_SFLX_LHEX )
     deallocate( URBAN_SFLX_QVEX )
     deallocate( URBAN_SFLX_GH   )
     deallocate( URBAN_SFLX_QTRC )
