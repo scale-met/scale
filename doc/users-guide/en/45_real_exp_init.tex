@@ -124,10 +124,10 @@ the computational performance may deteriorate due to locking file access.
 \noindent {\Large\em OPTION} \hrulefill \\
 When ``gpview'' is installed,  one can confirm whether the initial and boundary data have been created correctly  by the following command:
 \begin{verbatim}
- $ gpvect --scalar --slice z=1500 --nocont --aspect=1 --range=0.002:0.016 --int 0.001     \
-          --xintv=10 --yintv=10 --unit_vect init_d01_20070714-180000.000.pe00*@QV         \
-          init_d01_20070714-180000.000.pe00*@MOMX init_d01_20070714-180000.000.pe00*@MOMY \
-          --title "QV, MOMX, MOMY"
+ $ gpvect --wsn=1 --scalar --slice z=1500 --nocont --aspect=1 --range=0.002:0.016         \
+          --int 0.001 --xintv=10 --yintv=10 --unit_vect                                   \
+          init_d01_20070714-180000.000.pe00*@QV  init_d01_20070714-180000.000.pe00*@MOMX  \
+          init_d01_20070714-180000.000.pe00*@MOMY --title "QV, MOMX, MOMY"
 \end{verbatim}
 If the same figure as Fig. \ref{fig:init} is found, it is successfully concluded.
 

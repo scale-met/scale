@@ -316,23 +316,23 @@ factor   & ファクター値 & (optional) \\ \hline
 \label{tab:netcdf_item}
 \begin{tabularx}{150mm}{llX} \hline
 \rowcolor[gray]{0.9}
-アイテム名 \nmitem(item) & 説明 & 注釈 \\ \hline
-\verb|lon| & 経度 & \\ \hline
-\verb|lat| & 緯度 & \\ \hline
-\verb|height| & 高度 & \\ \hline
+アイテム名 \nmitem{item} & 説明 & 注釈 \\ \hline
+\verb|lon|      & 経度 & \\ \hline
+\verb|lat|      & 緯度 & \\ \hline
+\verb|height|   & 高度 & \\ \hline
 \verb|pressure| & 気圧 & \\ \hline
 \verb|DENS| & 大気密度 & \\ \hline
-\verb|W| & 鉛直風速 & \\ \hline
+\verb|W|    & 鉛直風速 & \\ \hline
 \verb|MOMZ| & 鉛直運動量 & \\ \hline
 \verb|Umet| & 東西風速 & \\ \hline
-\verb|U| & x軸方向風速 & \\ \hline
+\verb|U|    & x軸方向風速 & \\ \hline
 \verb|MOMX| & x軸方向運動量 & \\ \hline
 \verb|Vmet| & 南北風速 & \\ \hline
-\verb|V| & y軸方向風速 & \\ \hline
-\verb|MOMY| & y軸方向運動量 & \\ \hline
-\verb|PT| & 温位 & \namelist{PARAM_MKINIT_REAL_ATMOS}の\nmitem{PT_dry}を参照\\ \hline
-\verb|RHOT| & 密度重みつき温位 & \namelist{PARAM_MKINIT_REAL_ATMOS}の\nmitem{PT_dry}を参照\\ \hline
-\verb|T| & 気温 & \\ \hline
+\verb|V|    & y軸方向風速 & \\ \hline
+\verb|MOMY| & y軸方向運動量    & \\ \hline
+\verb|PT|   & 温位             &\namelist{PARAM_MKINIT_REAL_ATMOS}の\nmitem{PT_dry}を参照 \\ \hline
+\verb|RHOT| & 密度重みつき温位 &\namelist{PARAM_MKINIT_REAL_ATMOS}の\nmitem{PT_dry}を参照\\ \hline
+\verb|T|    & 気温             & \\ \hline
 \verb|QV| & 水蒸気量 & \namelist{PARAM_MKINIT_REAL_ATMOS_NETCDF}の\nmitem{mixing_ratio}を参照 \\ \hline
 \verb|RH| & 相対湿度 & \\ \hline
 \verb|QC| & 雲水量  & \namelist{PARAM_MKINIT_REAL_ATMOS_NETCDF}の\nmitem{mixing_ratio}を参照 \\ \hline
@@ -349,6 +349,17 @@ factor   & ファクター値 & (optional) \\ \hline
 \verb|T2| & 2m 気温 & \\ \hline
 \verb|Q2| & 2m 水蒸気量 & \\ \hline
 \verb|RH2| & 2m 相対湿度 & \\ \hline
+\end{tabularx}
+\end{center}
+\end{table}
+
+\begin{table}[tbh]
+\begin{center}
+\caption{\namelist{NetCDF_ITEM}の\nmitem{item}のリスト。前頁からの続き。}
+\label{tab:netcdf_item}
+\begin{tabularx}{150mm}{llp{55mm}} \hline
+\rowcolor[gray]{0.9}
+アイテム名 \nmitem{item} & 説明 & 注釈 \\ \hline
 \verb|lz| & 土壌層厚 & \\ \hline
 \verb|topo| & 地表高度 & \\ \hline
 \verb|lsmask| & ランドマスク & \\ \hline
