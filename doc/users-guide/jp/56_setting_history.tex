@@ -85,14 +85,15 @@
 周期境界条件の場合を除いて、対象領域の外側に位置するハロのデータも出力される。\\
 \nmitem{FILE_HISTORY_CARTESC_BOUNDARY}の設定は、全ての出力変数に適用される。\\
 
-出力変数は、\namelist{HISTORY_ITEM}を加えることで設定される。
+出力変数は\namelist{HISTORY_ITEM}を加えることで設定される。
+出力可能な変数のリストは、SCALE HPのリファレンスマニュアルにあるヒストリ変数リストより確認することができる（詳しくは、\ref{sec:reference_manual}節を参照いただきたい）。
 出力の形式は、\namelist{PARAM_FILE_HISTORY}で指定されたデフォルト設定に従う。
 下記のように、「(オプション)」と書かれたネームリストの項目を追加することで、
 特定の変数に対する形式をデフォルト設定から変更できる。
 
 \editboxtwo{
 \verb|&HISTORY_ITEM                    | & \\
-\verb| NAME              = "RAIN",     | &  変数名. 変数のリストはリファレンスマニュアル内にある(\ref{sec:reference_manual}節を参照) \\
+\verb| NAME              = "RAIN",     | &  変数名\\
 \verb| OUTNAME           = "",         | &  (オプション) \verb|NAME|と同じ \\
 \verb| BASENAME          = "rain_d01", | &  (オプション) \verb|FILE_HISTORY_DEFAULT_BASENAME|と同じ \\
 \verb| POSTFIX_TIMELABEL = .false.,    | &  (オプション) \verb|FILE_HISTORY_DEFAULT_POSTFIX_TIMELABEL|と同じ \\

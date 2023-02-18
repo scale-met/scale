@@ -140,10 +140,10 @@
 初期値と境界値が正しく作成されているかを確認できる。
 
 \begin{verbatim}
- $ gpvect --scalar --slice z=1500 --nocont --aspect=1 --range=0.002:0.016 --int 0.001     \
-          --xintv=10 --yintv=10 --unit_vect init_d01_20070714-180000.000.pe00*@QV         \
-          init_d01_20070714-180000.000.pe00*@MOMX init_d01_20070714-180000.000.pe00*@MOMY \
-          --title "QV, MOMX, MOMY"
+ $ gpvect --wsn=1 --scalar --slice z=1500 --nocont --aspect=1 --range=0.002:0.016         \
+          --int 0.001 --xintv=10 --yintv=10 --unit_vect                                   \
+          init_d01_20070714-180000.000.pe00*@QV  init_d01_20070714-180000.000.pe00*@MOMX  \
+          init_d01_20070714-180000.000.pe00*@MOMY --title "QV, MOMX, MOMY"
 \end{verbatim}
 処理が正常に終了していれば、図\ref{fig:init}と同様の図が得られる。
 
