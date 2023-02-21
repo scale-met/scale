@@ -45,7 +45,7 @@ CFLAGS_DEBUG = -O0
 
 FFLAGS_OPENMP = -mp
 
-FFLAGS_OPENACC = -acc -Mcuda -Minfo=accel
+FFLAGS_OPENACC = -acc -cuda -Minfo=accel -cudalib=cusparse
 #FFLAGS_OPENACC = -acc -ta=tesla,cuda8.0,cc60 -Mcuda -Minfo=accel
 
 FFLAGS_SYSDEPEND = -DNVIDIA
