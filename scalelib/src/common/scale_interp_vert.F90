@@ -220,6 +220,11 @@ contains
     real(RP), intent(in)  :: var  (KA,IA,JA)
     real(RP), intent(out) :: var_Z(KA,IA,JA)
 
+#ifdef _OPENACC
+    real(RP) :: workr(KA,7)
+    integer  :: worki(KA,2)
+#endif
+
     integer  :: i, j
     !---------------------------------------------------------------------------
 
@@ -230,9 +235,12 @@ contains
     !$acc kernels copyin(Xi, Z, var) copyout(var_Z)
     !$acc loop independent
     do j = JS, JE
-    !$acc loop independent
+    !$acc loop independent private(workr,worki)
     do i = IS, IE
        call INTERP_interp1d( KA, KS, KE, KA, KS, KE, &
+#ifdef _OPENACC
+                             workr(:,:), worki(:,:), &
+#endif
                              INTERP_xi2z_idx (:,:,i,j), & ! (in)
                              INTERP_xi2z_coef(:,  i,j), & ! (in)
                              Z(:,i,j), Xi(:),           & ! (in)
@@ -265,6 +273,11 @@ contains
     real(RP), intent(in)  :: var   (KA,IA,JA)
     real(RP), intent(out) :: var_Xi(KA,IA,JA)
 
+#ifdef _OPENACC
+    real(RP) :: workr(KA,7)
+    integer  :: worki(KA,2)
+#endif
+
     integer :: i, j
     !---------------------------------------------------------------------------
 
@@ -275,9 +288,12 @@ contains
     !$acc kernels copyin(Z, Xi, var) copyout(var_Xi)
     !$acc loop independent
     do j = JS, JE
-    !$acc loop independent
+    !$acc loop independent private(workr,worki)
     do i = IS, IE
        call INTERP_interp1d( KA, KS, KE, KA, KS, KE, &
+#ifdef _OPENACC
+                             workr(:,:), worki(:,:), &
+#endif
                              INTERP_z2xi_idx (:,:,i,j), & ! (in)
                              INTERP_z2xi_coef(:,  i,j), & ! (in)
                              Xi(:), Z(:,i,j),           & ! (in)
@@ -310,6 +326,11 @@ contains
     real(RP), intent(in)  :: var  (KA,IA,JA)
     real(RP), intent(out) :: var_Z(KA,IA,JA)
 
+#ifdef _OPENACC
+    real(RP) :: workr(KA,7)
+    integer  :: worki(KA,2)
+#endif
+
     integer  :: i, j
     !---------------------------------------------------------------------------
 
@@ -320,9 +341,12 @@ contains
     !$acc kernels copyin(Xih, Zh, var) copyout(var_Z)
     !$acc loop independent
     do j = JS, JE
-    !$acc loop independent
+    !$acc loop independent private(workr,worki)
     do i = IS, IE
        call INTERP_interp1d( KA, KS-1, KE, KA, KS-1, KE, &
+#ifdef _OPENACC
+                             workr(:,:), worki(:,:), &
+#endif
                              INTERP_xih2zh_idx (:,:,i,j), & ! (in)
                              INTERP_xih2zh_coef(:,  i,j), & ! (in)
                              Zh(1:,i,j), Xih(1:),         & ! (in)
@@ -355,6 +379,11 @@ contains
     real(RP), intent(in)  :: var   (KA,IA,JA)
     real(RP), intent(out) :: var_Xi(KA,IA,JA)
 
+#ifdef _OPENACC
+    real(RP) :: workr(KA,7)
+    integer  :: worki(KA,2)
+#endif
+
     integer  :: i, j
     !---------------------------------------------------------------------------
 
@@ -365,9 +394,12 @@ contains
     !$acc kernels copyin(Zh, Xih, var) copyout(var_Xi)
     !$acc loop independent
     do j = JS, JE
-    !$acc loop independent
+    !$acc loop independent private(workr,worki)
     do i = IS, IE
        call INTERP_interp1d( KA, KS-1, KE, KA, KS-1, KE, &
+#ifdef _OPENACC
+                             workr(:,:), worki(:,:), &
+#endif
                              INTERP_zh2xih_idx (:,:,i,j), & ! (in)
                              INTERP_zh2xih_coef(:,  i,j), & ! (in)
                              Xih(1:), Zh(1:,i,j),         & ! (in)
@@ -527,6 +559,11 @@ contains
     real(RP), intent(in)  :: var  (KA   ,IA,JA)
     real(RP), intent(out) :: var_P(Kpres,IA,JA)
 
+#ifdef _OPENACC
+    real(RP) :: workr(KA,7)
+    integer  :: worki(KA,2)
+#endif
+
     integer :: i, j
     !---------------------------------------------------------------------------
 
@@ -537,9 +574,12 @@ contains
     !$acc kernels copyin(var) copyout(var_P)
     !$acc loop independent
     do j = JS, JE
-    !$acc loop independent
+    !$acc loop independent private(workr,worki)
     do i = IS, IE
        call INTERP_interp1d( KA, KS, KE, Kpres, 1, Kpres, &
+#ifdef _OPENACC
+                             workr(:,:), worki(:,:), &
+#endif
                              INTERP_xi2p_idx (:,:,i,j), & ! (in)
                              INTERP_xi2p_coef(:,  i,j), & ! (in)
                              LnPRES(:,i,j), LnPaxis(:), & ! (in)
@@ -571,6 +611,11 @@ contains
     real(RP), intent(in)  :: var  (KA   ,IA,JA)
     real(RP), intent(out) :: var_P(Kpres,IA,JA)
 
+#ifdef _OPENACC
+    real(RP) :: workr(KA,7)
+    integer  :: worki(KA,2)
+#endif
+
     integer :: k, i, j
     !---------------------------------------------------------------------------
 
@@ -581,9 +626,12 @@ contains
     !$acc kernels copyin(var) copyout(var_P)
     !$acc loop independent
     do j = JS, JE
-    !$acc loop independent
+    !$acc loop independent private(workr,worki)
     do i = IS, IE
        call INTERP_interp1d( KA, KS-1, KE, Kpres, 1, Kpres, &
+#ifdef _OPENACC
+                             workr(:,:), worki(:,:), &
+#endif
                              INTERP_xih2p_idx (:,:,i,j), & ! (in)
                              INTERP_xih2p_coef(:,  i,j), & ! (in)
                              LnPRESh(:,i,j), LnPaxis(:), & ! (in)

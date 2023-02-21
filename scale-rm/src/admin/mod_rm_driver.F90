@@ -89,6 +89,9 @@ contains
     use scale_random, only: &
        RANDOM_setup, &
        RANDOM_finalize
+    use scale_matrix, only: &
+       MATRIX_setup, &
+       MATRIX_finalize
     use scale_tracer, only: &
        TRACER_finalize
     use scale_atmos_hydrometeor, only: &
@@ -345,6 +348,9 @@ contains
 
     ! setup random number
     call RANDOM_setup
+
+    ! setup matrix
+    call MATRIX_setup
 
     ! setup submodel administrator
     call ATMOS_admin_setup
@@ -651,6 +657,8 @@ contains
     if ( URBAN_do ) call URBAN_GRID_CARTESC_finalize
 
     call PRC_CARTESC_finalize
+
+    call MATRIX_finalize
 
     call RANDOM_finalize
 

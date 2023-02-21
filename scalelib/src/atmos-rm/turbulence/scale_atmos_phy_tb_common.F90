@@ -35,7 +35,6 @@ module scale_atmos_phy_tb_common
   !++ Public procedure
   !
   public :: ATMOS_PHY_TB_calc_strain_tensor
-  public :: ATMOS_PHY_TB_diffusion_solver
   public :: ATMOS_PHY_TB_calc_tend_MOMZ
   public :: ATMOS_PHY_TB_calc_tend_MOMX
   public :: ATMOS_PHY_TB_calc_tend_MOMY
@@ -1339,6 +1338,8 @@ contains
        RFDZ => ATMOS_GRID_CARTESC_RFDZ, &
        RFDX => ATMOS_GRID_CARTESC_RFDX, &
        RFDY => ATMOS_GRID_CARTESC_RFDY
+    use scale_matrix, only: &
+       MATRIX_SOLVER_tridiagonal
     implicit none
 
     real(RP), intent(inout) :: qflx_phi(KA,IA,JA,3)
@@ -1363,6 +1364,7 @@ contains
     integer,  intent(in)    :: JJE
 
     real(RP) :: TEND(KA,IA,JA)
+    real(RP) :: TEND2(KA,IA,JA)
     real(RP) :: d(KA)
 
     integer :: k, i, j
@@ -1370,7 +1372,7 @@ contains
     !$acc data copy(qflx_phi) &
     !$acc      copyin(DENS, PHI, Kh, GSQRT, J13G, J23G, MAPF, a, b, c, &
     !$acc             RCDZ, RFDZ, RFDX, RFDY) &
-    !$acc      create(TEND)
+    !$acc      create(TEND,TEND2)
 
 
     ! (x-y plane; x,y,w)
@@ -1577,31 +1579,22 @@ contains
                                         GSQRT, J13G, J23G, J33G, MAPF, & ! (in)
                                         IIS, IIE, JJS, JJE ) ! (in)
 
-       !$omp parallel do &
-       !$omp private(d)
+       call MATRIX_SOLVER_tridiagonal( KA, KS, KE, IA, IIS, IIE, JA, JJS, JJE, &
+                                       a(:,:,:), b(:,:,:), c(:,:,:), TEND(:,:,:), &
+                                       TEND2(:,:,:) )
+
+       !$omp parallel do collapse(2)
        !$acc kernels
        do j = JJS, JJE
-       !$acc loop private(d)
        do i = IIS, IIE
-
-          do k = KS, KE
-             d(k) = TEND(k,i,j)
-          end do
-
-          call ATMOS_PHY_TB_diffusion_solver( &
-                  TEND(:,i,j),                & ! (out)
-                  a(:,i,j), b(:,i,j), c(:,i,j), d, & ! (in)
-                  KE                               ) ! (in)
-
           do k = KS, KE-1
              qflx_phi(k,i,j,ZDIR) = qflx_phi(k,i,j,ZDIR) &
                      - 0.25_RP & ! 1/2/2
                      * ( DENS(k,i,j)+DENS(k+1,i,j) ) &
                      * ( Kh(k,i,j) + Kh(k+1,i,j) ) * FACT &
-                     * dt * ( TEND(k+1,i,j)-TEND(k,i,j) ) * RFDZ(k) * J33G &
+                     * dt * ( TEND2(k+1,i,j)-TEND2(k,i,j) ) * RFDZ(k) * J33G &
                      / GSQRT(k,i,j,I_XYW)
           end do
-
        end do
        end do
        !$acc end kernels
@@ -1612,49 +1605,6 @@ contains
 
     return
   end subroutine ATMOS_PHY_TB_calc_flux_phi
-
-  !-----------------------------------------------------------------------------
-!OCL SERIAL
-  subroutine ATMOS_PHY_TB_diffusion_solver( &
-       phi, &
-       a, b, c, d, &
-       KE_TB )
-    !$acc routine seq
-    implicit none
-    real(RP), intent(out) :: phi(KA)
-    real(RP), intent(in)  :: a(KA)
-    real(RP), intent(in)  :: b(KA)
-    real(RP), intent(in)  :: c(KA)
-    real(RP), intent(in)  :: d(KA)
-    integer,  intent(in), value  :: KE_TB
-    real(RP) :: e(KA)
-    real(RP) :: f(KA)
-    real(RP) :: denom
-    integer :: k
-
-    e(KS) = - a(KS) / b(KS)
-    f(KS) =   d(KS) / b(KS)
-    do k = KS+1, KE_TB-1
-       denom = b(k) + c(k)*e(k-1)
-       e(k) = - a(k) / denom
-       f(k) = ( d(k) - c(k)*f(k-1) ) / denom
-    end do
-
-    ! flux at the top boundary is zero
-    phi(KE_TB) = ( d(KE_TB) - c(KE_TB)*f(KE_TB-1) ) / ( b(KE_TB) + c(KE_TB)*e(KE_TB-1) ) ! = f(KE_PBL)
-
-    do k = KE_TB-1, KS, -1
-       phi(k) = e(k) * phi(k+1) + f(k)
-    end do
-    do k = 1, KS-1
-       phi(k) = 0.0_RP
-    end do
-    do k = KE_TB+1, KA
-       phi(k) = 0.0_RP
-    end do
-
-    return
-  end subroutine ATMOS_PHY_TB_diffusion_solver
 
   !-----------------------------------------------------------------------------
   subroutine ATMOS_PHY_TB_calc_tend_MOMZ( &

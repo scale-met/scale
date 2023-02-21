@@ -1197,6 +1197,9 @@ contains
   subroutine INTERP_interp1d( &
        KA_ref, KS_ref, KE_ref, &
        KA, KS, KE, &
+#ifdef _OPENACC
+       workr, worki, &
+#endif
        idx_k,         &
        vfact,         &
        hgt_ref,       &
@@ -1229,10 +1232,19 @@ contains
 
     real(RP), pointer :: work(:)
 
-    integer  :: idx  (KA_ref)
-    integer  :: idx_r(KA_ref)
-    real(RP) :: FDZ  (KA_ref)
-    real(RP) :: U    (KA_ref)
+#ifdef _OPENACC
+    real(RP), intent(out), target :: workr(KA_ref,7)
+    integer,  intent(out)         :: worki(KA_ref,2)
+#define idx_i1(k)   worki(k,1)
+#define idx_r_i1(k) worki(k,2)
+#define FDZ_i1(k)   workr(k,1)
+#define U_i1(k)     workr(k,2)
+#else
+    integer  :: idx_i1  (KA_ref)
+    integer  :: idx_r_i1(KA_ref)
+    real(RP) :: FDZ_i1  (KA_ref)
+    real(RP) :: U_i1    (KA_ref)
+#endif
 
     integer :: kmax
     integer :: k
@@ -1253,7 +1265,11 @@ contains
     endif
 
     if ( logwgt_ ) then
+#ifdef _OPENACC
+       work => workr(:,3)
+#else
        allocate( work(KA_ref) )
+#endif
        do k = KS_ref, KE_ref
           if ( abs( val_ref(k) - UNDEF ) < EPS ) then
              work(k) = UNDEF
@@ -1266,22 +1282,27 @@ contains
     endif
 
     call spline_coef( KA_ref, KS_ref, KE_ref, &
-                      hgt_ref(:), work(:), & ! (in)
-                      spline_,             & ! (in)
-                      kmax,                & ! (out)
-                      idx(:), idx_r(:),    & ! (out)
-                      U(:), FDZ(:)         ) ! (out)
+#ifdef _OPENACC
+                      workr(:,4:7), &
+#endif
+                      hgt_ref(:), work(:),    & ! (in)
+                      spline_,                & ! (in)
+                      kmax,                   & ! (out)
+                      idx_i1(:), idx_r_i1(:), & ! (out)
+                      U_i1(:), FDZ_i1(:)      ) ! (out)
 
     call spline_exec( KA_ref, kmax, KA, KS, KE, &
-                      idx_k(:,:), vfact(:), & ! (in)
-                      hgt_ref(:), hgt(:),   & ! (in)
-                      work(:),              & ! (in)
-                      idx(:), idx_r(:),     & ! (in)
-                      U(:), FDZ(:),         & ! (in)
-                      val(:)                ) ! (out)
+                      idx_k(:,:), vfact(:),   & ! (in)
+                      hgt_ref(:), hgt(:),     & ! (in)
+                      work(:),                & ! (in)
+                      idx_i1(:), idx_r_i1(:), & ! (in)
+                      U_i1(:), FDZ_i1(:),     & ! (in)
+                      val(:)                  ) ! (out)
 
     if ( logwgt_ ) then
+#ifndef _OPENACC
        deallocate( work )
+#endif
        do k = KS, KE
           if ( abs( val(k) - UNDEF ) > EPS ) then
              val(k) = exp( val(k) )
@@ -1447,6 +1468,10 @@ contains
     real(RP) :: w(KA,npoints)
     logical  :: lval2
 
+#ifdef _OPENACC
+    real(RP) :: workr(KA_ref,4)
+#endif
+
     integer :: imin, imax
     integer :: jmin, jmax
     integer :: ii, jj
@@ -1539,9 +1564,12 @@ contains
     !$acc kernels
     !$acc loop independent
     do j = jmin, jmax
-    !$acc loop independent
+    !$acc loop independent private(workr)
     do i = imin, imax
        call spline_coef( KA_ref, KS_ref, KE_ref, &
+#ifdef _OPENACC
+                         workr(:,:), &
+#endif
                          hgt_ref(:,i,j), work(:,i,j), & ! (in)
                          spline_,                     & ! (in)
                          kmax(i,j),                   & ! (out)
@@ -2314,6 +2342,9 @@ contains
 !OCL SERIAL
   subroutine spline_coef( &
        KA_ref, KS_ref, KE_ref, &
+#ifdef _OPENACC
+       work,             &
+#endif
        hgt_ref, val_ref, &
        spline,           &
        kmax,             &
@@ -2324,7 +2355,7 @@ contains
        UNDEF => CONST_UNDEF, &
        EPS   => CONST_EPS
     use scale_matrix, only: &
-       MATRIX_SOLVER_tridiagonal
+       MATRIX_SOLVER_tridiagonal_1D_TA
     implicit none
     integer,  intent(in) :: KA_ref, KS_ref, KE_ref
 
@@ -2338,8 +2369,14 @@ contains
     real(RP), intent(out) :: U  (KA_ref)
     real(RP), intent(out) :: FDZ(KA_ref)
 
-    real(RP) :: MD(KA_ref)
-    real(RP) :: V (KA_ref)
+#ifdef _OPENACC
+    real(RP), intent(out) :: work(KA_ref,4)
+#define MD_sc(k) work(k,1)
+#define V_sc(k) work(k,2)
+#else
+    real(RP) :: MD_sc(KA_ref)
+    real(RP) :: V_sc (KA_ref)
+#endif
     real(RP) :: dz
     integer  :: k
 
@@ -2374,21 +2411,24 @@ contains
 
        if ( kmax > 3 ) then
 
-          MD(2) = 2.0_RP * ( FDZ(2) + FDZ(3) ) + FDZ(2)
+          MD_sc(2) = 2.0_RP * ( FDZ(2) + FDZ(3) ) + FDZ(2)
           do k = 3, kmax-2
-             MD(k) = 2.0_RP * ( FDZ(k) + FDZ(k+1) )
+             MD_sc(k) = 2.0_RP * ( FDZ(k) + FDZ(k+1) )
           end do
-          MD(kmax-1) = 2.0_RP * ( FDZ(kmax-1) + FDZ(kmax) ) + FDZ(kmax)
+          MD_sc(kmax-1) = 2.0_RP * ( FDZ(kmax-1) + FDZ(kmax) ) + FDZ(kmax)
 
           do k = 2, kmax-1
-             V(k) = ( val_ref(idx(k+1)) - val_ref(idx(k  )) ) / FDZ(k+1) &
-                  - ( val_ref(idx(k  )) - val_ref(idx(k-1)) ) / FDZ(k  )
+             V_sc(k) = ( val_ref(idx(k+1)) - val_ref(idx(k  )) ) / FDZ(k+1) &
+                     - ( val_ref(idx(k  )) - val_ref(idx(k-1)) ) / FDZ(k  )
           end do
 
-          call MATRIX_SOLVER_tridiagonal( kmax, 2, kmax-1, &
-                                          FDZ(2:), MD(:), FDZ(:), & ! (in)
-                                          V(:),                   & ! (in)
-                                          U(:)                    ) ! (out)
+          call MATRIX_SOLVER_tridiagonal_1D_TA( kmax, 2, kmax-1, &
+#ifdef _OPENACC
+                                                work(:,3:4), &
+#endif
+                                                FDZ(2:), MD_sc(:), FDZ(:), & ! (in)
+                                                V_sc(:),                   & ! (in)
+                                                U(:)                       ) ! (out)
 !          U(1) = 0.0_RP
 !          U(kmax) = 0.0_RP
           U(1) = U(2)

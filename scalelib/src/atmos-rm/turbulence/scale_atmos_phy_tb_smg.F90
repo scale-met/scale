@@ -279,16 +279,16 @@ contains
        FILE_HISTORY_in
     use scale_atmos_phy_tb_common, only: &
        calc_strain_tensor => ATMOS_PHY_TB_calc_strain_tensor, &
-       diffusion_solver   => ATMOS_PHY_TB_diffusion_solver,   &
        calc_tend_momz     => ATMOS_PHY_TB_calc_tend_momz,     &
        calc_tend_momx     => ATMOS_PHY_TB_calc_tend_momx,     &
        calc_tend_momy     => ATMOS_PHY_TB_calc_tend_momy,     &
        calc_flux_phi      => ATMOS_PHY_TB_calc_flux_phi
-
     use scale_atmos_hydrometeor, only: &
        I_QV
     use scale_random, only: &
        RANDOM_normal
+    use scale_matrix, only: &
+       MATRIX_SOLVER_tridiagonal
     implicit none
 
     ! SGS flux
@@ -359,10 +359,10 @@ contains
 
     ! implicit scheme
     real(RP) :: TEND(KA,IA,JA)
+    real(RP) :: TEND2(KA,IA,JA)
     real(RP) :: a   (KA,IA,JA)
     real(RP) :: b   (KA,IA,JA)
     real(RP) :: c   (KA,IA,JA)
-    real(RP) :: d   (KA)
     real(RP) :: ap
 
     ! backscatter
@@ -391,7 +391,7 @@ contains
     !$acc      copyin(MOMZ, MOMX, MOMY, POTT, DENS, QTRC, N2, &
     !$acc             FZ, FDZ, RCDZ, RFDZ, CDX, FDX, CDY, FDY, GSQRT, J13G, J23G, MAPF) &
     !$acc      create(TKE, S33_C, S11_C, S22_C, S31_C, S12_C, S23_C, S12_Z, S23_X, S31_Y, S2, &
-    !$acc             Kh, TEND, a, b, c)
+    !$acc             Kh, TEND, TEND2, a, b, c)
 
     !$acc data create(random_mz, random_mx, random_my, random_qz, random_qx, random_qy, dd) if (ATMOS_PHY_TB_SMG_backscatter)
 
@@ -804,10 +804,9 @@ contains
                                IIS, IIE, JJS, JJE ) ! (in)
 
           !$omp parallel do collapse(2) &
-          !$omp private (ap,d)
+          !$omp private (ap)
           !$acc kernels
           do j = JJS, JJE
-          !$acc loop private(d)
           do i = IIS, IIE
              ap = - FourOverThree * dt &
                   * DENS(KS+1,i,j)*Nu(KS+1,i,j) &
@@ -836,22 +835,23 @@ contains
              a(KE-1,i,j) = 0.0_RP
              c(KE-1,i,j) = ap * RFDZ(KE) / GSQRT(KE,i,j,I_XYW)
              b(KE-1,i,j) = - c(KE-1,i,j) + 0.5_RP * ( DENS(KE-1,i,j)+DENS(KE,i,j) )
+          end do
+          end do
+          !$acc end kernels
 
-             do k = KS, KE-1
-                d(k) = TEND(k,i,j)
-             end do
+          call MATRIX_SOLVER_tridiagonal( KA, KS, KE-1, IA, IIS, IIE, JA, JJS, JJE, &
+                                          a(:,:,:), b(:,:,:), c(:,:,:), TEND(:,:,:), &
+                                          TEND2(:,:,:) )
 
-             call diffusion_solver( &
-                  TEND(:,i,j),                     & ! (out)
-                  a(:,i,j), b(:,i,j), c(:,i,j), d, & ! (in)
-                  KE-1                             ) ! (in)
-
+          !$omp parallel do collapse(2)
+          !$acc kernels
+          do j = JJS, JJE
+          do i = IIS, IIE
              do k = KS+1, KE-1
                 qflx_sgs_momz(k,i,j,ZDIR) = qflx_sgs_momz(k,i,j,ZDIR) &
                      - FourOverThree * DENS(k,i,j) * Nu(k,i,j) * dt &
-                     * ( TEND(k,i,j) - TEND(k-1,i,j) ) * RCDZ(k) / GSQRT(k,i,j,I_XYZ)
+                     * ( TEND2(k,i,j) - TEND2(k-1,i,j) ) * RCDZ(k) / GSQRT(k,i,j,I_XYZ)
              end do
-
           end do
           end do
           !$acc end kernels
@@ -979,10 +979,9 @@ contains
                                IIS, IIE, JJS, JJE ) ! (in)
 
           !$omp parallel do collapse(2) &
-          !$omp private(ap,d)
+          !$omp private(ap)
           !$acc kernels
           do j = JJS, JJE
-          !$acc loop private(d)
           do i = IIS, IIE
 
              ap = - dt * 0.25_RP * ( DENS(KS  ,i  ,j)*Nu(KS  ,i  ,j) &
@@ -1020,25 +1019,26 @@ contains
              a(KE,i,j) = 0.0_RP
              c(KE,i,j) = ap * RCDZ(KE) / GSQRT(KE,i,j,I_UYZ)
              b(KE,i,j) = - c(KE,i,j) + 0.5_RP * ( DENS(KE,i,j)+DENS(KE,i+1,j) )
+          end do
+          end do
+          !$acc end kernels
 
-             do k = KS, KE
-                d(k) = TEND(k,i,j)
-             end do
+          call MATRIX_SOLVER_tridiagonal( KA, KS, KE, IA, IIS, IIE, JA, JJS, JJE, &
+                                          a(:,:,:), b(:,:,:), c(:,:,:), TEND(:,:,:), &
+                                          TEND2(:,:,:) )
 
-             call diffusion_solver( &
-                  TEND(:,i,j),                     & ! (out)
-                  a(:,i,j), b(:,i,j), c(:,i,j), d, & ! (in)
-                  KE                               ) ! (in)
-
+          !$omp parallel do collapse(2)
+          !$acc kernels
+          do j = JJS, JJE
+          do i = IIS, IIE
              do k = KS, KE-1
                 qflx_sgs_momx(k,i,j,ZDIR) = qflx_sgs_momx(k,i,j,ZDIR) &
                      - 0.25_RP * ( DENS(k  ,i  ,j)*Nu(k  ,i  ,j) &
                                  + DENS(k+1,i  ,j)*Nu(k+1,i  ,j) &
                                  + DENS(k  ,i+1,j)*Nu(k  ,i+1,j) &
                                  + DENS(k+1,i+1,j)*Nu(k+1,i+1,j) ) &
-                     * dt * ( TEND(k+1,i,j) - TEND(k,i,j) ) * RFDZ(k) / GSQRT(k,i,j,I_UYW)
+                     * dt * ( TEND2(k+1,i,j) - TEND2(k,i,j) ) * RFDZ(k) / GSQRT(k,i,j,I_UYW)
              end do
-
           end do
           end do
           !$acc end kernels
@@ -1166,10 +1166,9 @@ contains
                                IIS, IIE, JJS, JJE ) ! (in)
 
           !$omp parallel do collapse(2) &
-          !$omp private(ap,d)
+          !$omp private(ap)
           !$acc kernels
           do j = JJS, JJE
-          !$acc loop private(d)
           do i = IIS, IIE
 
              ap = - dt * 0.25_RP * ( DENS(KS  ,i,j  )*Nu(KS  ,i,j  ) &
@@ -1207,23 +1206,25 @@ contains
              a(KE,i,j) = 0.0_RP
              c(KE,i,j) = ap * RCDZ(KE) / GSQRT(KE,i,j,I_XVZ)
              b(KE,i,j) = - c(KE,i,j) + 0.5_RP * ( DENS(KE,i,j)+DENS(KE,i,j+1) )
+          end do
+          end do
+          !$acc end kernels
 
-             do k = KS, KE
-                d(k) = TEND(k,i,j)
-             end do
+          call MATRIX_SOLVER_tridiagonal( KA, KS, KE, IA, IIS, IIE, JA, JJS, JJE, &
+                                          a(:,:,:), b(:,:,:), c(:,:,:), TEND(:,:,:), &
+                                          TEND2(:,:,:) )
 
-             call diffusion_solver( &
-                  TEND(:,i,j),                     & ! (out)
-                  a(:,i,j), b(:,i,j), c(:,i,j), d, & ! (in)
-                  KE                               ) ! (in)
-
+          !$omp parallel do collapse(2)
+          !$acc kernels
+          do j = JJS, JJE
+          do i = IIS, IIE
              do k = KS, KE-1
                 qflx_sgs_momy(k,i,j,ZDIR) = qflx_sgs_momy(k,i,j,ZDIR) &
                      - 0.25_RP * ( DENS(k  ,i,j  )*Nu(k  ,i,j  ) &
                                  + DENS(k+1,i,j  )*Nu(k+1,i,j  ) &
                                  + DENS(k  ,i,j+1)*Nu(k  ,i,j+1) &
                                  + DENS(k+1,i,j+1)*Nu(k+1,i,j+1) ) &
-                     * dt * ( TEND(k+1,i,j) - TEND(k,i,j) ) * RFDZ(k) / GSQRT(k,i,j,I_XVW)
+                     * dt * ( TEND2(k+1,i,j) - TEND2(k,i,j) ) * RFDZ(k) / GSQRT(k,i,j,I_XVW)
              end do
 
           end do
@@ -1374,10 +1375,9 @@ contains
        if ( ATMOS_PHY_TB_SMG_implicit ) then
 
           !$omp parallel do collapse(2) &
-          !$omp private (ap,d)
+          !$omp private (ap)
           !$acc kernels
           do j = JJS, JJE
-          !$acc loop private(d)
           do i = IIS, IIE
              ap = - dt * 0.25_RP * ( DENS(KS,i,j)+DENS(KS+1,i,j) ) &
                                  * ( Kh(KS,i,j)+Kh(KS+1,i,j) ) &
