@@ -1116,6 +1116,14 @@ contains
                                      nhalos_y,     & ! [IN]
                                      hinfo,        & ! [IN]
                                      debug         ) ! [IN]
+       else
+          ! set additional global attributes
+          call FILE_set_attribute( fid, "global", "Conventions", "CF-1.6" ) ! [IN]
+          if ( hinfo%calendar /= "" ) then
+             call FILE_set_attribute( fid, "global", "calendar", hinfo%calendar )
+          end if
+          call FILE_set_attribute( fid, "global", "time_units", hinfo%time_units )
+          call FILE_set_attribute( fid, "global", "time_start", (/hinfo%time_start(1)/) )
        endif
 
        ! add 1D range
