@@ -69,8 +69,6 @@ module scale_atmos_dyn_tstep_short_fvm_hevi
   integer,  private, parameter :: VA_FVM_HEVI = 0
   integer                      :: IFS_OFF
   integer                      :: JFS_OFF
-
-  integer,  private, parameter :: LSIZE = CACHELINESIZE / RP
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------

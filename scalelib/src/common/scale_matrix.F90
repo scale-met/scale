@@ -27,6 +27,8 @@ module scale_matrix
 
   interface MATRIX_SOLVER_tridiagonal
      module procedure MATRIX_SOLVER_tridiagonal_1D
+     module procedure MATRIX_SOLVER_tridiagonal_2D
+     module procedure MATRIX_SOLVER_tridiagonal_2D_trans
      module procedure MATRIX_SOLVER_tridiagonal_3D
   end interface MATRIX_SOLVER_tridiagonal
 
@@ -64,6 +66,7 @@ contains
 
     real(RP) :: c(KA)
     real(RP) :: d(KA)
+    real(RP) :: rdenom
 
     integer :: k
     !---------------------------------------------------------------------------
@@ -72,13 +75,13 @@ contains
     c(KS) = ud(KS) / md(KS)
     d(KS) = iv(KS) / md(KS)
     do k = KS+1, KE-1
-       c(k) =           ud(k)            / ( md(k) - ld(k) * c(k-1) )
-       d(k) = ( iv(k) - ld(k) * d(k-1) ) / ( md(k) - ld(k) * c(k-1) )
+       rdenom = 1.0_RP / ( md(k) - ld(k) * c(k-1) )
+       c(k) =           ud(k)            * rdenom
+       d(k) = ( iv(k) - ld(k) * d(k-1) ) * rdenom
     enddo
-    d(KE) = ( iv(KE) - ld(KE) * d(KE-1) ) / ( md(KE) - ld(KE) * c(KE-1) )
 
     ! backward substitution
-    ov(KE) = d(KE)
+    ov(KE) = ( iv(KE) - ld(KE) * d(KE-1) ) / ( md(KE) - ld(KE) * c(KE-1) )
     do k = KE-1, KS, -1
        ov(k) = d(k) - c(k) * ov(k+1)
     enddo
@@ -86,8 +89,131 @@ contains
     return
   end subroutine MATRIX_SOLVER_tridiagonal_1D
 
+  subroutine MATRIX_SOLVER_tridiagonal_2D( &
+       KA, KS, KE, &
+       IA, IS, IE, &
+       ud, md, ld, &
+       iv,         &
+       ov          )
+    implicit none
+    integer,  intent(in)  :: KA, KS, KE
+    integer,  intent(in)  :: IA, IS, IE
+
+    real(RP), intent(in)  :: ud(KA,IA) ! upper  diagonal
+    real(RP), intent(in)  :: md(KA,IA) ! middle diagonal
+    real(RP), intent(in)  :: ld(KA,IA) ! lower  diagonal
+    real(RP), intent(in)  :: iv(KA,IA) ! input  vector
+
+    real(RP), intent(out) :: ov(KA,IA) ! output vector
+
+    real(RP) :: c(LSIZE,KS:KE)
+    real(RP) :: d(LSIZE,KS:KE)
+    real(RP) :: w(LSIZE,KS:KE)
+    real(RP) :: rdenom
+
+    integer :: k, i, ii, l
+    !---------------------------------------------------------------------------
+
+    do ii = IS, IE, LSIZE
+
+       ! foward reduction
+       do l = 1, LSIZE
+          i = ii + l - 1
+          if ( i <= IE ) then
+             c(l,KS) = ud(KS,i) / md(KS,i)
+             d(l,KS) = iv(KS,i) / md(KS,i)
+          end if
+       end do
+       do k = KS+1, KE-1
+          do l = 1, LSIZE
+             i = ii + l - 1
+             if ( i <= IE ) then
+                rdenom = 1.0_RP / ( md(k,i) - ld(k,i) * c(l,k-1) )
+                c(l,k) =             ud(k,i)              * rdenom
+                d(l,k) = ( iv(k,i) - ld(k,i) * d(l,k-1) ) * rdenom
+             end if
+          end do
+       end do
+
+       ! backward substitution
+       do l = 1, LSIZE
+          i = ii + l - 1
+          if ( i <= IE ) then
+             w(l,KE) = ( iv(KE,i) - ld(KE,i) * d(l,KE-1) ) / ( md(KE,i) - ld(KE,i) * c(l,KE-1) )
+          end if
+       end do
+       do k = KE-1, KS, -1
+          do l = 1, LSIZE
+             i = ii + l - 1
+             if ( i <= IE ) then
+                w(l,k) = d(l,k) - c(l,k) * w(l,k+1)
+             end if
+          end do
+       enddo
+
+       do l = 1, LSIZE
+          i = ii + l - 1
+          if ( i <= IE ) then
+             do k = KS, KE
+                ov(k,i) = w(l,k)
+             end do
+          end if
+       end do
+
+    end do
+
+    return
+  end subroutine MATRIX_SOLVER_tridiagonal_2D
+
+  subroutine MATRIX_SOLVER_tridiagonal_2D_trans( &
+       KA, KS, KE, &
+       ud, md, ld, &
+       iv,         &
+       ov          )
+    implicit none
+    integer,  intent(in)  :: KA, KS, KE
+
+    real(RP), intent(in)  :: ud(LSIZE,KA) ! upper  diagonal
+    real(RP), intent(in)  :: md(LSIZE,KA) ! middle diagonal
+    real(RP), intent(in)  :: ld(LSIZE,KA) ! lower  diagonal
+    real(RP), intent(in)  :: iv(LSIZE,KA) ! input  vector
+
+    real(RP), intent(out) :: ov(LSIZE,KA) ! output vector
+
+    real(RP) :: c(LSIZE,KS:KE)
+    real(RP) :: d(LSIZE,KS:KE)
+    real(RP) :: rdenom
+
+    integer :: k, l
+    !---------------------------------------------------------------------------
+
+    ! foward reduction
+    do l = 1, LSIZE
+       c(l,KS) = ud(l,KS) / md(l,KS)
+       d(l,KS) = iv(l,KS) / md(l,KS)
+    end do
+    do k = KS+1, KE-1
+       do l = 1, LSIZE
+          rdenom = 1.0_RP / ( md(l,k) - ld(l,k) * c(l,k-1) )
+          c(l,k) =             ud(l,k)              * rdenom
+          d(l,k) = ( iv(l,k) - ld(l,k) * d(l,k-1) ) * rdenom
+       end do
+    end do
+
+    ! backward substitution
+    do l = 1, LSIZE
+       ov(l,KE) = ( iv(l,KE) - ld(l,KE) * d(l,KE-1) ) / ( md(l,KE) - ld(l,KE) * c(l,KE-1) )
+    end do
+    do k = KE-1, KS, -1
+       do l = 1, LSIZE
+          ov(l,k) = d(l,k) - c(l,k) * ov(l,k+1)
+       end do
+    end do
+
+    return
+  end subroutine MATRIX_SOLVER_tridiagonal_2D_trans
+
   !-----------------------------------------------------------------------------
-  !> solve tridiagonal matrix with Thomas's algorithm
   subroutine MATRIX_SOLVER_tridiagonal_3D( &
        KA, KS, KE, &
        IA, IS, IE, &
@@ -111,34 +237,77 @@ contains
 
     logical,  intent(in), optional :: mask(IA,JA)
 
-    integer :: i, j
+    real(RP) :: udl(LSIZE,KA)
+    real(RP) :: mdl(LSIZE,KA)
+    real(RP) :: ldl(LSIZE,KA)
+    real(RP) :: ivl(LSIZE,KA)
+    real(RP) :: ovl(LSIZE,KA)
+    integer  :: idx(LSIZE)
+    integer  :: len
+
+    integer :: i, j, k, l
     !---------------------------------------------------------------------------
 
     if ( present(mask) ) then
-       !$omp parallel do default(none) schedule(dynamic) collapse(2) &
-       !$omp shared(JS,JE,IS,IE,KA,KS,KE,ud,md,ld,iv,ov,mask) &
-       !$omp private(i,j)
+       !$omp parallel do schedule(dynamic) &
+       !$omp private(len,udl,mdl,ldl,ivl,ovl,idx)
        do j = JS, JE
-       do i = IS, IE
-          if ( mask(i,j) ) then
-             call MATRIX_SOLVER_tridiagonal_1D( KA, KS, KE, &
-                                                ud(:,i,j), md(:,i,j), ld(:,i,j), & ! (in)
-                                                iv(:,i,j),                       & ! (in)
-                                                ov(:,i,j)                        ) ! (out)
+          len = 0
+          do i = IS, IE
+             if ( mask(i,j) ) then
+                len = len + 1
+                idx(len) = i
+                if ( len == LSIZE ) then
+                   do k = KS, KE
+                   do l = 1, LSIZE
+                      udl(l,k) = ud(k,idx(l),j)
+                      mdl(l,k) = md(k,idx(l),j)
+                      ldl(l,k) = ld(k,idx(l),j)
+                      ivl(l,k) = iv(k,idx(l),j)
+                   end do
+                   end do
+                   call MATRIX_SOLVER_tridiagonal_2D_trans( KA, KS, KE, &
+                                                            udl(:,:), mdl(:,:), ldl(:,:),   & ! (in)
+                                                            ivl(:,:),                       & ! (in)
+                                                            ovl(:,:)                        ) ! (out)
+                   do l = 1, LSIZE
+                   do k = KS, KE
+                      ov(k,idx(l),j) = ovl(l,k)
+                   end do
+                   end do
+                   len = 0
+                end if
+             end if
+          end do
+          if ( len > 0 ) then
+             do k = KS, KE
+             do l = 1, len
+                udl(l,k) = ud(k,idx(l),j)
+                mdl(l,k) = md(k,idx(l),j)
+                ldl(l,k) = ld(k,idx(l),j)
+                ivl(l,k) = iv(k,idx(l),j)
+             end do
+             end do
+             call MATRIX_SOLVER_tridiagonal_2D_trans( KA, KS, KE, &
+                                                      udl(:,:), mdl(:,:), ldl(:,:),   & ! (in)
+                                                      ivl(:,:),                       & ! (in)
+                                                      ovl(:,:)                        ) ! (out)
+             do l = 1, len
+             do k = KS, KE
+                ov(k,idx(l),j) = ovl(l,k)
+             end do
+             end do
           end if
-       enddo
-       enddo
+       end do
     else
-       !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
-       !$omp shared(JS,JE,IS,IE,KA,KS,KE,ud,md,ld,iv,ov) &
-       !$omp private(i,j)
+       !$omp parallel do default(none) OMP_SCHEDULE_ &
+       !$omp shared(JS,JE,IA,IS,IE,KA,KS,KE,ud,md,ld,iv,ov) &
+       !$omp private(j)
        do j = JS, JE
-       do i = IS, IE
-          call MATRIX_SOLVER_tridiagonal_1D( KA, KS, KE, &
-                                             ud(:,i,j), md(:,i,j), ld(:,i,j), & ! (in)
-                                             iv(:,i,j),                       & ! (in)
-                                             ov(:,i,j)                        ) ! (out)
-       enddo
+          call MATRIX_SOLVER_tridiagonal_2D( KA, KS, KE, IA, IS, IE, &
+                                             ud(:,:,j), md(:,:,j), ld(:,:,j), & ! (in)
+                                             iv(:,:,j),                       & ! (in)
+                                             ov(:,:,j)                        ) ! (out)
        enddo
     end if
 

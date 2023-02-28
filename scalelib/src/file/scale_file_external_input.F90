@@ -842,7 +842,6 @@ contains
     integer                :: dim_rank
     character(len=H_SHORT) :: dim_name  (FILE_EXTERNAL_INPUT_dim_limit)
     integer                :: dim_size  (FILE_EXTERNAL_INPUT_dim_limit)
-    integer                :: var_size  (FILE_EXTERNAL_INPUT_dim_limit)
     integer                :: natts
     character(len=H_SHORT) :: att_name  (FILE_EXTERNAL_INPUT_att_limit)
     integer                :: att_type  (FILE_EXTERNAL_INPUT_att_limit)
@@ -1227,6 +1226,7 @@ contains
        var,          &
        error         )
     use scale_const, only: &
+       EPS   => CONST_EPS, &
        UNDEF => CONST_UNDEF
     use scale_file, only: &
        FILE_Read
@@ -1243,8 +1243,8 @@ contains
 
     real(RP), allocatable :: buf(:)
 
-    integer  :: n
-    integer  :: n1, nn1
+    integer  :: n1s, n1e
+    integer  :: n1
     !---------------------------------------------------------------------------
 
     nid = FILE_EXTERNAL_INPUT_getId(varname)
@@ -1269,9 +1269,6 @@ contains
     if ( do_readfile ) then
 
        if ( FILE_EXTERNAL_INPUT_item(nid)%file ) then
-
-          ! next -> prev
-          FILE_EXTERNAL_INPUT_item(nid)%value(:,:,:,I_prev) = FILE_EXTERNAL_INPUT_item(nid)%value(:,:,:,I_next)
 
           step_next = FILE_EXTERNAL_INPUT_item(nid)%data_step_next - FILE_EXTERNAL_INPUT_item(nid)%data_step_offset
 
@@ -1301,6 +1298,7 @@ contains
 
           deallocate( buf )
 
+          if ( error ) return
        end if
 
     endif
@@ -1308,25 +1306,28 @@ contains
 
     error = .false.
 
-    ! store data with weight
-    do n1 = 1, FILE_EXTERNAL_INPUT_item(nid)%dim_max(1)
-       nn1 = n1 + FILE_EXTERNAL_INPUT_item(nid)%dim_start(1) - 1
+    n1s = FILE_EXTERNAL_INPUT_item(nid)%dim_start(1)
+    n1e = n1s - 1 + FILE_EXTERNAL_INPUT_item(nid)%dim_max(1)
 
-       if (       abs( FILE_EXTERNAL_INPUT_item(nid)%value(nn1,1,1,I_prev) - UNDEF ) > abs( UNDEF * 0.1_RP ) &
-            .and. abs( FILE_EXTERNAL_INPUT_item(nid)%value(nn1,1,1,I_next) - UNDEF ) > abs( UNDEF * 0.1_RP ) ) then
-          var(nn1) = ( 1.0_RP-weight ) * FILE_EXTERNAL_INPUT_item(nid)%value(nn1,1,1,I_prev) &
-                   + (        weight ) * FILE_EXTERNAL_INPUT_item(nid)%value(nn1,1,1,I_next)
-       else
-          if ( FILE_EXTERNAL_INPUT_item(nid)%allow_missing ) then
-             var(nn1) = UNDEF
+    ! store data with weight
+    if ( FILE_EXTERNAL_INPUT_item(nid)%allow_missing ) then
+       !$omp parallel do
+       do n1 = n1s, n1e
+          if (       abs( FILE_EXTERNAL_INPUT_item(nid)%value(n1,1,1,I_prev) - UNDEF ) > EPS &
+               .and. abs( FILE_EXTERNAL_INPUT_item(nid)%value(n1,1,1,I_next) - UNDEF ) > EPS ) then
+             var(n1) = ( 1.0_RP-weight ) * FILE_EXTERNAL_INPUT_item(nid)%value(n1,1,1,I_prev) &
+                     + (        weight ) * FILE_EXTERNAL_INPUT_item(nid)%value(n1,1,1,I_next)
           else
-             LOG_INFO("FILE_EXTERNAL_INPUT_update_1D",*) 'missing value is found in ', &
-                  trim(FILE_EXTERNAL_INPUT_item(nid)%varname), ' at (',nn1,')'
-             error = .true.
-             exit
+             var(n1) = UNDEF
           end if
-       end if
-    enddo
+       enddo
+    else
+       !$omp parallel do
+       do n1 = n1s, n1e
+          var(n1) = ( 1.0_RP-weight ) * FILE_EXTERNAL_INPUT_item(nid)%value(n1,1,1,I_prev) &
+                  + (        weight ) * FILE_EXTERNAL_INPUT_item(nid)%value(n1,1,1,I_next)
+       enddo
+    end if
 
     return
   end subroutine FILE_EXTERNAL_INPUT_update_1D
@@ -1339,6 +1340,7 @@ contains
        var,          &
        error         )
     use scale_const, only: &
+       EPS   => CONST_EPS, &
        UNDEF => CONST_UNDEF
     use scale_file, only: &
        FILE_Read
@@ -1355,9 +1357,8 @@ contains
 
     real(RP), allocatable :: buf(:,:)
 
-    integer :: n
+    integer :: n1s, n1e, n2s, n2e
     integer :: n1, n2
-    integer :: nn1, nn2
     !---------------------------------------------------------------------------
 
     nid = FILE_EXTERNAL_INPUT_getId( varname )
@@ -1382,9 +1383,6 @@ contains
     if ( do_readfile ) then
 
        if ( FILE_EXTERNAL_INPUT_item(nid)%file ) then
-
-          ! next -> prev
-          FILE_EXTERNAL_INPUT_item(nid)%value(:,:,:,I_prev) = FILE_EXTERNAL_INPUT_item(nid)%value(:,:,:,I_next)
 
           step_next = FILE_EXTERNAL_INPUT_item(nid)%data_step_next - FILE_EXTERNAL_INPUT_item(nid)%data_step_offset
 
@@ -1414,35 +1412,41 @@ contains
 
           deallocate( buf )
 
+          if ( error ) return
        end if
 
     endif
 
     error = .false.
 
+    n1s = FILE_EXTERNAL_INPUT_item(nid)%dim_start(1)
+    n1e = n1s - 1 + FILE_EXTERNAL_INPUT_item(nid)%dim_max(1)
+    n2s = FILE_EXTERNAL_INPUT_item(nid)%dim_start(2)
+    n2e = n2s - 1 + FILE_EXTERNAL_INPUT_item(nid)%dim_max(2)
+
     ! store data with weight
-    do n2 = 1, FILE_EXTERNAL_INPUT_item(nid)%dim_max(2)
-       nn2 = n2 + FILE_EXTERNAL_INPUT_item(nid)%dim_start(2) - 1
-
-       do n1 = 1, FILE_EXTERNAL_INPUT_item(nid)%dim_max(1)
-          nn1 = n1 + FILE_EXTERNAL_INPUT_item(nid)%dim_start(1) - 1
-
-          if (       abs( FILE_EXTERNAL_INPUT_item(nid)%value(nn1,nn2,1,I_prev) - UNDEF ) > abs( UNDEF * 0.1_RP ) &
-               .and. abs( FILE_EXTERNAL_INPUT_item(nid)%value(nn1,nn2,1,I_next) - UNDEF ) > abs( UNDEF * 0.1_RP ) ) then
-             var(nn1,nn2) = ( 1.0_RP-weight ) * FILE_EXTERNAL_INPUT_item(nid)%value(nn1,nn2,1,I_prev) &
-                          + (        weight ) * FILE_EXTERNAL_INPUT_item(nid)%value(nn1,nn2,1,I_next)
-          else
-             if ( FILE_EXTERNAL_INPUT_item(nid)%allow_missing ) then
-                var(nn1,nn2) = UNDEF
+    if ( FILE_EXTERNAL_INPUT_item(nid)%allow_missing ) then
+       !$omp parallel do
+       do n2 = n2s, n2e
+          do n1 = n1s, n1e
+             if (       abs( FILE_EXTERNAL_INPUT_item(nid)%value(n1,n2,1,I_prev) - UNDEF ) > EPS &
+                  .and. abs( FILE_EXTERNAL_INPUT_item(nid)%value(n1,n2,1,I_next) - UNDEF ) > EPS ) then
+                var(n1,n2) = ( 1.0_RP-weight ) * FILE_EXTERNAL_INPUT_item(nid)%value(n1,n2,1,I_prev) &
+                           + (        weight ) * FILE_EXTERNAL_INPUT_item(nid)%value(n1,n2,1,I_next)
              else
-                LOG_INFO("FILE_EXTERNAL_INPUT_update_2D",*) 'missing value is found in ', &
-                     trim(FILE_EXTERNAL_INPUT_item(nid)%varname), ' at (',nn1,',',nn2,')'
-                error = .true.
-                exit
+                var(n1,n2) = UNDEF
              end if
-          end if
+          enddo
        enddo
-    enddo
+    else
+       !$omp parallel do
+       do n2 = n2s, n2e
+          do n1 = n1s, n1e
+             var(n1,n2) = ( 1.0_RP-weight ) * FILE_EXTERNAL_INPUT_item(nid)%value(n1,n2,1,I_prev) &
+                        + (        weight ) * FILE_EXTERNAL_INPUT_item(nid)%value(n1,n2,1,I_next)
+          enddo
+       enddo
+    end if
 
     return
   end subroutine FILE_EXTERNAL_INPUT_update_2D
@@ -1455,6 +1459,7 @@ contains
        var,          &
        error         )
     use scale_const, only: &
+       EPS   => CONST_EPS, &
        UNDEF => CONST_UNDEF
     use scale_file, only: &
        FILE_Read
@@ -1471,9 +1476,8 @@ contains
 
     real(RP), allocatable :: buf(:,:,:)
 
-    integer :: n
+    integer :: n1s, n1e, n2s, n2e, n3s, n3e
     integer :: n1, n2, n3
-    integer :: nn1, nn2, nn3
     !---------------------------------------------------------------------------
 
     nid = FILE_EXTERNAL_INPUT_getId( varname )
@@ -1498,9 +1502,6 @@ contains
     if ( do_readfile ) then
 
        if ( FILE_EXTERNAL_INPUT_item(nid)%file ) then
-
-          ! next -> prev
-          FILE_EXTERNAL_INPUT_item(nid)%value(:,:,:,I_prev) = FILE_EXTERNAL_INPUT_item(nid)%value(:,:,:,I_next)
 
           step_next = FILE_EXTERNAL_INPUT_item(nid)%data_step_next - FILE_EXTERNAL_INPUT_item(nid)%data_step_offset
 
@@ -1528,39 +1529,49 @@ contains
                                                buf(:,:,:),                            &
                                                error                                  )
 
+          deallocate(buf)
+
+          if ( error ) return
        end if
 
     endif
 
     error = .false.
 
+    n1s = FILE_EXTERNAL_INPUT_item(nid)%dim_start(1)
+    n1e = n1s - 1 + FILE_EXTERNAL_INPUT_item(nid)%dim_max(1)
+    n2s = FILE_EXTERNAL_INPUT_item(nid)%dim_start(2)
+    n2e = n2s - 1 + FILE_EXTERNAL_INPUT_item(nid)%dim_max(2)
+    n3s = FILE_EXTERNAL_INPUT_item(nid)%dim_start(3)
+    n3e = n3s - 1 + FILE_EXTERNAL_INPUT_item(nid)%dim_max(3)
+
     ! store data with weight
-    do n3 = 1, FILE_EXTERNAL_INPUT_item(nid)%dim_max(3)
-       nn3 = n3 + FILE_EXTERNAL_INPUT_item(nid)%dim_start(3) - 1
-
-       do n2 = 1, FILE_EXTERNAL_INPUT_item(nid)%dim_max(2)
-          nn2 = n2 + FILE_EXTERNAL_INPUT_item(nid)%dim_start(2) - 1
-
-          do n1 = 1, FILE_EXTERNAL_INPUT_item(nid)%dim_max(1)
-             nn1 = n1 + FILE_EXTERNAL_INPUT_item(nid)%dim_start(1) - 1
-
-             if (       abs( FILE_EXTERNAL_INPUT_item(nid)%value(nn1,nn2,nn3,I_prev) - UNDEF ) > abs( UNDEF * 0.1_RP ) &
-                  .and. abs( FILE_EXTERNAL_INPUT_item(nid)%value(nn1,nn2,nn3,I_next) - UNDEF ) > abs( UNDEF * 0.1_RP ) ) then
-                var(nn1,nn2,nn3) = ( 1.0_RP-weight ) * FILE_EXTERNAL_INPUT_item(nid)%value(nn1,nn2,nn3,I_prev) &
-                                 + (        weight ) * FILE_EXTERNAL_INPUT_item(nid)%value(nn1,nn2,nn3,I_next)
-             else
-                if ( FILE_EXTERNAL_INPUT_item(nid)%allow_missing ) then
-                   var(nn1,nn2,nn3) = UNDEF
+    if ( FILE_EXTERNAL_INPUT_item(nid)%allow_missing ) then
+       !$omp parallel do
+       do n3 = n3s, n3e
+          do n2 = n2s, n2e
+             do n1 = n1s, n1e
+                if (       abs( FILE_EXTERNAL_INPUT_item(nid)%value(n1,n2,n3,I_prev) - UNDEF ) > EPS &
+                     .and. abs( FILE_EXTERNAL_INPUT_item(nid)%value(n1,n2,n3,I_next) - UNDEF ) > EPS ) then
+                   var(n1,n2,n3) = ( 1.0_RP-weight ) * FILE_EXTERNAL_INPUT_item(nid)%value(n1,n2,n3,I_prev) &
+                                 + (        weight ) * FILE_EXTERNAL_INPUT_item(nid)%value(n1,n2,n3,I_next)
                 else
-                   LOG_INFO("FILE_EXTERNAL_INPUT_update_3D",*) 'missing value is found in ', &
-                        trim(FILE_EXTERNAL_INPUT_item(nid)%varname), ' at (',nn1,',',nn2,',',nn3,')'
-                   error = .true.
-                   exit
+                   var(n1,n2,n3) = UNDEF
                 end if
-             end if
+             enddo
           enddo
        enddo
-    enddo
+    else
+       !$omp parallel do
+       do n3 = n3s, n3e
+          do n2 = n2s, n2e
+             do n1 = n1s, n1e
+                var(n1,n2,n3) = ( 1.0_RP-weight ) * FILE_EXTERNAL_INPUT_item(nid)%value(n1,n2,n3,I_prev) &
+                              + (        weight ) * FILE_EXTERNAL_INPUT_item(nid)%value(n1,n2,n3,I_next)
+             enddo
+          enddo
+       enddo
+    end if
 
     return
   end subroutine FILE_EXTERNAL_INPUT_update_3D
@@ -1571,6 +1582,9 @@ contains
        varname, &
        var,     &
        error    )
+    use scale_const, only: &
+       EPS   => CONST_EPS, &
+       UNDEF => CONST_UNDEF
     implicit none
     character(len=*), intent(in)  :: varname ! item name
     real(RP),         intent(in)  :: var(:)  ! variable
@@ -1589,11 +1603,21 @@ contains
 
     error = .false.
 
+    !$omp workshare
     FILE_EXTERNAL_INPUT_item(nid)%value(:,:,:,I_prev) = FILE_EXTERNAL_INPUT_item(nid)%value(:,:,:,I_next)
+    !$omp end workshare
 
+    !$omp parallel do private(nn1,nnn1)
     do n1 = 1, FILE_EXTERNAL_INPUT_item(nid)%dim_max(1)
        nn1  = n1 + FILE_EXTERNAL_INPUT_item(nid)%dim_start(1) - 1
        nnn1 = n1 + FILE_EXTERNAL_INPUT_item(nid)%var_start(1) - 1
+       if ( .not. FILE_EXTERNAL_INPUT_item(nid)%allow_missing ) then
+          if ( abs( var(nnn1) - UNDEF ) < EPS ) then
+             LOG_INFO("FILE_EXTERNAL_INPUT_put_ref_1D",*) 'missing value is found in ', &
+                  trim(FILE_EXTERNAL_INPUT_item(nid)%varname), ' at (',nnn1,')'
+             error = .true.
+          end if
+       end if
        FILE_EXTERNAL_INPUT_item(nid)%value(nn1,1,1,I_next) = var(nnn1)
     enddo
 
@@ -1604,6 +1628,9 @@ contains
        varname, &
        var,     &
        error    )
+    use scale_const, only: &
+       EPS   => CONST_EPS, &
+       UNDEF => CONST_UNDEF
     implicit none
     character(len=*), intent(in)  :: varname  ! item name
     real(RP),         intent(in)  :: var(:,:) ! variable
@@ -1622,29 +1649,49 @@ contains
 
     error = .false.
 
+    !$omp workshare
     FILE_EXTERNAL_INPUT_item(nid)%value(:,:,:,I_prev) = FILE_EXTERNAL_INPUT_item(nid)%value(:,:,:,I_next)
+    !$omp end workshare
 
     if ( FILE_EXTERNAL_INPUT_item(nid)%transpose ) then
        ! (x,z)->(z,x)
+       !$omp parallel do private(nn1,nn2,nnn1,nnn2)
        do n2 = 1, FILE_EXTERNAL_INPUT_item(nid)%dim_max(2)
+          if ( error ) cycle
           nn2  = n2 + FILE_EXTERNAL_INPUT_item(nid)%dim_start(2) - 1
           nnn2 = n2 + FILE_EXTERNAL_INPUT_item(nid)%var_start(1) - 1
 
           do n1 = 1, FILE_EXTERNAL_INPUT_item(nid)%dim_max(1)
              nn1  = n1 + FILE_EXTERNAL_INPUT_item(nid)%dim_start(1) - 1
              nnn1 = n1 + FILE_EXTERNAL_INPUT_item(nid)%var_start(2) - 1
+             if ( .not. FILE_EXTERNAL_INPUT_item(nid)%allow_missing ) then
+                if ( abs( var(nnn2,nnn1) - UNDEF ) < EPS ) then
+                   LOG_INFO("FILE_EXTERNAL_INPUT_put_ref_2D",*) 'missing value is found in ', &
+                        trim(FILE_EXTERNAL_INPUT_item(nid)%varname), ' at (',nnn2,',',nnn1,')'
+                   error = .true.
+                end if
+             end if
              FILE_EXTERNAL_INPUT_item(nid)%value(nn1,nn2,1,I_next) = var(nnn2,nnn1)
           enddo
        enddo
     else
        ! (z,x)->(z,x)
+       !$omp parallel do private(nn1,nn2,nnn1,nnn2)
        do n2 = 1, FILE_EXTERNAL_INPUT_item(nid)%dim_max(2)
+          if ( error ) cycle
           nn2  = n2 + FILE_EXTERNAL_INPUT_item(nid)%dim_start(2) - 1
           nnn2 = n2 + FILE_EXTERNAL_INPUT_item(nid)%var_start(2) - 1
 
           do n1 = 1, FILE_EXTERNAL_INPUT_item(nid)%dim_max(1)
              nn1  = n1 + FILE_EXTERNAL_INPUT_item(nid)%dim_start(1) - 1
              nnn1 = n1 + FILE_EXTERNAL_INPUT_item(nid)%var_start(1) - 1
+             if ( .not. FILE_EXTERNAL_INPUT_item(nid)%allow_missing ) then
+                if ( abs( var(nnn2,nnn1) - UNDEF ) < EPS ) then
+                   LOG_INFO("FILE_EXTERNAL_INPUT_put_ref_2D",*) 'missing value is found in ', &
+                        trim(FILE_EXTERNAL_INPUT_item(nid)%varname), ' at (',nnn1,',',nnn2,')'
+                   error = .true.
+                end if
+             end if
              FILE_EXTERNAL_INPUT_item(nid)%value(nn1,nn2,1,I_next) = var(nnn1,nnn2)
           enddo
        enddo
@@ -1657,6 +1704,9 @@ contains
        varname, &
        var,     &
        error    )
+    use scale_const, only: &
+       EPS   => CONST_EPS, &
+       UNDEF => CONST_UNDEF
     implicit none
     character(len=*), intent(in)  :: varname    ! item name
     real(RP),         intent(in)  :: var(:,:,:) ! variable
@@ -1675,38 +1725,60 @@ contains
 
     error = .false.
 
+    !$omp workshare
     FILE_EXTERNAL_INPUT_item(nid)%value(:,:,:,I_prev) = FILE_EXTERNAL_INPUT_item(nid)%value(:,:,:,I_next)
+    !$omp end workshare
 
     if ( FILE_EXTERNAL_INPUT_item(nid)%transpose ) then
        ! (x,y,z)->(z,x,y)
+       !$omp parallel do private(nn1,nn2,nn3,nnn1,nnn2,nnn3)
        do n3 = 1, FILE_EXTERNAL_INPUT_item(nid)%dim_max(3)
+          if ( error ) cycle
           nn3  = n3 + FILE_EXTERNAL_INPUT_item(nid)%dim_start(3) - 1
           nnn3 = n3 + FILE_EXTERNAL_INPUT_item(nid)%var_start(2) - 1
 
           do n2 = 1, FILE_EXTERNAL_INPUT_item(nid)%dim_max(2)
+             if ( error ) exit
              nn2  = n2 + FILE_EXTERNAL_INPUT_item(nid)%dim_start(2) - 1
              nnn2 = n2 + FILE_EXTERNAL_INPUT_item(nid)%var_start(1) - 1
 
              do n1 = 1, FILE_EXTERNAL_INPUT_item(nid)%dim_max(1)
                 nn1  = n1 + FILE_EXTERNAL_INPUT_item(nid)%dim_start(1) - 1
                 nnn1 = n1 + FILE_EXTERNAL_INPUT_item(nid)%var_start(3) - 1
+                if ( .not. FILE_EXTERNAL_INPUT_item(nid)%allow_missing ) then
+                   if ( abs( var(nnn2,nnn3,nnn1) - UNDEF ) < EPS ) then
+                      LOG_INFO("FILE_EXTERNAL_INPUT_put_ref_3D",*) 'missing value is found in ', &
+                           trim(FILE_EXTERNAL_INPUT_item(nid)%varname), ' at (',nnn2,',',nnn3,',',nnn1,')'
+                      error = .true.
+                   end if
+                end if
                 FILE_EXTERNAL_INPUT_item(nid)%value(nn1,nn2,nn3,I_next) = var(nnn2,nnn3,nnn1)
              enddo
           enddo
        enddo
     else
        ! (z,x,y)->(z,x,y)
+       !$omp parallel do private(nn1,nn2,nn3,nnn1,nnn2,nnn3)
        do n3 = 1, FILE_EXTERNAL_INPUT_item(nid)%dim_max(3)
+          if ( error ) cycle
           nn3  = n3 + FILE_EXTERNAL_INPUT_item(nid)%dim_start(3) - 1
           nnn3 = n3 + FILE_EXTERNAL_INPUT_item(nid)%var_start(3) - 1
 
           do n2 = 1, FILE_EXTERNAL_INPUT_item(nid)%dim_max(2)
+             if ( error ) exit
              nn2  = n2 + FILE_EXTERNAL_INPUT_item(nid)%dim_start(2) - 1
              nnn2 = n2 + FILE_EXTERNAL_INPUT_item(nid)%var_start(2) - 1
 
              do n1 = 1, FILE_EXTERNAL_INPUT_item(nid)%dim_max(1)
                 nn1  = n1 + FILE_EXTERNAL_INPUT_item(nid)%dim_start(1) - 1
                 nnn1 = n1 + FILE_EXTERNAL_INPUT_item(nid)%var_start(1) - 1
+                if ( .not. FILE_EXTERNAL_INPUT_item(nid)%allow_missing ) then
+                   if ( abs( var(nnn1,nnn2,nnn3) - UNDEF ) < EPS ) then
+                      LOG_INFO("FILE_EXTERNAL_INPUT_put_ref_3D",*) 'missing value is found in ', &
+                           trim(FILE_EXTERNAL_INPUT_item(nid)%varname), ' at (',nnn1,',',nnn2,',',nnn3,')'
+                      error = .true.
+                   end if
+                end if
                 FILE_EXTERNAL_INPUT_item(nid)%value(nn1,nn2,nn3,I_next) = var(nnn1,nnn2,nnn3)
              enddo
           enddo
@@ -1742,14 +1814,16 @@ contains
     nid = FILE_EXTERNAL_INPUT_getId( varname )
 
     if ( nid == 0 ) then
-       LOG_INFO("FILE_EXTERNAL_INPUT_get_ref_3D",*) 'Variable was not registered: ', trim(varname)
+       LOG_INFO("FILE_EXTERNAL_INPUT_get_ref_1D",*) 'Variable was not registered: ', trim(varname)
        error = .true.
        return
     endif
 
     error = .false.
 
+    !$omp workshare
     var(:) = FILE_EXTERNAL_INPUT_item(nid)%value(:,1,1,i_step_)
+    !$omp end workshare
 
     return
   end subroutine FILE_EXTERNAL_INPUT_get_ref_1D
@@ -1778,14 +1852,16 @@ contains
     nid = FILE_EXTERNAL_INPUT_getId( varname )
 
     if ( nid == 0 ) then
-       LOG_INFO("FILE_EXTERNAL_INPUT_update_3D",*) 'Variable was not registered: ', trim(varname)
+       LOG_INFO("FILE_EXTERNAL_INPUT_get_ref_2D",*) 'Variable was not registered: ', trim(varname)
        error = .true.
        return
     endif
 
     error = .false.
 
+    !$omp workshare
     var(:,:) = FILE_EXTERNAL_INPUT_item(nid)%value(:,:,1,i_step_)
+    !$omp end workshare
 
     return
   end subroutine FILE_EXTERNAL_INPUT_get_ref_2D
@@ -1816,14 +1892,16 @@ contains
     nid = FILE_EXTERNAL_INPUT_getId( varname )
 
     if ( nid == 0 ) then
-       LOG_INFO("FILE_EXTERNAL_INPUT_update_3D",*) 'Variable was not registered: ', trim(varname)
+       LOG_INFO("FILE_EXTERNAL_INPUT_get_ref_3D",*) 'Variable was not registered: ', trim(varname)
        error = .true.
        return
     endif
 
     error = .false.
 
+    !$omp workshare
     var(:,:,:) = FILE_EXTERNAL_INPUT_item(nid)%value(:,:,:,i_step_)
+    !$omp end workshare
 
     return
   end subroutine FILE_EXTERNAL_INPUT_get_ref_3D
