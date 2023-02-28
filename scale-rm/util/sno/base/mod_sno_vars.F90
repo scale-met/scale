@@ -1119,7 +1119,7 @@ contains
        else
           ! set additional global attributes
           call FILE_set_attribute( fid, "global", "Conventions", "CF-1.6" ) ! [IN]
-          if ( hindo%calendar /= "" ) then
+          if ( hinfo%calendar /= "" ) then
              call FILE_set_attribute( fid, "global", "calendar", hinfo%calendar )
           end if
           call FILE_set_attribute( fid, "global", "time_units", hinfo%time_units )
