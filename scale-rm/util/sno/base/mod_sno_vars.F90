@@ -1118,10 +1118,12 @@ contains
                                      debug         ) ! [IN]
        else
           ! set additional global attributes
-          call FILE_Set_Attribute( fid, "global", "Conventions", "CF-1.6" ) ! [IN]
-          call FILE_Set_Attribute( fid, "global", "calendar", hinfo%calendar )
-          call FILE_Set_Attribute( fid, "global", "time_units", hinfo%time_units )
-          call FILE_Set_Attribute( fid, "global", "time_start", (/hinfo%time_start(1)/) )
+          call FILE_set_attribute( fid, "global", "Conventions", "CF-1.6" ) ! [IN]
+          if ( hindo%calendar /= "" ) then
+             call FILE_set_attribute( fid, "global", "calendar", hinfo%calendar )
+          end if
+          call FILE_set_attribute( fid, "global", "time_units", hinfo%time_units )
+          call FILE_set_attribute( fid, "global", "time_start", (/hinfo%time_start(1)/) )
        endif
 
        ! add 1D range
