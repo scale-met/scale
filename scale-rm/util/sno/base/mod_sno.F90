@@ -443,7 +443,9 @@ contains
                                       hinfo%minfo_longitude_of_central_meridian        (:) )
           endif
        case('lon','lat')
-          if ( output_grads ) then ! treat as normal variable for GrADS
+          naxis           = naxis + 1 
+          axisname(naxis) = varname_file(n)
+          if ( output_grads ) then ! add as normal variable for GrADS
              if ( nvars_req == 0 ) then
                 nvars          = nvars + 1
                 varname(nvars) = varname_file(n)
@@ -461,9 +463,6 @@ contains
                    endif
                 enddo
              endif
-          else ! treat as axis variable for NetCDF
-             naxis           = naxis + 1
-             axisname(naxis) = varname_file(n)
           endif
        case('topo','lsmask')
           if ( isnormalvar ) then ! treat as normal variable
