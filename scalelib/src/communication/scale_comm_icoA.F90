@@ -1646,7 +1646,7 @@ contains
        REQ_count = REQ_count + 1
        totalsize = Recv_info_p2r(I_size    ,irank) * kmax * vmax
        rank      = Recv_info_p2r(I_prc_from,irank)
-       tag       = Recv_info_p2r(I_prc_from,irank) + 1000000
+       tag       = Recv_info_p2r(I_prc_from,irank) + 100000
 
        call MPI_IRECV( recvbuf_p2r_SP(1,irank), & ! [OUT]
                        totalsize,               & ! [IN]
@@ -1663,7 +1663,7 @@ contains
        REQ_count = REQ_count + 1
        totalsize = Recv_info_r2p(I_size    ,irank) * kmax * vmax
        rank      = Recv_info_r2p(I_prc_from,irank)
-       tag       = Recv_info_r2p(I_prc_from,irank) + 2000000
+       tag       = Recv_info_r2p(I_prc_from,irank) + 200000
 
        call MPI_IRECV( recvbuf_r2p_SP(1,irank), & ! [OUT]
                        totalsize,               & ! [IN]
@@ -2044,7 +2044,6 @@ contains
        var,   &
        var_pl )
     use scale_prc, only: &
-prc_myrank,&
        PRC_LOCAL_COMM_WORLD, &
        PRC_abort
     implicit none
