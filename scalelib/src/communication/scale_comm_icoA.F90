@@ -979,6 +979,7 @@ contains
     use scale_prc, only: &
        PRC_myrank
     use scale_prc_icoA, only: &
+       PRC_RGN_ndiamond,    &
        PRC_have_pl,         &
        PRC_RGN_local,       &
        PRC_RGN_vert_pl,     &
@@ -1003,12 +1004,14 @@ contains
 
     integer  :: irank, ipos
 
-    integer, parameter :: Send_size_nglobal_pl = 10
+    integer :: Send_size_nglobal_pl
 
     integer  :: l, l_pl, n, v, vv
     integer  :: i_from, j_from, r_from, g_from, l_from, p_from
     integer  :: i_to, j_to, r_to, g_to, l_to, p_to
     !---------------------------------------------------------------------------
+
+    Send_size_nglobal_pl = PRC_RGN_ndiamond
 
     allocate( Copy_info_p2r(info_vindex) )
     allocate( Recv_info_p2r(info_vindex,Recv_nlim) )
