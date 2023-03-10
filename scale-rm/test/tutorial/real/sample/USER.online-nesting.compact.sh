@@ -98,6 +98,14 @@ MAPPROJECTION_LC_LAT1="30.0"
 MAPPROJECTION_LC_LAT2="40.0"
 
 #################################################
+# &PARAM_COMM_CARTESC_NEST(ALL configs)
+#################################################
+
+# .true.  => parent domain does not wait for child domain
+# .false. => parent domain wait for child domain
+ONLINE_AGGRESSIVE_COMM=".false."
+
+#################################################
 #
 # &PARAM_ATMOS   (run config)
 # &PARAM_OCEAN   (run config)
@@ -119,10 +127,6 @@ OCEAN_DYN_TYPE="INIT"
 LAND_DYN_TYPE="BUCKET"
 LAND_SFC_TYPE="SKIN"
 URBAN_DYN_TYPE="KUSAKA01"
-
-# .true.  => parent domain does not wait for child domain
-# .false. => parent domain wait for child domain
-ONLINE_AGGRESSIVE_COMM=".false."
 
 #################################################
 #
