@@ -640,6 +640,8 @@ contains
     integer :: NUMBER_OF_SKIP_TSTEPS_LAND  = 0       ! num of skipped first several data
     integer :: NUMBER_OF_SKIP_TSTEPS_OCEAN = 0       ! num of skipped first several data
 
+    character(len=H_LONG) :: BASENAME_ORG_LAND                = ''
+    character(len=H_LONG) :: BASENAME_ORG_OCEAN               = ''
     character(len=H_LONG) :: BASENAME_BOUNDARY_LAND           = ''
     character(len=H_LONG) :: BASENAME_BOUNDARY_OCEAN          = ''
     logical               :: BOUNDARY_POSTFIX_TIMELABEL_LAND  = .false.
@@ -713,6 +715,7 @@ contains
     NUMBER_OF_TSTEPS_LAND           = NUMBER_OF_TSTEPS
     NUMBER_OF_SKIP_TSTEPS_LAND      = NUMBER_OF_SKIP_TSTEPS
     FILETYPE_LAND                   = FILETYPE_ORG
+    BASENAME_ORG_LAND               = BASENAME_ORG
     BASENAME_ADD_NUM_LAND           = BASENAME_ADD_NUM
     BASENAME_BOUNDARY_LAND          = BASENAME_BOUNDARY
     BOUNDARY_POSTFIX_TIMELABEL_LAND = BOUNDARY_POSTFIX_TIMELABEL
@@ -785,6 +788,7 @@ contains
     NUMBER_OF_TSTEPS_OCEAN           = NUMBER_OF_TSTEPS
     NUMBER_OF_SKIP_TSTEPS_OCEAN      = NUMBER_OF_SKIP_TSTEPS
     FILETYPE_OCEAN                   = FILETYPE_ORG
+    BASENAME_ORG_OCEAN               = BASENAME_ORG
     BASENAME_ADD_NUM_OCEAN           = BASENAME_ADD_NUM
     BASENAME_BOUNDARY_OCEAN          = BASENAME_BOUNDARY
     BOUNDARY_POSTFIX_TIMELABEL_OCEAN = BOUNDARY_POSTFIX_TIMELABEL
@@ -824,6 +828,7 @@ contains
        ( ( NUMBER_OF_FILES_LAND            .NE.   NUMBER_OF_FILES_OCEAN            ) .OR. &
          ( NUMBER_OF_TSTEPS_LAND           .NE.   NUMBER_OF_TSTEPS_OCEAN           ) .OR. &
          ( NUMBER_OF_SKIP_TSTEPS_LAND      .NE.   NUMBER_OF_SKIP_TSTEPS_OCEAN      ) .OR. &
+         ( BASENAME_ORG_LAND               .NE.   BASENAME_ORG_OCEAN               ) .OR. &
          ( BASENAME_BOUNDARY_LAND          .NE.   BASENAME_BOUNDARY_OCEAN          ) .OR. &
          ( BOUNDARY_POSTFIX_TIMELABEL_LAND .NEQV. BOUNDARY_POSTFIX_TIMELABEL_OCEAN ) .OR. &
          ( BOUNDARY_TITLE_LAND             .NE.   BOUNDARY_TITLE_OCEAN             ) .OR. &
@@ -843,7 +848,8 @@ contains
                              mdlid_land,             & ![OUT]
                              mdlid_ocean,            & ![OUT]
                              timelen,                & ![OUT]
-                             BASENAME_ORG,           & ![IN]
+                             BASENAME_ORG_LAND,      & ![IN]
+                             BASENAME_ORG_OCEAN,     & ![IN]
                              BASENAME_LAND,          & ![IN]
                              BASENAME_OCEAN,         & ![IN]
                              FILETYPE_LAND,          & ![IN]
@@ -898,8 +904,9 @@ contains
        LOG_INFO("REALINPUT_surface",*) 'Target Postfix Name (Ocean): ', trim(BASENAME_OCEAN)
        LOG_INFO("REALINPUT_surface",*) 'Time Steps in One File     : ', NUMBER_OF_TSTEPS
 
-       call ParentSurfaceOpen( FILETYPE_LAND, FILETYPE_OCEAN, & ! [IN]
-                               basename_org, basename_land, basename_ocean ) ! [IN]
+       call ParentSurfaceOpen( FILETYPE_LAND, FILETYPE_OCEAN,         & ! [IN]
+                               basename_org_land, basename_org_ocean, & ! [IN]
+                               basename_land, basename_ocean          ) ! [IN]
 
        do oistep = 1, NUMBER_OF_TSTEPS_OCEAN
 
@@ -935,7 +942,7 @@ contains
                                    OCEAN_SFC_TEMP_in  (    :,:),         &
                                    OCEAN_SFC_albedo_in(    :,:,:,:),     &
                                    OCEAN_SFC_Z0_in    (    :,:),         &
-                                   BASENAME_ORG,                         &
+                                   BASENAME_ORG_LAND, BASENAME_ORG_OCEAN, &
                                    BASENAME_LAND, BASENAME_OCEAN,        &
                                    mdlid_land, mdlid_ocean,              &
                                    ldims, odims,                         &
@@ -2714,7 +2721,8 @@ contains
        ldims, odims,        &
        lmdlid, omdlid,      &
        timelen,             &
-       basename_org,        &
+       basename_org_land,   &
+       basename_org_ocean,  &
        basename_land,       &
        basename_ocean,      &
        filetype_land,       &
@@ -2746,7 +2754,8 @@ contains
     integer,          intent(out) :: omdlid   ! model id for ocean
     integer,          intent(out) :: timelen  ! number of time steps in ocean file
 
-    character(len=*), intent(in)  :: basename_org
+    character(len=*), intent(in)  :: basename_org_land
+    character(len=*), intent(in)  :: basename_org_ocean
     character(len=*), intent(in)  :: basename_land
     character(len=*), intent(in)  :: basename_ocean
     character(len=*), intent(in)  :: filetype_land
@@ -2796,7 +2805,7 @@ contains
        call ParentLandSetupNetCDF( ldims,              & ! (out)
                                    timelen,            & ! (out)
                                    lon_all, lat_all,   & ! (out)
-                                   basename_org,       & ! (in)
+                                   basename_org_land,  & ! (in)
                                    basename_land,      & ! (in)
                                    use_file_landwater, & ! (in)
                                    serial_land,        & ! (inout)
@@ -2808,7 +2817,7 @@ contains
        if ( do_read_land ) call ParentLandSetupGrADS( ldims,             & ! (out)
                                                       timelen,           & ! (out)
                                                       lon_all, lat_all,  & ! (out)
-                                                      basename_org,      & ! (in)
+                                                      basename_org_land, & ! (in)
                                                       basename_land      ) ! (in)
 
     case default
@@ -2924,20 +2933,20 @@ contains
     case('NetCDF')
 
        omdlid = iNetCDF
-       call ParentOceanSetupNetCDF( odims, timelen,   & ! (out)
-                                    lon_all, lat_all, & ! (out)
-                                    basename_org,     & ! (in)
-                                    basename_ocean,   & ! (in)
-                                    serial_ocean,     & ! (inout)
-                                    do_read_ocean     ) ! (inout)
+       call ParentOceanSetupNetCDF( odims, timelen,     & ! (out)
+                                    lon_all, lat_all,   & ! (out)
+                                    basename_org_ocean, & ! (in)
+                                    basename_ocean,     & ! (in)
+                                    serial_ocean,       & ! (inout)
+                                    do_read_ocean       ) ! (inout)
 
     case('GrADS')
 
        omdlid = iGrADS
-       if ( do_read_ocean ) call ParentOceanSetupGrADS( odims, timelen,   & ! (out)
-                                                        lon_all, lat_all, & ! (out)
-                                                        basename_org,     & ! (in)
-                                                        basename_ocean    ) ! (in)
+       if ( do_read_ocean ) call ParentOceanSetupGrADS( odims, timelen,     & ! (out)
+                                                        lon_all, lat_all,   & ! (out)
+                                                        basename_org_ocean, & ! (in)
+                                                        basename_ocean      ) ! (in)
     case default
 
        LOG_ERROR("ParentSurfaceSetup",*) 'Unsupported FILE TYPE:', trim(filetype_ocean)
@@ -3037,28 +3046,30 @@ contains
   !-----------------------------------------------------------------------------
   !> Surface Open
   subroutine ParentSurfaceOpen( &
-       filetype_land, filetype_ocean, &
-       basename_org, basename_land, basename_ocean )
+       filetype_land, filetype_ocean,         &
+       basename_org_land, basename_org_ocean, &
+       basename_land, basename_ocean          )
     use mod_realinput_netcdf, only: &
        ParentLandOpenNetCDF, &
        ParentOceanOpenNetCDF
     implicit none
     character(len=*), intent(in) :: filetype_land
     character(len=*), intent(in) :: filetype_ocean
-    character(len=*), intent(in) :: basename_org
+    character(len=*), intent(in) :: basename_org_land
+    character(len=*), intent(in) :: basename_org_ocean
     character(len=*), intent(in) :: basename_land
     character(len=*), intent(in) :: basename_ocean
 
     select case ( filetype_land )
     case ( "NetCDF" )
-       call ParentLandOpenNetCDF( basename_org, basename_land )
+       call ParentLandOpenNetCDF( basename_org_land, basename_land )
     case ( "GrADS" )
        ! do nothing
     end select
 
     select case ( filetype_ocean )
     case ( "NetCDF" )
-       call ParentOceanOpenNetCDF( basename_org, basename_land )
+       call ParentOceanOpenNetCDF( basename_org_ocean, basename_land )
     case ( "GrADS" )
        ! do nothing
     end select
@@ -3243,7 +3254,7 @@ contains
        lz_org, topo_org,                  &
        lmask_org, omask_org,              &
        tw, sst, albw, z0w,                &
-       basename_org,                      &
+       basename_org_land, basename_org_ocean, &
        basename_land, basename_ocean,     &
        mdlid_land, mdlid_ocean,           &
        ldims, odims,                      &
@@ -3307,7 +3318,8 @@ contains
     real(RP),         intent(out)   :: sst (IA,JA)
     real(RP),         intent(out)   :: albw(IA,JA,N_RAD_DIR,N_RAD_RGN)
     real(RP),         intent(out)   :: z0w (IA,JA)
-    character(len=*), intent(in)  :: basename_org
+    character(len=*), intent(in)  :: basename_org_land
+    character(len=*), intent(in)  :: basename_org_ocean
     character(len=*), intent(in)  :: basename_land
     character(len=*), intent(in)  :: basename_ocean
     integer,          intent(in)  :: mdlid_land
