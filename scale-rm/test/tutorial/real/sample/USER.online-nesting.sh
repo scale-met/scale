@@ -2,7 +2,6 @@
 
 #################################################
 #
-# &PARAM_COMM_CARTESC_NEST(ALL configs)
 # &PARAM_TIME             (ALL configs)
 # &PARAM_FILE_HISTORY     (run config)
 # &PARAM_ATMOS_BOUNDARY   (run config)
@@ -108,6 +107,15 @@ MAPPROJECTION_BASEPOINT_LAT="34.653396"
 MAPPROJECTION_TYPE="LC"
 MAPPROJECTION_LC_LAT1="30.0"
 MAPPROJECTION_LC_LAT2="40.0"
+
+
+#################################################
+# &PARAM_COMM_CARTESC_NEST  (run config)
+#################################################
+
+# .true.  => parent domain does not wait for child domain
+# .false. => parent domain wait for child domain
+ONLINE_AGGRESSIVE_COMM=".false."
 
 #################################################
 #
