@@ -941,7 +941,6 @@ contains
                                    OCEAN_SFC_TEMP_in  (    :,:),          &
                                    OCEAN_SFC_albedo_in(    :,:,:,:),      &
                                    OCEAN_SFC_Z0_in    (    :,:),          &
-                                   BASENAME_ORG_LAND, BASENAME_ORG_OCEAN, &
                                    BASENAME_LAND, BASENAME_OCEAN,         &
                                    mdlid_land, mdlid_ocean,               &
                                    ldims, odims,                          &
@@ -3253,7 +3252,6 @@ contains
        lz_org, topo_org,                      &
        lmask_org, omask_org,                  &
        tw, sst, albw, z0w,                    &
-       basename_org_land, basename_org_ocean, &
        basename_land, basename_ocean,         &
        mdlid_land, mdlid_ocean,               &
        ldims, odims,                          &
@@ -3317,8 +3315,6 @@ contains
     real(RP),         intent(out)   :: sst (IA,JA)
     real(RP),         intent(out)   :: albw(IA,JA,N_RAD_DIR,N_RAD_RGN)
     real(RP),         intent(out)   :: z0w (IA,JA)
-    character(len=*), intent(in)  :: basename_org_land
-    character(len=*), intent(in)  :: basename_org_ocean
     character(len=*), intent(in)  :: basename_land
     character(len=*), intent(in)  :: basename_ocean
     integer,          intent(in)  :: mdlid_land
