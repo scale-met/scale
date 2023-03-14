@@ -299,17 +299,21 @@ contains
     real(RP) :: QHYD(KA,IA,JA)
     !---------------------------------------------------------------------------
 
+    !$acc data create(QHYD) &
+    !$acc      copyin(DENS,RHOT,QHYD,Sarea) &
+    !$acc      copy(QTRC,Epot)
+
     call ATMOS_vars_get_diagnostic( "QHYD", QHYD(:,:,:) )
 
-    !$acc update host(DENS, RHOT, QTRC(:,:,:,QS_LT:QE_LT)) ! tentative
     call ATMOS_PHY_LT_sato2019_adjustment( &
          KA, KS, KE, IA, IS, IE, JA, JS, JE, KIJMAX, IMAX, JMAX, QA_LT, & ! [IN]
          DENS(:,:,:), RHOT(:,:,:), QHYD(:,:,:), Sarea(:,:,:,:), & ! [IN]
          dt_LT,                                                 & ! [IN]
          QTRC(:,:,:,QS_LT:QE_LT), Epot(:,:,:)                   ) ! [INOUT]
-    !$acc update device(QTRC(:,:,:,QS_LT:QE_LT)) ! tentative
 
     call history
+
+    !$acc end data
 
     return
   end subroutine ATMOS_PHY_LT_driver_adjustment
@@ -332,12 +336,15 @@ contains
     logical  :: HIST_sw(w_nmax)
     integer  :: k, i, j, n, ip
 
+    !$acc data copyin(QTRC,DENS) create(work)
+
     do ip = 1, w_nmax
        call FILE_HISTORY_query( HIST_id(ip), HIST_sw(ip) )
     end do
 
     if ( HIST_sw(I_CRGD_LIQ) ) then
        !$omp parallel do
+       !$acc kernels
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
@@ -349,10 +356,12 @@ contains
        end do
        end do
        end do
+       !$acc end kernels
        call FILE_HISTORY_put( HIST_id(I_CRGD_LIQ), work(:,:,:) )
     end if
     if ( HIST_sw(I_CRGD_ICE) ) then
        !$omp parallel do
+       !$acc kernels
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
@@ -364,10 +373,12 @@ contains
        end do
        end do
        end do
+       !$acc end kernels
        call FILE_HISTORY_put( HIST_id(I_CRGD_ICE), work(:,:,:) )
     end if
     if ( HIST_sw(I_CRGD_TOT) ) then
        !$omp parallel do
+       !$acc kernels
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
@@ -379,8 +390,11 @@ contains
        end do
        end do
        end do
+       !$acc end kernels
        call FILE_HISTORY_put( HIST_id(I_CRGD_TOT), work(:,:,:) )
     end if
+
+    !$acc end data
 
     return
   end subroutine history

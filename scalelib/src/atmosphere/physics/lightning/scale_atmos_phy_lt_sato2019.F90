@@ -87,12 +87,14 @@ module scale_atmos_phy_lt_sato2019
   real(RP),              private    :: C_F2013
 
   real(RP), allocatable, private    :: A(:,:,:,:) !--- A : Laplasian (Coefficient matrix)
+  !$acc declare create(d_QCRG_TOT,LT_PATH_TOT,fls_int_p_tot,B_F2013_TOT,G_F2013,A)
 
   !---
   integer,  parameter, private :: nxlut_lt = 200, nylut_lt = 200
   real(RP), private :: dq_chrg( nxlut_lt,nylut_lt )    !--- charge separation [fC]
   real(RP), private :: grid_lut_t( nxlut_lt )
   real(RP), private :: grid_lut_l( nylut_lt )
+  !$acc declare create(dq_chrg,grid_lut_t,grid_lut_l)
   real(RP), private :: tcrglimit
   logical, private                  :: Hgt_dependency_Eint = .false.
 
@@ -289,6 +291,7 @@ contains
     call COMM_bcast( nxlut_lt, nylut_lt, dq_chrg )
     call COMM_bcast( nxlut_lt, grid_lut_t )
     call COMM_bcast( nxlut_lt, grid_lut_l )
+    !$acc update device(dq_chrg,grid_lut_t,grid_lut_l)
 
 !    KIJMAXG = (IEG-ISG+1)*(JEG-JSG+1)*(KE-KS+1)
     KIJMAXG = IMAXG*JMAXG*KMAX
@@ -300,6 +303,7 @@ contains
     d_QCRG_TOT(:,:,:) = 0.0_RP
     LT_PATH_TOT(:,:,:,:) = 0.0_RP
     fls_int_p_tot(:,:,:) = 0.0_RP
+    !$acc update device(d_QCRG_TOT,LT_PATH_TOT,fls_int_p_tot)
 
     tcrglimit = -60.0_RP+T00
 
@@ -314,6 +318,7 @@ contains
       G_F2013(i,j) = CDX(i)*CDY(j)*1.0E-6_RP       ! [m2] -> [km2]
     enddo
     enddo
+    !$acc update device(B_F2013_TOT,G_F2013)
     C_F2013 = PI*R_neut*R_neut*1.0E-6_RP  ! [m2] -> [km2]
 
     flg_eint_hgt = 0.0_RP
@@ -463,6 +468,7 @@ contains
     enddo
     enddo
     enddo
+    !$acc update device(A)
 
     return
   end subroutine ATMOS_PHY_LT_sato2019_setup
@@ -504,6 +510,8 @@ contains
        PRC_IsMaster, &
        PRC_abort
     use scale_comm_cartesC, only: &
+       COMM_datatype, &
+       COMM_world, &
        COMM_wait, &
        COMM_vars8
     use scale_file_history, only: &
@@ -534,9 +542,10 @@ contains
     real(RP) :: d_QCRG(KA,IA,JA)            !--- Change of charge by charge neutralization [fC/m3]
     real(RP) :: LT_PATH(KA,IA,JA)           !--- Lightning path (0-> no path, 1-> path)
     real(RP) :: fls_int_p(KA,IA,JA)
-    real(RP) :: Total_Sarea(2)              !--- Sum of surface area and that of each catergory [m2]
+    real(RP) :: Total_Sarea1, Total_Sarea2  !--- Sum of surface area and that of each category [m2]
+    real(RP) :: r_totalSarea1, r_totalSarea2  
     real(RP) :: neg_crg, pos_crg
-    real(RP) :: frac, r_totalSarea(2)
+    real(RP) :: frac
     real(RP) :: dqneut(KA,IA,JA,QA_LT)
     real(RP) :: dqneut_real(KA,IA,JA,QA_LT)
     real(RP) :: dqneut_real_tot(KA,IA,JA)
@@ -555,41 +564,96 @@ contains
     real(RP) :: crg_rate(QA_LT), qcrg_before(QA_LT)
     real(RP) :: B_F2013(IA,JA)
     integer  :: int_sw
+    real(RP) :: iprod, buf, tmp_qcrg, tmp_dqcrg
+    integer  :: ierror
 
+    !$acc data &
+    !$acc copyin(DENS,RHOT,QHYD,Sarea) &
+    !$acc copy(QTRC,Epot) &
+    !$acc create(QHYD_mass,QCRG,Efield,NUM_end,d_QCRG,LT_PATH,fls_int_p, &
+    !$acc        dqneut,dqneut_real,dqneut_real_tot,flg_chrged,HIST_sw,w3d, &
+    !$acc        diff_qcrg,lack,sum_crg,crg_rate,qcrg_before,B_F2013)
+
+    !$acc kernels
     NUM_end(:,:,:,:) = 0.0_RP
     B_F2013(:,:) = 0.0_RP
+    !$acc end kernels
 
     !$omp parallel do
+    !$acc kernels
+    !$acc loop independent collapse(2)
     do j = JS, JE
     do i = IS, IE
 
        ! calc total charge density
+       !$acc loop independent
        do k = KS, KE
-          QCRG(k,i,j) = 0.0_RP
+          tmp_qcrg = 0.0_RP
+          !$acc loop reduction(+:tmp_qcrg)
           do n = 1, QA_LT
-             QCRG(k,i,j) = QCRG(k,i,j) + QTRC(k,i,j,n)
+             tmp_qcrg = tmp_qcrg + QTRC(k,i,j,n)
           end do
-          QCRG(k,i,j) = QCRG(k,i,j) * DENS(k,i,j) * 1.E-6_RP ![fC/kg] -> [nc/m3]
+          QCRG(k,i,j) = tmp_qcrg * DENS(k,i,j) * 1.E-6_RP ![fC/kg] -> [nc/m3]
        enddo
 
+       !$acc loop independent
        do k = KS, KE
           QHYD_mass(k,i,j) = QHYD(k,i,j) * DENS(k,i,j) ![kg/kg] -> [kg/m3]
        enddo
 
     enddo
     enddo
+    !$acc end kernels
 
-    !--- Calculate E field
-    call ATMOS_PHY_LT_electric_field( KA, KS, KE,                   &   ! [IN]
-                                      IA, IS, IE,                   &   ! [IN]
-                                      JA, JS, JE,                   &   ! [IN]
-                                      QCRG    (:,:,:),              &   ! [IN]
-                                      DENS    (:,:,:),              &   ! [IN]
-                                      RHOT    (:,:,:),              &   ! [IN]
-                                      Epot    (:,:,:),              &   ! [INOUT]
-                                      Efield  (:,:,:,I_lt_x:I_lt_z) )   ! [OUT]
+    iprod = 0.0_RP
+    !$omp parallel do reduction(+:iprod) private(i,j,k)
+    !$acc kernels
+    !$acc loop independent collapse(3) reduction(+:iprod)
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+        iprod = iprod + abs( QCRG(k,i,j) )
+    enddo
+    enddo
+    enddo
+    !$acc end kernels
+
+    call MPI_AllReduce(iprod, buf, 1, COMM_datatype, MPI_SUM, COMM_world, ierror)
+
+    if( buf <= SMALL ) then
+
+       !$omp parallel do
+       !$acc kernels
+       !$acc loop independent collapse(3)
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          Epot(k,i,j) = 0.0_RP
+          Efield(k,i,j,I_lt_x) = 0.0_RP
+          Efield(k,i,j,I_lt_y) = 0.0_RP
+          Efield(k,i,j,I_lt_z) = 0.0_RP
+       end do
+       end do
+       end do
+       !$acc end kernels
+
+    else
+
+       !--- Calculate E field
+       call ATMOS_PHY_LT_electric_field( KA, KS, KE,                   &   ! [IN]
+                                         IA, IS, IE,                   &   ! [IN]
+                                         JA, JS, JE,                   &   ! [IN]
+                                         QCRG    (:,:,:),              &   ! [IN]
+                                         DENS    (:,:,:),              &   ! [IN]
+                                         RHOT    (:,:,:),              &   ! [IN]
+                                         Epot    (:,:,:),              &   ! [INOUT]
+                                         Efield  (:,:,:,I_lt_x:I_lt_z) )   ! [INOUT]
+   
+    endif
 
     !$omp parallel do
+    !$acc kernels
+    !$acc loop independent collapse(3)
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -597,19 +661,22 @@ contains
                                     + Efield(k,i,j,I_lt_y)*Efield(k,i,j,I_lt_y) &
                                     + Efield(k,i,j,I_lt_z)*Efield(k,i,j,I_lt_z) )
 
-
        LT_PATH(k,i,j) = 0.0_RP
-    enddo
-    enddo
-    enddo
 
+    enddo
+    enddo
+    enddo
+    !$acc end kernels
 
     if ( LT_DO_Lightning ) then
 
+       !$acc kernels
        d_QCRG_TOT(:,:,:) = 0.0_RP
        fls_int_p_tot(:,:,:) = 0.0_RP
        LT_PATH_TOT(:,:,:,:) = 0.0_RP
        B_F2013_TOT(:,:) = 0.0_RP
+       !$acc end kernels
+
        call ATMOS_PHY_LT_judge_absE( KA, KS, KE,             &   ! [IN]
                                      IA, IS, IE,             &   ! [IN]
                                      JA, JS, JE,             &   ! [IN]
@@ -617,7 +684,6 @@ contains
                                      Efield(:,:,:,I_lt_abs), &   ! [IN]
                                      Emax,                   &   ! [OUT]
                                      flg_lt_neut             )   ! [OUT]
-
 
        count_neut = 0
        do while( flg_lt_neut > 0 )
@@ -641,6 +707,7 @@ contains
 
          !--- Calculate lightning path and charge neutralization
          if( NUTR_TYPE == 'MG2001' ) then
+           !$acc update host(Efield,Epot,QCRG,QHYD_mass,NUM_end,LT_PATH)
            call ATMOS_PHY_LT_neutralization_MG2001(              &
                                              KA, KS, KE,         & !  [IN]
                                              IA, IS, IE,         & !  [IN]
@@ -655,6 +722,7 @@ contains
                                              LT_PATH  (:,:,:),   & !  [INOUT]
                                              fls_int_p(:,:,:),   & !  [OUT]
                                              d_QCRG   (:,:,:)    ) !  [OUT]
+           !$acc update device(NUM_end,LT_PATH,fls_int_p,d_QCRG)
          elseif( NUTR_TYPE == 'F2013' ) then
            call ATMOS_PHY_LT_neutralization_F2013(               &
                                              KA, KS, KE,         & !  [IN]
@@ -678,27 +746,34 @@ contains
          call COMM_wait ( LT_path(:,:,:),1 )
          call COMM_wait ( d_QCRG(:,:,:),2 )
 
+         !$acc kernels
          dqneut(:,:,:,:) = 0.0_RP
          dqneut_real(:,:,:,:) = 0.0_RP
+         !$acc end kernels
+
          !-- Calculate neutralization of each hydrometeor or each category
          select case( NUTR_qhyd )
          case ( 'TOTAL' )
 
             !$omp parallel do &
-            !$omp private(Total_Sarea,r_totalSarea,zerosw)
+            !$omp private(Total_Sarea1,Total_Sarea2,r_totalSarea1,r_totalSarea2,zerosw)
+            !$acc kernels
+            !$acc loop independent collapse(3)
             do j = JS, JE
             do i = IS, IE
             do k = KS, KE
                if( abs( d_QCRG(k,i,j) ) > 0.0_RP ) then
-                  Total_Sarea(1) = 0.0_RP
+                  Total_Sarea1 = 0.0_RP
+                  !$acc loop independent reduction(+:Total_Sarea1)
                   do n = 1, QA_LT
-                     Total_Sarea(1) = Total_Sarea(1) + Sarea(k,i,j,n)
+                     Total_Sarea1 = Total_Sarea1 + Sarea(k,i,j,n)
                   enddo
-                  zerosw = 0.5_RP - sign( 0.5_RP, Total_Sarea(1)-SMALL )
-                  r_totalSarea(1) = 1.0_RP / ( Total_Sarea(1) + zerosw ) * ( 1.0_RP - zerosw )
+                  zerosw = 0.5_RP - sign( 0.5_RP, Total_Sarea1-SMALL )
+                  r_totalSarea1 = 1.0_RP / ( Total_Sarea1 + zerosw ) * ( 1.0_RP - zerosw )
+                  !$acc loop seq
                   do n = 1, QA_LT
                      dqneut(k,i,j,n) = d_QCRG(k,i,j)*1.0E+6_RP &
-                                     * Sarea(k,i,j,n) * r_totalSarea(1) / DENS(k,i,j)
+                                     * Sarea(k,i,j,n) * r_totalSarea1 / DENS(k,i,j)
                      QTRC(k,i,j,n) = QTRC(k,i,j,n) + dqneut(k,i,j,n)
                      dqneut_real(k,i,j,n) = dqneut(k,i,j,n)
                   enddo
@@ -706,27 +781,34 @@ contains
             enddo
             enddo
             enddo
+            !$acc end kernels
 
          case ( 'Each_POLARITY', 'Each_POLARITY2' )
 
             !$omp parallel do &
-            !$omp private(Total_Sarea,r_totalSarea,flg_chrged,pos_crg,neg_crg,frac,lack, &
+            !$omp private(Total_Sarea1,Total_Sarea2,r_totalSarea1,r_totalSarea2,flg_chrged,pos_crg,neg_crg,frac,lack, &
             !$omp         diff_qcrg,crg_rate,sum_crg,qcrg_before, &
             !$omp         positive,negative,zerosw,sw,int_sw)
+            !$acc kernels
+            !$acc loop independent collapse(2)
             do j = JS, JE
             do i = IS, IE
+            !$acc loop private(lack,flg_chrged,diff_qcrg,crg_rate,sum_crg)
             do k = KS, KE
                lack(:) = 0.0_RP
                if( abs( d_QCRG(k,i,j) ) > 0.0_RP ) then
 
                   !--- flg whether the charged or not (0.0-> not charged, 1.0->charged)
+                  !$acc loop independent
                   do n = 1, QA_LT
                      flg_chrged(n) = abs(QTRC(k,i,j,n)) >= SMALL
                   enddo
 
-                  Total_Sarea(:) = 0.0_RP
+                  Total_Sarea1 = 0.0_RP
+                  Total_Sarea2 = 0.0_RP
                   pos_crg = 0.0_RP
                   neg_crg = 0.0_RP
+                  !$acc loop independent reduction(+:pos_crg,neg_crg,Total_Sarea1,Total_Sarea2)
                   do n = 1, QA_LT
                      if ( flg_chrged(n) ) then
                         positive = 0.5_RP + sign( 0.5_RP, QTRC(k,i,j,n) )
@@ -736,9 +818,9 @@ contains
                         !--- total of negative charge
                         neg_crg = neg_crg + QTRC(k,i,j,n) * negative
                         !--- Sarea of positively charged hydrometeor
-                        Total_Sarea(1) = Total_Sarea(1) + Sarea(k,i,j,n) * positive
+                        Total_Sarea1 = Total_Sarea1 + Sarea(k,i,j,n) * positive
                         !--- Sarea of negatively charged hydrometeor
-                        Total_Sarea(2) = Total_Sarea(2) + Sarea(k,i,j,n) * negative
+                        Total_Sarea2 = Total_Sarea2 + Sarea(k,i,j,n) * negative
                      end if
                   end do
 
@@ -748,21 +830,22 @@ contains
                   neg_crg = frac * neg_crg
 
                   !--- remove 0 surface area ( no crg for each porality )
-                  zerosw = 0.5_RP - sign( 0.5_RP, Total_Sarea(1) - SMALL )
-                  r_totalSarea(1) = 1.0_RP / ( Total_Sarea(1) + zerosw ) * ( 1.0_RP - zerosw )
-                  zerosw = 0.5_RP - sign( 0.5_RP, Total_Sarea(2) - SMALL )
-                  r_totalSarea(2) = 1.0_RP / ( Total_Sarea(2) + zerosw ) * ( 1.0_RP - zerosw )
+                  zerosw = 0.5_RP - sign( 0.5_RP, Total_Sarea1 - SMALL )
+                  r_totalSarea1 = 1.0_RP / ( Total_Sarea1 + zerosw ) * ( 1.0_RP - zerosw )
+                  zerosw = 0.5_RP - sign( 0.5_RP, Total_Sarea2 - SMALL )
+                  r_totalSarea2 = 1.0_RP / ( Total_Sarea2 + zerosw ) * ( 1.0_RP - zerosw )
 
                   diff_qcrg(:) = 0.0_RP
                   crg_rate(:) = 0.0_RP
                   sum_crg(:) = 0.0_RP
+                  !$acc loop seq
                   do n = 1, QA_LT
                      if ( flg_chrged(n) ) then
                         sw = 0.5_RP + sign( 0.5_RP, QTRC(k,i,j,n) )
                         dqneut(k,i,j,n) = &
-                                    + pos_crg * Sarea(k,i,j,n) * r_totalSarea(1) &
+                                    + pos_crg * Sarea(k,i,j,n) * r_totalSarea1 &
                                     * sw &   ! sw = 1 positive
-                                    + neg_crg * Sarea(k,i,j,n) * r_totalSarea(2)  &
+                                    + neg_crg * Sarea(k,i,j,n) * r_totalSarea2  &
                                     * ( 1.0_RP - sw ) ! sw = 0 negative
                         qcrg_before(n) = QTRC(k,i,j,n)
 
@@ -794,6 +877,7 @@ contains
 #endif
                     lack(0) = max( lack(0), 0.0_RP ) ! negative (Should be Positive)
                     lack(1) = min( lack(1), 0.0_RP ) ! positive (Should be Negative)
+                    !$acc loop independent
                     do n = 1, QA_LT
                        if ( flg_chrged(n) ) then
                           sw = 0.5_RP + sign( 0.5_RP, QTRC(k,i,j,n) )
@@ -808,6 +892,7 @@ contains
                     enddo
                   endif
 
+                  !$acc loop independent
                   do n = 1, QA_LT
                      if ( flg_chrged(n) ) then
                         dqneut_real(k,i,j,n) = QTRC(k,i,j,n) - qcrg_before(n)
@@ -819,39 +904,82 @@ contains
             enddo
             enddo
             enddo
+            !$acc end kernels
 
          end select
 
-
+         !$acc kernels
+         !$acc loop independent collapse(3)
          do j = JS, JE
          do i = IS, IE
 
             ! calc total charge density
             do k = KS, KE
-               QCRG(k,i,j) = 0.0_RP
-               dqneut_real_tot(k,i,j) = 0.0_RP
+               tmp_qcrg = 0.0_RP
+               tmp_dqcrg = 0.0_RP
+               !$acc loop independent reduction(+:tmp_qcrg,tmp_dqcrg)
                do n = 1, QA_LT
-                  QCRG(k,i,j) = QCRG(k,i,j) + QTRC(k,i,j,n)
-                  dqneut_real_tot(k,i,j) = dqneut_real_tot(k,i,j) + dqneut_real(k,i,j,n)
+                  tmp_qcrg = tmp_qcrg + QTRC(k,i,j,n)
+                  tmp_dqcrg = tmp_dqcrg + dqneut_real(k,i,j,n)
                end do
-               QCRG(k,i,j) = QCRG(k,i,j) * DENS(k,i,j) * 1.E-6_RP ![fC/kg] -> [nc/m3]
+               QCRG(k,i,j) = tmp_qcrg * DENS(k,i,j) * 1.E-6_RP ![fC/kg] -> [nc/m3]
+               dqneut_real_tot(k,i,j) = tmp_dqcrg
             enddo
 
          enddo
          enddo
+         !$acc end kernels
 
-         !--- Calculate E field
-         call ATMOS_PHY_LT_electric_field( KA, KS, KE,                   & ! [IN]
-                                           IA, IS, IE,                   & ! [IN]
-                                           JA, JS, JE,                   & ! [IN]
-                                           QCRG    (:,:,:),              & ! [IN]
-                                           DENS    (:,:,:),              & ! [IN]
-                                           RHOT    (:,:,:),              & ! [IN]
-                                           Epot    (:,:,:),              & ! [INOUT]
-                                           Efield  (:,:,:,I_lt_x:I_lt_z) ) ! [OUT]
+         iprod = 0.0_RP
+         !$omp parallel do reduction(+:iprod) private(i,j,k)
+         !$acc kernels
+         !$acc loop independent collapse(3) reduction(+:iprod)
+         do j = JS, JE
+         do i = IS, IE
+         do k = KS, KE
+             iprod = iprod + abs( QCRG(k,i,j) )
+         enddo
+         enddo
+         enddo
+         !$acc end kernels
+
+         call MPI_AllReduce(iprod, buf, 1, COMM_datatype, MPI_SUM, COMM_world, ierror)
+
+         if( buf <= SMALL ) then
+
+            !$omp parallel do
+            !$acc kernels
+            !$acc loop independent collapse(3)
+            do j = JS, JE
+            do i = IS, IE
+            do k = KS, KE
+               Epot(k,i,j) = 0.0_RP
+               Efield(k,i,j,I_lt_x) = 0.0_RP
+               Efield(k,i,j,I_lt_y) = 0.0_RP
+               Efield(k,i,j,I_lt_z) = 0.0_RP
+            end do
+            end do
+            end do
+            !$acc end kernels
+
+         else
+
+            !--- Calculate E field
+            call ATMOS_PHY_LT_electric_field( KA, KS, KE,                   & ! [IN]
+                                              IA, IS, IE,                   & ! [IN]
+                                              JA, JS, JE,                   & ! [IN]
+                                              QCRG    (:,:,:),              & ! [IN]
+                                              DENS    (:,:,:),              & ! [IN]
+                                              RHOT    (:,:,:),              & ! [IN]
+                                              Epot    (:,:,:),              & ! [INOUT]
+                                              Efield  (:,:,:,I_lt_x:I_lt_z) ) ! [INOUT]
+
+         endif
 
          !--- Add Total number of path
          !$omp parallel do
+         !$acc kernels
+         !$acc loop independent collapse(3)
          do j = JS, JE
          do i = IS, IE
          do k = KS, KE
@@ -861,10 +989,12 @@ contains
          end do
          end do
          end do
+         !$acc end kernels
 
          !--- Add Total number of charge neutralization and flash point
          if ( HIST_id(I_Qneut) > 0 ) then
             !$omp parallel do
+            !$acc kernels
             do j = JS, JE
             do i = IS, IE
             do k = KS, KE
@@ -872,9 +1002,11 @@ contains
             end do
             end do
             end do
+            !$acc end kernels
          end if
          if ( HIST_id(I_FlashPoint) > 0 ) then
             !$omp parallel do
+            !$acc kernels
             do j = JS, JE
             do i = IS, IE
             do k = KS, KE
@@ -882,10 +1014,12 @@ contains
             end do
             end do
             end do
+            !$acc end kernels
          end if
 
          if ( HIST_id(I_PosFLASH) > 0 ) then
             !$omp parallel do
+            !$acc kernels
             do j = JS, JE
             do i = IS, IE
             do k = KS, KE
@@ -894,9 +1028,11 @@ contains
             end do
             end do
             end do
+            !$acc end kernels
          end if
          if ( HIST_id(I_NegFLASH) > 0 ) then
             !$omp parallel do
+            !$acc kernels
             do j = JS, JE
             do i = IS, IE
             do k = KS, KE
@@ -905,9 +1041,11 @@ contains
             end do
             end do
             end do
+            !$acc end kernels
          end if
          if ( HIST_id(I_LTpath) > 0 ) then
             !$omp parallel do
+            !$acc kernels
             do j = JS, JE
             do i = IS, IE
             do k = KS, KE
@@ -915,13 +1053,16 @@ contains
             end do
             end do
             end do
+            !$acc end kernels
          end if
          if ( HIST_id(I_FOD) > 0 ) then
+            !$acc kernels
             do j = JS, JE
             do i = IS, IE
                B_F2013_TOT(i,j) = B_F2013_TOT(i,j) + G_F2013(i,j)/C_F2013*B_F2013(i,j)
             enddo
             enddo
+            !$acc end kernels
          endif
 
          call ATMOS_PHY_LT_judge_absE( KA, KS, KE,             &   ! [IN]
@@ -942,7 +1083,7 @@ contains
          if( flg_lt_neut == 1 .and. Emax == Emax_old ) then
             flg_lt_neut = 0
             if( PRC_IsMaster ) then
-               LOG_INFO("ATMOS_PHY_LT_sato2019_adjustment",'(A,2E15.7,1X,I0)')  &
+               LOG_INFO("ATMOS_PHY_LT_sato2019_adjustment",'(A,2(E15.7,A),1X,I0)')  &
                    'Eabs value after neutralization is same as previous value, Finish', &
                     Emax_old*1.E-3_RP, ' [kV/m] -> ', Emax*1.E-3_RP, count_neut
             endif
@@ -962,9 +1103,12 @@ contains
                    count_neut
             endif
             !---- Back to Charge density as previous step
+            !$acc kernels
+            !$acc loop independent collapse(3)
             do j = JS, JE
             do i = IS, IE
             do k = KS, KE
+               !$acc loop independent
                do n = 1, QA_LT
                   QTRC(k,i,j,n) = QTRC(k,i,j,n) - dqneut_real(k,i,j,n)
                enddo
@@ -973,6 +1117,7 @@ contains
             enddo
             enddo
             enddo
+            !$acc end kernels
          elseif( flg_lt_neut == 2 ) then
             flg_lt_neut = 0
             if( PRC_IsMaster ) then
@@ -993,6 +1138,8 @@ contains
     else
 
        !$omp parallel do private(i,j,k)
+       !$acc kernels
+       !$acc loop independent collapse(3)
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
@@ -1000,6 +1147,7 @@ contains
        end do
        end do
        end do
+       !$acc end kernels
 
     endif
 
@@ -1010,6 +1158,8 @@ contains
 
     if ( HIST_sw(I_Ex  ) ) then
        !$omp parallel do private(i,j,k)
+       !$acc kernels
+       !$acc loop independent collapse(3)
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
@@ -1017,10 +1167,13 @@ contains
        enddo
        enddo
        enddo
+       !$acc end kernels
        call FILE_HISTORY_put( HIST_id(I_Ex  ), w3d(:,:,:) )
     endif
     if ( HIST_sw(I_Ey  ) ) then
        !$omp parallel do private(i,j,k)
+       !$acc kernels
+       !$acc loop independent collapse(3)
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
@@ -1028,10 +1181,13 @@ contains
        enddo
        enddo
        enddo
+       !$acc end kernels
        call FILE_HISTORY_put( HIST_id(I_Ey  ), w3d(:,:,:) )
     endif
     if ( HIST_sw(I_Ez  ) ) then
        !$omp parallel do private(i,j,k)
+       !$acc kernels
+       !$acc loop independent collapse(3)
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
@@ -1039,10 +1195,13 @@ contains
        enddo
        enddo
        enddo
+       !$acc end kernels
        call FILE_HISTORY_put( HIST_id(I_Ez  ), w3d(:,:,:) )
     endif
     if ( HIST_sw(I_Eabs) ) then
        !$omp parallel do private(i,j,k)
+       !$acc kernels
+       !$acc loop independent collapse(3)
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
@@ -1050,6 +1209,7 @@ contains
        enddo
        enddo
        enddo
+       !$acc end kernels
        call FILE_HISTORY_put( HIST_id(I_Eabs), w3d(:,:,:) )
     endif
     if ( HIST_sw(I_Epot) ) then
@@ -1057,6 +1217,8 @@ contains
     end if
     if ( HIST_sw(I_Qneut) ) then
        !$omp parallel do private(i,j,k)
+       !$acc kernels
+       !$acc loop independent collapse(3)
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
@@ -1064,10 +1226,13 @@ contains
        enddo
        enddo
        enddo
+       !$acc end kernels
        call FILE_HISTORY_put( HIST_id(I_Qneut), w3d(:,:,:) )
     endif
     if ( HIST_sw(I_LTpath)  ) then
        !$omp parallel do private(i,j,k)
+       !$acc kernels
+       !$acc loop independent collapse(3)
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
@@ -1075,10 +1240,13 @@ contains
        enddo
        enddo
        enddo
+       !$acc end kernels
        call FILE_HISTORY_put( HIST_id(I_LTpath), w3d(:,:,:) )
     endif
     if ( HIST_sw(I_PosFLASH) ) then
        !$omp parallel do private(i,j,k)
+       !$acc kernels
+       !$acc loop independent collapse(3)
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
@@ -1086,10 +1254,13 @@ contains
        enddo
        enddo
        enddo
+       !$acc end kernels
        call FILE_HISTORY_put( HIST_id(I_PosFLASH), w3d(:,:,:) )
     endif
     if ( HIST_sw(I_NegFLASH) ) then
        !$omp parallel do private(i,j,k)
+       !$acc kernels
+       !$acc loop independent collapse(3)
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
@@ -1097,10 +1268,13 @@ contains
        enddo
        enddo
        enddo
+       !$acc end kernels
        call FILE_HISTORY_put( HIST_id(I_NegFLASH), w3d(:,:,:) )
     endif
     if ( HIST_sw(I_FlashPoint) ) then
        !$omp parallel do private(i,j,k)
+       !$acc kernels
+       !$acc loop independent collapse(3)
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
@@ -1108,18 +1282,23 @@ contains
        enddo
        enddo
        enddo
+       !$acc end kernels
        call FILE_HISTORY_put( HIST_id(I_FlashPoint), w3d(:,:,:) )
     end if
     if ( HIST_sw(I_FOD) ) then
        !$omp parallel do private(i,j)
+       !$acc kernels
+       !$acc loop independent collapse(2)
        do j = JS, JE
        do i = IS, IE
           w3d(1,i,j) = B_F2013_TOT(i,j)/dt_LT ![num/grid/s]
        enddo
        enddo
+       !$acc end kernels
        call FILE_HISTORY_put( HIST_id(I_FOD), w3d(1,:,:) )
     end if
 
+    !$acc end data
 
     return
   end subroutine ATMOS_PHY_LT_sato2019_adjustment
@@ -1134,8 +1313,8 @@ contains
        QCRG,       & ! [IN]
        DENS,       & ! [IN]
        RHOT,       & ! [IN]
-       E_pot,      & ! [OUT]
-       Efield      ) ! [OUT]
+       E_pot,      & ! [INOUT]
+       Efield      ) ! [INOUT]
     use scale_prc, only: &
        PRC_abort, &
        PRC_IsMaster, &
@@ -1187,12 +1366,11 @@ contains
     real(RP), intent(in)  :: QCRG     (KA,IA,JA)      !-- Charge density [nC/m3]
     real(RP), intent(in)  :: DENS     (KA,IA,JA)      !-- Total density [kg/m3]
     real(RP), intent(in)  :: RHOT     (KA,IA,JA)      !-- density weighted potential temperature [K kg/m3]
-    real(RP), intent(inout) :: E_pot (KA,IA,JA)      !-- Electric potential [V]
-    real(RP), intent(out)   :: Efield(KA,IA,JA,3)    !-- Electric field [V/m]
+    real(RP), intent(inout) :: E_pot (KA,IA,JA)       !-- Electric potential [V]
+    real(RP), intent(inout) :: Efield(KA,IA,JA,3)     !-- Electric field [V/m]
 
-    real(RP) :: eps_air(KA,IA,JA)
+    real(RP) :: eps_air
     !--- A x E_pott = - QCRG/epsiron
-!    real(RP) :: A(KA,15,IA,JA)            !--- A : Laplasian
     real(RP) :: B(KA,IA,JA)               !--- B : -QCRG*DENS/epsiron
     real(RP) :: E_pot_N(KA,IA,JA)         !--- electrical potential calculated by Bi-CGSTAB
 
@@ -1201,49 +1379,29 @@ contains
 
     call PROF_rapstart('LT_E_field', 2)
 
-    iprod = 0.0_RP
-    !$omp parallel do reduction(+:iprod) private(i,j,k)
+
+    !$acc data &
+    !$acc copy(E_pot,Efield) &
+    !$acc copyin(QCRG,DENS,RHOT) &
+    !$acc create(B,E_pot_N) &
+    !$acc copyin(GSQRT,MAPF,J13G,J23G,RCDX,RCDY,RFDZ)
+
+    !$omp parallel do private(i,j,k)
+    !$acc kernels
+    !$acc loop independent collapse(3)
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
-        iprod = iprod + abs( QCRG(k,i,j) )
+       eps_air = EPSvac * EPSair   !--- temporary, dependency of epsiron on P and T will be implemented
+       B(k,i,j) = - QCRG(k,i,j)/eps_air * 1.0E-9_RP ! [nC/m3] -> [C/m3 * m/F] = [V/m2]
     enddo
     enddo
     enddo
-
-    call MPI_AllReduce(iprod, buf, 1, COMM_datatype, MPI_SUM, COMM_world, ierror)
-
-    if( buf <= EPS ) then
-       !$omp parallel do
-       do j = JS, JE
-       do i = IS, IE
-       do k = KS, KE
-          E_pot(k,i,j) = 0.0_RP
-          Efield(k,i,j,1:3) = 0.0_RP
-       end do
-       end do
-       end do
-
-       call PROF_rapend('LT_E_field', 2)
-
-       return
-    endif
+    !$acc end kernels
 
     !$omp parallel do private(i,j,k)
-    do j = JS, JE
-    do i = IS, IE
-    do k = KS, KE
-       eps_air(k,i,j) = EPSvac * EPSair   !--- temporary, dependency of epsiron on P and T will be implemented
-       B(k,i,j) = - QCRG(k,i,j)/eps_air(k,i,j) * 1.0E-9_RP ! [nC/m3] -> [C/m3 * m/F] = [V/m2]
-    enddo
-    enddo
-    enddo
-
-    !---- fill halo
-    call COMM_vars8( eps_air,1 )
-    call COMM_vars8( B,      2 )
-
-    !$omp parallel do private(i,j,k)
+    !$acc kernels
+    !$acc loop independent collapse(3)
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -1251,12 +1409,12 @@ contains
     end do
     end do
     end do
-    call COMM_vars8( E_pot_N, 3 )
+    !$acc end kernels
+
+    call COMM_vars8( E_pot_N, 1 )
 
 
-    call COMM_wait ( eps_air, 1 )
-    call COMM_wait ( B,       2 )
-    call COMM_wait ( E_pot_N, 3 )
+    call COMM_wait ( E_pot_N, 1 )
 
     !--- calcuclate counter matrix
     call ATMOS_PHY_LT_solve_bicgstab( &
@@ -1264,22 +1422,30 @@ contains
        IA, IS, IE, & ! (in)
        JA, JS, JE, & ! (in)
        E_pot,      & ! (out)
-       E_pot_n,    & ! (in)
+       E_pot_N,    & ! (in)
        A, B        ) ! (in)
 
     call COMM_vars8( E_pot, 1 )
     call COMM_wait ( E_pot, 1, .true. )
 
     !$omp parallel do private(i,j)
+    !$acc parallel copy(E_pot)
+    !$acc loop collapse(2)
     do j = 1, JA
     do i = 1, IA
-       E_pot(1:KS-1,i,j) = 0.0_RP
-       E_pot(KE+1:KA,i,j) = 0.0_RP
+       do k = 1, KS-1
+          E_pot(k,i,j) = 0.0_RP
+       enddo
+       do k = KE+1, KA
+          E_pot(k,i,j) = 0.0_RP
+       enddo
     enddo
     enddo
+    !$acc end parallel
 
     !---- Calculate Electrical Field
     !$omp parallel do private(i,j,k)
+    !$acc kernels
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -1309,6 +1475,9 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
+
+    !$acc end data
 
     call PROF_rapend('LT_E_field', 2)
 
@@ -1347,16 +1516,15 @@ contains
     real(RP) :: Ms(KA,IA,JA)
     real(RP) :: al, be, w
 
-    real(RP), pointer :: r(:,:,:)
-    real(RP), pointer :: rn(:,:,:)
-    real(RP), pointer :: swap(:,:,:)
-    real(RP), target :: v0(KA,IA,JA)
-    real(RP), target :: v1(KA,IA,JA)
+    real(RP) :: r(KA,IA,JA)
+    real(RP) :: rn(KA,IA,JA)
+    real(RP) :: swap(KA,IA,JA)
+    real(RP) :: v1(KA,IA,JA)
     real(RP) :: r0r
     real(RP) :: norm, error, error2
 
-    real(RP) :: iprod(2)
-    real(RP) :: buf(2)
+    real(RP) :: iprod1, iprod2
+    real(RP) :: buf1, buf2
 
     real(RP):: diag(KA,IA,JA)
     real(RP):: z1(KA,IA,JA)
@@ -1369,16 +1537,20 @@ contains
     integer :: iter
     integer :: ierror
 
-
-    r  => v0
-    rn => v1
+    !$acc data &
+    !$acc copyout(PHI_N) &
+    !$acc copyin(PHI,M,B) &
+    !$acc create(r0,p,Mp,s,Ms,r,rn,swap,v1,diag,z1,z2,Mz1,Mz2)
 
     if( FLAG_preprocessing == 3 ) then
+       !$acc update host(M)
        call ILU_decomp(KA, KS, KE, &
                        IA, IS, IE, &
                        JA, JS, JE, &
                        M,  diag)
+       !$acc update device(diag)
     endif
+
     call mul_matrix( KA, KS, KE, & ! (in)
                      IA, IS, IE, & ! (in)
                      JA, JS, JE, & ! (in)
@@ -1386,6 +1558,8 @@ contains
 
     norm = 0.0_RP
     !$omp parallel do reduction(+:norm) private(i, j, k)
+    !$acc kernels
+    !$acc loop independent collapse(3) reduction(+:norm)
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -1393,9 +1567,12 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
 
     ! r = b - M x0
     !$omp parallel do private(i, j, k)
+    !$acc kernels
+    !$acc loop independent collapse(3)
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -1403,8 +1580,11 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
 
     !$omp parallel do private(i, j, k)
+    !$acc kernels
+    !$acc loop independent collapse(3)
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -1413,9 +1593,12 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
 
     r0r  = 0.0_RP
     !$omp parallel do reduction(+:r0r) private(i, j, k)
+    !$acc kernels
+    !$acc loop independent collapse(3) reduction(+:r0r)
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -1423,8 +1606,11 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
 
     !$omp parallel do private(i, j, k)
+    !$acc kernels
+    !$acc loop independent collapse(3)
     do j = JS-1, JE+1
     do i = IS-1, IE+1
     do k = KS, KE
@@ -1432,19 +1618,22 @@ contains
     end do
     end do
     end do
+    !$acc end kernels
 
-    iprod(1) = r0r
-    iprod(2) = norm
-    call MPI_AllReduce(iprod, buf, 2, COMM_datatype, MPI_SUM, COMM_world, ierror)
-    r0r = buf(1)
-    norm = buf(2)
-
+    iprod1 = r0r
+    iprod2 = norm
+    call MPI_AllReduce(iprod1, buf1, 1, COMM_datatype, MPI_SUM, COMM_world, ierror)
+    call MPI_AllReduce(iprod2, buf2, 1, COMM_datatype, MPI_SUM, COMM_world, ierror)
+    r0r = buf1
+    norm = buf2
     error2 = norm
 
     do iter = 1, ITMAX
 
        error = 0.0_RP
        !$omp parallel do reduction(+:error) private(i, j, k)
+       !$acc kernels
+       !$acc loop independent collapse(3) reduction(+:error)
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
@@ -1452,8 +1641,10 @@ contains
        enddo
        enddo
        enddo
-       call MPI_AllReduce(error, buf, 1, COMM_datatype, MPI_SUM, COMM_world, ierror)
-       error = buf(1)
+       !$acc end kernels
+
+       call MPI_AllReduce(error, buf1, 1, COMM_datatype, MPI_SUM, COMM_world, ierror)
+       error = buf1
 
        if ( sqrt(error/norm) < epsilon ) then
          LOG_INFO("ATMOS_PHY_LT_Efield",'(a,1x,i0,1x,2e15.7)') "Bi-CGSTAB converged:", iter, sqrt(error/norm),norm
@@ -1471,38 +1662,47 @@ contains
                            JA, JS, JE, & ! (in)
                            Mp, M, p    )
 
-          iprod(1) = 0.0_RP
-          !$omp parallel do reduction(+:iprod) private(i, j, k)
+          !$omp parallel do reduction(+:iprod1) private(i, j, k)
+          iprod1 = 0.0_RP
+          !$acc kernels
+          !$acc loop independent collapse(3) reduction(+:iprod1)
           do j = JS, JE
           do i = IS, IE
           do k = KS, KE
-             iprod(1) = iprod(1) + r0(k,i,j) * Mp(k,i,j)
+             iprod1 = iprod1 + r0(k,i,j) * Mp(k,i,j)
           enddo
           enddo
           enddo
+          !$acc end kernels
 
        else   !--- Preprocessing
 
           if( FLAG_preprocessing == 1 ) then !--- Gauss-Seidel preprocessing
 
+             !$acc update host(M,p)
              call gs( KA, KS, KE, & ! (in)
                       IA, IS, IE, & ! (in)
                       JA, JS, JE, & ! (in)
                       z1, M, p    )
+             !$acc update device(z1)
 
           elseif( FLAG_preprocessing == 2 ) then  !--- Synmetric Gauss-Seidel preprocessing (Default)
 
+             !$acc update host(M,p)
              call sgs( KA, KS, KE, & ! (in)
                        IA, IS, IE, & ! (in)
                        JA, JS, JE, & ! (in)
                        z1, M, p    )
+             !$acc update device(z1)
 
           elseif( FLAG_preprocessing == 3 ) then  !--- Incomplete Cholesky Factorization preprocessing
 
+             !$acc update host(M,p,diag)
              call solve_ILU( KA, KS, KE, & ! (in)
                              IA, IS, IE, & ! (in)
                              JA, JS, JE, & ! (in)
                              z1, M, p, diag)
+             !$acc update device(z1)
 
           endif
 
@@ -1518,27 +1718,33 @@ contains
                            JA, JS, JE, & ! (in)
                            Mz1, M, z1    )
 
-          iprod(1) = 0.0_RP
-          !$omp parallel do reduction(+:iprod)  private(i, j, k)
+          iprod1 = 0.0_RP
+          !$omp parallel do reduction(+:iprod1)  private(i, j, k)
+          !$acc kernels
+          !$acc loop independent collapse(3) reduction(+:iprod1)
           do j = JS, JE
           do i = IS, IE
           do k = KS, KE
-             iprod(1) = iprod(1) + r0(k,i,j) * Mz1(k,i,j)
+             iprod1 = iprod1 + r0(k,i,j) * Mz1(k,i,j)
           enddo
           enddo
           enddo
+          !$acc end kernels
 
        endif
 
-       call MPI_AllReduce(iprod, buf, 1, COMM_datatype, MPI_SUM, COMM_world, ierror)
-       if ( buf(1) == 0.0_RP ) then
-         LOG_INFO("ATMOS_PHY_LT_Efield",'(a,1x,e15.7,1x,i10)') 'Buf(1) is zero(Bi-CGSTAB) skip:', buf(1), iter
+       call MPI_AllReduce(iprod1, buf1, 1, COMM_datatype, MPI_SUM, COMM_world, ierror)
+
+       if ( buf1 == 0.0_RP ) then
+         LOG_INFO("ATMOS_PHY_LT_Efield",'(a,1x,e15.7,1x,i10)') 'Buf1 is zero(Bi-CGSTAB) skip:', buf1, iter
          exit
        endif
-       al = r0r / buf(1) ! (r0,r) / (r0,Mp)
+       al = r0r / buf1 ! (r0,r) / (r0,Mp)
 
        if( FLAG_preprocessing == 0 ) then  !-- No preprocessing
           !$omp parallel do
+          !$acc kernels
+          !$acc loop independent collapse(3)
           do j = JS, JE
           do i = IS, IE
           do k = KS, KE
@@ -1546,8 +1752,11 @@ contains
           enddo
           enddo
           enddo
+          !$acc end kernels
        else  ! Preprocessing
           !$omp parallel do private(i, j, k)
+          !$acc kernels
+          !$acc loop independent collapse(3)
           do j = JS, JE
           do i = IS, IE
           do k = KS, KE
@@ -1555,6 +1764,7 @@ contains
           enddo
           enddo
           enddo
+          !$acc end kernels
        endif
 
        call COMM_vars8( s, 1 )
@@ -1566,40 +1776,49 @@ contains
                            JA, JS, JE, & ! (in)
                            Ms, M,  s   )
 
-          iprod(1) = 0.0_RP
-          iprod(2) = 0.0_RP
-          !$omp parallel do reduction(+:iprod)
+          iprod1 = 0.0_RP
+          iprod2 = 0.0_RP
+          !$omp parallel do reduction(+:iprod1,iprod2)
+          !$acc kernels
+          !$acc loop independent collapse(3) reduction(+:iprod1,iprod2)
           do j = JS, JE
           do i = IS, IE
           do k = KS, KE
-             iprod(1) = iprod(1) + Ms(k,i,j) *  s(k,i,j)
-             iprod(2) = iprod(2) + Ms(k,i,j) * Ms(k,i,j)
+             iprod1 = iprod1 + Ms(k,i,j) *  s(k,i,j)
+             iprod2 = iprod2 + Ms(k,i,j) * Ms(k,i,j)
           enddo
           enddo
           enddo
+          !$acc end kernels
 
        else  !--- Preprocessing
 
           if( FLAG_preprocessing == 1 ) then   !--- Gauss-Seidel preprocessing
 
+             !$acc update host(M,s)
              call gs( KA, KS, KE, & ! (in)
                       IA, IS, IE, & ! (in)
                       JA, JS, JE, & ! (in)
                       z2, M, s    )
+             !$acc update device(z2)
 
           elseif( FLAG_preprocessing == 2 ) then  !--- Synmetric Gauss-Seidel preprocessing (Default)
 
+             !$acc update host(M,s)
              call sgs( KA, IS, KE, & ! (in)
                        IA, IS, IE, & ! (in)
                        JA, JS, JE, & ! (in)
                        z2, M, s    )
+             !$acc update device(z2)
 
           elseif( FLAG_preprocessing == 3 ) then  !--- Incomplete Cholesky Factorization preprocessing
 
+             !$acc update host(M,s,diag)
              call solve_ILU( KA, KS, KE, & ! (in)
                              IA, IS, IE, & ! (in)
                              JA, JS, JE, & ! (in)
                              z2, M, s, diag)
+             !$acc update device(z2)
           endif
 
           call COMM_vars8( z2, 1 )
@@ -1608,31 +1827,38 @@ contains
                            IA, IS, IE, & ! (in)
                            JA, JS, JE, & ! (in)
                            Mz2, M, z2 )
-          iprod(1) = 0.0_RP
-          iprod(2) = 0.0_RP
-          !$omp parallel do reduction(+:iprod) private(i, j, k)
+
+          iprod1 = 0.0_RP
+          iprod2 = 0.0_RP
+          !$omp parallel do reduction(+:iprod1,iprod2) private(i, j, k)
+          !$acc kernels
+          !$acc loop independent collapse(3) reduction(+:iprod1,iprod2)
           do j = JS, JE
           do i = IS, IE
           do k = KS, KE
-             iprod(1) = iprod(1) + Mz2(k,i,j) *  s(k,i,j)
-             iprod(2) = iprod(2) + Mz2(k,i,j) * Mz2(k,i,j)
+             iprod1 = iprod1 + Mz2(k,i,j) *  s(k,i,j)
+             iprod2 = iprod2 + Mz2(k,i,j) * Mz2(k,i,j)
           enddo
           enddo
           enddo
+          !$acc end kernels
 
        endif
 
-       call MPI_AllReduce(iprod, buf, 2, COMM_datatype, MPI_SUM, COMM_world, ierror)
-       if ( buf(2) == 0.0_RP ) then
-         LOG_INFO("ATMOS_PHY_LT_Efield",'(a,1x,e15.7,1x,i10)') 'Buf(2) is zero(Bi-CGSTAB) skip:', buf(2), iter
+       call MPI_AllReduce(iprod1, buf1, 1, COMM_datatype, MPI_SUM, COMM_world, ierror)
+       call MPI_AllReduce(iprod2, buf2, 1, COMM_datatype, MPI_SUM, COMM_world, ierror)
+
+       if ( buf2 == 0.0_RP ) then
+         LOG_INFO("ATMOS_PHY_LT_Efield",'(a,1x,e15.7,1x,i10)') 'Buf2 is zero(Bi-CGSTAB) skip:', buf2, iter
          exit
        endif
-       w = buf(1) / buf(2) ! (Ms,s) / (Ms,Ms)
-
+       w = buf1 / buf2 ! (Ms,s) / (Ms,Ms)
 
        if( FLAG_preprocessing == 0 ) then !--- No preprocessing
 
           !$omp parallel do private(i, j, k)
+          !$acc kernels
+          !$acc loop independent collapse(3)
           do j = JS, JE
           do i = IS, IE
           do k = KS, KE
@@ -1640,8 +1866,11 @@ contains
           enddo
           enddo
           enddo
+          !$acc end kernels
 
           !$omp parallel do private(i, j, k)
+          !$acc kernels
+          !$acc loop independent collapse(3)
           do j = JS, JE
           do i = IS, IE
           do k = KS, KE
@@ -1649,11 +1878,13 @@ contains
           enddo
           enddo
           enddo
-
+          !$acc end kernels
 
        else
 
           !$omp parallel do private(i, j, k)
+          !$acc kernels
+          !$acc loop independent collapse(3)
           do j = JS, JE
           do i = IS, IE
           do k = KS, KE
@@ -1661,8 +1892,11 @@ contains
           enddo
           enddo
           enddo
+          !$acc end kernels
 
           !$omp parallel do private(i, j, k)
+          !$acc kernels
+          !$acc loop independent collapse(3)
           do j = JS, JE
           do i = IS, IE
           do k = KS, KE
@@ -1670,27 +1904,33 @@ contains
           enddo
           enddo
           enddo
+          !$acc end kernels
 
        endif
 
-       iprod(1) = 0.0_RP
-       !$omp parallel do reduction(+:iprod) private(i, j, k)
+       iprod1 = 0.0_RP
+       !$omp parallel do reduction(+:iprod1) private(i, j, k)
+       !$acc kernels
+       !$acc loop independent collapse(3) reduction(+:iprod1)
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
-          iprod(1) = iprod(1) + r0(k,i,j) * rn(k,i,j)
+          iprod1 = iprod1 + r0(k,i,j) * rn(k,i,j)
        enddo
        enddo
        enddo
+       !$acc end kernels
 
        be = al/w / r0r
 
-       call MPI_AllReduce(iprod, r0r, 1, COMM_datatype, MPI_SUM, COMM_world, ierror)
+       call MPI_AllReduce(iprod1, r0r, 1, COMM_datatype, MPI_SUM, COMM_world, ierror)
 
        be = be * r0r ! al/w * (r0,rn)/(r0,r)
 
        if( FLAG_preprocessing == 0 ) then !--- No preprocessing
           !$omp parallel do private(i, j, k)
+          !$acc kernels
+          !$acc loop independent collapse(3)
           do j = JS, JE
           do i = IS, IE
           do k = KS, KE
@@ -1698,8 +1938,11 @@ contains
           enddo
           enddo
           enddo
+          !$acc end kernels
        else
           !$omp parallel do private(i, j, k)
+          !$acc kernels
+          !$acc loop independent collapse(3)
           do j = JS, JE
           do i = IS, IE
           do k = KS, KE
@@ -1707,11 +1950,15 @@ contains
           enddo
           enddo
           enddo
+          !$acc end kernels
        endif
 
-       swap => rn
-       rn => r
-       r => swap
+       !$acc kernels
+       swap(:,:,:) = rn(:,:,:)
+       rn(:,:,:)   = r(:,:,:)
+       r (:,:,:)   = swap(:,:,:)
+       !$acc end kernels
+
 
        if ( r0r == 0.0_RP ) then
          LOG_INFO("ATMOS_PHY_LT_Efield",'(a,1x,i0,1x,3e15.7)') "Inner product of r0 and r_itr is zero(Bi-CGSTAB) :", &
@@ -1733,6 +1980,7 @@ contains
        endif
     endif
 
+    !$acc end data
     return
   end subroutine ATMOS_PHY_LT_solve_bicgstab
 
@@ -2008,7 +2256,7 @@ contains
                   IA, IS, IE, &
                   JA, JS, JE, &
                   Z,  M,  Y )
-  
+
     return
   
   end subroutine sgs
@@ -2314,9 +2562,13 @@ contains
 
     integer :: k, i, j
 
+    !$acc kernels copyin(M,C) copyout(V)
     !$omp parallel do private(i,j,k)
+    !$acc loop independent
     do j = JS, JE
+    !$acc loop independent
     do i = IS, IE
+       !$acc loop independent
        do k = KS+1, KE-1
           V(k,i,j) = M(k,1,i,j) * C(k  ,i  ,j  ) &
                    + M(k,2,i,j) * C(k-1,i  ,j  ) &
@@ -2356,6 +2608,7 @@ contains
                  + M(KE,11,i,j)* C(KE-1,i  ,j+1)
     enddo
     enddo
+    !$acc end kernels
 
     return
   end subroutine mul_matrix
@@ -2938,7 +3191,6 @@ contains
        enddo
        enddo
        enddo
-
        iprod(1) =  Npls
        iprod(2) =  Nmns
        call MPI_AllReduce(iprod, ibuf, 2, MPI_integer, MPI_SUM, COMM_world, ierr)
@@ -3172,7 +3424,7 @@ contains
     real(RP) :: Edif(KS:KE), Edif_max, abs_qcrg_max
     real(RP) :: sw
 
-    integer, allocatable :: proc_num(:), proc_numg(:)
+    !integer, allocatable :: proc_num(:), proc_numg(:)
     real(RP),allocatable :: E_exce_x(:), E_exce_x_g(:)  !--- x point of column in which |E|>Eint is included [m] (_g means global attribute)
     real(RP),allocatable :: E_exce_y(:), E_exce_y_g(:)  !--- y point of column in which |E|>Eint is included [m] (_g means global attribute)
     real(RP) :: exce_grid(2,KIJMAX)
@@ -3180,24 +3432,38 @@ contains
     integer  :: countindx(PRC_nprocs+1)
     integer  :: num_own                               !--- number of column whose |E| > Eint-dEint for each process
     integer  :: num_total                             !--- total number of column whose |E| > Eint-dEint
-    real(RP) :: rbuf1(2), rbuf2(2)
+    real(RP) :: rbuf1, rbuf2
     integer  :: k, i, j, ipp, iq, ierr
 
     call PROF_rapstart('LT_neut_F2013', 1)
 
+    !$acc data copyin(Efield,E_pot,QCRG,DENS,QHYD,CX,CY) &
+    !$acc      copy(NUM_end,LT_path) &
+    !$acc      copyout(fls_int_p,d_QCRG,B_OUT) &
+    !$acc      create(B,C,Edif,exce_grid,count1)
+
     !$omp parallel do
+    !$acc kernels
+    !$acc loop independent collapse(4)
     do j = JS, JE
     do i = IS, IE
     do k = KS, IE
-       NUM_end(k,i,j,:) = 0.0_RP
+    do iq = 1, 3
+       NUM_end(k,i,j,iq) = 0.0_RP
     end do
     end do
     end do
+    end do
+    !$acc end kernels
+
     !--- search grid whose Efield is over threshold of flash inititation
     num_own = 0
+    !$acc kernels
+    !$acc loop independent collapse(2) reduction(+:num_own)
     do j = JS, JE
     do i = IS, IE
        Edif_max = -1.0_RP
+       !$acc loop independent reduction(max:Edif_max)
        do k = KS, KE
           Edif(k) = Efield(k,i,j,I_lt_abs) - ( Eint-delEint )
           Edif_max = max( Edif_max, Edif(k) )
@@ -3206,17 +3472,22 @@ contains
           num_own = num_own + 1
           exce_grid(1,num_own) = CX(i)
           exce_grid(2,num_own) = CY(j)
+          !$acc loop independent
           do k = KS, KE
              fls_int_p(k,i,j) = 0.5_RP + sign( 0.5_RP, Edif(k)-EPS )
           enddo
        else
+          !$acc loop independent
           do k = KS, KE
              fls_int_p(k,i,j) = 0.0_RP
           enddo
        endif
     enddo
     enddo
+    !$acc end kernels
 
+    !############## calculation by CPU ################
+    !$acc update host(exce_grid)
     !**** proc_num(0~) -> process number of each grid with |E|> E_threthold (local)
 !    allocate(proc_num(own_prc_total))
     allocate(E_exce_x(num_own))
@@ -3249,7 +3520,10 @@ contains
     call MPI_AllGatherv( E_exce_y,   num_own, COMM_datatype, &
                          E_exce_y_g, count1, countindx, COMM_datatype, &
                          COMM_world, ierr )
+    !$acc data copyin(E_exce_x_g,E_exce_y_g)
+    !############## calculation by CPU ################
 
+    !$acc kernels
     C(:,:) = 0
     do ipp = 1, num_total
        do j = JS, JE
@@ -3262,17 +3536,23 @@ contains
        enddo
        enddo
     enddo
+    !$acc end kernels
+
+    !$acc end data
 
     Spls = 0.0_RP
     Smns = 0.0_RP
     !$omp parallel do reduction(+:Spls,Smns) &
     !$omp private(abs_qcrg_max,sw)
+    !$acc kernels
+    !$acc loop independent collapse(2) reduction(+:Spls,Smns)
     do j = JS, JE
     do i = IS, IE
 
        B(i,j) = 0.0_RP
        if ( C(i,j) == 1 ) then
           abs_qcrg_max = abs( QCRG(KS,i,j) )
+          !$acc loop reduction(max:abs_qcrg_max)
           do k = KS+1, KE
              abs_qcrg_max = max( abs_qcrg_max, abs( QCRG(k,i,j) ) )
           end do
@@ -3288,16 +3568,17 @@ contains
 
     enddo
     enddo
+    !$acc end kernels
 
-    rbuf1(1) = Spls
-    call MPI_Allreduce( rbuf1, rbuf2, 1, COMM_datatype, &
+    rbuf1 = Spls
+    call MPI_AllReduce( rbuf1, rbuf2, 1, COMM_datatype, &
                         MPI_SUM, COMM_world, ierr       )
-    Spls_g = rbuf2(1)
+    Spls_g = rbuf2
 
-    rbuf1(1) = Smns
-    call MPI_Allreduce( rbuf1, rbuf2, 1, COMM_datatype, &
+    rbuf1 = Smns
+    call MPI_AllReduce( rbuf1, rbuf2, 1, COMM_datatype, &
                         MPI_SUM, COMM_world, ierr       )
-    Smns_g = rbuf2(1)
+    Smns_g = rbuf2
 
     if( max( Spls_g,Smns_g )*0.3_RP < min( Spls_g,Smns_g ) ) then
       Q_d = 0.3_RP * max( Spls_g,Smns_g )
@@ -3319,6 +3600,8 @@ contains
 
     !---- select initial point of flash by random select
     !$omp parallel do
+    !$acc kernels
+    !$acc loop independent collapse(3)
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -3335,17 +3618,20 @@ contains
     enddo
     enddo
 
+    !$acc loop independent collapse(2)
     do j = JS, JE
     do i = IS, IE
        B_OUT(i,j) = B(i,j)
     enddo
     enddo
+    !$acc end kernels
 
     deallocate(E_exce_x)
     deallocate(E_exce_y)
     deallocate(E_exce_x_g)
     deallocate(E_exce_y_g)
 
+    !$acc end data
 
     call PROF_rapend('LT_neut_F2013', 1)
 
@@ -3382,12 +3668,18 @@ contains
     integer  :: own_prc_total, iprod1, buf
     integer  :: k, i, j, ierr
 
+    !$acc data &
+    !$acc copyin(DENS,Efield) &
+    !$acc create(Eint_hgt)
+
     !--- search grid whose Efield is over threshold of flash inititation
     own_prc_total = 0
     if( flg_eint_hgt == 1.0_RP ) then
        !$omp parallel do &
        !$omp reduction(+:own_prc_total) &
        !$omp private(E_det)
+       !$acc kernels
+       !$acc loop independent collapse(3) reduction(+:own_prc_total)
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
@@ -3402,10 +3694,13 @@ contains
        enddo
        enddo
        enddo
+       !$acc end kernels
     else
        !$omp parallel do &
        !$omp reduction(+:own_prc_total) &
        !$omp private(E_det)
+       !$acc kernels
+       !$acc loop independent collapse(3) reduction(+:own_prc_total)
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
@@ -3416,12 +3711,23 @@ contains
        enddo
        enddo
        enddo
+       !$acc end kernels
     endif
 
     !--- Add number of grids, whose |E| are over threshold of flash initiaion, for all process
     iprod1 = own_prc_total
     call MPI_AllReduce(iprod1, buf, 1, MPI_integer, MPI_SUM, COMM_world, ierr)
-    rprod1 = maxval(Efield(KS:KE,IS:IE,JS:JE))
+    rprod1 = 0.0_RP
+    !$acc kernels
+    !$acc loop independent collapse(3) reduction(max:rprod1)
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       rprod1 = max(rprod1,Efield(k,i,j))
+    enddo
+    enddo
+    enddo
+    !$acc end kernels
     call MPI_AllReduce(rprod1, rbuf, 1, COMM_datatype, MPI_MAX, COMM_world, ierr)
     !--- exit when no grid point with |E| over threshold of flash initiation exist
     Emax = rbuf
@@ -3433,6 +3739,8 @@ contains
         flg_lt_neut = 2
       endif
     endif
+
+    !$acc end data
 
   end subroutine ATMOS_PHY_LT_judge_absE
   !-----------------------------------------------------------------------------
@@ -3463,29 +3771,38 @@ contains
     real(RP), intent(out) :: beta_crg(KA,IA,JA)
 
     integer  :: i, j, k, pp, qq, iq
-    integer  :: grid(2)
+    integer  :: grid1, grid2
     real(RP) :: cwc
     real(RP) :: diffx(nxlut_lt), diffy(nylut_lt)
 
+    !$acc data copyin(TEMP,DENS,QLIQ) copyout(dqcrg,beta_crg) &
+    !$acc      create(diffx,diffy)
+
     !$omp parallel do &
-    !$omp private(cwc,diffx,diffy,grid)
+    !$omp private(cwc,diffx,diffy,grid1,grid2)
+    !$acc kernels
+    !$acc loop independent collapse(2)
     do j = JS, JE
     do i = IS, IE
+    !$acc loop private(diffx,diffy)
     do k = KS, KE
        if( TEMP(k,i,j) <= T00 .and. TEMP(k,i,j) >= tcrglimit ) then
           cwc = 0.0_RP
+          !$acc loop independent reduction(+:cwc)
           do iq = 1, NLIQ
              cwc = cwc + QLIQ(k,i,j,iq) * DENS(k,i,j) * 1.0E+3_RP ![g/m3]
           enddo
+          !$acc loop seq
           do pp = 1, nxlut_lt
              diffx(pp) = abs( grid_lut_t(pp)-TEMP(k,i,j) )
           enddo
-          grid(1) = minloc( diffx,1 )
+          grid1 = minloc( diffx,1 )
+          !$acc loop seq
           do qq = 1, nylut_lt
              diffy(qq) = abs( grid_lut_l(qq)-cwc )
           enddo
-          grid(2) = minloc( diffy,1 )
-          dqcrg(k,i,j) = dq_chrg( grid(1), grid(2) ) &
+          grid2 = minloc( diffy,1 )
+          dqcrg(k,i,j) = dq_chrg( grid1, grid2 ) &
                        *( 0.5_RP + sign( 0.5_RP,cwc-1.0E-2_RP ) ) !--- no charge separation when cwc < 0.01 [g/m3]
        else
           dqcrg(k,i,j) = 0.0_RP
@@ -3501,6 +3818,9 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
+
+    !$acc end data
 
     return
 

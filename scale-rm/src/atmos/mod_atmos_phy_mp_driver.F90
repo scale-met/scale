@@ -933,15 +933,12 @@ contains
              end do
              !$acc end kernels
 
-!             !$acc update host(TEMP1, DENS, QTRC1(:,:,:,QLS:QLE)) ! tentative
-             !$acc update host(TEMP1, QTRC1(:,:,:,QLS:QLE)) ! tentative
              call ATMOS_PHY_LT_sato2019_select_dQCRG_from_LUT( &
                   KA, KS, KE, IA, IS, IE, JA, JS, JE, & ! [IN]
                   QLA,                                & ! [IN]
                   TEMP1(:,:,:), DENS(:,:,:),          & ! [IN]
                   QTRC1(:,:,:,QLS:QLE),               & ! [IN]
                   dqcrg(:,:,:), beta_crg(:,:,:)       ) ! [OUT]
-             !$acc update device(dqcrg, beta_crg) ! tentative
              call ATMOS_PHY_MP_tomita08_adjustment( &
                   KA, KS, KE, IA, IS, IE, JA, JS, JE, &
                   DENS(:,:,:), PRES(:,:,:), CCN(:,:,:), dt_MP,                          & ! [IN]
