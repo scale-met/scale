@@ -3792,12 +3792,12 @@ contains
           do iq = 1, NLIQ
              cwc = cwc + QLIQ(k,i,j,iq) * DENS(k,i,j) * 1.0E+3_RP ![g/m3]
           enddo
-          !$acc loop seq
+          !$acc loop independent
           do pp = 1, nxlut_lt
              diffx(pp) = abs( grid_lut_t(pp)-TEMP(k,i,j) )
           enddo
           grid1 = minloc( diffx,1 )
-          !$acc loop seq
+          !$acc loop independent
           do qq = 1, nylut_lt
              diffy(qq) = abs( grid_lut_l(qq)-cwc )
           enddo

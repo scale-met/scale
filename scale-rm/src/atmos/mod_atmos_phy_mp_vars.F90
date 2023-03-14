@@ -178,6 +178,7 @@ contains
     ATMOS_PHY_MP_RHOH     (:,:,:)   = 0.0_RP
     ATMOS_PHY_MP_EVAPORATE(:,:,:)   = 0.0_RP
 !    !$acc update device(ATMOS_PHY_MP_DENS_t, ATMOS_PHY_MP_MOMZ_t, ATMOS_PHY_MP_RHOU_t, ATMOS_PHY_MP_RHOV_t, ATMOS_PHY_MP_RHOT_t, ATMOS_PHY_MP_RHOQ_t, ATMOS_PHY_MP_RHOH, ATMOS_PHY_MP_EVAPORATE)
+    !$acc enter data create(ATMOS_PHY_MP_DENS_t, ATMOS_PHY_MP_MOMZ_t, ATMOS_PHY_MP_RHOU_t, ATMOS_PHY_MP_RHOV_t, ATMOS_PHY_MP_RHOT_t, ATMOS_PHY_MP_RHOQ_t, ATMOS_PHY_MP_RHOH, ATMOS_PHY_MP_EVAPORATE)
 
     allocate( ATMOS_PHY_MP_SFLX_rain(IA,JA) )
     allocate( ATMOS_PHY_MP_SFLX_snow(IA,JA) )
@@ -186,6 +187,7 @@ contains
     ATMOS_PHY_MP_SFLX_snow(:,:) = UNDEF
     ATMOS_PHY_MP_SFLX_ENGI(:,:) = UNDEF
 !    !$acc update device(ATMOS_PHY_MP_SFLX_rain, ATMOS_PHY_MP_SFLX_snow, ATMOS_PHY_MP_SFLX_ENGI)
+    !$acc enter data create(ATMOS_PHY_MP_SFLX_rain, ATMOS_PHY_MP_SFLX_snow, ATMOS_PHY_MP_SFLX_ENGI)
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -241,6 +243,7 @@ contains
     DIAG_Re      = .false.
     DIAG_Qe      = .false.
     DIAG_Ne      = .false.
+    !$acc enter data create(ATMOS_PHY_MP_CLDFRAC, ATMOS_PHY_MP_Re, ATMOS_PHY_MP_Qe, ATMOS_PHY_MP_Ne)
 
     ! history
     allocate( HIST_Re_id(N_HYD) )
@@ -287,16 +290,20 @@ contains
     deallocate( ATMOS_PHY_MP_RHOQ_t     )
     deallocate( ATMOS_PHY_MP_RHOH       )
     deallocate( ATMOS_PHY_MP_EVAPORATE  )
+    !$acc exit data delete(ATMOS_PHY_MP_DENS_t,ATMOS_PHY_MP_MOMZ_t,ATMOS_PHY_MP_RHOU_t,ATMOS_PHY_MP_RHOV_t,ATMOS_PHY_MP_RHOT_t,ATMOS_PHY_MP_RHOH,ATMOS_PHY_MP_EVAPORATE)
 
     deallocate( ATMOS_PHY_MP_SFLX_rain )
     deallocate( ATMOS_PHY_MP_SFLX_snow )
     deallocate( ATMOS_PHY_MP_SFLX_ENGI )
+    !$acc exit data delete(ATMOS_PHY_MP_SFLX_rain,ATMOS_PHY_MP_SFLX_snow,ATMOS_PHY_MP_SFLX_ENGI)
 
     ! diagnostices
     deallocate( ATMOS_PHY_MP_CLDFRAC )
     deallocate( ATMOS_PHY_MP_Re      )
     deallocate( ATMOS_PHY_MP_Qe      )
     deallocate( ATMOS_PHY_MP_Ne      )
+    !$acc exit data delete(ATMOS_PHY_MP_CLDFRAC,ATMOS_PHY_MP_Re,ATMOS_PHY_MP_Qe,ATMOS_PHY_MP_Ne)
+
 
     ! history
     deallocate( HIST_Re_id )
@@ -530,7 +537,7 @@ contains
     integer  :: ih
     !---------------------------------------------------------------------------
 
-!    !$acc data create(WORK)
+    !$acc data create(WORK)
 
     if ( HIST_CLDFRAC_id > 0 ) then
        call FILE_HISTORY_query( HIST_CLDFRAC_id, do_put )
@@ -619,7 +626,7 @@ contains
        end if
     end if
 
-!    !$acc end data
+    !$acc end data
 
     return
   end subroutine ATMOS_PHY_MP_vars_history
@@ -668,7 +675,7 @@ contains
     integer :: k, i, j, ih
 
     if ( present(CLDFRAC) ) then
-!       !$acc data copyout(CLDFRAC)
+       !$acc data copyout(CLDFRAC)
        if ( .not. DIAG_CLDFRAC ) then
           select case ( ATMOS_PHY_MP_TYPE )
           case ( 'KESSLER' )
@@ -693,14 +700,14 @@ contains
                   ATMOS_PHY_MP_CLDFRAC(:,:,:)                                ) ! [OUT]
           case default
 !OCL XFILL
-!             !$acc kernels
+             !$acc kernels
              ATMOS_PHY_MP_CLDFRAC(:,:,:) = 0.0_RP
-!             !$acc end kernels
+             !$acc end kernels
           end select
           DIAG_CLDFRAC = .true.
        end if
 !OCL XFILL
-!       !$acc kernels
+       !$acc kernels
        do j = JSB, JEB
        do i = ISB, IEB
        do k = KS, KE
@@ -708,12 +715,12 @@ contains
        end do
        end do
        end do
-!       !$acc end kernels
-!       !$acc end data
+       !$acc end kernels
+       !$acc end data
     end if
 
     if ( present(Re) ) then
-!       !$acc data copyout(Re)
+       !$acc data copyout(Re)
        if ( .not. DIAG_Re ) then
           select case ( ATMOS_PHY_MP_TYPE )
           case ( 'KESSLER' )
@@ -738,14 +745,14 @@ contains
                   ATMOS_PHY_MP_Re(:,:,:,:)                             ) ! [OUT]
           case default
 !OCL XFILL
-!             !$acc kernels
+             !$acc kernels
              ATMOS_PHY_MP_Re(:,:,:,:) = 0.0_RP
-!             !$acc end kernels
+             !$acc end kernels
           end select
           DIAG_Re = .true.
        end if
 !OCL XFILL
-!       !$acc kernels
+       !$acc kernels
        do ih = 1, N_HYD
        do j = JSB, JEB
        do i = ISB, IEB
@@ -755,12 +762,12 @@ contains
        end do
        end do
        end do
-!       !$acc end kernels
-!       !$acc end data
+       !$acc end kernels
+       !$acc end data
     end if
 
     if ( present(Qe) ) then
-!       !$acc data copyout(Qe)
+       !$acc data copyout(Qe)
        if ( .not. DIAG_Qe ) then
           select case ( ATMOS_PHY_MP_TYPE )
           case ( 'KESSLER' )
@@ -785,14 +792,14 @@ contains
                   ATMOS_PHY_MP_Qe(:,:,:,:)   ) ! [OUT]
           case default
 !OCL XFILL
-!             !$acc kernels
+             !$acc kernels
              ATMOS_PHY_MP_Qe(:,:,:,:) = 0.0_RP
-!             !$acc end kernels
+             !$acc end kernels
           end select
           DIAG_Qe = .true.
        end if
 !OCL XFILL
-!       !$acc kernels
+       !$acc kernels
        do ih = 1, N_HYD
        do j = JSB, JEB
        do i = ISB, IEB
@@ -802,12 +809,12 @@ contains
        end do
        end do
        end do
-!       !$acc end kernels
-!       !$acc end data
+       !$acc end kernels
+       !$acc end data
     end if
 
     if ( present(Ne) ) then
-!       !$acc data copyout(Ne)
+       !$acc data copyout(Ne)
        if ( .not. DIAG_Ne ) then
           select case ( ATMOS_PHY_MP_TYPE )
           case ( 'KESSLER', 'TOMITA08' )
@@ -826,7 +833,7 @@ contains
           DIAG_Ne = .true.
        end if
 !OCL XFILL
-!       !$acc kernels
+       !$acc kernels
        do ih = 1, N_HYD
        do j = JSB, JEB
        do i = ISB, IEB
@@ -836,8 +843,8 @@ contains
        end do
        end do
        end do
-!       !$acc end kernels
-!       !$acc end data
+       !$acc end kernels
+       !$acc end data
     end if
 
     return

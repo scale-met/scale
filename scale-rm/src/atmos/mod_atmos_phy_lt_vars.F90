@@ -55,6 +55,7 @@ module mod_atmos_phy_lt_vars
 
   real(RP), public, allocatable :: ATMOS_PHY_LT_Epot(:,:,:) ! tendency QTRC [kg/kg/s]
   real(RP), public, allocatable :: ATMOS_PHY_LT_Sarea(:,:,:,:)
+!  !$acc declare create(ATMOS_PHY_LT_Epot,ATMOS_PHY_LT_Sarea)
 
   integer, public :: QA_LT = 0
   integer, public :: QS_LT = -1
@@ -117,6 +118,8 @@ contains
 
     allocate( ATMOS_PHY_LT_Epot(KA,IA,JA) )
     ATMOS_PHY_LT_Epot(:,:,:) = UNDEF
+    !$acc enter data create(ATMOS_PHY_LT_Epot)
+!    !$acc update device (ATMOS_PHY_LT_Epot)
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -159,6 +162,8 @@ contains
     ! for cloud microphysics
     allocate( ATMOS_PHY_MP_RHOC_t(KA,IA,JA,QS_LT:QE_LT) )
     ATMOS_PHY_MP_RHOC_t(:,:,:,:) = 0.0_RP
+!    !$acc update device (ATMOS_PHY_MP_RHOC_t)
+    !$acc enter data create(ATMOS_PHY_MP_RHOC_t)
 
 
     return
@@ -179,6 +184,8 @@ contains
 
     ! for cloud microphysics
     deallocate( ATMOS_PHY_MP_RHOC_t )
+    !$acc exit data delete(ATMOS_PHY_LT_Epot,ATMOS_PHY_MP_RHOC_t)
+
 
     return
   end subroutine ATMOS_PHY_LT_vars_finalize
@@ -194,15 +201,21 @@ contains
     integer :: i, j
     !---------------------------------------------------------------------------
 
+    !$acc data copy(ATMOS_PHY_LT_Epot)
+
+    !$acc kernels
     do j  = JS, JE
     do i  = IS, IE
        ATMOS_PHY_LT_Epot(   1:KS-1,i,j) = ATMOS_PHY_LT_Epot(KS,i,j)
        ATMOS_PHY_LT_Epot(KE+1:KA,  i,j) = ATMOS_PHY_LT_Epot(KE,i,j)
     enddo
     enddo
+    !$acc end kernels
 
     call COMM_vars8( ATMOS_PHY_LT_Epot(:,:,:), 1 )
     call COMM_wait ( ATMOS_PHY_LT_Epot(:,:,:), 1 )
+
+    !$acc end data
 
     return
   end subroutine ATMOS_PHY_LT_vars_fillhalo
@@ -261,6 +274,9 @@ contains
     integer  :: i, j
     !---------------------------------------------------------------------------
 
+    !$acc data copyout(ATMOS_PHY_LT_Epot) &
+    !$acc      copyin(ATMOS_GRID_CARTESC_REAL_VOL)
+
     if ( restart_fid /= -1 ) then
        LOG_NEWLINE
        LOG_INFO("ATMOS_PHY_LT_vars_restart_read",*) 'Read from restart file (ATMOS_PHY_LT) '
@@ -272,12 +288,14 @@ contains
           call FILE_CARTESC_flush( restart_fid ) ! X/Y halos have been read from file
 
           ! fill K halos
+          !$acc kernels
           do j  = 1, JA
           do i  = 1, IA
              ATMOS_PHY_LT_Epot(   1:KS-1,i,j) = ATMOS_PHY_LT_Epot(KS,i,j)
              ATMOS_PHY_LT_Epot(KE+1:KA,  i,j) = ATMOS_PHY_LT_Epot(KE,i,j)
           enddo
           enddo
+          !$acc end kernels
        else
           call ATMOS_PHY_LT_vars_fillhalo
        end if
@@ -291,6 +309,8 @@ contains
     else
        LOG_INFO("ATMOS_PHY_LT_vars_restart_read",*) 'invalid restart file for ATMOS_PHY_LT.'
     endif
+
+    !$acc end data
 
     return
   end subroutine ATMOS_PHY_LT_vars_restart_read
@@ -397,6 +417,8 @@ contains
 
     !---------------------------------------------------------------------------
 
+    !$acc data copyin(ATMOS_PHY_LT_Epot,ATMOS_GRID_CARTESC_REAL_VOL)
+
     if ( restart_fid /= -1 ) then
 
        call ATMOS_PHY_LT_vars_fillhalo
@@ -411,6 +433,8 @@ contains
        call FILE_CARTESC_write_var( restart_fid, VAR_ID(1), ATMOS_PHY_LT_Epot(:,:,:), VAR_NAME(1), 'ZXY' ) ! [IN]
 
     endif
+
+    !$acc end data
 
     return
   end subroutine ATMOS_PHY_LT_vars_restart_write
