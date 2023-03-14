@@ -925,38 +925,38 @@ contains
           end if
 
           ! read all prepared data
-          call ParentSurfaceInput( LAND_TEMP_in       (:,:,:),           &
-                                   LAND_WATER_in      (:,:,:),           &
-                                   LAND_SFC_TEMP_in   (:,:),             &
-                                   LAND_SFC_albedo_in (:,:,:,:),         &
-                                   URBAN_TC_in(:,:),                     &
-                                   URBAN_QC_in(:,:),                     &
-                                   URBAN_UC_in(:,:),                     &
-                                   URBAN_SFC_TEMP_in(:,:),               &
-                                   URBAN_SFC_albedo_in(:,:,:,:),         &
-                                   lst_ocean(:,:),                       &
-                                   lz_org(:), topo_org(:,:),             &
-                                   lmask_org(:,:), omask_org(:,:),       &
-                                   OCEAN_TEMP_in      (OKS,:,:),         &
-                                   OCEAN_SFC_TEMP_in  (    :,:),         &
-                                   OCEAN_SFC_albedo_in(    :,:,:,:),     &
-                                   OCEAN_SFC_Z0_in    (    :,:),         &
+          call ParentSurfaceInput( LAND_TEMP_in       (:,:,:),            &
+                                   LAND_WATER_in      (:,:,:),            &
+                                   LAND_SFC_TEMP_in   (:,:),              &
+                                   LAND_SFC_albedo_in (:,:,:,:),          &
+                                   URBAN_TC_in(:,:),                      &
+                                   URBAN_QC_in(:,:),                      &
+                                   URBAN_UC_in(:,:),                      &
+                                   URBAN_SFC_TEMP_in(:,:),                &
+                                   URBAN_SFC_albedo_in(:,:,:,:),          &
+                                   lst_ocean(:,:),                        &
+                                   lz_org(:), topo_org(:,:),              &
+                                   lmask_org(:,:), omask_org(:,:),        &
+                                   OCEAN_TEMP_in      (OKS,:,:),          &
+                                   OCEAN_SFC_TEMP_in  (    :,:),          &
+                                   OCEAN_SFC_albedo_in(    :,:,:,:),      &
+                                   OCEAN_SFC_Z0_in    (    :,:),          &
                                    BASENAME_ORG_LAND, BASENAME_ORG_OCEAN, &
-                                   BASENAME_LAND, BASENAME_OCEAN,        &
-                                   mdlid_land, mdlid_ocean,              &
-                                   ldims, odims,                         &
-                                   USE_FILE_LANDWATER,                   &
-                                   INIT_LANDWATER_RATIO,                 &
-!                                   INIT_LANDWATER_RATIO_EACH(:),         &
-                                   INIT_OCEAN_ALB_LW, INIT_OCEAN_ALB_SW, &
-                                   INIT_OCEAN_Z0W,                       &
-                                   INTRP_ITER_MAX,                       &
-                                   SOILWATER_DS2VC_flag,                 &
-                                   elevation_correction_land,            &
-                                   elevation_correction_ocean,           &
-                                   oistep, listep,                       &
-                                   multi_land,                           &
-                                   URBAN_do                              )
+                                   BASENAME_LAND, BASENAME_OCEAN,         &
+                                   mdlid_land, mdlid_ocean,               &
+                                   ldims, odims,                          &
+                                   USE_FILE_LANDWATER,                    &
+                                   INIT_LANDWATER_RATIO,                  &
+!                                   INIT_LANDWATER_RATIO_EACH(:),          &
+                                   INIT_OCEAN_ALB_LW, INIT_OCEAN_ALB_SW,  &
+                                   INIT_OCEAN_Z0W,                        &
+                                   INTRP_ITER_MAX,                        &
+                                   SOILWATER_DS2VC_flag,                  &
+                                   elevation_correction_land,             &
+                                   elevation_correction_ocean,            &
+                                   oistep, listep,                        &
+                                   multi_land,                            &
+                                   URBAN_do                               )
 
           !--- input initial data
           if ( t == 1 ) then
@@ -3247,29 +3247,29 @@ contains
   !-----------------------------------------------------------------------------
   !> Surface Data Read
   subroutine ParentSurfaceInput( &
-       tg, strg, lst, albg,               &
-       tc_urb, qc_urb, uc_urb, ust, albu, &
-       lst_ocean,                         &
-       lz_org, topo_org,                  &
-       lmask_org, omask_org,              &
-       tw, sst, albw, z0w,                &
+       tg, strg, lst, albg,                   &
+       tc_urb, qc_urb, uc_urb, ust, albu,     &
+       lst_ocean,                             &
+       lz_org, topo_org,                      &
+       lmask_org, omask_org,                  &
+       tw, sst, albw, z0w,                    &
        basename_org_land, basename_org_ocean, &
-       basename_land, basename_ocean,     &
-       mdlid_land, mdlid_ocean,           &
-       ldims, odims,                      &
-       use_file_landwater,                &
-       init_landwater_ratio,              &
-!       init_landwater_ratio_each,         &
-       init_ocean_alb_lw,                 &
-       init_ocean_alb_sw,                 &
-       init_ocean_z0w,                    &
-       intrp_iter_max,                    &
-       soilwater_ds2vc_flag,              &
-       elevation_correction_land,         &
-       elevation_correction_ocean,        &
-       oistep, listep,                    &
-       multi_land,                        &
-       URBAN_do                           )
+       basename_land, basename_ocean,         &
+       mdlid_land, mdlid_ocean,               &
+       ldims, odims,                          &
+       use_file_landwater,                    &
+       init_landwater_ratio,                  &
+!       init_landwater_ratio_each,             &
+       init_ocean_alb_lw,                     &
+       init_ocean_alb_sw,                     &
+       init_ocean_z0w,                        &
+       intrp_iter_max,                        &
+       soilwater_ds2vc_flag,                  &
+       elevation_correction_land,             &
+       elevation_correction_ocean,            &
+       oistep, listep,                        &
+       multi_land,                            &
+       URBAN_do                               )
     use scale_comm_cartesC, only: &
          COMM_bcast, &
          COMM_vars8, &
