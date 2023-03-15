@@ -276,6 +276,7 @@ contains
              read( fid_lut_lt,* ) grid_lut_t( myu ), grid_lut_l( n ), dq_chrg( myu,n )
           enddo
           enddo
+          !$acc update device(dq_chrg,grid_lut_t,grid_lut_l)
         !--- LUT file does not exist
         else
            LOG_ERROR("ATMOS_PHY_LT_sato2019_setup",*) 'xxx LUT for LT is requied when ATMOS_PHY_LT_TYPE = SATO2019, stop!'
@@ -290,8 +291,7 @@ contains
 
     call COMM_bcast( nxlut_lt, nylut_lt, dq_chrg )
     call COMM_bcast( nxlut_lt, grid_lut_t )
-    call COMM_bcast( nxlut_lt, grid_lut_l )
-    !$acc update device(dq_chrg,grid_lut_t,grid_lut_l)
+    call COMM_bcast( nylut_lt, grid_lut_l )
 
 !    KIJMAXG = (IEG-ISG+1)*(JEG-JSG+1)*(KE-KS+1)
     KIJMAXG = IMAXG*JMAXG*KMAX
@@ -3459,7 +3459,7 @@ contains
     !--- search grid whose Efield is over threshold of flash inititation
     num_own = 0
     !$acc kernels
-    !$acc loop independent collapse(2) reduction(+:num_own)
+    !$acc loop independent collapse(2)
     do j = JS, JE
     do i = IS, IE
        Edif_max = -1.0_RP
@@ -3469,7 +3469,9 @@ contains
           Edif_max = max( Edif_max, Edif(k) )
        enddo
        if ( Edif_max > 0.0_RP ) then
+          !$acc atomic
           num_own = num_own + 1
+          !$acc end atomic
           exce_grid(1,num_own) = CX(i)
           exce_grid(2,num_own) = CY(j)
           !$acc loop independent

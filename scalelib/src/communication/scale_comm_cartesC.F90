@@ -1342,14 +1342,16 @@ contains
 
     counts = IA
 
-    !$acc host_data use_device(var) if(acc_is_present(var))
+!    !$acc host_data use_device(var) if(acc_is_present(var))
+    !$acc update host(var) if(acc_is_present(var))
     call MPI_BCAST( var(:),         &
                     counts,         &
                     MPI_REAL,       &
                     PRC_masterrank, &
                     COMM_world,     &
                     ierr            )
-    !$acc end host_data
+!    !$acc end host_data
+    !$acc update device(var) if(acc_is_present(var))
 
     call PROF_rapend('COMM_Bcast', 2)
 
@@ -1372,14 +1374,16 @@ contains
 
     counts = IA
 
-    !$acc host_data use_device(var) if(acc_is_present(var))
+!    !$acc host_data use_device(var) if(acc_is_present(var))
+    !$acc update host(var) if(acc_is_present(var))
     call MPI_BCAST( var(:),         &
                     counts,         &
                     MPI_DOUBLE_PRECISION, &
                     PRC_masterrank, &
                     COMM_world,     &
                     ierr            )
-    !$acc end host_data
+!    !$acc end host_data
+    !$acc update device(var) if(acc_is_present(var))
 
     call PROF_rapend('COMM_Bcast', 2)
 
@@ -1435,14 +1439,16 @@ contains
 
     counts = IA * JA
 
-    !$acc host_data use_device(var) if(acc_is_present(var))
+!    !$acc host_data use_device(var) if(acc_is_present(var))
+    !$acc update host(var) if(acc_is_present(var))
     call MPI_BCAST( var(:,:),       &
                     counts,         &
                     MPI_DOUBLE_PRECISION, &
                     PRC_masterrank, &
                     COMM_world,     &
                     ierr            )
-    !$acc end host_data
+!    !$acc end host_data
+    !$acc update device(var) if(acc_is_present(var))
 
     call PROF_rapend('COMM_Bcast', 2)
 
