@@ -8,11 +8,21 @@
 !!
 !! @par History
 !! @li      2019-03-19 (Y.Sato) [new] Newly created
-!! @li      2021-02-22 (N. Yamashita, T. Iwashita) [add] Add preprocessing subroutine 
-!! @li      2021-06-24 (T. Iwashita) [add] Add OpenMP option for preprocessing subroutine 
+!! @li      2021-02-22 (N. Yamashita, T. Iwashita) [add] Add preprocessing subroutine
+!! @li      2021-06-24 (T. Iwashita) [add] Add OpenMP option for preprocessing subroutine
 !!
 !<
 !-------------------------------------------------------------------------------
+#ifndef COLORING
+#ifdef _OPENACC
+#define COLORING 2
+#elif defined(_OPENMP)
+#define COLORING 1
+#else
+#define COLORING 0
+#endif
+#endif
+
 #include "scalelib.h"
 module scale_atmos_phy_lt_sato2019
   !-----------------------------------------------------------------------------
@@ -94,7 +104,7 @@ module scale_atmos_phy_lt_sato2019
   real(RP), private :: dq_chrg( nxlut_lt,nylut_lt )    !--- charge separation [fC]
   real(RP), private :: grid_lut_t( nxlut_lt )
   real(RP), private :: grid_lut_l( nylut_lt )
-  !$acc declare create(dq_chrg,grid_lut_t,grid_lut_l)
+!  !$acc declare create(dq_chrg,grid_lut_t,grid_lut_l)
   real(RP), private :: tcrglimit
   logical, private                  :: Hgt_dependency_Eint = .false.
 
@@ -262,6 +272,7 @@ contains
         R_neut = 2.d0 * min( minval( CDX,1 ), minval( CDY,1 ) )
     endif
 
+    !$acc enter data create(dq_chrg,grid_lut_t,grid_lut_l)
     if ( PRC_IsMaster ) then
         fname_lut_lt = ATMOS_PHY_LT_LUT_FILENAME
         fid_lut_lt = IO_get_available_fid()
@@ -477,6 +488,8 @@ contains
   !> finalize
   subroutine ATMOS_PHY_LT_sato2019_finalize
 
+    !$acc exit data delete(dq_chrg,grid_lut_t,grid_lut_l)
+
     deallocate( d_QCRG_TOT )
     deallocate( LT_PATH_TOT )
     deallocate( fls_int_p_tot )
@@ -543,7 +556,7 @@ contains
     real(RP) :: LT_PATH(KA,IA,JA)           !--- Lightning path (0-> no path, 1-> path)
     real(RP) :: fls_int_p(KA,IA,JA)
     real(RP) :: Total_Sarea1, Total_Sarea2  !--- Sum of surface area and that of each category [m2]
-    real(RP) :: r_totalSarea1, r_totalSarea2  
+    real(RP) :: r_totalSarea1, r_totalSarea2
     real(RP) :: neg_crg, pos_crg
     real(RP) :: frac
     real(RP) :: dqneut(KA,IA,JA,QA_LT)
@@ -589,7 +602,7 @@ contains
        !$acc loop independent
        do k = KS, KE
           tmp_qcrg = 0.0_RP
-          !$acc loop reduction(+:tmp_qcrg)
+          !$acc loop seq
           do n = 1, QA_LT
              tmp_qcrg = tmp_qcrg + QTRC(k,i,j,n)
           end do
@@ -648,7 +661,7 @@ contains
                                          RHOT    (:,:,:),              &   ! [IN]
                                          Epot    (:,:,:),              &   ! [INOUT]
                                          Efield  (:,:,:,I_lt_x:I_lt_z) )   ! [INOUT]
-   
+
     endif
 
     !$omp parallel do
@@ -764,7 +777,7 @@ contains
             do k = KS, KE
                if( abs( d_QCRG(k,i,j) ) > 0.0_RP ) then
                   Total_Sarea1 = 0.0_RP
-                  !$acc loop independent reduction(+:Total_Sarea1)
+                  !$acc loop seq
                   do n = 1, QA_LT
                      Total_Sarea1 = Total_Sarea1 + Sarea(k,i,j,n)
                   enddo
@@ -789,17 +802,17 @@ contains
             !$omp private(Total_Sarea1,Total_Sarea2,r_totalSarea1,r_totalSarea2,flg_chrged,pos_crg,neg_crg,frac,lack, &
             !$omp         diff_qcrg,crg_rate,sum_crg,qcrg_before, &
             !$omp         positive,negative,zerosw,sw,int_sw)
-            !$acc kernels
-            !$acc loop independent collapse(2)
+            !$acc parallel
+            !$acc loop independent collapse(2) gang
             do j = JS, JE
             do i = IS, IE
-            !$acc loop private(lack,flg_chrged,diff_qcrg,crg_rate,sum_crg)
+            !$acc loop vector private(lack,flg_chrged,diff_qcrg,crg_rate,sum_crg)
             do k = KS, KE
                lack(:) = 0.0_RP
                if( abs( d_QCRG(k,i,j) ) > 0.0_RP ) then
 
                   !--- flg whether the charged or not (0.0-> not charged, 1.0->charged)
-                  !$acc loop independent
+                  !$acc loop seq
                   do n = 1, QA_LT
                      flg_chrged(n) = abs(QTRC(k,i,j,n)) >= SMALL
                   enddo
@@ -808,7 +821,7 @@ contains
                   Total_Sarea2 = 0.0_RP
                   pos_crg = 0.0_RP
                   neg_crg = 0.0_RP
-                  !$acc loop independent reduction(+:pos_crg,neg_crg,Total_Sarea1,Total_Sarea2)
+                  !$acc loop seq
                   do n = 1, QA_LT
                      if ( flg_chrged(n) ) then
                         positive = 0.5_RP + sign( 0.5_RP, QTRC(k,i,j,n) )
@@ -836,7 +849,10 @@ contains
                   r_totalSarea2 = 1.0_RP / ( Total_Sarea2 + zerosw ) * ( 1.0_RP - zerosw )
 
                   diff_qcrg(:) = 0.0_RP
-                  crg_rate(:) = 0.0_RP
+                  !$acc loop seq
+                  do n = 1, QA_LT
+                     crg_rate(n) = 0.0_RP
+                  end do
                   sum_crg(:) = 0.0_RP
                   !$acc loop seq
                   do n = 1, QA_LT
@@ -877,7 +893,7 @@ contains
 #endif
                     lack(0) = max( lack(0), 0.0_RP ) ! negative (Should be Positive)
                     lack(1) = min( lack(1), 0.0_RP ) ! positive (Should be Negative)
-                    !$acc loop independent
+                    !$acc loop seq
                     do n = 1, QA_LT
                        if ( flg_chrged(n) ) then
                           sw = 0.5_RP + sign( 0.5_RP, QTRC(k,i,j,n) )
@@ -892,7 +908,7 @@ contains
                     enddo
                   endif
 
-                  !$acc loop independent
+                  !$acc loop seq
                   do n = 1, QA_LT
                      if ( flg_chrged(n) ) then
                         dqneut_real(k,i,j,n) = QTRC(k,i,j,n) - qcrg_before(n)
@@ -904,7 +920,7 @@ contains
             enddo
             enddo
             enddo
-            !$acc end kernels
+            !$acc end parallel
 
          end select
 
@@ -917,7 +933,7 @@ contains
             do k = KS, KE
                tmp_qcrg = 0.0_RP
                tmp_dqcrg = 0.0_RP
-               !$acc loop independent reduction(+:tmp_qcrg,tmp_dqcrg)
+               !$acc loop seq
                do n = 1, QA_LT
                   tmp_qcrg = tmp_qcrg + QTRC(k,i,j,n)
                   tmp_dqcrg = tmp_dqcrg + dqneut_real(k,i,j,n)
@@ -1108,7 +1124,7 @@ contains
             do j = JS, JE
             do i = IS, IE
             do k = KS, KE
-               !$acc loop independent
+               !$acc loop seq
                do n = 1, QA_LT
                   QTRC(k,i,j,n) = QTRC(k,i,j,n) - dqneut_real(k,i,j,n)
                enddo
@@ -1392,19 +1408,6 @@ contains
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
-       eps_air = EPSvac * EPSair   !--- temporary, dependency of epsiron on P and T will be implemented
-       B(k,i,j) = - QCRG(k,i,j)/eps_air * 1.0E-9_RP ! [nC/m3] -> [C/m3 * m/F] = [V/m2]
-    enddo
-    enddo
-    enddo
-    !$acc end kernels
-
-    !$omp parallel do private(i,j,k)
-    !$acc kernels
-    !$acc loop independent collapse(3)
-    do j = JS, JE
-    do i = IS, IE
-    do k = KS, KE
        E_pot_N(k,i,j) = E_pot(k,i,j)   !-- initial value -> previous step value
     end do
     end do
@@ -1413,6 +1416,19 @@ contains
 
     call COMM_vars8( E_pot_N, 1 )
 
+
+    !$omp parallel do private(i,j,k)
+    !$acc kernels
+    !$acc loop independent collapse(3)
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       eps_air = EPSvac * EPSair   !--- temporary, dependency of epsiron on P and T will be implemented
+       B(k,i,j) = - QCRG(k,i,j)/eps_air * 1.0E-9_RP ! [nC/m3] -> [C/m3 * m/F] = [V/m2]
+    enddo
+    enddo
+    enddo
+    !$acc end kernels
 
     call COMM_wait ( E_pot_N, 1 )
 
@@ -1429,7 +1445,7 @@ contains
     call COMM_wait ( E_pot, 1, .true. )
 
     !$omp parallel do private(i,j)
-    !$acc parallel copy(E_pot)
+    !$acc parallel vector_length(32)
     !$acc loop collapse(2)
     do j = 1, JA
     do i = 1, IA
@@ -1516,15 +1532,16 @@ contains
     real(RP) :: Ms(KA,IA,JA)
     real(RP) :: al, be, w
 
-    real(RP) :: r(KA,IA,JA)
-    real(RP) :: rn(KA,IA,JA)
-    real(RP) :: swap(KA,IA,JA)
+    real(RP), pointer :: r(:,:,:), rn(:,:,:), swap(:,:,:)
+    real(RP), target :: rbuf1(KA,IA,JA)
+    real(RP), target :: rbuf2(KA,IA,JA)
     real(RP) :: v1(KA,IA,JA)
+
     real(RP) :: r0r
     real(RP) :: norm, error, error2
 
     real(RP) :: iprod1, iprod2
-    real(RP) :: buf1, buf2
+    real(RP) :: buf(2)
 
     real(RP):: diag(KA,IA,JA)
     real(RP):: z1(KA,IA,JA)
@@ -1540,7 +1557,10 @@ contains
     !$acc data &
     !$acc copyout(PHI_N) &
     !$acc copyin(PHI,M,B) &
-    !$acc create(r0,p,Mp,s,Ms,r,rn,swap,v1,diag,z1,z2,Mz1,Mz2)
+    !$acc create(r0,p,Mp,s,Ms,rbuf1,rbuf2,v1,diag,z1,z2,Mz1,Mz2)
+
+    r  => rbuf1
+    rn => rbuf2
 
     if( FLAG_preprocessing == 3 ) then
        !$acc update host(M)
@@ -1620,15 +1640,16 @@ contains
     end do
     !$acc end kernels
 
-    iprod1 = r0r
-    iprod2 = norm
-    call MPI_AllReduce(iprod1, buf1, 1, COMM_datatype, MPI_SUM, COMM_world, ierror)
-    call MPI_AllReduce(iprod2, buf2, 1, COMM_datatype, MPI_SUM, COMM_world, ierror)
-    r0r = buf1
-    norm = buf2
+    buf(1) = r0r
+    buf(2) = norm
+    call MPI_AllReduce(MPI_IN_PLACE, buf(:), 2, COMM_datatype, MPI_SUM, COMM_world, ierror)
+    r0r = buf(1)
+    norm = buf(2)
     error2 = norm
 
     do iter = 1, ITMAX
+
+       call COMM_vars8( p, 1 )
 
        error = 0.0_RP
        !$omp parallel do reduction(+:error) private(i, j, k)
@@ -1643,17 +1664,15 @@ contains
        enddo
        !$acc end kernels
 
-       call MPI_AllReduce(error, buf1, 1, COMM_datatype, MPI_SUM, COMM_world, ierror)
-       error = buf1
+       call MPI_AllReduce(MPI_IN_PLACE, error, 1, COMM_datatype, MPI_SUM, COMM_world, ierror)
+
+       call COMM_wait ( p, 1 )
 
        if ( sqrt(error/norm) < epsilon ) then
          LOG_INFO("ATMOS_PHY_LT_Efield",'(a,1x,i0,1x,2e15.7)') "Bi-CGSTAB converged:", iter, sqrt(error/norm),norm
          exit
        endif
        error2 = error
-
-       call COMM_vars8( p, 1 )
-       call COMM_wait ( p, 1 )
 
        if( FLAG_preprocessing == 0 ) then  !-- No preprocessing
 
@@ -1662,8 +1681,8 @@ contains
                            JA, JS, JE, & ! (in)
                            Mp, M, p    )
 
-          !$omp parallel do reduction(+:iprod1) private(i, j, k)
           iprod1 = 0.0_RP
+          !$omp parallel do reduction(+:iprod1) private(i, j, k)
           !$acc kernels
           !$acc loop independent collapse(3) reduction(+:iprod1)
           do j = JS, JE
@@ -1679,25 +1698,21 @@ contains
 
           if( FLAG_preprocessing == 1 ) then !--- Gauss-Seidel preprocessing
 
-             !$acc update host(M,p)
              call gs( KA, KS, KE, & ! (in)
                       IA, IS, IE, & ! (in)
                       JA, JS, JE, & ! (in)
                       z1, M, p    )
-             !$acc update device(z1)
 
           elseif( FLAG_preprocessing == 2 ) then  !--- Synmetric Gauss-Seidel preprocessing (Default)
 
-             !$acc update host(M,p)
              call sgs( KA, KS, KE, & ! (in)
                        IA, IS, IE, & ! (in)
                        JA, JS, JE, & ! (in)
                        z1, M, p    )
-             !$acc update device(z1)
 
           elseif( FLAG_preprocessing == 3 ) then  !--- Incomplete Cholesky Factorization preprocessing
 
-             !$acc update host(M,p,diag)
+             !$acc update host(p,diag) ! M is already updated
              call solve_ILU( KA, KS, KE, & ! (in)
                              IA, IS, IE, & ! (in)
                              JA, JS, JE, & ! (in)
@@ -1706,13 +1721,15 @@ contains
 
           endif
 
+          call COMM_vars8( z1, 1 )
+
           call mul_matrix( KA, KS, KE, & ! (in)
                            IA, IS, IE, & ! (in)
                            JA, JS, JE, & ! (in)
                            Mp, M, p    )
 
-          call COMM_vars8( z1, 1 )
           call COMM_wait ( z1, 1 )
+
           call mul_matrix( KA, KS, KE, & ! (in)
                            IA, IS, IE, & ! (in)
                            JA, JS, JE, & ! (in)
@@ -1733,13 +1750,13 @@ contains
 
        endif
 
-       call MPI_AllReduce(iprod1, buf1, 1, COMM_datatype, MPI_SUM, COMM_world, ierror)
+       call MPI_AllReduce(MPI_IN_PLACE, iprod1, 1, COMM_datatype, MPI_SUM, COMM_world, ierror)
 
-       if ( buf1 == 0.0_RP ) then
-         LOG_INFO("ATMOS_PHY_LT_Efield",'(a,1x,e15.7,1x,i10)') 'Buf1 is zero(Bi-CGSTAB) skip:', buf1, iter
+       if ( iprod1 == 0.0_RP ) then
+         LOG_INFO("ATMOS_PHY_LT_Efield",'(a,1x,e15.7,1x,i10)') 'Iprod1 is zero(Bi-CGSTAB) skip:', iprod1, iter
          exit
        endif
-       al = r0r / buf1 ! (r0,r) / (r0,Mp)
+       al = r0r / iprod1 ! (r0,r) / (r0,Mp)
 
        if( FLAG_preprocessing == 0 ) then  !-- No preprocessing
           !$omp parallel do
@@ -1795,25 +1812,21 @@ contains
 
           if( FLAG_preprocessing == 1 ) then   !--- Gauss-Seidel preprocessing
 
-             !$acc update host(M,s)
              call gs( KA, KS, KE, & ! (in)
                       IA, IS, IE, & ! (in)
                       JA, JS, JE, & ! (in)
                       z2, M, s    )
-             !$acc update device(z2)
 
           elseif( FLAG_preprocessing == 2 ) then  !--- Synmetric Gauss-Seidel preprocessing (Default)
 
-             !$acc update host(M,s)
              call sgs( KA, IS, KE, & ! (in)
                        IA, IS, IE, & ! (in)
                        JA, JS, JE, & ! (in)
                        z2, M, s    )
-             !$acc update device(z2)
 
           elseif( FLAG_preprocessing == 3 ) then  !--- Incomplete Cholesky Factorization preprocessing
 
-             !$acc update host(M,s,diag)
+             !$acc update host(s,diag) ! M is already updated
              call solve_ILU( KA, KS, KE, & ! (in)
                              IA, IS, IE, & ! (in)
                              JA, JS, JE, & ! (in)
@@ -1845,14 +1858,15 @@ contains
 
        endif
 
-       call MPI_AllReduce(iprod1, buf1, 1, COMM_datatype, MPI_SUM, COMM_world, ierror)
-       call MPI_AllReduce(iprod2, buf2, 1, COMM_datatype, MPI_SUM, COMM_world, ierror)
+       buf(1) = iprod1
+       buf(2) = iprod2
+       call MPI_AllReduce(MPI_IN_PLACE, buf(:), 2, COMM_datatype, MPI_SUM, COMM_world, ierror)
 
-       if ( buf2 == 0.0_RP ) then
-         LOG_INFO("ATMOS_PHY_LT_Efield",'(a,1x,e15.7,1x,i10)') 'Buf2 is zero(Bi-CGSTAB) skip:', buf2, iter
+       if ( buf(2) == 0.0_RP ) then
+         LOG_INFO("ATMOS_PHY_LT_Efield",'(a,1x,e15.7,1x,i10)') 'Buf(2) is zero(Bi-CGSTAB) skip:', buf(2), iter
          exit
        endif
-       w = buf1 / buf2 ! (Ms,s) / (Ms,Ms)
+       w = buf(1) / buf(2) ! (Ms,s) / (Ms,Ms)
 
        if( FLAG_preprocessing == 0 ) then !--- No preprocessing
 
@@ -1953,12 +1967,9 @@ contains
           !$acc end kernels
        endif
 
-       !$acc kernels
-       swap(:,:,:) = rn(:,:,:)
-       rn(:,:,:)   = r(:,:,:)
-       r (:,:,:)   = swap(:,:,:)
-       !$acc end kernels
-
+       swap => rn
+       rn   => r
+       r    => swap
 
        if ( r0r == 0.0_RP ) then
          LOG_INFO("ATMOS_PHY_LT_Efield",'(a,1x,i0,1x,3e15.7)') "Inner product of r0 and r_itr is zero(Bi-CGSTAB) :", &
@@ -2035,8 +2046,8 @@ contains
     enddo
     enddo
     enddo
-  return
 
+    return
   end subroutine ILU_decomp
 
   !----- N. Yamashita and T. Iwashita of Hokkaido Univ. created (2021/2/22)-----
@@ -2225,9 +2236,6 @@ contains
                   IA, IS, IE, &
                   JA, JS, JE, &
                   Z,  M,  V)
-    use scale_prc, only: &
-       PRC_abort, &
-       PRC_IsMaster
     implicit none
     integer,  intent(in)  :: KA, KS, KE
     integer,  intent(in)  :: IA, IS, IE
@@ -2237,13 +2245,16 @@ contains
     real(RP), intent(out) :: Z(KA,IA,JA)
     real(RP):: Y(KA,IA,JA)
     integer :: k,i,j
-  
+
+    !$acc data copyin(M,V) copyout(Z) create(Y)
+
     call gs( KA, KS, KE, &
              IA, IS, IE, &
              JA, JS, JE, &
              Y,  M,  V )
-  
+
     !$omp parallel do private(i, j, k)
+    !$acc kernels
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -2251,25 +2262,23 @@ contains
     enddo
     enddo
     enddo
-  
+    !$acc end kernels
+
     call back_sub(KA, KS, KE, &
                   IA, IS, IE, &
                   JA, JS, JE, &
                   Z,  M,  Y )
 
+    !$acc end data
+
     return
-  
   end subroutine sgs
-  
+
   !----- N. Yamashita and T. Iwashita of Hokkaido Univ. created (2021/2/22)-----
   subroutine back_sub ( KA, KS, KE, &
                         IA, IS, IE, &
                         JA, JS, JE, &
                         Z,  M,  V   )
-   use scale_prc, only: &
-       PRC_abort, &
-       PRC_IsMaster
-   !$ use omp_lib
    implicit none
    integer,  intent(in)  :: KA, KS, KE
    integer,  intent(in)  :: IA, IS, IE
@@ -2278,38 +2287,103 @@ contains
    real(RP), intent(in)  :: M(KA,15,IA,JA)
    real(RP), intent(out) :: Z(KA,IA,JA)
    integer :: k, i, j
-   integer :: myid, nth
-   integer :: jst, jen, jinc, flgomp
-  
-   Z(:,:,:)=0.0_RP
 
-   flgomp = 0
+   !$acc data copyin(V,M) copyout(Z)
 
-   !$omp parallel private(i, j, k, myid, jst, jen, jinc)
+!$acc kernels
+z(:,:,:)=1d30
+!$acc end kernels
 
-   !$omp single
-   !$ flgomp = 1  !---for openmp
-   !$ nth = omp_get_num_threads()
-   !$omp end single
+   !$omp parallel
+   !$omp do
+   !$acc parallel vector_length(32)
+   do i = IS, IE
+   do k = KS, KE
+      Z(k,i,JS-1) = 0.0_RP
+      Z(k,i,JE+1) = 0.0_RP
+   end do
+   end do
+   !$acc end parallel
+   !$omp do
+   !$acc parallel vector_length(32)
+   do j = JS, JE
+   do k = KS, KE
+      Z(k,IS-1,j) = 0.0_RP
+      Z(k,IE+1,j) = 0.0_RP
+   end do
+   end do
+   !$acc end parallel
+   !$omp end parallel
 
-   !$ myid = omp_get_thread_num()
 
-   if( flgomp == 0 ) then
-     jst = JE
-     jen = JS
-     jinc = -1
-   elseif( flgomp == 1 ) then
-     jst = JE-2*myid
-     jen = JS
-     jinc = -2*nth
-   endif 
-  
-   do j = jst, jen, jinc
-   do i = IE, IS,-1
+#if COLORING == 2
+   !$omp parallel do collapse(2)
+!   !$acc parallel vector_length(32)
+   !$acc parallel vector_length(1)
+   !$acc loop independent collapse(2)
+   do j = JE, JS, -1
+   do i = IE, IS, -1
+      if ( mod((IE-i)+(JE-j),2)==0 ) then
+
+      Z(KE,i,j) = ( V(KE,i,j)             )/M(KE,1,i,j)
+
+      do k = KE-1, KS, -1
+         Z(k,i,j) = (V(k,i,j) &
+         -( M(k,3,i,j) * Z(k+1,i  ,j  ) ) )/M(k,1,i,j)
+      enddo
+
+      end if
+
+#elif COLORING == 1
+   !$omp parallel do
+   !$acc parallel vector_length(1)
+   !$acc loop independent
+   do j = JE, JS, -2
+   do i = IE, IS, -1
 
       Z(KE,i,j) = ( V(KE,i,j) &
-      -( M(KE,2,i,j) * Z(KE-1,i  ,j  ) &
-       + M(KE,4,i,j) * Z(KE  ,i-1,j  ) &
+      -( M(KE,5,i,j) * Z(KE  ,i+1,j  ) ) )/M(KE,1,i,j)
+
+      do k = KE-1, KS, -1
+         Z(k,i,j) = (V(k,i,j) &
+         -( M(k,3,i,j) * Z(k+1,i  ,j  ) &
+          + M(k,5,i,j) * Z(k  ,i+1,j  ) &
+          + M(k,13,i,j)* Z(k+1,i+1,j  ) ) )/M(k,1,i,j)
+      enddo
+#else
+   !$acc parallel num_gang(1) vector_length(1)
+   do j = JE, JS, -1
+   do i = IE, IS, -1
+
+      Z(KE,i,j) = ( V(KE,i,j) &
+      -( M(KE,5,i,j) * Z(KE  ,i+1,j  ) &
+       + M(KE,7,i,j) * Z(KE  ,i  ,j+1) ) )/M(KE,1,i,j)
+
+      do k = KE-1, KS, -1
+         Z(k,i,j) = (V(k,i,j) &
+         -( M(k,3,i,j) * Z(k+1,i  ,j  ) &
+          + M(k,5,i,j) * Z(k  ,i+1,j  ) &
+          + M(k,7,i,j) * Z(k  ,i  ,j+1) &
+          + M(k,13,i,j)* Z(k+1,i+1,j  ) &
+          + M(k,15,i,j)* Z(k+1,i  ,j+1) ) )/M(k,1,i,j)
+      enddo
+#endif
+   end do
+   end do
+   !$acc end parallel
+
+#if COLORING > 0
+#if COLORING == 2
+   !$omp parallel do collapse(2)
+!   !$acc parallel vector_length(32)
+   !$acc parallel vector_length(1)
+   !$acc loop independent collapse(2)
+   do j = JE, JS, -1
+   do i = IE, IS, -1
+      if ( mod((IE-i)+(JE-j),2)==1 ) then
+
+      Z(KE,i,j) = ( V(KE,i,j) &
+      -( M(KE,4,i,j) * Z(KE  ,i-1,j  ) &
        + M(KE,5,i,j) * Z(KE  ,i+1,j  ) &
        + M(KE,6,i,j) * Z(KE  ,i  ,j-1) &
        + M(KE,7,i,j) * Z(KE  ,i  ,j+1) &
@@ -2317,11 +2391,10 @@ contains
        + M(KE,9,i,j) * Z(KE-1,i+1,j  ) &
        + M(KE,10,i,j)* Z(KE-1,i  ,j-1) &
        + M(KE,11,i,j)* Z(KE-1,i  ,j+1) ) )/M(KE,1,i,j)
-  
+
       do k = KE-1, KS+1,-1
          Z(k,i,j) = (V(k,i,j) &
-         -( M(k,2,i,j) * Z(k-1,i  ,j  ) &
-          + M(k,3,i,j) * Z(k+1,i  ,j  ) &
+         -( M(k,3,i,j) * Z(k+1,i  ,j  ) &
           + M(k,4,i,j) * Z(k  ,i-1,j  ) &
           + M(k,5,i,j) * Z(k  ,i+1,j  ) &
           + M(k,6,i,j) * Z(k  ,i  ,j-1) &
@@ -2334,9 +2407,8 @@ contains
           + M(k,13,i,j)* Z(k+1,i+1,j  ) &
           + M(k,14,i,j)* Z(k+1,i  ,j-1) &
           + M(k,15,i,j)* Z(k+1,i  ,j+1) ) )/M(k,1,i,j)
-  
       enddo
-  
+
       Z(KS,i,j) = (V(KS,i,j) &
       -( M(KS,3,i,j) * Z(KS+1,i  ,j  ) &
        + M(KS,4,i,j) * Z(KS  ,i-1,j  ) &
@@ -2347,62 +2419,51 @@ contains
        + M(KS,13,i,j)* Z(KS+1,i+1,j  ) &
        + M(KS,14,i,j)* Z(KS+1,i  ,j-1) &
        + M(KS,15,i,j)* Z(KS+1,i  ,j+1) ) ) /M(KS,1,i,j)
-  
-   enddo
-   enddo
 
-   if( flgomp == 1 ) then
-     !$omp barrier
+      end if
+#elif COLORING == 1
+   !$omp parallel do
+   !$acc parallel vector_length(1)
+   !$acc loop independent
+   do j = JE-1, JS, -2
+   do i = IE, IS, -1
+      Z(KE,i,j) = ( V(KE,i,j) &
+      -( M(KE,5,i,j) * Z(KE  ,i+1,j  ) &
+       + M(KE,6,i,j) * Z(KE  ,i  ,j-1) &
+       + M(KE,7,i,j) * Z(KE  ,i  ,j+1) &
+       + M(KE,9,i,j) * Z(KE-1,i+1,j  ) &
+       + M(KE,10,i,j)* Z(KE-1,i  ,j-1) &
+       + M(KE,11,i,j)* Z(KE-1,i  ,j+1) ) )/M(KE,1,i,j)
 
-     do j = JE-2*myid-1, JS,-2*nth
-        do i = IE, IS,-1
+      do k = KE-1, KS+1,-1
+         Z(k,i,j) = (V(k,i,j) &
+         -( M(k,3,i,j) * Z(k+1,i  ,j  ) &
+          + M(k,5,i,j) * Z(k  ,i+1,j  ) &
+          + M(k,6,i,j) * Z(k  ,i  ,j-1) &
+          + M(k,7,i,j) * Z(k  ,i  ,j+1) &
+          + M(k,9,i,j) * Z(k-1,i+1,j  ) &
+          + M(k,10,i,j)* Z(k-1,i  ,j-1) &
+          + M(k,11,i,j)* Z(k-1,i  ,j+1) &
+          + M(k,13,i,j)* Z(k+1,i+1,j  ) &
+          + M(k,14,i,j)* Z(k+1,i  ,j-1) &
+          + M(k,15,i,j)* Z(k+1,i  ,j+1) ) )/M(k,1,i,j)
+      enddo
 
-           Z(KE,i,j) = ( V(KE,i,j) &
-           -( M(KE,2,i,j) * Z(KE-1,i  ,j  ) &
-           + M(KE,4,i,j) * Z(KE  ,i-1,j  ) &
-           + M(KE,5,i,j) * Z(KE  ,i+1,j  ) &
-           + M(KE,6,i,j) * Z(KE  ,i  ,j-1) &
-           + M(KE,7,i,j) * Z(KE  ,i  ,j+1) &
-           + M(KE,8,i,j) * Z(KE-1,i-1,j  ) &
-           + M(KE,9,i,j) * Z(KE-1,i+1,j  ) &
-           + M(KE,10,i,j)* Z(KE-1,i  ,j-1) &
-           + M(KE,11,i,j)* Z(KE-1,i  ,j+1) ) )/M(KE,1,i,j)
+      Z(KS,i,j) = (V(KS,i,j) &
+      -( M(KS,3,i,j) * Z(KS+1,i  ,j  ) &
+       + M(KS,5,i,j) * Z(KS  ,i+1,j  ) &
+       + M(KS,6,i,j) * Z(KS  ,i  ,j-1) &
+       + M(KS,7,i,j) * Z(KS  ,i  ,j+1) &
+       + M(KS,13,i,j)* Z(KS+1,i+1,j  ) &
+       + M(KS,14,i,j)* Z(KS+1,i  ,j-1) &
+       + M(KS,15,i,j)* Z(KS+1,i  ,j+1) ) ) /M(KS,1,i,j)
+#endif
+   end do
+   end do
+   !$acc end parallel
+#endif
 
-           do k = KE-1, KS+1,-1
-           Z(k,i,j) = (V(k,i,j) &
-           -( M(k,2,i,j) * Z(k-1,i  ,j  ) &
-           + M(k,3,i,j) * Z(k+1,i  ,j  ) &
-           + M(k,4,i,j) * Z(k  ,i-1,j  ) &
-           + M(k,5,i,j) * Z(k  ,i+1,j  ) &
-           + M(k,6,i,j) * Z(k  ,i  ,j-1) &
-           + M(k,7,i,j) * Z(k  ,i  ,j+1) &
-           + M(k,8,i,j) * Z(k-1,i-1,j  ) &
-           + M(k,9,i,j) * Z(k-1,i+1,j  ) &
-           + M(k,10,i,j)* Z(k-1,i  ,j-1) &
-           + M(k,11,i,j)* Z(k-1,i  ,j+1) &
-           + M(k,12,i,j)* Z(k+1,i-1,j  ) &
-           + M(k,13,i,j)* Z(k+1,i+1,j  ) &
-           + M(k,14,i,j)* Z(k+1,i  ,j-1) &
-           + M(k,15,i,j)* Z(k+1,i  ,j+1) ) )/M(k,1,i,j)
-
-           enddo
-
-           Z(KS,i,j) = (V(KS,i,j) &
-           -( M(KS,3,i,j) * Z(KS+1,i  ,j  ) &
-           + M(KS,4,i,j) * Z(KS  ,i-1,j  ) &
-           + M(KS,5,i,j) * Z(KS  ,i+1,j  ) &
-           + M(KS,6,i,j) * Z(KS  ,i  ,j-1) &
-           + M(KS,7,i,j) * Z(KS  ,i  ,j+1) &
-           + M(KS,12,i,j)* Z(KS+1,i-1,j  ) &
-           + M(KS,13,i,j)* Z(KS+1,i+1,j  ) &
-           + M(KS,14,i,j)* Z(KS+1,i  ,j-1) &
-           + M(KS,15,i,j)* Z(KS+1,i  ,j+1) ) ) /M(KS,1,i,j)
-
-        enddo
-     enddo
-   endif
-
-   !$omp end parallel
+   !$acc end data
 
    return
   end subroutine back_sub
@@ -2412,7 +2473,6 @@ contains
                   IA, IS, IE, &
                   JA, JS, JE, &
                   Z,  M,  V   )
-   !$ use omp_lib
    implicit none
    integer,  intent(in)  :: KA, KS, KE
    integer,  intent(in)  :: IA, IS, IE
@@ -2421,38 +2481,100 @@ contains
    real(RP), intent(in)  :: M(KA,15,IA,JA)
    real(RP), intent(out) :: Z(KA,IA,JA)
 
-   integer :: k, i, j
-   integer :: myid, nth
-   integer :: jst, jen, jinc, flgomp
+   integer :: k, i, j, n
 
-   Z(:,:,:) = 0.0_RP
+   !$acc data copyin(V,M) copyout(Z)
 
-   flgomp = 0
+   !$omp parallel
+   !$omp do
+   !$acc parallel vector_length(32)
+   do i = IS, IE
+   do k = KS, KE
+      Z(k,i,JS-1) = 0.0_RP
+      Z(k,i,JE+1) = 0.0_RP
+   end do
+   end do
+   !$acc end parallel
+   !$omp do
+   !$acc parallel vector_length(32)
+   do j = JS, JE
+   do k = KS, KE
+      Z(k,IS-1,j) = 0.0_RP
+      Z(k,IE+1,j) = 0.0_RP
+   end do
+   end do
+   !$acc end parallel
+   !$omp end parallel
 
-   !$omp parallel private(i, j, k, myid, jst, jen, jinc)
 
-   !$omp single
-   !$ flgomp = 1  !---for openmp
-   !$ nth = omp_get_num_threads()
-   !$omp end single
+#if COLORING == 2
+   !$omp parallel do collapse(2)
+!   !$acc parallel vector_length(32)
+   !$acc parallel vector_length(1)
+   !$acc loop independent collapse(2)
+   do j = JS, JE
+   do i = IS, IE
+      if ( mod((i-IS)+(j-JS),2)==0 ) then
 
-   !$ myid =  omp_get_thread_num()
-   if( flgomp == 0 ) then
-      jst = JS
-      jen = JE
-      jinc = 1
-   elseif( flgomp == 1 ) then
-      jst = JS+2*myid
-      jen = JE
-      jinc = 2*nth
-   endif
+      Z(KS,i,j) = (V(KS,i,j)  ) /M(KS,1,i,j)
 
-   do j = jst, jen, jinc
+      do k = KS+1, KE
+         Z(k,i,j) = (V(k,i,j) &
+         -( M(k,2,i,j) * Z(k-1,i  ,j  ) ) )/M(k,1,i,j)
+      enddo
+
+      end if
+
+#elif COLORING == 1
+   !$omp parallel do
+   !$acc parallel vector_length(1)
+   !$acc loop independent
+   do j = JS, JE, 2
    do i = IS, IE
 
       Z(KS,i,j) = (V(KS,i,j) &
-      -( M(KS,3,i,j) * Z(KS+1,i  ,j  ) &
-       + M(KS,4,i,j) * Z(KS  ,i-1,j  )  &
+      -( M(KS,4,i,j) * Z(KS  ,i-1,j  ) ) ) /M(KS,1,i,j)
+
+      do k = KS+1, KE
+         Z(k,i,j) = (V(k,i,j) &
+         -( M(k,2,i,j) * Z(k-1,i  ,j  ) &
+          + M(k,4,i,j) * Z(k  ,i-1,j  ) &
+          + M(k,8,i,j) * Z(k-1,i-1,j  ) ) )/M(k,1,i,j)
+      enddo
+#else
+   !$acc parallel num_gang(1) vector_length(1)
+   do j = JS, JE
+   do i = IS, IE
+
+      Z(KS,i,j) = (V(KS,i,j) &
+      -( M(KS,4,i,j) * Z(KS  ,i-1,j  ) &
+       + M(KS,6,i,j) * Z(KS  ,i  ,j-1) ) ) /M(KS,1,i,j)
+
+      do k = KS+1, KE
+         Z(k,i,j) = (V(k,i,j) &
+         -( M(k,2,i,j) * Z(k-1,i  ,j  ) &
+          + M(k,4,i,j) * Z(k  ,i-1,j  ) &
+          + M(k,6,i,j) * Z(k  ,i  ,j-1) &
+          + M(k,8,i,j) * Z(k-1,i-1,j  ) &
+          + M(k,10,i,j)* Z(k-1,i  ,j-1) ) )/M(k,1,i,j)
+      enddo
+#endif
+   end do
+   end do
+   !$acc end parallel
+
+#if COLORING > 0
+#if COLORING == 2
+   !$omp parallel do collapse(2)
+!   !$acc parallel vector_length(32)
+   !$acc parallel vector_length(1)
+   !$acc loop independent collapse(2)
+   do j = JS, JE
+   do i = IS, IE
+      if ( mod((i-IS)+(j-JS),2)==1 ) then
+
+      Z(KS,i,j) = (V(KS,i,j) &
+      -( M(KS,4,i,j) * Z(KS  ,i-1,j  )  &
        + M(KS,5,i,j) * Z(KS  ,i+1,j  ) &
        + M(KS,6,i,j) * Z(KS  ,i  ,j-1) &
        + M(KS,7,i,j) * Z(KS  ,i  ,j+1) &
@@ -2464,7 +2586,6 @@ contains
       do k = KS+1, KE-1
          Z(k,i,j) = (V(k,i,j) &
          -( M(k,2,i,j) * Z(k-1,i  ,j  ) &
-          + M(k,3,i,j) * Z(k+1,i  ,j  ) &
           + M(k,4,i,j) * Z(k  ,i-1,j  ) &
           + M(k,5,i,j) * Z(k  ,i+1,j  ) &
           + M(k,6,i,j) * Z(k  ,i  ,j-1) &
@@ -2490,60 +2611,50 @@ contains
        + M(KE,10,i,j)* Z(KE-1,i  ,j-1) &
        + M(KE,11,i,j)* Z(KE-1,i  ,j+1) ) )/M(KE,1,i,j)
 
-   enddo
-   enddo
+      end if
+#elif COLORING == 1
+   !$omp parallel do
+   !$acc parallel vector_length(1)
+   !$acc loop independent
+   do j = JS+1, JE, 2
+   do i = IS, IE
+      Z(KS,i,j) = (V(KS,i,j) &
+      -( M(KS,4,i,j) * Z(KS  ,i-1,j  )  &
+       + M(KS,6,i,j) * Z(KS  ,i  ,j-1) &
+       + M(KS,7,i,j) * Z(KS  ,i  ,j+1) &
+       + M(KS,12,i,j)* Z(KS+1,i-1,j  ) &
+       + M(KS,14,i,j)* Z(KS+1,i  ,j-1) &
+       + M(KS,15,i,j)* Z(KS+1,i  ,j+1) ) ) /M(KS,1,i,j)
 
-   if( flgomp == 1 ) then
-      !$omp barrier
-
-      do j = JS+2*myid+1, JE, 2*nth
-      do i = IS, IE
-
-        Z(KS,i,j) = (V(KS,i,j) &
-        -( M(KS,3,i,j)* Z(KS+1,i  ,j  ) &
-        + M(KS,4,i,j) * Z(KS  ,i-1,j  ) &
-        + M(KS,5,i,j) * Z(KS  ,i+1,j  ) &
-        + M(KS,6,i,j) * Z(KS  ,i  ,j-1) &
-        + M(KS,7,i,j) * Z(KS  ,i  ,j+1) &
-        + M(KS,12,i,j)* Z(KS+1,i-1,j  ) &
-        + M(KS,13,i,j)* Z(KS+1,i+1,j  ) &
-        + M(KS,14,i,j)* Z(KS+1,i  ,j-1) &
-        + M(KS,15,i,j)* Z(KS+1,i  ,j+1) ) ) /M(KS,1,i,j)
-
-        do k = KS+1, KE-1
-        Z(k,i,j) = (V(k,i,j) &
-        -( M(k,2,i,j)* Z(k-1,i  ,j  ) &
-        + M(k,3,i,j) * Z(k+1,i  ,j  ) &
-        + M(k,4,i,j) * Z(k  ,i-1,j  ) &
-        + M(k,5,i,j) * Z(k  ,i+1,j  ) &
-        + M(k,6,i,j) * Z(k  ,i  ,j-1) &
-        + M(k,7,i,j) * Z(k  ,i  ,j+1) &
-        + M(k,8,i,j) * Z(k-1,i-1,j  ) &
-        + M(k,9,i,j) * Z(k-1,i+1,j  ) &
-        + M(k,10,i,j)* Z(k-1,i  ,j-1) &
-        + M(k,11,i,j)* Z(k-1,i  ,j+1) &
-        + M(k,12,i,j)* Z(k+1,i-1,j  ) &
-        + M(k,13,i,j)* Z(k+1,i+1,j  ) &
-        + M(k,14,i,j)* Z(k+1,i  ,j-1) &
-        + M(k,15,i,j)* Z(k+1,i  ,j+1) ) )/M(k,1,i,j)
-        enddo
-
-        Z(KE,i,j) = ( V(KE,i,j) &
-        -( M(KE,2,i,j)* Z(KE-1,i  ,j  ) &
-        + M(KE,4,i,j) * Z(KE  ,i-1,j  ) &
-        + M(KE,5,i,j) * Z(KE  ,i+1,j  ) &
-        + M(KE,6,i,j) * Z(KE  ,i  ,j-1) &
-        + M(KE,7,i,j) * Z(KE  ,i  ,j+1) &
-        + M(KE,8,i,j) * Z(KE-1,i-1,j  ) &
-        + M(KE,9,i,j) * Z(KE-1,i+1,j  ) &
-        + M(KE,10,i,j)* Z(KE-1,i  ,j-1) &
-        + M(KE,11,i,j)* Z(KE-1,i  ,j+1) ) )/M(KE,1,i,j)
-
-      enddo
+      do k = KS+1, KE-1
+         Z(k,i,j) = (V(k,i,j) &
+         -( M(k,2,i,j) * Z(k-1,i  ,j  ) &
+          + M(k,4,i,j) * Z(k  ,i-1,j  ) &
+          + M(k,6,i,j) * Z(k  ,i  ,j-1) &
+          + M(k,7,i,j) * Z(k  ,i  ,j+1) &
+          + M(k,8,i,j) * Z(k-1,i-1,j  ) &
+          + M(k,10,i,j)* Z(k-1,i  ,j-1) &
+          + M(k,11,i,j)* Z(k-1,i  ,j+1) &
+          + M(k,12,i,j)* Z(k+1,i-1,j  ) &
+          + M(k,14,i,j)* Z(k+1,i  ,j-1) &
+          + M(k,15,i,j)* Z(k+1,i  ,j+1) ) )/M(k,1,i,j)
       enddo
 
-   endif
-   !$omp end parallel
+      Z(KE,i,j) = ( V(KE,i,j) &
+      -( M(KE,2,i,j) * Z(KE-1,i  ,j  ) &
+       + M(KE,4,i,j) * Z(KE  ,i-1,j  ) &
+       + M(KE,6,i,j) * Z(KE  ,i  ,j-1) &
+       + M(KE,7,i,j) * Z(KE  ,i  ,j+1) &
+       + M(KE,8,i,j) * Z(KE-1,i-1,j  ) &
+       + M(KE,10,i,j)* Z(KE-1,i  ,j-1) &
+       + M(KE,11,i,j)* Z(KE-1,i  ,j+1) ) )/M(KE,1,i,j)
+#endif
+   end do
+   end do
+   !$acc end parallel
+#endif
+
+   !$acc end data
 
    return
   end subroutine gs
@@ -2562,12 +2673,22 @@ contains
 
     integer :: k, i, j
 
-    !$acc kernels copyin(M,C) copyout(V)
     !$omp parallel do private(i,j,k)
+    !$acc kernels copyin(M,C) copyout(V)
     !$acc loop independent
     do j = JS, JE
     !$acc loop independent
     do i = IS, IE
+       V(KS,i,j) = M(KS,1,i,j) * C(KS  ,i  ,j  ) &
+                 + M(KS,3,i,j) * C(KS+1,i  ,j  ) &
+                 + M(KS,4,i,j) * C(KS  ,i-1,j  ) &
+                 + M(KS,5,i,j) * C(KS  ,i+1,j  ) &
+                 + M(KS,6,i,j) * C(KS  ,i  ,j-1) &
+                 + M(KS,7,i,j) * C(KS  ,i  ,j+1) &
+                 + M(KS,12,i,j)* C(KS+1,i-1,j  ) &
+                 + M(KS,13,i,j)* C(KS+1,i+1,j  ) &
+                 + M(KS,14,i,j)* C(KS+1,i  ,j-1) &
+                 + M(KS,15,i,j)* C(KS+1,i  ,j+1)
        !$acc loop independent
        do k = KS+1, KE-1
           V(k,i,j) = M(k,1,i,j) * C(k  ,i  ,j  ) &
@@ -2586,16 +2707,6 @@ contains
                    + M(k,14,i,j)* C(k+1,i  ,j-1) &
                    + M(k,15,i,j)* C(k+1,i  ,j+1)
        enddo
-       V(KS,i,j) = M(KS,1,i,j) * C(KS  ,i  ,j  ) &
-                 + M(KS,3,i,j) * C(KS+1,i  ,j  ) &
-                 + M(KS,4,i,j) * C(KS  ,i-1,j  ) &
-                 + M(KS,5,i,j) * C(KS  ,i+1,j  ) &
-                 + M(KS,6,i,j) * C(KS  ,i  ,j-1) &
-                 + M(KS,7,i,j) * C(KS  ,i  ,j+1) &
-                 + M(KS,12,i,j)* C(KS+1,i-1,j  ) &
-                 + M(KS,13,i,j)* C(KS+1,i+1,j  ) &
-                 + M(KS,14,i,j)* C(KS+1,i  ,j-1) &
-                 + M(KS,15,i,j)* C(KS+1,i  ,j+1)
        V(KE,i,j) = M(KE,1,i,j) * C(KE  ,i  ,j  ) &
                  + M(KE,2,i,j) * C(KE-1,i  ,j  ) &
                  + M(KE,4,i,j) * C(KE  ,i-1,j  ) &
@@ -3440,7 +3551,7 @@ contains
     !$acc data copyin(Efield,E_pot,QCRG,DENS,QHYD,CX,CY) &
     !$acc      copy(NUM_end,LT_path) &
     !$acc      copyout(fls_int_p,d_QCRG,B_OUT) &
-    !$acc      create(B,C,Edif,exce_grid,count1)
+    !$acc      create(B,C,Edif,exce_grid)
 
     !$omp parallel do
     !$acc kernels
@@ -3500,7 +3611,7 @@ contains
     E_exce_y(1:num_own) = exce_grid(2,1:num_own)
 
     call MPI_AllGather( num_own, 1, MPI_integer, &
-                        count1, 1, MPI_integer, &
+                        count1(:), 1, MPI_integer, &
                         COMM_world, ierr )
 
     countindx(1) = 0
@@ -3553,9 +3664,9 @@ contains
 
        B(i,j) = 0.0_RP
        if ( C(i,j) == 1 ) then
-          abs_qcrg_max = abs( QCRG(KS,i,j) )
+          abs_qcrg_max = 0.0_RP
           !$acc loop reduction(max:abs_qcrg_max)
-          do k = KS+1, KE
+          do k = KS, KE
              abs_qcrg_max = max( abs_qcrg_max, abs( QCRG(k,i,j) ) )
           end do
           if ( abs_qcrg_max >= q_thre ) then
@@ -3619,7 +3730,9 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
 
+    !$acc kernels
     !$acc loop independent collapse(2)
     do j = JS, JE
     do i = IS, IE
@@ -3775,35 +3888,44 @@ contains
     integer  :: i, j, k, pp, qq, iq
     integer  :: grid1, grid2
     real(RP) :: cwc
-    real(RP) :: diffx(nxlut_lt), diffy(nylut_lt)
+    real(RP) :: diffx, diffy, tmp
 
-    !$acc data copyin(TEMP,DENS,QLIQ) copyout(dqcrg,beta_crg) &
-    !$acc      create(diffx,diffy)
+    !$acc data copyin(TEMP,DENS,QLIQ) copyout(dqcrg,beta_crg)
 
     !$omp parallel do &
-    !$omp private(cwc,diffx,diffy,grid1,grid2)
+    !$omp private(cwc,diffx,diffy,tmp,grid1,grid2)
     !$acc kernels
     !$acc loop independent collapse(2)
     do j = JS, JE
     do i = IS, IE
-    !$acc loop private(diffx,diffy)
+    !$acc loop vector
     do k = KS, KE
        if( TEMP(k,i,j) <= T00 .and. TEMP(k,i,j) >= tcrglimit ) then
           cwc = 0.0_RP
-          !$acc loop independent reduction(+:cwc)
+          !$acc loop seq
           do iq = 1, NLIQ
              cwc = cwc + QLIQ(k,i,j,iq) * DENS(k,i,j) * 1.0E+3_RP ![g/m3]
           enddo
-          !$acc loop independent
-          do pp = 1, nxlut_lt
-             diffx(pp) = abs( grid_lut_t(pp)-TEMP(k,i,j) )
+          diffx = abs( grid_lut_t(1)-TEMP(k,i,j) )
+          grid1 = 1
+          !$acc loop seq
+          do pp = 2, nxlut_lt
+             tmp = abs( grid_lut_t(pp)-TEMP(k,i,j) )
+             if ( tmp < diffx ) then
+                diffx = tmp
+                grid1 = pp
+             end if
           enddo
-          grid1 = minloc( diffx,1 )
-          !$acc loop independent
-          do qq = 1, nylut_lt
-             diffy(qq) = abs( grid_lut_l(qq)-cwc )
+          diffy = abs( grid_lut_l(1)-cwc )
+          grid2 = 1
+          !$acc loop seq
+          do qq = 2, nylut_lt
+             tmp = abs( grid_lut_l(qq)-cwc )
+             if ( tmp < diffy ) then
+                diffy = tmp
+                grid2 = qq
+             end if
           enddo
-          grid2 = minloc( diffy,1 )
           dqcrg(k,i,j) = dq_chrg( grid1, grid2 ) &
                        *( 0.5_RP + sign( 0.5_RP,cwc-1.0E-2_RP ) ) !--- no charge separation when cwc < 0.01 [g/m3]
        else
