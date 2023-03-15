@@ -1153,7 +1153,7 @@ contains
 
     call MPI_BCAST( var,            &
                     counts,         &
-                    COMM_datatype,  &
+                    MPI_REAL,       &
                     PRC_masterrank, &
                     COMM_world,     &
                     ierr            )
@@ -1179,7 +1179,7 @@ contains
 
     call MPI_BCAST( var,            &
                     counts,         &
-                    COMM_datatype,  &
+                    MPI_DOUBLE_PRECISION, &
                     PRC_masterrank, &
                     COMM_world,     &
                     ierr            )
@@ -1210,7 +1210,7 @@ contains
 
     call MPI_BCAST( var(:),         &
                     counts,         &
-                    COMM_datatype,  &
+                    MPI_REAL,       &
                     PRC_masterrank, &
                     COMM_world,     &
                     ierr            )
@@ -1238,7 +1238,7 @@ contains
 
     call MPI_BCAST( var(:),         &
                     counts,         &
-                    COMM_datatype,  &
+                    MPI_DOUBLE_PRECISION, &
                     PRC_masterrank, &
                     COMM_world,     &
                     ierr            )
@@ -1269,7 +1269,7 @@ contains
 
     call MPI_BCAST( var(:,:),       &
                     counts,         &
-                    COMM_datatype,  &
+                    MPI_REAL,       &
                     PRC_masterrank, &
                     COMM_world,     &
                     ierr            )
@@ -1297,7 +1297,7 @@ contains
 
     call MPI_BCAST( var(:,:),       &
                     counts,         &
-                    COMM_datatype,  &
+                    MPI_DOUBLE_PRECISION, &
                     PRC_masterrank, &
                     COMM_world,     &
                     ierr            )
@@ -1328,7 +1328,7 @@ contains
 
     call MPI_BCAST( var(:,:,:),     &
                     counts,         &
-                    COMM_datatype,  &
+                    MPI_REAL,       &
                     PRC_masterrank, &
                     COMM_world,     &
                     ierr            )
@@ -1356,7 +1356,7 @@ contains
 
     call MPI_BCAST( var(:,:,:),     &
                     counts,         &
-                    COMM_datatype,  &
+                    MPI_DOUBLE_PRECISION, &
                     PRC_masterrank, &
                     COMM_world,     &
                     ierr            )
@@ -1392,7 +1392,7 @@ contains
 
     call MPI_BCAST( var(:,:,:,:),   &
                     counts,         &
-                    COMM_datatype,  &
+                    MPI_REAL,       &
                     PRC_masterrank, &
                     COMM_world,     &
                     ierr            )
@@ -1425,7 +1425,7 @@ contains
 
     call MPI_BCAST( var(:,:,:,:),   &
                     counts,         &
-                    COMM_datatype,  &
+                    MPI_DOUBLE_PRECISION, &
                     PRC_masterrank, &
                     COMM_world,     &
                     ierr            )
