@@ -2454,7 +2454,7 @@ contains
     !---- for Lightning component
 !    logical, private, save :: MP_doice_graupel_collection = .false.
 !    real(RP), private :: flg_igcol = 0.0_RP
-    !--- for Charge split
+    !--- for Charge separation
     real(RP) :: v0_crg_l=0.0_RP, d0_crg_l=0.0_RP
     real(RP) :: facq(I_QC:I_QG), f_crg
     integer :: grid(2), pp, qq
@@ -4747,7 +4747,7 @@ contains
           Pcrg2(k,I_NGacNS2NG) = Pac(k,I_NGacNS2NG)*(1.0_RP-sw1) / (rhoq(k,I_NS)+sw1) * rhoq_crg(k,I_QS)
        end do
 
-       !--- Charge split by Snow-Graupel rebound--------------------------------
+       !--- Charge separation by Snow-Graupel rebound--------------------------------
        do k = KS, KE
           alpha_lt = 5.0_RP * ( dq_xave(k,I_mp_QS) / d0_crg )**2 * vt_xave(k,I_mp_QG,2) / v0_crg
           alpha_lt = min( alpha_lt, 10.0_RP )
@@ -4761,7 +4761,7 @@ contains
 !!$       do k = KS, KE
 !!$         sw1 = 0.5_RP - sign( 0.5_RP, rhoq(k,I_NI)-SMALL ) !--- if NS is small,  ignore charge transfer
 !!$         Pcrg2(k,I_NGacNI2NG) = Pac(k,I_NGacNI2NG)*(1.0_RP-sw1) / (rhoq(k,I_NI)+sw1) * rhoq_crg(k,I_QI) * flg_igcol
-!!$       !--- Charge split by Ice-Graupel rebound--------------------------------
+!!$       !--- Charge separation by Ice-Graupel rebound--------------------------------
 !!$         alpha_lt = 5.0_RP * ( dq_xave(k,I_mp_QI) / d0_crg )**2 * vt_xave(k,I_mp_QG,2) / v0_crg
 !!$         alpha_lt = min( alpha_lt, 10.0_RP )
 !!$         Pcrg2(k,I_CGNGacNI2NG)= 0.25_RP*pi*( 1.0_RP - E_stick(k) )*E_gi &
@@ -5044,6 +5044,8 @@ contains
     real(RP) :: kernel_ig, kernel_is, kernel_ii
     real(RP) :: kernel_sg, kernel_ss
     real(RP) :: kernel_gg
+    real(RP) :: kernel_sg_reb
+    real(RP) :: beta_work(KA), dqcrg_work(KA)
     !
     ! work for Gauss-Legendre quadrature
     integer, parameter :: ngmax=4
@@ -5111,6 +5113,14 @@ contains
     !---------------------------------------------------------------------------
     !
     !
+    if( flg_lt ) then
+       beta_work(:) = beta_crg(:)
+       dqcrg_work(:) = dqcrg(:)
+    else
+       beta_work(:) = 0.0_RP
+       dqcrg_work(:) = 0.0_RP
+    endif
+
     do k = KS, KE
        tem(k) = max( wtem(k), tem_min ) ! 11/08/30 T.Mitsui
     end do
@@ -5468,6 +5478,13 @@ contains
              !
              kernel_gg          = 0.125_RP*pi*(dag_glx+dag_gly)*(dag_glx+dag_gly)*sqrt((vtg_glx-vtg_gly)*(vtg_glx-vtg_gly))  * E_stick(k) * E_gg
              Pac(k,I_NGacNG2NG)   = Pac(k,I_NGacNG2NG) - kernel_gg*dNg_glx*dNg_gly
+            
+             !--- Charge separation by Snow-Graupel rebound--------------------------------
+             alpha_lt = 5.0_RP * ( das_glx / d0_crg )**2*vtg_gly/v0_crg
+             alpha_lt = min( alpha_lt, 10.0_RP )
+             kernel_sg_reb      = 0.25_RP*pi*(das_glx+dag_gly)*(das_glx+dag_gly)*sqrt((vts_glx-vtg_gly)*(vts_glx-vtg_gly))  &
+                                * ( 1.0_RP - E_stick(k) ) * E_gs
+             Pcrg2(k,I_CGNGacNS2NG)= Pcrg2(k,I_CGNGacNS2NG)+kernel_sg_reb*dNs_glx*dNg_gly*dqcrg_work(k)*alpha_lt*beta_work(k)
           end do
        end do
     end do
@@ -5520,6 +5537,138 @@ contains
        PQ(k,I_LIarm) =  coef_emelt*(Pac(k,I_LRacLI2LG_R)+Pac(k,I_LRacLI2LG_I))
        PQ(k,I_NIarm) =  PQ(k,I_LIarm)/xq(k,I_mp_QG)
     enddo
+
+    !---- for charge density
+    if ( flg_lt ) then
+
+       ! 1.c-g (X=Cloud, Y=Graupel)
+       do k = KS, KE
+          sw1 = 0.5_RP - sign( 0.5_RP, rhoq(k,I_NC)-SMALL ) 
+          Pcrg2(k,I_NGacNC2NG) = Pac(k,I_NGacNC2NG)*(1.0_RP-sw1) / (rhoq(k,I_NC)+sw1) * rhoq_crg(k,I_QC)
+       end do
+
+       ! 2.c-s (X=Cloud, Y=Snow)
+       do k = KS, KE
+          sw1 = 0.5_RP - sign( 0.5_RP, rhoq(k,I_NC)-SMALL )
+          Pcrg2(k,I_NSacNC2NS) = Pac(k,I_NSacNC2NS)*(1.0_RP-sw1) / (rhoq(k,I_NC)+sw1) * rhoq_crg(k,I_QC)
+       end do
+
+       ! 3.c-i (X=Cloud, Y=Cloud Ice)
+       do k = KS, KE
+          sw1 = 0.5_RP - sign( 0.5_RP, rhoq(k,I_NC)-SMALL )
+          Pcrg2(k,I_NIacNC2NI) = Pac(k,I_NIacNC2NI)*(1.0_RP-sw1) / (rhoq(k,I_NC)+sw1) * rhoq_crg(k,I_QC)
+       end do
+
+       ! 4.r-g
+       do k = KS, KE
+          sw1 = 0.5_RP - sign( 0.5_RP, rhoq(k,I_NR)-SMALL )
+          sw2 = 0.5_RP - sign( 0.5_RP, rhoq(k,I_NG)-SMALL )
+          Pcrg2(k,I_NRacNG2NG) = Pac(k,I_NRacNG2NG)*(1.0_RP-sw1) / (rhoq(k,I_NR)+sw1) * rhoq_crg(k,I_QR)
+          Pcrg2(k,I_NRacNG2NR) = Pac(k,I_NRacNG2NR)*(1.0_RP-sw2) / (rhoq(k,I_NG)+sw2) * rhoq_crg(k,I_QG)
+       end do
+
+       ! 5.r-s
+       do k = KS, KE
+          sw1 = 0.5_RP - sign( 0.5_RP, rhoq(k,I_NR)-SMALL )
+          sw2 = 0.5_RP - sign( 0.5_RP, rhoq(k,I_NS)-SMALL )
+          Pcrg2(k,I_NRacNS2NG_R) = Pac(k,I_NRacNS2NG_R)*(1.0_RP-sw1) / (rhoq(k,I_NR)+sw1) * rhoq_crg(k,I_QR)
+          Pcrg2(k,I_NRacNS2NG_S) = Pac(k,I_NRacNS2NG_S)*(1.0_RP-sw2) / (rhoq(k,I_NS)+sw2) * rhoq_crg(k,I_QS)
+       end do
+
+
+       ! 6.r-i
+       do k = KS, KE
+          sw1 = 0.5_RP - sign( 0.5_RP, rhoq(k,I_NR)-SMALL )
+          sw2 = 0.5_RP - sign( 0.5_RP, rhoq(k,I_NI)-SMALL )
+          Pcrg2(k,I_NRacNI2NG_R) = Pac(k,I_NRacNI2NG_R)*(1.0_RP-sw1) / (rhoq(k,I_NR)+sw1) * rhoq_crg(k,I_QR)
+          Pcrg2(k,I_NRacNI2NG_I) = Pac(k,I_NRacNI2NG_I)*(1.0_RP-sw2) / (rhoq(k,I_NI)+sw2) * rhoq_crg(k,I_QI)
+       end do
+
+       ! 7.i-g
+       do k = KS, KE
+          sw1 = 0.5_RP - sign( 0.5_RP, rhoq(k,I_NI)-SMALL )
+          Pcrg2(k,I_NIacNG2NG) = Pac(k,I_NIacNG2NG)*(1.0_RP-sw1) / (rhoq(k,I_NI)+sw1) * rhoq_crg(k,I_QI)
+       end do
+
+       ! 8.i-s
+       do k = KS, KE
+          sw1 = 0.5_RP - sign( 0.5_RP, rhoq(k,I_NI)-SMALL )
+          Pcrg2(k,I_NIacNS2NS) = Pac(k,I_NIacNS2NS)*(1.0_RP-sw1) / (rhoq(k,I_NI)+sw1) * rhoq_crg(k,I_QI)
+       end do
+
+       ! 9.i-i
+       do k = KS, KE
+          sw1 = 0.5_RP - sign( 0.5_RP, rhoq(k,I_NI)-SMALL )
+          Pcrg2(k,I_NIacNI2NS) = Pac(k,I_NIacNI2NS)*(1.0_RP-sw1) / (rhoq(k,I_NI)+sw1) * rhoq_crg(k,I_QI)
+       end do
+
+       ! 10.s-g
+       do k = KS, KE
+          sw1 = 0.5_RP - sign( 0.5_RP, rhoq(k,I_NS)-SMALL ) 
+          Pcrg2(k,I_NGacNS2NG) = Pac(k,I_NGacNS2NG)*(1.0_RP-sw1) / (rhoq(k,I_NS)+sw1) * rhoq_crg(k,I_QS)
+       end do
+
+       ! 11.s-s
+       do k = KS, KE
+          Pcrg2(k,I_NSacNS2NS) = 0.0_RP ! no charge transfer between category due to the collection of the same category (snow-snow)
+       end do
+
+       ! 12.g-g
+       do k = KS, KE
+          Pcrg2(k,I_NGacNG2NG) = 0.0_RP ! no charge transfer between category due to the collection of the same category (graupel-graupel)
+       end do
+
+       !--- Partial conversion
+       ! ice-cloud => graupel
+       do k = KS, KE
+          sw1 = 0.5_RP - sign( 0.5_RP, rhoq(k,I_NI)-SMALL )
+          Pcrg1(k,I_NIcon) = PQ(k,I_NIcon)*(1.0_RP-sw1) / (rhoq(k,I_NI)+sw1) * rhoq_crg(k,I_QI)
+       end do
+
+       ! snow-cloud => graupel
+       do k = KS, KE
+          sw1 = 0.5_RP - sign( 0.5_RP, rhoq(k,I_NS)-SMALL )
+          Pcrg1(k,I_NScon) = PQ(k,I_NScon)*(1.0_RP-sw1) / (rhoq(k,I_NS)+sw1) * rhoq_crg(k,I_QS)
+       end do
+
+       !--- enhanced melting( due to collection-freezing of water droplets )
+       ! cloud-graupel
+       do k = KS, KE
+          sw1 = 0.5_RP - sign( 0.5_RP, rhoq(k,I_NG)-SMALL )
+          Pcrg1(k,I_NGacm) = PQ(k,I_NGacm)*(1.0_RP-sw1) / (rhoq(k,I_NG)+sw1) * rhoq_crg(k,I_QG)
+       end do
+
+       ! rain-graupel
+       do k = KS, KE
+          sw1 = 0.5_RP - sign( 0.5_RP, rhoq(k,I_NG)-SMALL ) 
+          Pcrg1(k,I_NGarm) = PQ(k,I_NGarm)*(1.0_RP-sw1) / (rhoq(k,I_NG)+sw1) * rhoq_crg(k,I_QG)
+       end do
+
+       ! cloud-snow
+       do k = KS, KE
+          sw1 = 0.5_RP - sign( 0.5_RP, rhoq(k,I_NS)-SMALL ) 
+          Pcrg1(k,I_NSacm) = PQ(k,I_NSacm)*(1.0_RP-sw1) / (rhoq(k,I_NS)+sw1) * rhoq_crg(k,I_QS)
+       end do
+
+       ! rain-snow
+       do k = KS, KE
+          sw1 = 0.5_RP - sign( 0.5_RP, rhoq(k,I_NS)-SMALL ) 
+          Pcrg1(k,I_NSarm) = PQ(k,I_NSarm)*(1.0_RP-sw1) / (rhoq(k,I_NS)+sw1) * rhoq_crg(k,I_QS)
+       end do
+
+       ! cloud-ice
+       do k = KS, KE
+          sw1 = 0.5_RP - sign( 0.5_RP, rhoq(k,I_NI)-SMALL ) 
+          Pcrg1(k,I_NIacm) = PQ(k,I_NIacm)*(1.0_RP-sw1) / (rhoq(k,I_NI)+sw1) * rhoq_crg(k,I_QI)
+       end do
+
+       ! rain-ice
+       do k = KS, KE
+          sw1 = 0.5_RP - sign( 0.5_RP, rhoq(k,I_NI)-SMALL ) 
+          Pcrg1(k,I_NIarm) = PQ(k,I_NIarm)*(1.0_RP-sw1) / (rhoq(k,I_NI)+sw1) * rhoq_crg(k,I_QI)
+       end do
+
+    endif
 
     return
   end subroutine mixed_phase_collection_bin
