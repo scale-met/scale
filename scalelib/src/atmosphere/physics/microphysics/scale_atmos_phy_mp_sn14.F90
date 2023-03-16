@@ -2456,8 +2456,8 @@ contains
 !    real(RP), private :: flg_igcol = 0.0_RP
     !--- for Charge separation
     real(RP) :: v0_crg_l, d0_crg_l
-    real(RP) :: dqcrg_l(KA,IA,JA)
-    real(RP) :: beta_crg_l(KA,IA,JA)
+    real(RP) :: dqcrg_l(KA)
+    real(RP) :: beta_crg_l(KA)
     real(RP) :: facq(I_QC:I_QG), f_crg
     integer :: grid(2), pp, qq
     real(RP) :: drhoqcrg_c, drhoqcrg_r
@@ -2548,13 +2548,9 @@ contains
 !        call PRC_MPIstop
 !        flg_igcol = 0.0_RP
 !      endif
-       dqcrg_l(:,:,:) = dqcrg(:,:,:)
-       beta_crg_l(:,:,:) = beta_crg(:,:,:)
     else
        d0_crg_l = 1.0_RP  
        v0_crg_l = 1.0_RP 
-       dqcrg_l(:,:,:) = 0.0_RP
-       beta_crg_l(:,:,:) = 0.0_RP
     endif
 
     do ip = 1, w_nmax
@@ -2573,7 +2569,7 @@ contains
     !$omp        opt_collection_bin,opt_nucleation_ice_hom,so22_het, &
     !$omp        w3d,HIST_sw,HIST_idx, &
     !$omp        QTRC_crg,QSPLT_in,RHOQcrg_t_mp,Sarea, &
-    !$omp        d0_crg_l,v0_crg_l,beta_crg_l,dqcrg_l,flg_lt_l) &
+    !$omp        d0_crg_l,v0_crg_l,beta_crg,dqcrg,flg_lt_l) &
     !$omp private (pres,temp,rrho,rhoe,rhoq,cva,cpa,rhoq0_t,rhoe0_t,cptot0_t,cvtot0_t, &
     !$omp          xq,dq_xa,vt_xa,wtemp,esw,esi,log_rho_fac,log_rho_fac_q, &
     !$omp          drhoqv,drhoqc,drhonc,drhoqr,drhonr,drhoqi,drhoni,drhoqs,drhons,drhoqg,drhong, &
@@ -2596,6 +2592,7 @@ contains
     !$omp          eml_dqc,eml_dnc,eml_dqr,eml_dnr,eml_dqi,eml_dni,eml_dqs,eml_dns,eml_dqg,eml_dng, &
     !$omp          spl_dqi,spl_dni,spl_dqg,spl_dqs, &
     !$omp          dTdt_equiv_d,sl_PLCdep,sl_PLRdep,sl_PNRdep,qke_d, &
+    !$omp          beta_crg_l,dqcrg_l, &
     !$omp          dqv,dql,dqi,dcv,dcp, &
     !$omp          di2l,dtem,fact,sw,sw1,sw2,tmp)
     do j = JS, JE
@@ -2996,14 +2993,20 @@ contains
           end do
        endif
 
+       if ( flg_lt_l ) then
+          do k = KS, KE
+             beta_crg_l(k) = beta_crg(k,i,j)
+             dqcrg_l(k) = dqcrg(k,i,j)
+          end do
+       end if
+
        ! collection process
        if( opt_collection_bin ) then
           call mixed_phase_collection_bin(            &
                KA, KS, KE,                        & ! (in)
                flg_lt_l,                          & ! (in)
                d0_crg_l, v0_crg_l,                & ! (in)
-               beta_crg_l(:,i,j),                 & ! (in)
-               dqcrg_l(:,i,j),                    & ! (in)
+               beta_crg_l(:), dqcrg_l(:),         & ! (in)
                temp(:), rhoq(:,:),                & ! (in)
                rhoq_crg(:,:),                     & ! (in)
                xq(:,:), dq_xa(:,:), vt_xa(:,:,:), & ! (in)
@@ -3017,8 +3020,7 @@ contains
                KA, KS, KE,                        & ! (in)
                flg_lt_l,                          & ! (in)
                d0_crg_l, v0_crg_l,                & ! (in)
-               beta_crg_l(:,i,j),                 & ! (in)
-               dqcrg_l(:,i,j),                    & ! (in)
+               beta_crg_l(:), dqcrg_l(:),         & ! (in)
                temp(:), rhoq(:,:),                & ! (in)
                rhoq_crg(:,:),                     & ! (in)
                xq(:,:), dq_xa(:,:), vt_xa(:,:,:), & ! (in)
