@@ -2455,7 +2455,9 @@ contains
 !    logical, private, save :: MP_doice_graupel_collection = .false.
 !    real(RP), private :: flg_igcol = 0.0_RP
     !--- for Charge separation
-    real(RP) :: v0_crg_l=0.0_RP, d0_crg_l=0.0_RP
+    real(RP) :: v0_crg_l, d0_crg_l
+    real(RP) :: dqcrg_l(KA,IA,JA)
+    real(RP) :: beta_crg_l(KA,IA,JA)
     real(RP) :: facq(I_QC:I_QG), f_crg
     integer :: grid(2), pp, qq
     real(RP) :: drhoqcrg_c, drhoqcrg_r
@@ -2546,6 +2548,13 @@ contains
 !        call PRC_MPIstop
 !        flg_igcol = 0.0_RP
 !      endif
+       dqcrg_l(:,:,:) = dqcrg(:,:,:)
+       beta_crg_l(:,:,:) = beta_crg(:,:,:)
+    else
+       d0_crg_l = 1.0_RP  
+       v0_crg_l = 1.0_RP 
+       dqcrg_l(:,:,:) = 0.0_RP
+       beta_crg_l(:,:,:) = 0.0_RP
     endif
 
     do ip = 1, w_nmax
@@ -2564,7 +2573,7 @@ contains
     !$omp        opt_collection_bin,opt_nucleation_ice_hom,so22_het, &
     !$omp        w3d,HIST_sw,HIST_idx, &
     !$omp        QTRC_crg,QSPLT_in,RHOQcrg_t_mp,Sarea, &
-    !$omp        d0_crg_l,v0_crg_l,beta_crg,dqcrg,flg_lt_l) &
+    !$omp        d0_crg_l,v0_crg_l,beta_crg_l,dqcrg_l,flg_lt_l) &
     !$omp private (pres,temp,rrho,rhoe,rhoq,cva,cpa,rhoq0_t,rhoe0_t,cptot0_t,cvtot0_t, &
     !$omp          xq,dq_xa,vt_xa,wtemp,esw,esi,log_rho_fac,log_rho_fac_q, &
     !$omp          drhoqv,drhoqc,drhonc,drhoqr,drhonr,drhoqi,drhoni,drhoqs,drhons,drhoqg,drhong, &
@@ -2884,7 +2893,7 @@ contains
             esw(:), esi(:),                  & ! (in)
             rhoq(:,:), pres(:), temp(:),     & ! (in)
             cpa(:), cva(:),                  & ! (in)
-            flg_lt_l,                        & ! in
+            flg_lt_l,                        & ! (in)
             PQ(:,:),                         & ! (inout)
             sl_PLCdep, sl_PLRdep, sl_PNRdep, & ! (inout)
             RHOQ0_t(:,:), RHOE0_t(:),        & ! (out)
@@ -2993,8 +3002,8 @@ contains
                KA, KS, KE,                        & ! (in)
                flg_lt_l,                          & ! (in)
                d0_crg_l, v0_crg_l,                & ! (in)
-               beta_crg(:,i,j),                   & ! (in)
-               dqcrg(:,i,j),                      & ! (in)
+               beta_crg_l(:,i,j),                 & ! (in)
+               dqcrg_l(:,i,j),                    & ! (in)
                temp(:), rhoq(:,:),                & ! (in)
                rhoq_crg(:,:),                     & ! (in)
                xq(:,:), dq_xa(:,:), vt_xa(:,:,:), & ! (in)
@@ -3008,8 +3017,8 @@ contains
                KA, KS, KE,                        & ! (in)
                flg_lt_l,                          & ! (in)
                d0_crg_l, v0_crg_l,                & ! (in)
-               beta_crg(:,i,j),                   & ! (in)
-               dqcrg(:,i,j),                      & ! (in)
+               beta_crg_l(:,i,j),                 & ! (in)
+               dqcrg_l(:,i,j),                    & ! (in)
                temp(:), rhoq(:,:),                & ! (in)
                rhoq_crg(:,:),                     & ! (in)
                xq(:,:), dq_xa(:,:), vt_xa(:,:,:), & ! (in)
