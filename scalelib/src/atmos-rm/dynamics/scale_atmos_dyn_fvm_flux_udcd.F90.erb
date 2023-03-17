@@ -500,8 +500,11 @@ contains
 
     !$omp do OMP_SCHEDULE_ collapse(2)
     !$acc kernels
+    !$acc loop independent
     do j = JJS, JJE
+    !$acc loop independent
     do i = IIS, IIE
+    !$acc loop independent
     do k = KS<%=nh%>, KE<%=-(nh+1)%>
 #ifdef DEBUG
        call CHECK( __LINE__, mflx(k,i,j) )
@@ -524,7 +527,9 @@ contains
 
     !$omp do OMP_SCHEDULE_ collapse(2)
     !$acc kernels
+    !$acc loop independent
     do j = JJS, JJE
+    !$acc loop independent
     do i = IIS, IIE
 #ifdef DEBUG
 <% nh.times do |k| %>
@@ -591,8 +596,11 @@ contains
     !$omp private(vel) &
     !$omp shared(JJS,JJE,IIS,IIE,KS,KE,mflx,val,flux,GSQRT,num_diff)
     !$acc kernels
+    !$acc loop independent
     do j = JJS<%=-j%>, JJE
+    !$acc loop independent
     do i = IIS<%=-i%>, IIE
+    !$acc loop independent
     do k = KS, KE
 #ifdef DEBUG
        call CHECK( __LINE__, mflx(k,i,j) )
@@ -653,8 +661,11 @@ contains
 
     !$omp do OMP_SCHEDULE_ collapse(2)
     !$acc kernels
+    !$acc loop independent
     do j = JJS, JJE
+    !$acc loop independent
     do i = IIS, IIE
+    !$acc loop independent
     do k = KS<%=nh+1%>, KE<%=-[nh,1].max%>
 #ifdef DEBUG
        call CHECK( __LINE__, mom(k-1,i,j) )
@@ -679,7 +690,9 @@ contains
 
     !$omp do OMP_SCHEDULE_ collapse(2)
     !$acc kernels
+    !$acc loop independent
     do j = JJS, JJE
+    !$acc loop independent
     do i = IIS, IIE
 #ifdef DEBUG
 <% if nh >= 1 %>
@@ -761,8 +774,11 @@ contains
 
     !$omp do OMP_SCHEDULE_ collapse(2)
     !$acc kernels
+    !$acc loop independent
     do j = JJS, JJE
+    !$acc loop independent
     do i = IIS, IIE
+    !$acc loop independent
     do k = KS<%=[nh,2].max%>, KE<%=-[nh,1].max%>
        vel = <%= interp("mom", uv, "XYZ") %> &
            / DENS(k,i,j)
@@ -777,7 +793,9 @@ contains
     
     !$omp do OMP_SCHEDULE_ collapse(2)
     !$acc kernels
+    !$acc loop independent
     do j = JJS, JJE
+    !$acc loop independent
     do i = IIS, IIE
        ! The boundary condition is qflx_hi + qflxJ13 + qfluxJ23 = 0 at KS.
        ! The flux at KS can be non-zero.
@@ -859,8 +877,11 @@ contains
 
     !$omp do OMP_SCHEDULE_ collapse(2)
     !$acc kernels
+    !$acc loop independent
     do j = JJS<%=-j%>, JJE
+    !$acc loop independent
     do i = IIS<%=-i%>, IIE
+    !$acc loop independent
     do k = KS, KE-1
 #ifdef DEBUG
        call CHECK( __LINE__, mom(k  ,i,j) )
@@ -885,7 +906,9 @@ contains
 
     !$omp do OMP_SCHEDULE_ collapse(2)
     !$acc kernels
+    !$acc loop independent
     do j = JJS<%=-j%>, JJE
+    !$acc loop independent
     do i = IIS<%=-i%>, IIE
        flux(KE,i,j) = 0.0_RP
     enddo
@@ -946,7 +969,9 @@ contains
 
     !$omp do OMP_SCHEDULE_
     !$acc kernels
+    !$acc loop independent
     do j = JJS, JJE
+    !$acc loop independent
     do k = KS<%=nh%>, KE<%=-nh-1%>
        i = IIS
 #ifdef DEBUG
@@ -970,6 +995,7 @@ contains
 
     !$omp do OMP_SCHEDULE_
     !$acc kernels
+    !$acc loop independent
     do j = JJS, JJE
        i = IIS
 #ifdef DEBUG
@@ -1003,8 +1029,11 @@ contains
 <% end %>
     !$omp do OMP_SCHEDULE_ collapse(2) 
     !$acc kernels
+    !$acc loop independent
     do j = JJS, JJE
+    !$acc loop independent
     do i = IIS, IIE
+    !$acc loop independent
     do k = KS<%=nh%>, KE<%=-nh-1%>
 #ifdef DEBUG
        call CHECK( __LINE__, mom(k,i,j) )
@@ -1029,7 +1058,9 @@ contains
 
     !$omp do OMP_SCHEDULE_ collapse(2) 
     !$acc kernels
+    !$acc loop independent
     do j = JJS, JJE
+    !$acc loop independent
     do i = IIS, IIE
 #ifdef DEBUG
 <% nh.times do |k| %>
@@ -1112,7 +1143,9 @@ contains
 
     !$omp do OMP_SCHEDULE_
     !$acc kernels
+    !$acc loop independent
     do j = JJS, JJE
+    !$acc loop independent
     do k = KS<%=nh%>, KE<%=-nh-1%>
        i = IIS
        vel = <%= interp("mom", xyz, "XYW") %> &
@@ -1126,6 +1159,7 @@ contains
 
     !$omp do OMP_SCHEDULE_
     !$acc kernels
+    !$acc loop independent
     do j = JJS, JJE
        i = IIS
        ! The boundary condition is qflx_hi + qflxJ13 + qfluxJ23 = 0 at KS-1.
@@ -1155,8 +1189,11 @@ contains
 
     !$omp do OMP_SCHEDULE_ collapse(2)
     !$acc kernels
+    !$acc loop independent
     do j = JJS, JJE
+    !$acc loop independent
     do i = IIS, IIE
+    !$acc loop independent
     do k = KS<%=nh%>, KE<%=-nh-1%>
        vel = <%= interp("mom", xyz, uv+"W") %> &
            / <%= interp("DENS", "XYZ", uv+"W") %>
@@ -1171,7 +1208,9 @@ contains
 
     !$omp do OMP_SCHEDULE_ collapse(2)
     !$acc kernels
+    !$acc loop independent
     do j = JJS, JJE
+    !$acc loop independent
     do i = IIS, IIE
        ! The boundary condition is qflx_hi + qflxJ13 + qfluxJ23 = 0 at KS-1.
        ! The flux at KS-1 can be non-zero.
@@ -1267,7 +1306,9 @@ contains
     !$omp private(vel) &
     !$omp shared(JJS,JJE,IIS,IIE,KS,KE,mom,val,DENS,flux,GSQRT,MAPF,num_diff,TwoD)
     !$acc kernels
+    !$acc loop independent
     do j = JJS<%=-jj+jo%>, JJE<%=jo%>
+    !$acc loop independent
     do k = KS, KE
        i = IIS
 #ifdef DEBUG
@@ -1295,8 +1336,11 @@ contains
     !$omp private(vel) &
     !$omp shared(JJS,JJE,IIS,IIE,KS,KE,mom,val,DENS,flux,GSQRT,MAPF,num_diff)
     !$acc kernels
+    !$acc loop independent
     do j = JJS<%=-jj+jo%>, JJE<%=jo%>
+    !$acc loop independent
     do i = IIS<%=-ii+io%>, IIE<%=io%>
+    !$acc loop independent
     do k = KS, KE
 #ifdef DEBUG
        call CHECK( __LINE__, mom(k,i  ,j) )
@@ -1334,7 +1378,7 @@ contains
   function phi(v1, v2, v3)
     use scale_const, only: &
        EPS => CONST_EPS
-    !$acc routine vector
+    !$acc routine seq
     implicit none
 
     real(RP)              :: phi

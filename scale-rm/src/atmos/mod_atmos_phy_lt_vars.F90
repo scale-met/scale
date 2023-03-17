@@ -162,8 +162,7 @@ contains
     ! for cloud microphysics
     allocate( ATMOS_PHY_MP_RHOC_t(KA,IA,JA,QS_LT:QE_LT) )
     ATMOS_PHY_MP_RHOC_t(:,:,:,:) = 0.0_RP
-!    !$acc update device (ATMOS_PHY_MP_RHOC_t)
-    !$acc enter data create(ATMOS_PHY_MP_RHOC_t)
+    !$acc update device (ATMOS_PHY_MP_RHOC_t)
 
 
     return
@@ -180,12 +179,11 @@ contains
     LOG_NEWLINE
     LOG_INFO("ATMOS_PHY_LT_vars_finalize",*) 'Finalize'
 
+    !$acc exit data delete(ATMOS_PHY_LT_Epot)
     deallocate( ATMOS_PHY_LT_Epot )
 
     ! for cloud microphysics
     deallocate( ATMOS_PHY_MP_RHOC_t )
-    !$acc exit data delete(ATMOS_PHY_LT_Epot,ATMOS_PHY_MP_RHOC_t)
-
 
     return
   end subroutine ATMOS_PHY_LT_vars_finalize

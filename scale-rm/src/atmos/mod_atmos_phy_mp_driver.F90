@@ -875,7 +875,8 @@ contains
 
        case ( 'TOMITA08' )
 !OCL XFILL
-          !$acc kernels async
+          !$acc parallel async
+          !$acc loop collapse(2)
           do j = JS, JE
           do i = IS, IE
           do k = KS, KE
@@ -883,9 +884,10 @@ contains
           end do
           end do
           end do
-          !$acc end kernels
+          !$acc end parallel
 !OCL XFILL
-          !$acc kernels async
+          !$acc parallel async
+          !$acc loop collapse(3)
           do iq = QS_MP, QE_MP
           do j = JS, JE
           do i = IS, IE
@@ -895,9 +897,10 @@ contains
           end do
           end do
           end do
-          !$acc end kernels
+          !$acc end parallel
 !OCL XFILL
-          !$acc kernels async
+          !$acc parallel async
+          !$acc loop collapse(2)
           do j = JS, JE
           do i = IS, IE
           do k = KS, KE
@@ -905,9 +908,10 @@ contains
           end do
           end do
           end do
-          !$acc end kernels
+          !$acc end parallel
 !OCL XFILL
-          !$acc kernels async
+          !$acc parallel async
+          !$acc loop collapse(2)
           do j = JS, JE
           do i = IS, IE
           do k = KS, KE
@@ -915,13 +919,14 @@ contains
           end do
           end do
           end do
-          !$acc end kernels
+          !$acc end parallel
 
           !$acc wait
 
           if( flg_lt ) then
 !OCL XFILL
-             !$acc kernels
+             !$acc parallel
+             !$acc loop collapse(3)
              do iq = QS_LT, QE_LT
              do j = JS, JE
              do i = IS, IE
@@ -931,7 +936,7 @@ contains
              end do
              end do
              end do
-             !$acc end kernels
+             !$acc end parallel
 
              call ATMOS_PHY_LT_sato2019_select_dQCRG_from_LUT( &
                   KA, KS, KE, IA, IS, IE, JA, JS, JE, & ! [IN]
@@ -939,6 +944,7 @@ contains
                   TEMP1(:,:,:), DENS(:,:,:),          & ! [IN]
                   QTRC1(:,:,:,QLS:QLE),               & ! [IN]
                   dqcrg(:,:,:), beta_crg(:,:,:)       ) ! [OUT]
+
              call ATMOS_PHY_MP_tomita08_adjustment( &
                   KA, KS, KE, IA, IS, IE, JA, JS, JE, &
                   DENS(:,:,:), PRES(:,:,:), CCN(:,:,:), dt_MP,                          & ! [IN]
@@ -955,7 +961,8 @@ contains
                   RHOE_t(:,:,:), EVAPORATE(:,:,:)                                       ) ! [OUT]
           endif
 
-          !$acc kernels async
+          !$acc parallel async
+          !$acc loop collapse(3)
           do iq = QS_MP, QE_MP
           do j = JS, JE
           do i = IS, IE
@@ -965,9 +972,10 @@ contains
           enddo
           enddo
           enddo
-          !$acc end kernels
+          !$acc end parallel
 
-          !$acc kernels async
+          !$acc parallel async
+          !$acc loop collapse(2)
           do j = JS, JE
           do i = IS, IE
           do k = KS, KE
@@ -976,10 +984,11 @@ contains
           end do
           end do
           end do
-          !$acc end kernels
+          !$acc end parallel
 
           if( flg_lt ) then
-             !$acc kernels async
+             !$acc parallel async
+             !$acc loop collapse(3)
              do iq = QS_LT, QE_LT
              do j = JS, JE
              do i = IS, IE
@@ -989,7 +998,7 @@ contains
              enddo
              enddo
              enddo
-             !$acc end kernels
+             !$acc end parallel
           endif
 
           !$acc wait
@@ -1090,7 +1099,8 @@ contains
        end select
 
 
-       !$acc kernels
+       !$acc parallel
+       !$acc loop collapse(2)
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
@@ -1104,7 +1114,7 @@ contains
        end do
        end do
        end do
-       !$acc end kernels
+       !$acc end parallel
 
        if ( MP_do_precipitation ) then
 
@@ -1148,14 +1158,11 @@ contains
           !$omp         DENS2,TEMP2,PRES2,CPtot2,CVtot2,RHOE,RHOE2,RHOQ,RHOQ2, &
           !$omp         RHOQ2_crg,mflux_crg,sflux_crg,eflux_crg, &
           !$omp         vterm,mflux,sflux,eflux,FLX_hydro,CP_t,CV_t)
-          !$acc kernels
-          !$acc loop independent
+          !$acc parallel
+          !$acc loop independent collapse(2) gang &
+          !$acc private(vterm,FLX_hydro,DENS2,TEMP2,PRES2,CPtot2,CVtot2,RHOE,RHOE2,RHOQ,RHOQ2,mflux,sflux,eflux,FZ,FDZ,RFDZ,RCDZ, &
+          !$acc         RHOQ2_crg,mflux_crg,sflux_crg,eflux_crg)
           do j = JS, JE
-          !$acc loop independent &
-          !$acc private(FZ, FDZ, RFDZ, RCDZ, &
-          !$acc         DENS2, TEMP2, PRES2, CPtot2, CVtot2, RHOE, RHOE2, RHOQ, RHOQ2, &
-          !$acc         vterm, FLX_hydro, mflux, sflux, eflux, &
-          !$acc         RHOQ2_crg, mflux_crg, sflux_crg, eflux_crg)
           do i = IS, IE
 
              FZ(1:KA) = REAL_FZ(1:KA,i,j)
@@ -1177,6 +1184,7 @@ contains
                 RHOE(k)   = TEMP(k,i,j) * CVtot(k,i,j) * DENS2(k)
                 RHOE2(k)  = RHOE(k)
              end do
+             !$acc loop collapse(2)
              do iq = QS_MP+1, QE_MP
              do k = KS, KE
                 RHOQ (k,iq) = DENS2(k) * QTRC(k,i,j,iq) + RHOQ_t_MP(k,i,j,iq) * dt_MP
@@ -1185,6 +1193,7 @@ contains
              end do
 
              if( flg_lt ) then
+                !$acc loop collapse(2)
                 do iq = QS_LT, QE_LT
                 do k = KS, KE
                    RHOQ2_crg(k,iq) = DENS2(k) * QTRC(k,i,j,iq)
@@ -1196,7 +1205,7 @@ contains
              SFLX_snow(i,j) = 0.0_RP
              SFLX_ENGI(i,j) = 0.0_RP
              FLX_hydro(:) = 0.0_RP
-             !$acc loop seq
+
              do step = 1, MP_NSTEP_SEDIMENTATION
 
                 select case ( ATMOS_PHY_MP_TYPE )
@@ -1221,7 +1230,11 @@ contains
                         KA,        & ! [IN]
                         vterm(:,:) ) ! [OUT]
                 case default
-                   vterm(:,:) = 0.0_RP ! tentative
+                   do iq = QS_MP+1, QE_MP
+                      do k = KS, KE
+                         vterm(k,iq) = 0.0_RP ! tentative
+                      end do
+                   end do
                 end select
 
                 ! store to history output
@@ -1314,6 +1327,7 @@ contains
                 SFLX_ENGI(i,j) = SFLX_ENGI(i,j) - eflux    * MP_RNSTEP_SEDIMENTATION
 
              enddo
+
              SFLX_ENGI(i,j) = SFLX_ENGI(i,j) - SFLX_snow(i,j) * LHF ! moist internal energy
 
 !OCL XFILL
@@ -1335,6 +1349,7 @@ contains
 !                     * log( EXNER(k,i,j) ) * ( CP_t / CPtot(k,i,j) - CV_t / CVtot(k,i,j) )
              end do
 
+             !$acc loop collapse(2)
              do iq = QS_MP+1, QE_MP
              do k  = KS, KE
                 RHOQ_t_MP(k,i,j,iq) = RHOQ_t_MP(k,i,j,iq) &
@@ -1343,6 +1358,7 @@ contains
              enddo
 
              if( flg_lt ) then
+                !$acc loop collapse(2)
                 do iq = QS_LT, QE_LT
                 do k  = KS, KE
                    RHOC_t_MP(k,i,j,iq) = RHOC_t_MP(k,i,j,iq) &
@@ -1360,7 +1376,7 @@ contains
 
           enddo
           enddo
-          !$acc end kernels
+          !$acc end parallel
 
           ! history output
           do iq = QS_MP+1, QE_MP
@@ -1419,7 +1435,8 @@ contains
     !$omp shared(KS,KE,IS,IE,JS,JE, &
     !$omp        DENS_t_MP,MOMZ_t_MP,RHOU_t_MP,RHOV_t_MP,RHOH_MP, &
     !$omp        DENS_t,MOMZ_t,RHOU_t,RHOV_t,RHOH)
-    !$acc kernels
+    !$acc parallel
+    !$acc loop collapse(2)
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -1432,12 +1449,13 @@ contains
     enddo
     enddo
     enddo
-    !$acc end kernels
+    !$acc end parallel
 
     !$omp parallel do default(none) OMP_SCHEDULE_ collapse(3) &
     !$omp private(iq,i,j,k) &
     !$omp shared(QS_MP,QE_MP,JS,JE,IS,IE,KS,KE,RHOQ_t,RHOQ_t_MP)
-    !$acc kernels
+    !$acc parallel
+    !$acc loop collapse(3)
     do iq = QS_MP, QE_MP
     do j = JS, JE
     do i = IS, IE
@@ -1447,10 +1465,11 @@ contains
     enddo
     enddo
     enddo
-    !$acc end kernels
+    !$acc end parallel
 
     if( flg_lt ) then
-       !$acc kernels
+       !$acc parallel
+       !$acc loop collapse(3)
        do iq = QS_LT, QE_LT
        do j = JS, JE
        do i = IS, IE
@@ -1461,7 +1480,7 @@ contains
        enddo
        enddo
        enddo
-       !$acc end kernels
+       !$acc end parallel
     endif
 
     if ( STATISTICS_checktotal ) then

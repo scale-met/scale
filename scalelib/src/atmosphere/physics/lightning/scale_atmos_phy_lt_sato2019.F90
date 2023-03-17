@@ -3947,7 +3947,6 @@ z(:,:,:)=1d30
     !$acc end data
 
     return
-
  end subroutine ATMOS_PHY_LT_sato2019_select_dQCRG_from_LUT
   !-----------------------------------------------------------------------------
 end module scale_atmos_phy_lt_sato2019

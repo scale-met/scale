@@ -479,10 +479,22 @@ contains
     real(RP), intent(out)   :: sflx (2) !> 1: rain, 2: snow
     real(RP), intent(out)   :: esflx
 
-    real(RP) :: qflx  (KA)
-    real(RP) :: eflx  (KA)
-    real(RP) :: RHOCP (KA)
-    real(RP) :: RHOCV (KA)
+#ifdef _OPENACC
+    real(RP) :: qflx0
+    real(RP) :: qflx1
+    real(RP) :: eflx0
+    real(RP) :: eflx1
+    real(RP) :: RHOCP_pu
+    real(RP) :: RHOCV_pu
+#define RHOCP_pu(k) RHOCP_pu
+#define RHOCV_pu(k) RHOCV_pu
+#else
+    real(RP) :: qflx(KA)
+    real(RP) :: eflx(KA)
+    real(RP) :: RHOCP_pu(KA)
+    real(RP) :: RHOCV_pu(KA)
+#endif
+
     real(RP) :: dDENS
     real(RP) :: CP, CV
 
@@ -492,77 +504,129 @@ contains
     ! tracer/energy transport by falldown
     ! 1st order upwind, forward euler, velocity is always negative
 
-!OCL ZFILL
     mflx(:) = 0.0_RP
     sflx(:) = 0.0_RP
     esflx   = 0.0_RP
+
+#ifndef _OPENACC
     qflx(KE) = 0.0_RP
     eflx(KE) = 0.0_RP
+#endif
 
-!OCL ZFILL
     do k = KS, KE
-       RHOCP(k) = CPtot(k) * DENS(k)
-       RHOCV(k) = CVtot(k) * DENS(k)
+
+       RHOCP_pu(k) = CPtot(k) * DENS(k)
+       RHOCV_pu(k) = CVtot(k) * DENS(k)
+#ifndef _OPENACC
     end do
+#endif
 
     !$acc loop seq
     do iq = 1, QHA
 
        !--- mass flux for each tracer, upwind with vel < 0
+#ifdef _OPENACC
+       if ( k == KS ) then
+          qflx0 = vterm(KS,iq) * RHOQ(KS,iq)
+       else
+          qflx0 = 0.5_RP * ( vterm(k,iq) + vterm(k-1,iq) ) * RHOQ(k,iq)
+       end if
+       if ( k == KE ) then
+          qflx1 = 0.0_RP
+       else
+          qflx1 = 0.5_RP * ( vterm(k+1,iq) + vterm(k,iq) ) * RHOQ(k+1,iq)
+       end if
+#else
        qflx(KS-1) = vterm(KS,iq) * RHOQ(KS,iq)
        do k = KS, KE-1
           qflx(k)  = 0.5_RP * ( vterm(k+1,iq) + vterm(k,iq) ) * RHOQ(k+1,iq)
        enddo
+#endif
 
        !--- update falling tracer
+#ifdef _OPENACC
+       rhoq(k,iq) = rhoq(k,iq) - dt * ( qflx1 - qflx0 ) * RCDZ(k)
+#else
        do k = KS, KE
           rhoq(k,iq) = rhoq(k,iq) - dt * ( qflx(k) - qflx(k-1) ) * RCDZ(k)
        enddo ! falling (water mass & number) tracer
+#endif
 
        ! QTRC(iq; iq>QLA+QLI) is not mass tracer, such as number density
        if ( iq > QLA + QIA ) cycle
 
+#ifdef _OPENACC
+       mflx(k-1) = mflx(k-1) + qflx0
+#else
        do k = KS-1, KE-1
           mflx(k) = mflx(k) + qflx(k)
        end do
+#endif
 
        if ( iq > QLA ) then ! ice water
           CP = CP_ICE
           CV = CV_ICE
+#ifdef _OPENACC
+          if ( k == KS ) sflx(2) = sflx(2) + qflx0
+#else
           sflx(2) = sflx(2) + qflx(KS-1)
+#endif
        else                 ! liquid water
           CP = CP_WATER
           CV = CV_WATER
+#ifdef _OPENACC
+          if ( k == KS ) sflx(1) = sflx(1) + qflx0
+#else
           sflx(1) = sflx(1) + qflx(KS-1)
+#endif
        end if
 
        !--- update density
+#ifdef _OPENACC
+       dDENS = - ( qflx1 - qflx0 ) * RCDZ(k) * dt
+#else
        do k = KS, KE
           dDENS = - ( qflx(k) - qflx(k-1) ) * RCDZ(k) * dt
-          RHOCP(k) = RHOCP(k) + CP * dDENS
-          RHOCV(k) = RHOCV(k) + CV * dDENS
+#endif
+          RHOCP_pu(k) = RHOCP_pu(k) + CP * dDENS
+          RHOCV_pu(k) = RHOCV_pu(k) + CV * dDENS
           DENS(k) = DENS(k) + dDENS
-       end do
 
        ! internal energy flux
+#ifdef _OPENACC
+          eflx0 = qflx0 * TEMP(k  ) * CV
+          eflx1 = qflx1 * TEMP(k+1) * CV
+          if ( k == KS ) esflx = esflx + eflx0
+#else
+       end do
+
        do k = KS-1, KE-1
           eflx(k) = qflx(k) * TEMP(k+1) * CV
        end do
        esflx = esflx + eflx(KS-1)
+#endif
 
        !--- update internal energy
+#ifdef _OPENACC
+          RHOE(k) = RHOE(k) - ( ( eflx1 - eflx0 )  & ! contribution with the transport of internal energy
+                              + qflx1 * FDZ(k) * GRAV  & ! contribution with the release of potential energy
+                              ) * RCDZ(k) * dt
+#else
        do k = KS, KE
           RHOE(k) = RHOE(k) - ( ( eflx(k) - eflx(k-1) )  & ! contribution with the transport of internal energy
                               + qflx(k) * FDZ(k) * GRAV  & ! contribution with the release of potential energy
                               ) * RCDZ(k) * dt
        end do
+#endif
 
     end do
 
-!OCL ZFILL
+#ifndef _OPENACC
     do k = KS, KE
-       CPtot(k) = RHOCP(k) / DENS(k)
-       CVtot(k) = RHOCV(k) / DENS(k)
+#endif
+       CPtot(k) = RHOCP_pu(k) / DENS(k)
+       CVtot(k) = RHOCV_pu(k) / DENS(k)
+
     end do
 
     return
@@ -802,14 +866,31 @@ contains
     real(RP), intent(out) :: RHOU_t(KA)
     real(RP), intent(out) :: RHOV_t(KA)
 
+#ifdef _OPENACC
+    real(RP) :: flx0, flx1
+#else
     real(RP) :: flx(KA)
+#endif
 
     integer  :: k
     !---------------------------------------------------------------------------
 
+#ifdef _OPENACC
+    do k = KS, KE
+#else
     flx(KE) = 0.0_RP
+#endif
 
     !--- momentum z (half level)
+#ifdef _OPENACC
+    if ( k < KE ) then
+       flx0 = ( mflx(k  ) + mflx(k-1) ) * MOMZ(k  ) / ( DENS(k+1) + DENS(k  ) )
+       flx1 = ( mflx(k+1) + mflx(k  ) ) * MOMZ(k+1) / ( DENS(k+2) + DENS(k+1) )
+       MOMZ_t(k) = - ( flx1 - flx0 ) * RFDZ(k)
+    else ! k = KE
+       MOMZ_t(k) = 0.0_RP
+    end if
+#else
     do k = KS, KE-1
        flx(k) = ( mflx(k) + mflx(k-1) ) * MOMZ(k) / ( DENS(k+1) + DENS(k) )
     enddo
@@ -817,22 +898,43 @@ contains
        MOMZ_t(k) = - ( flx(k+1) - flx(k) ) * RFDZ(k)
     enddo
     MOMZ_t(KE) = 0.0_RP
+#endif
 
     !--- momentum x
+#ifdef _OPENACC
+    flx0 = mflx(k-1) * U(k)
+    if ( k < KE ) then
+       flx1 = mflx(k) * U(k+1)
+    else
+       flx1 = 0.0_RP
+    end if
+    RHOU_t(k) = - ( flx1 - flx0 ) * RCDZ(k)
+#else
     do k = KS-1, KE-1
        flx(k) = mflx(k) * U(k+1)
     enddo
     do k = KS, KE
        RHOU_t(k) = - ( flx(k) - flx(k-1) ) * RCDZ(k)
     enddo
+#endif
 
     !--- momentum y
+#ifdef _OPENACC
+    flx0 = mflx(k-1) * V(k)
+    if ( k < KE ) then
+       flx1 = mflx(k) * V(k+1)
+    end if
+    RHOV_t(k) = - ( flx1 - flx0 ) * RCDZ(k)
+
+    end do
+#else
     do k = KS-1, KE-1
        flx(k) = mflx(k) * V(k+1)
     enddo
     do k = KS, KE
        RHOV_t(k) = - ( flx(k) - flx(k-1) ) * RCDZ(k)
     enddo
+#endif
 
     return
   end subroutine ATMOS_PHY_MP_precipitation_momentum

@@ -201,6 +201,10 @@ contains
     COMM_vsize_max = max( 10 + QA*2, 25 )
     COMM_vsize_max_pc = 50 + QA*2
 
+#ifdef _OPENACC
+    COMM_USE_MPI_ONESIDED = .false.
+#endif
+
     !--- read namelist
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_COMM_CARTESC,iostat=ierr)
@@ -233,7 +237,6 @@ contains
 #ifdef _OPENACC
     if ( COMM_USE_MPI_ONESIDED ) then
        LOG_WARN("COMM_setup",*) "Open MPI does not support one-sided APIs with CUDA-aware UCX"
-       COMM_USE_MPI_ONESIDED = .false.
     end if
 #endif
 
@@ -2527,13 +2530,32 @@ contains
 
     !--- To 4-Direction HALO communicate
     if ( .not. PRC_TwoD ) then
-
        call packWE_3D( KA, IA, IS, IE, JA, JS, JE, &
                        IHALO, &
                        var, gid, vid)
+    end if
 
+    !$acc host_data use_device(var) if(flag_device)
+
+    ! To N HALO
+    if ( PRC_HAS_N ) then
+       call MPI_ISEND( var(:,:,JE-JHALO+1:JE), ginfo(gid)%size2D_NS4*KA, COMM_datatype,        &
+                       PRC_next(PRC_N), tag+1, COMM_world, ginfo(gid)%req_list(ireq,vid), ierr )
+       ireq = ireq + 1
+    endif
+    ! To S HALO
+    if ( PRC_HAS_S ) then
+       call MPI_ISEND( var(:,:,JS:JS+JHALO-1), ginfo(gid)%size2D_NS4*KA, COMM_datatype,        &
+                       PRC_next(PRC_S), tag+2, COMM_world, ginfo(gid)%req_list(ireq,vid), ierr )
+       ireq = ireq + 1
+    endif
+
+    !$acc end host_data
+
+    if ( .not. PRC_TwoD ) then
 #ifdef _OPENACC
        ptr => ginfo(gid)%sendpack_P2WE(:,:,vid)
+       !$acc wait
        !$acc host_data use_device(ptr) if(flag_device)
 #endif
        ! To W HALO
@@ -2559,23 +2581,6 @@ contains
 
        !$acc end host_data
     end if
-
-    !$acc host_data use_device(var) if(flag_device)
-
-    ! To N HALO
-    if ( PRC_HAS_N ) then
-       call MPI_ISEND( var(:,:,JE-JHALO+1:JE), ginfo(gid)%size2D_NS4*KA, COMM_datatype,        &
-                       PRC_next(PRC_N), tag+1, COMM_world, ginfo(gid)%req_list(ireq,vid), ierr )
-       ireq = ireq + 1
-    endif
-    ! To S HALO
-    if ( PRC_HAS_S ) then
-       call MPI_ISEND( var(:,:,JS:JS+JHALO-1), ginfo(gid)%size2D_NS4*KA, COMM_datatype,        &
-                       PRC_next(PRC_S), tag+2, COMM_world, ginfo(gid)%req_list(ireq,vid), ierr )
-       ireq = ireq + 1
-    endif
-
-    !$acc end host_data
 
     ginfo(gid)%req_cnt(vid) = ireq - 1
 
@@ -2623,13 +2628,34 @@ contains
 
     !--- To 4-Direction HALO communicate
     if ( .not. PRC_TwoD ) then
-
        call packWE_3D( KA, IA, IS, IE, JA, JS, JE, &
                        IHALO, &
                        var, gid, vid)
+    end if
 
+    !$acc host_data use_device(var)
+
+    ! To N HALO
+    if ( PRC_HAS_N ) then
+       disp = 0
+       call MPI_PUT( var(:,:,JE-JHALO+1:JE), ginfo(gid)%size2D_NS4*KA, COMM_datatype, &
+                     PRC_next(PRC_N), disp, ginfo(gid)%size2D_NS4*KA, COMM_datatype, &
+                     ginfo(gid)%win_packNS(vid), ierr )
+    endif
+    ! To S HALO
+    if ( PRC_HAS_S ) then
+       disp = KA * IA * JHALO
+       call MPI_PUT( var(:,:,JS:JS+JHALO-1), ginfo(gid)%size2D_NS4*KA, COMM_datatype, &
+                     PRC_next(PRC_S), disp, ginfo(gid)%size2D_NS4*KA, COMM_datatype, &
+                     ginfo(gid)%win_packNS(vid), ierr )
+    endif
+
+    !$acc end host_data
+
+    if ( .not. PRC_TwoD ) then
 #ifdef _OPENACC
        ptr => ginfo(gid)%sendpack_P2WE(:,:,vid)
+       !$acc wait
        !$acc host_data use_device(ptr)
 #endif
 
@@ -2657,27 +2683,7 @@ contains
        endif
 
        !$acc end host_data
-
     end if
-
-    !$acc host_data use_device(var)
-
-    ! To N HALO
-    if ( PRC_HAS_N ) then
-       disp = 0
-       call MPI_PUT( var(:,:,JE-JHALO+1:JE), ginfo(gid)%size2D_NS4*KA, COMM_datatype, &
-                     PRC_next(PRC_N), disp, ginfo(gid)%size2D_NS4*KA, COMM_datatype, &
-                     ginfo(gid)%win_packNS(vid), ierr )
-    endif
-    ! To S HALO
-    if ( PRC_HAS_S ) then
-       disp = KA * IA * JHALO
-       call MPI_PUT( var(:,:,JS:JS+JHALO-1), ginfo(gid)%size2D_NS4*KA, COMM_datatype, &
-                     PRC_next(PRC_S), disp, ginfo(gid)%size2D_NS4*KA, COMM_datatype, &
-                     ginfo(gid)%win_packNS(vid), ierr )
-    endif
-
-    !$acc end host_data
 
     call MPI_Win_complete( ginfo(gid)%win_packWE(vid), ierr )
     call MPI_Win_complete( ginfo(gid)%win_packNS(vid), ierr )
@@ -2846,29 +2852,6 @@ contains
 
           !$acc host_data use_device(var) if(flag_device)
 
-#ifdef _OPENACC
-          ptr => ginfo(gid)%sendpack_P2WE(:,:,vid)
-          !$acc host_data use_device(ptr) if(flag_device)
-#endif
-          ! To W HALO
-          tagc = 60
-#ifdef _OPENACC
-          call MPI_ISEND( ptr(:,1), ginfo(gid)%size2D_WE*KA, COMM_datatype,    &
-#else
-          call MPI_ISEND( ginfo(gid)%sendpack_P2WE(:,1,vid), ginfo(gid)%size2D_WE*KA, COMM_datatype,    &
-#endif
-                          PRC_next(PRC_W), tag+tagc, COMM_world, ginfo(gid)%req_list(ireq,vid), ierr )
-          ireq = ireq + 1
-          ! To E HALO
-          tagc = 70
-#ifdef _OPENACC
-          call MPI_ISEND( ptr(:,2), ginfo(gid)%size2D_WE*KA, COMM_datatype,    &
-#else
-          call MPI_ISEND( ginfo(gid)%sendpack_P2WE(:,2,vid), ginfo(gid)%size2D_WE*KA, COMM_datatype,    &
-#endif
-                          PRC_next(PRC_E), tag+tagc, COMM_world, ginfo(gid)%req_list(ireq,vid), ierr )
-          !$acc end host_data
-          ireq = ireq + 1
           ! To NW HALO
           tagc = 0
           do j = JE-JHALO+1, JE
@@ -2903,6 +2886,31 @@ contains
           enddo
 
           !$acc end host_data
+
+#ifdef _OPENACC
+          ptr => ginfo(gid)%sendpack_P2WE(:,:,vid)
+          !$acc wait
+          !$acc host_data use_device(ptr) if(flag_device)
+#endif
+          ! To W HALO
+          tagc = 60
+#ifdef _OPENACC
+          call MPI_ISEND( ptr(:,1), ginfo(gid)%size2D_WE*KA, COMM_datatype,    &
+#else
+          call MPI_ISEND( ginfo(gid)%sendpack_P2WE(:,1,vid), ginfo(gid)%size2D_WE*KA, COMM_datatype,    &
+#endif
+                          PRC_next(PRC_W), tag+tagc, COMM_world, ginfo(gid)%req_list(ireq,vid), ierr )
+          ireq = ireq + 1
+          ! To E HALO
+          tagc = 70
+#ifdef _OPENACC
+          call MPI_ISEND( ptr(:,2), ginfo(gid)%size2D_WE*KA, COMM_datatype,    &
+#else
+          call MPI_ISEND( ginfo(gid)%sendpack_P2WE(:,2,vid), ginfo(gid)%size2D_WE*KA, COMM_datatype,    &
+#endif
+                          PRC_next(PRC_E), tag+tagc, COMM_world, ginfo(gid)%req_list(ireq,vid), ierr )
+          !$acc end host_data
+          ireq = ireq + 1
 
        end if
 
@@ -3096,34 +3104,6 @@ contains
                           var, gid, vid)
 
           !$acc host_data use_device(var) if(flag_device)
-#ifdef _OPENACC
-          ptr => ginfo(gid)%sendpack_P2WE(:,:,vid)
-          !$acc host_data use_device(ptr) if(flag_device)
-#endif
-
-          ! To W HALO
-          if ( PRC_HAS_W ) then
-             tagc = 60
-#ifdef _OPENACC
-             call MPI_ISEND( ptr(:,1), ginfo(gid)%size2D_WE*KA, COMM_datatype,    &
-#else
-             call MPI_ISEND( ginfo(gid)%sendpack_P2WE(:,1,vid), ginfo(gid)%size2D_WE*KA, COMM_datatype,    &
-#endif
-                             PRC_next(PRC_W), tag+tagc, COMM_world, ginfo(gid)%req_list(ireq,vid), ierr )
-             ireq = ireq + 1
-          endif
-          ! To E HALO
-          if ( PRC_HAS_E ) then
-             tagc = 70
-#ifdef _OPENACC
-             call MPI_ISEND( ptr(:,2), ginfo(gid)%size2D_WE*KA, COMM_datatype,    &
-#else
-             call MPI_ISEND( ginfo(gid)%sendpack_P2WE(:,2,vid), ginfo(gid)%size2D_WE*KA, COMM_datatype,    &
-#endif
-                             PRC_next(PRC_E), tag+tagc, COMM_world, ginfo(gid)%req_list(ireq,vid), ierr )
-             ireq = ireq + 1
-          endif
-          !$acc end host_data
 
           ! To NW HALO
           if ( PRC_HAS_N .AND. PRC_HAS_W ) then
@@ -3232,6 +3212,36 @@ contains
 
           !$acc end host_data
 
+#ifdef _OPENACC
+          ptr => ginfo(gid)%sendpack_P2WE(:,:,vid)
+          !$acc wait
+          !$acc host_data use_device(ptr) if(flag_device)
+#endif
+
+          ! To W HALO
+          if ( PRC_HAS_W ) then
+             tagc = 60
+#ifdef _OPENACC
+             call MPI_ISEND( ptr(:,1), ginfo(gid)%size2D_WE*KA, COMM_datatype,    &
+#else
+             call MPI_ISEND( ginfo(gid)%sendpack_P2WE(:,1,vid), ginfo(gid)%size2D_WE*KA, COMM_datatype,    &
+#endif
+                             PRC_next(PRC_W), tag+tagc, COMM_world, ginfo(gid)%req_list(ireq,vid), ierr )
+             ireq = ireq + 1
+          endif
+          ! To E HALO
+          if ( PRC_HAS_E ) then
+             tagc = 70
+#ifdef _OPENACC
+             call MPI_ISEND( ptr(:,2), ginfo(gid)%size2D_WE*KA, COMM_datatype,    &
+#else
+             call MPI_ISEND( ginfo(gid)%sendpack_P2WE(:,2,vid), ginfo(gid)%size2D_WE*KA, COMM_datatype,    &
+#endif
+                             PRC_next(PRC_E), tag+tagc, COMM_world, ginfo(gid)%req_list(ireq,vid), ierr )
+             ireq = ireq + 1
+          endif
+          !$acc end host_data
+
        end if
 
     endif
@@ -3309,29 +3319,6 @@ contains
                           var, gid, vid)
 
           !$acc host_data use_device(var)
-#ifdef _OPENACC
-          ptr => ginfo(gid)%sendpack_P2WE(:,:,vid)
-          !$acc host_data use_device(ptr)
-#endif
-          ! To W HALO
-          disp = 1
-#ifdef _OPENACC
-          call MPI_PUT( ptr(:,1), ginfo(gid)%size2D_WE*KA, COMM_datatype, &
-#else
-          call MPI_PUT( ginfo(gid)%sendpack_P2WE(:,1,vid), ginfo(gid)%size2D_WE*KA, COMM_datatype, &
-#endif
-                        PRC_next(PRC_W), disp, ginfo(gid)%size2D_WE*KA, COMM_datatype, &
-                        ginfo(gid)%win_packWE(vid), ierr )
-          ! To E HALO
-          disp = 0
-#ifdef _OPENACC
-          call MPI_PUT( ptr(:,2), ginfo(gid)%size2D_WE*KA, COMM_datatype, &
-#else
-          call MPI_PUT( ginfo(gid)%sendpack_P2WE(:,2,vid), ginfo(gid)%size2D_WE*KA, COMM_datatype, &
-#endif
-                        PRC_next(PRC_E), disp, ginfo(gid)%size2D_WE*KA, COMM_datatype, &
-                        ginfo(gid)%win_packWE(vid), ierr )
-          !$acc end host_data
           ! To NW HALO
           do j = JE-JHALO+1, JE
              disp = KA * ( IE + IA * ( j - JE+JHALO-1 ) )
@@ -3362,6 +3349,32 @@ contains
           enddo
 
           !$acc end host_data
+
+#ifdef _OPENACC
+          ptr => ginfo(gid)%sendpack_P2WE(:,:,vid)
+          !$acc wait
+          !$acc host_data use_device(ptr)
+#endif
+          ! To W HALO
+          disp = 1
+#ifdef _OPENACC
+          call MPI_PUT( ptr(:,1), ginfo(gid)%size2D_WE*KA, COMM_datatype, &
+#else
+          call MPI_PUT( ginfo(gid)%sendpack_P2WE(:,1,vid), ginfo(gid)%size2D_WE*KA, COMM_datatype, &
+#endif
+                        PRC_next(PRC_W), disp, ginfo(gid)%size2D_WE*KA, COMM_datatype, &
+                        ginfo(gid)%win_packWE(vid), ierr )
+          ! To E HALO
+          disp = 0
+#ifdef _OPENACC
+          call MPI_PUT( ptr(:,2), ginfo(gid)%size2D_WE*KA, COMM_datatype, &
+#else
+          call MPI_PUT( ginfo(gid)%sendpack_P2WE(:,2,vid), ginfo(gid)%size2D_WE*KA, COMM_datatype, &
+#endif
+                        PRC_next(PRC_E), disp, ginfo(gid)%size2D_WE*KA, COMM_datatype, &
+                        ginfo(gid)%win_packWE(vid), ierr )
+          !$acc end host_data
+
        end if
 
     else ! non-periodic condition
@@ -3397,34 +3410,6 @@ contains
                           var, gid, vid)
 
           !$acc host_data use_device(var)
-#ifdef _OPENACC
-          ptr => ginfo(gid)%sendpack_P2WE(:,:,vid)
-          !$acc host_data use_device(ptr)
-#endif
-
-          ! To W HALO
-          if ( PRC_HAS_W ) then
-             disp = 1
-#ifdef _OPENACC
-             call MPI_PUT( ptr(:,1), ginfo(gid)%size2D_WE*KA, COMM_datatype, &
-#else
-             call MPI_PUT( ginfo(gid)%sendpack_P2WE(:,1,vid), ginfo(gid)%size2D_WE*KA, COMM_datatype, &
-#endif
-                           PRC_next(PRC_W), disp, ginfo(gid)%size2D_WE*KA, COMM_datatype, &
-                           ginfo(gid)%win_packWE(vid), ierr )
-          endif
-          ! To E HALO
-          if ( PRC_HAS_E ) then
-             disp = 0
-#ifdef _OPENACC
-             call MPI_PUT( ptr(:,2), ginfo(gid)%size2D_WE*KA, COMM_datatype, &
-#else
-             call MPI_PUT( ginfo(gid)%sendpack_P2WE(:,2,vid), ginfo(gid)%size2D_WE*KA, COMM_datatype, &
-#endif
-                           PRC_next(PRC_E), disp, ginfo(gid)%size2D_WE*KA, COMM_datatype, &
-                           ginfo(gid)%win_packWE(vid), ierr )
-          endif
-          !$acc end host_data
 
           ! To NW HALO
           if ( PRC_HAS_N .AND. PRC_HAS_W ) then
@@ -3519,6 +3504,36 @@ contains
              enddo
           endif
 
+          !$acc end host_data
+
+#ifdef _OPENACC
+          ptr => ginfo(gid)%sendpack_P2WE(:,:,vid)
+          !$acc wait
+          !$acc host_data use_device(ptr)
+#endif
+
+          ! To W HALO
+          if ( PRC_HAS_W ) then
+             disp = 1
+#ifdef _OPENACC
+             call MPI_PUT( ptr(:,1), ginfo(gid)%size2D_WE*KA, COMM_datatype, &
+#else
+             call MPI_PUT( ginfo(gid)%sendpack_P2WE(:,1,vid), ginfo(gid)%size2D_WE*KA, COMM_datatype, &
+#endif
+                           PRC_next(PRC_W), disp, ginfo(gid)%size2D_WE*KA, COMM_datatype, &
+                           ginfo(gid)%win_packWE(vid), ierr )
+          endif
+          ! To E HALO
+          if ( PRC_HAS_E ) then
+             disp = 0
+#ifdef _OPENACC
+             call MPI_PUT( ptr(:,2), ginfo(gid)%size2D_WE*KA, COMM_datatype, &
+#else
+             call MPI_PUT( ginfo(gid)%sendpack_P2WE(:,2,vid), ginfo(gid)%size2D_WE*KA, COMM_datatype, &
+#endif
+                           PRC_next(PRC_E), disp, ginfo(gid)%size2D_WE*KA, COMM_datatype, &
+                           ginfo(gid)%win_packWE(vid), ierr )
+          endif
           !$acc end host_data
 
        end if
@@ -4739,6 +4754,7 @@ contains
        call packWE_3D( KA, IA, IS, IE, JA, JS, JE, &
                        IHALO, &
                        var, gid, ginfo(gid)%packid(vid))
+       !$acc wait
     end if
 
     call MPI_STARTALL(ginfo(gid)%preq_cnt(vid), ginfo(gid)%preq_list(1:ginfo(gid)%preq_cnt(vid),vid), ierr)
@@ -4779,6 +4795,7 @@ contains
        call unpackWE_3D( KA, IA, IS, IE, JA, JS, JE, &
                          IHALO, &
                          var, ginfo(gid)%recvpack_WE2P(:,:,vid) )
+       !$acc wait
     end if
 
 #ifdef DEBUG
@@ -4829,6 +4846,8 @@ contains
     call unpackNS_3D( KA, IA, IS, IE, JA, JS, JE, &
                       JHALO, &
                       var, pack )
+
+    !$acc wait
 
     call MPI_Win_post( group_packWE, MPI_MODE_NOSTORE, ginfo(gid)%win_packWE(vid), ierr )
     call MPI_Win_post( group_packNS, MPI_MODE_NOSTORE, ginfo(gid)%win_packNS(vid), ierr )
@@ -4960,6 +4979,7 @@ contains
        call unpackWE_3D( KA, IA, IS, IE, JA, JS, JE, &
                          IHALO, &
                          var, ginfo(gid)%recvpack_WE2P(:,:,pid) )
+       !$acc wait
     end if
 
 #ifdef DEBUG
@@ -5001,12 +5021,11 @@ contains
     if ( PRC_HAS_W ) then
        !--- packing packets to West
        !$omp parallel do private(i,j,k,n) OMP_SCHEDULE_ collapse(2)
-       !$acc kernels if(acc_is_present(var))
-       !$acc loop independent
+       !$acc parallel if(acc_is_present(var)) async
+       !$acc loop collapse(2) gang
        do j = JS, JE
-       !$acc loop independent
        do i = IS, IS+IHALO-1
-       !$acc loop independent
+       !$acc loop independent vector
        do k = 1, KA
           n = (j-JS) * KA * IHALO &
             + (i-IS) * KA         &
@@ -5019,18 +5038,17 @@ contains
        enddo
        enddo
        enddo
-       !$acc end kernels
+       !$acc end parallel
     end if
 
     if ( PRC_HAS_E ) then
        !--- packing packets to East
        !$omp parallel do private(i,j,k,n) OMP_SCHEDULE_ collapse(2)
-       !$acc kernels if(acc_is_present(var))
-       !$acc loop independent
+       !$acc parallel if(acc_is_present(var)) async
+       !$acc loop collapse(2) gang
        do j = JS, JE
-       !$acc loop independent
        do i = IE-IHALO+1, IE
-       !$acc loop independent
+       !$acc loop independent vector
        do k = 1, KA
           n = (j-JS)         * KA * IHALO &
             + (i-IE+IHALO-1) * KA         &
@@ -5043,7 +5061,7 @@ contains
        enddo
        enddo
        enddo
-       !$acc end kernels
+       !$acc end parallel
     end if
 
     call PROF_rapend('COMM_pack', 3)
@@ -5078,7 +5096,7 @@ contains
        !--- To 4-Direction HALO communicate
        !--- packing packets to West
        !$omp parallel do private(i,j,n) OMP_SCHEDULE_
-       !$acc kernels if(acc_is_present(var))
+       !$acc kernels if(acc_is_present(var)) async
        !$acc loop independent
        do j = JS, JE
        !$acc loop independent
@@ -5098,7 +5116,7 @@ contains
     if ( PRC_HAS_E ) then
        !--- packing packets to East
        !$omp parallel do private(i,j,n) OMP_SCHEDULE_
-       !$acc kernels if(acc_is_present(var))
+       !$acc kernels if(acc_is_present(var)) async
        !$acc loop independent
        do j = JS, JE
        !$acc loop independent
@@ -5114,6 +5132,8 @@ contains
        enddo
        !$acc end kernels
     end if
+
+    !$acc wait
 
     call PROF_rapend('COMM_pack', 3)
 
@@ -5143,29 +5163,33 @@ contains
     if ( PRC_HAS_E ) then
        !--- unpacking packets from East
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-       !$acc kernels if(acc_is_present(var))
+       !$acc parallel if(acc_is_present(var)) async
+       !$acc loop collapse(2) gang
        do j = JS, JE
        do i = IE+1, IA
+       !$acc loop vector
        do k = 1, KA
           var(k,i,j) = buf(k,i-IE,j,2)
        enddo
        enddo
        enddo
-       !$acc end kernels
+       !$acc end parallel
     end if
 
     if ( PRC_HAS_W ) then
        !--- unpacking packets from West
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-       !$acc kernels if(acc_is_present(var))
+       !$acc parallel if(acc_is_present(var)) async
+       !$acc loop collapse(2) gang
        do j = JS, JE
        do i = 1, IS-1
+       !$acc loop vector
        do k = 1, KA
           var(k,i,j) = buf(k,i,j,1)
        enddo
        enddo
        enddo
-       !$acc end kernels
+       !$acc end parallel
     end if
 
     call PROF_rapend('COMM_unpack', 3)
@@ -5196,7 +5220,7 @@ contains
     if( PRC_HAS_E ) then
         !--- unpacking packets from East
         !$omp parallel do private(i,j) OMP_SCHEDULE_
-       !$acc kernels if(acc_is_present(var))
+       !$acc kernels if(acc_is_present(var)) async
         do j = JS, JE
         do i = IE+1, IE+IHALO
            var(i,j) = buf(i-IE,j,1,2)
@@ -5208,7 +5232,7 @@ contains
      if( PRC_HAS_W ) then
         !--- unpacking packets from West
         !$omp parallel do private(i,j) OMP_SCHEDULE_
-       !$acc kernels if(acc_is_present(var))
+       !$acc kernels if(acc_is_present(var)) async
         do j = JS, JE
         do i = IS-IHALO, IS-1
            var(i,j) = buf(i,j,1,1)
@@ -5216,6 +5240,8 @@ contains
         enddo
        !$acc end kernels
     end if
+
+    !$acc wait
 
     call PROF_rapend('COMM_unpack', 3)
 
@@ -5245,7 +5271,7 @@ contains
     if ( PRC_HAS_S ) then
        !--- unpacking packets from S, SW, and SE
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-       !$acc kernels
+       !$acc kernels async
        do j = 1, JS-1
        do i = 1, IA
        do k = 1, KA
@@ -5258,7 +5284,7 @@ contains
        if ( PRC_HAS_W ) then
           !--- unpacking packets from SW
           !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-          !$acc kernels
+          !$acc kernels async
           do j = 1, JS-1
           do i = 1, IS-1
           do k = 1, KA
@@ -5271,7 +5297,7 @@ contains
        if ( PRC_HAS_E ) then
           !--- unpacking packets from SE
           !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-          !$acc kernels
+          !$acc kernels async
           do j = 1, JS-1
           do i = IE+1, IA
           do k = 1, KA
@@ -5286,7 +5312,7 @@ contains
     if ( PRC_HAS_N ) then
        !--- unpacking packets from N, NW, and NE
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-       !$acc kernels
+       !$acc kernels async
        do j = JE+1, JA
        do i = 1, IA
        do k = 1, KA
@@ -5299,7 +5325,7 @@ contains
        if ( PRC_HAS_W ) then
           !--- unpacking packets from NW
           !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-          !$acc kernels
+          !$acc kernels async
           do j = JE+1, JA
           do i = 1, IS-1
           do k = 1, KA
@@ -5312,7 +5338,7 @@ contains
        if ( PRC_HAS_E ) then
           !--- unpacking packets from NE
           !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-          !$acc kernels
+          !$acc kernels async
           do j = JE+1, JA
           do i = IE+1, IA
           do k = 1, KA
@@ -5323,6 +5349,8 @@ contains
           !$acc end kernels
        end if
     end if
+
+    !$acc wait
 
     call PROF_rapend('COMM_unpack', 3)
 
@@ -5351,7 +5379,7 @@ contains
     if ( PRC_HAS_S ) then
        !--- unpacking packets from S, SW, and SE
        !$omp parallel do private(i,j) OMP_SCHEDULE_
-       !$acc kernels
+       !$acc kernels async
        do j = 1, JS-1
        do i = 1, IA
           var(i,j) = buf(i,j,1)
@@ -5362,7 +5390,7 @@ contains
        if ( PRC_HAS_W ) then
           !--- unpacking packets from SW
           !$omp parallel do private(i,j) OMP_SCHEDULE_
-          !$acc kernels
+          !$acc kernels async
           do j = 1, JS-1
           do i = 1, IS-1
              var(i,j) = buf(i,j,1)
@@ -5373,7 +5401,7 @@ contains
        if ( PRC_HAS_E ) then
           !--- unpacking packets from SE
           !$omp parallel do private(i,j) OMP_SCHEDULE_
-          !$acc kernels
+          !$acc kernels async
           do j = 1, JS-1
           do i = IE+1, IA
              var(i,j) = buf(i,j,1)
@@ -5386,7 +5414,7 @@ contains
     if ( PRC_HAS_N ) then
        !--- unpacking packets from N, NW, and NE
        !$omp parallel do private(i,j) OMP_SCHEDULE_
-       !$acc kernels
+       !$acc kernels async
        do j = JE+1, JA
        do i = 1, IA
           var(i,j) = buf(i,j-JE,2)
@@ -5397,7 +5425,7 @@ contains
        if ( PRC_HAS_W ) then
           !--- unpacking packets from NW
           !$omp parallel do private(i,j) OMP_SCHEDULE_
-          !$acc kernels
+          !$acc kernels async
           do j = JE+1, JA
           do i = 1, IS-1
              var(i,j) = buf(i,j-JE,2)
@@ -5408,7 +5436,7 @@ contains
        if ( PRC_HAS_E ) then
           !--- unpacking packets from NE
           !$omp parallel do private(i,j) OMP_SCHEDULE_
-          !$acc kernels
+          !$acc kernels async
           do j = JE+1, JA
           do i = IE+1, IA
              var(i,j) = buf(i,j-JE,2)
@@ -5417,6 +5445,8 @@ contains
           !$acc end kernels
        end if
     end if
+
+    !$acc wait
 
     call PROF_rapend('COMM_unpack', 3)
 
@@ -5454,7 +5484,7 @@ contains
 
     !--- copy inner data to HALO(North)
     if ( .NOT. PRC_HAS_N ) then
-       !$acc kernels
+       !$acc kernels async
        do j = JE+1, JE+JHALO
        !$omp do
        do i = IS, IE
@@ -5469,7 +5499,7 @@ contains
 
     !--- copy inner data to HALO(South)
     if ( .NOT. PRC_HAS_S ) then
-       !$acc kernels
+       !$acc kernels async
        !$acc loop independent
        do j = JS-JHALO, JS-1
        !$omp do
@@ -5487,7 +5517,7 @@ contains
 
        !--- copy inner data to HALO(East)
        if ( .NOT. PRC_HAS_E ) then
-          !$acc kernels
+          !$acc kernels async
           !$omp do
           do j = JS, JE
           do i = IE+1, IE+IHALO
@@ -5502,7 +5532,7 @@ contains
 
        !--- copy inner data to HALO(West)
        if ( .NOT. PRC_HAS_W ) then
-          !$acc kernels
+          !$acc kernels async
           !$omp do
           do j = JS, JE
           !$acc loop independent
@@ -5517,7 +5547,7 @@ contains
        !--- copy inner data to HALO(NorthWest)
        if ( .NOT. PRC_HAS_N .AND. &
             .NOT. PRC_HAS_W ) then
-          !$acc kernels
+          !$acc kernels async
           do j = JE+1, JE+JHALO
           !$acc loop independent
           do i = IS-IHALO, IS-1
@@ -5528,7 +5558,7 @@ contains
           enddo
           !$acc end kernels
        elseif( .NOT. PRC_HAS_N ) then
-          !$acc kernels
+          !$acc kernels async
           do j = JE+1, JE+JHALO
           do i = IS-IHALO, IS-1
           do k = 1, KA
@@ -5538,7 +5568,7 @@ contains
           enddo
           !$acc end kernels
        elseif( .NOT. PRC_HAS_W ) then
-          !$acc kernels
+          !$acc kernels async
           do j = JE+1, JE+JHALO
           !$acc loop independent
           do i = IS-IHALO, IS-1
@@ -5553,7 +5583,7 @@ contains
        !--- copy inner data to HALO(SouthWest)
        if ( .NOT. PRC_HAS_S .AND. &
             .NOT. PRC_HAS_W ) then
-          !$acc kernels
+          !$acc kernels async
           !$acc loop independent
           do j = JS-JHALO, JS-1
           !$acc loop independent
@@ -5565,7 +5595,7 @@ contains
           enddo
           !$acc end kernels
        elseif( .NOT. PRC_HAS_S ) then
-          !$acc kernels
+          !$acc kernels async
           !$acc loop independent
           do j = JS-JHALO, JS-1
           do i = IS-IHALO, IS-1
@@ -5576,7 +5606,7 @@ contains
           enddo
           !$acc end kernels
        elseif( .NOT. PRC_HAS_W ) then
-          !$acc kernels
+          !$acc kernels async
           do j = JS-JHALO, JS-1
           !$acc loop independent
           do i = IS-IHALO, IS-1
@@ -5591,7 +5621,7 @@ contains
        !--- copy inner data to HALO(NorthEast)
        if ( .NOT. PRC_HAS_N .AND. &
             .NOT. PRC_HAS_E ) then
-          !$acc kernels
+          !$acc kernels async
           do j = JE+1, JE+JHALO
           do i = IE+1, IE+IHALO
           do k = 1, KA
@@ -5601,7 +5631,7 @@ contains
           enddo
           !$acc end kernels
        elseif( .NOT. PRC_HAS_N ) then
-          !$acc kernels
+          !$acc kernels async
           do j = JE+1, JE+JHALO
           do i = IE+1, IE+IHALO
           do k = 1, KA
@@ -5611,7 +5641,7 @@ contains
           enddo
           !$acc end kernels
        elseif( .NOT. PRC_HAS_E ) then
-          !$acc kernels
+          !$acc kernels async
           do j = JE+1, JE+JHALO
           do i = IE+1, IE+IHALO
           do k = 1, KA
@@ -5625,7 +5655,7 @@ contains
        !--- copy inner data to HALO(SouthEast)
        if ( .NOT. PRC_HAS_S .AND. &
             .NOT. PRC_HAS_E ) then
-          !$acc kernels
+          !$acc kernels async
           do j = JS-JHALO, JS-1
           do i = IE+1, IE+IHALO
           do k = 1, KA
@@ -5635,7 +5665,7 @@ contains
           enddo
           !$acc end kernels
        elseif( .NOT. PRC_HAS_S ) then
-          !$acc kernels
+          !$acc kernels async
           !$acc loop independent
           do j = JS-JHALO, JS-1
           do i = IE+1, IE+IHALO
@@ -5646,7 +5676,7 @@ contains
           enddo
           !$acc end kernels
        elseif( .NOT. PRC_HAS_E ) then
-          !$acc kernels
+          !$acc kernels async
           do j = JS-JHALO, JS-1
           do i = IE+1, IE+IHALO
           do k = 1, KA
@@ -5660,6 +5690,8 @@ contains
     end if
 
     !$omp end parallel
+
+    !$acc wait
 
     !$acc end data
 
@@ -5693,7 +5725,7 @@ contains
 
     !--- copy inner data to HALO(North)
     if( .NOT. PRC_HAS_N ) then
-       !$acc kernels
+       !$acc kernels async
        do j = JE+1, JE+JHALO
        !$omp do
        do i = IS, IE
@@ -5706,7 +5738,7 @@ contains
 
     !--- copy inner data to HALO(South)
     if( .NOT. PRC_HAS_S ) then
-       !$acc kernels
+       !$acc kernels async
        !$acc loop independent
        do j = JS-JHALO, JS-1
        !$omp do
@@ -5722,7 +5754,7 @@ contains
 
        if( .NOT. PRC_HAS_E ) then
           !$omp do
-          !$acc kernels
+          !$acc kernels async
           do j = JS, JE
           do i = IE+1, IE+IHALO
              var(i,j) = var(IE,j)
@@ -5734,7 +5766,7 @@ contains
 
        if( .NOT. PRC_HAS_W ) then
           !$omp do
-          !$acc kernels
+          !$acc kernels async
           do j = JS, JE
           !$acc loop independent
           do i = IS-IHALO, IS-1
@@ -5747,7 +5779,7 @@ contains
 
        !--- copy inner data to HALO(NorthWest)
        if( .NOT. PRC_HAS_N .AND. .NOT. PRC_HAS_W ) then
-          !$acc kernels
+          !$acc kernels async
           do j = JE+1, JE+JHALO
           !$acc loop independent
           do i = IS-IHALO, IS-1
@@ -5756,7 +5788,7 @@ contains
           enddo
           !$acc end kernels
        elseif( .NOT. PRC_HAS_N ) then
-          !$acc kernels
+          !$acc kernels async
           do j = JE+1, JE+JHALO
           do i = IS-IHALO, IS-1
              var(i,j) = var(i,JE)
@@ -5764,7 +5796,7 @@ contains
           enddo
           !$acc end kernels
        elseif( .NOT. PRC_HAS_W ) then
-          !$acc kernels
+          !$acc kernels async
           do j = JE+1, JE+JHALO
           !$acc loop independent
           do i = IS-IHALO, IS-1
@@ -5776,7 +5808,7 @@ contains
 
        !--- copy inner data to HALO(SouthWest)
        if( .NOT. PRC_HAS_S .AND. .NOT. PRC_HAS_W ) then
-          !$acc kernels
+          !$acc kernels async
           !$acc loop independent
           do j = JS-JHALO, JS-1
           !$acc loop independent
@@ -5786,7 +5818,7 @@ contains
           enddo
           !$acc end kernels
        elseif( .NOT. PRC_HAS_S ) then
-          !$acc kernels
+          !$acc kernels async
           !$acc loop independent
           do j = JS-JHALO, JS-1
           do i = IS-IHALO, IS-1
@@ -5795,7 +5827,7 @@ contains
           enddo
           !$acc end kernels
        elseif( .NOT. PRC_HAS_W ) then
-          !$acc kernels
+          !$acc kernels async
           do j = JS-JHALO, JS-1
           !$acc loop independent
           do i = IS-IHALO, IS-1
@@ -5807,7 +5839,7 @@ contains
 
        !--- copy inner data to HALO(NorthEast)
        if( .NOT. PRC_HAS_N .AND. .NOT. PRC_HAS_E ) then
-          !$acc kernels
+          !$acc kernels async
           do j = JE+1, JE+JHALO
           do i = IE+1, IE+IHALO
              var(i,j) = var(IE,JE)
@@ -5815,7 +5847,7 @@ contains
           enddo
           !$acc end kernels
        elseif( .NOT. PRC_HAS_N ) then
-          !$acc kernels
+          !$acc kernels async
           do j = JE+1, JE+JHALO
           do i = IE+1, IE+IHALO
              var(i,j) = var(i,JE)
@@ -5823,7 +5855,7 @@ contains
           enddo
           !$acc end kernels
        elseif( .NOT. PRC_HAS_E ) then
-          !$acc kernels
+          !$acc kernels async
           do j = JE+1, JE+JHALO
           do i = IE+1, IE+IHALO
              var(i,j) = var(IE,j)
@@ -5834,7 +5866,7 @@ contains
 
        !--- copy inner data to HALO(SouthEast)
        if( .NOT. PRC_HAS_S .AND. .NOT. PRC_HAS_E ) then
-          !$acc kernels
+          !$acc kernels async
           do j = JS-JHALO, JS-1
           do i = IE+1, IE+IHALO
              var(i,j) = var(IE,JS)
@@ -5842,7 +5874,7 @@ contains
           enddo
           !$acc end kernels
        elseif( .NOT. PRC_HAS_S ) then
-          !$acc kernels
+          !$acc kernels async
           !$acc loop independent
           do j = JS-JHALO, JS-1
           do i = IE+1, IE+IHALO
@@ -5851,7 +5883,7 @@ contains
           enddo
           !$acc end kernels
        elseif( .NOT. PRC_HAS_E ) then
-          !$acc kernels
+          !$acc kernels async
           do j = JS-JHALO, JS-1
           do i = IE+1, IE+IHALO
              var(i,j) = var(IE,j)
@@ -5863,6 +5895,8 @@ contains
     end if
 
     !$omp end parallel
+
+    !$acc wait
 
     !$acc end data
 

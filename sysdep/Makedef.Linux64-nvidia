@@ -14,9 +14,10 @@ MODDIROPT = -module
 FFLAGS_FAST  = -Mpreprocess -m64 -fast                \
                -Mbyteswapio                           \
                -Mflushz -Mfprelaxed -Mfpapprox -Kieee \
-               -Mvect=assoc
+               -Mvect=assoc \
+	       -DVECTLEN=${VECLEN}
 
-FFLAGS_AGGRESSIVE = -Mipa
+FFLAGS_AGGRESSIVE = -gpu=safecache
 
 FFLAGS_QUICKDEBUG = -Ktrap=fp -Mbounds -gopt
 
@@ -40,6 +41,18 @@ CFLAGS_FAST  = -fast
 CFLAGS_DEBUG = -O0
 
 
+##### Vector length
+ifeq ($SCALE_ENABLE_OPENACC),T)
+  VECTLEN = 32
+  ifeq ($SCALE_USE_SINGLEFP),T)
+    CHACHELINESIZE = 128
+  else
+    CHACHELINESIZE = 256
+  endif
+else
+  VECTLEN = 1
+  CHACHELINESIZE = 128
+endif
 
 ##### Special setting
 

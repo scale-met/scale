@@ -69,13 +69,13 @@ module mod_atmos_phy_mp_vars
   real(RP), public, allocatable :: ATMOS_PHY_MP_RHOQ_t(:,:,:,:)  ! tendency rho*QTRC [kg/m3/s]
   real(RP), public, allocatable :: ATMOS_PHY_MP_RHOC_t(:,:,:,:)  ! tendency rho*QTRC (charge) [fC/m3/s]
   real(RP), public, allocatable :: ATMOS_PHY_MP_RHOH  (:,:,:)    ! diabatic heating rate [J/kg/s]
-!  !$acc declare create(ATMOS_PHY_MP_DENS_t, ATMOS_PHY_MP_MOMZ_t, ATMOS_PHY_MP_RHOU_t, ATMOS_PHY_MP_RHOV_t, ATMOS_PHY_MP_RHOT_t, ATMOS_PHY_MP_RHOQ_t, ATMOS_PHY_MP_RHOC_t, ATMOS_PHY_MP_RHOH)
+  !$acc declare create(ATMOS_PHY_MP_DENS_t, ATMOS_PHY_MP_MOMZ_t, ATMOS_PHY_MP_RHOU_t, ATMOS_PHY_MP_RHOV_t, ATMOS_PHY_MP_RHOT_t, ATMOS_PHY_MP_RHOQ_t, ATMOS_PHY_MP_RHOC_t, ATMOS_PHY_MP_RHOH)
 
   real(RP), public, allocatable :: ATMOS_PHY_MP_EVAPORATE(:,:,:) ! number concentration of evaporated cloud [/m3]
   real(RP), public, allocatable :: ATMOS_PHY_MP_SFLX_rain(:,:)   ! precipitation flux (liquid) [kg/m2/s]
   real(RP), public, allocatable :: ATMOS_PHY_MP_SFLX_snow(:,:)   ! precipitation flux (solid)  [kg/m2/s]
   real(RP), public, allocatable :: ATMOS_PHY_MP_SFLX_ENGI(:,:)   ! internal energy flux        [J/m2/s]
-!  !$acc declare create(ATMOS_PHY_MP_EVAPORATE, ATMOS_PHY_MP_SFLX_rain, ATMOS_PHY_MP_SFLX_snow, ATMOS_PHY_MP_SFLX_ENGI)
+  !$acc declare create(ATMOS_PHY_MP_EVAPORATE, ATMOS_PHY_MP_SFLX_rain, ATMOS_PHY_MP_SFLX_snow, ATMOS_PHY_MP_SFLX_ENGI)
 
   integer, public :: QA_MP = 0
   integer, public :: QS_MP = -1
@@ -111,7 +111,7 @@ module mod_atmos_phy_mp_vars
   logical, private :: DIAG_Re
   logical, private :: DIAG_Qe
   logical, private :: DIAG_Ne
-!  !$acc declare create(ATMOS_PHY_MP_CLDFRAC, ATMOS_PHY_MP_Re, ATMOS_PHY_MP_Qe, ATMOS_PHY_MP_Ne)
+  !$acc declare create(ATMOS_PHY_MP_CLDFRAC, ATMOS_PHY_MP_Re, ATMOS_PHY_MP_Qe, ATMOS_PHY_MP_Ne)
 
   ! for history
   integer, private              :: HIST_CLDFRAC_id

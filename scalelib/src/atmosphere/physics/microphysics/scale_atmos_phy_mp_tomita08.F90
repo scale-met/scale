@@ -820,18 +820,18 @@ contains
   !> Lin-type cold rain microphysics
   subroutine MP_tomita08( &
          KA, KS, KE, IA, IS, IE, JA, JS, JE, &
-         DENS0, PRES0, CCN, &
-         dt,                &
-         TEMP0, QTRC0,      &
-         CPtot0, CVtot0,    &
-         RHOE_t,            &
-         flg_lt,            &
-         d0_crg, v0_crg,    &
-         dqcrg,             &
-         beta_crg,          &
-         QSPLT_in,          &
-         Sarea,             &
-         QTRC_crg0          )
+         DENS, PRES, CCN, &
+         dt,              &
+         TEMP, QTRC,      &
+         CPtot0, CVtot0,  &
+         RHOE_t,          &
+         flg_lt,          &
+         d0_crg, v0_crg,  &
+         dqcrg,           &
+         beta_crg,        &
+         QSPLT_in,        &
+         Sarea,           &
+         QTRC_crg0        )
     use scale_const, only: &
        UNDEF => CONST_UNDEF, &
        PI    => CONST_PI,    &
@@ -867,13 +867,13 @@ contains
     integer, intent(in) :: IA, IS, IE
     integer, intent(in) :: JA, JS, JE
 
-    real(RP), intent(in) :: DENS0(KA,IA,JA) ! density [km/m3]
-    real(RP), intent(in) :: PRES0(KA,IA,JA) ! pressure    [Pa]
-    real(RP), intent(in) :: CCN  (KA,IA,JA) ! [1/m3]
+    real(RP), intent(in) :: DENS(KA,IA,JA) ! density [km/m3]
+    real(RP), intent(in) :: PRES(KA,IA,JA) ! pressure    [Pa]
+    real(RP), intent(in) :: CCN (KA,IA,JA) ! [1/m3]
     real(DP), intent(in) :: dt
 
-    real(RP), intent(inout) :: TEMP0 (KA,IA,JA) ! temperature [K]
-    real(RP), intent(inout) :: QTRC0 (KA,IA,JA,QA_MP)
+    real(RP), intent(inout) :: TEMP  (KA,IA,JA) ! temperature [K]
+    real(RP), intent(inout) :: QTRC  (KA,IA,JA,QA_MP)
     real(RP), intent(inout) :: CPtot0(KA,IA,JA)
     real(RP), intent(inout) :: CVtot0(KA,IA,JA)
 
@@ -887,62 +887,59 @@ contains
     real(RP), intent(out), optional :: Sarea(KA,IA,JA,QA_MP-1)
     real(RP), intent(inout), optional :: QTRC_crg0(KA,IA,JA,QA_MP-1)
 
-    real(RP) :: dens(KA)            ! density
-    real(RP) :: temp(KA)            ! T [K]
-    real(RP) :: cptot, cvtot(KA)
-    real(RP) :: qv(KA), qc(KA), qr(KA), qi(KA), qs(KA), qg(KA)
-    real(RP) :: qv_t(KA), qc_t(KA), qr_t(KA), qi_t(KA), qs_t(KA), qg_t(KA)
+    real(RP) :: cvtot(KS:KE)
+    real(RP) :: qv(KS:KE), qc(KS:KE), qr(KS:KE), qi(KS:KE), qs(KS:KE), qg(KS:KE)
+    real(RP) :: qv_t(KS:KE), qc_t(KS:KE), qr_t(KS:KE), qi_t(KS:KE), qs_t(KS:KE), qg_t(KS:KE)
     real(RP) :: e_t, cp_t, cv_t
 
     real(RP) :: QSATL(KA) ! saturated water vapor for liquid water [kg/kg]
     real(RP) :: QSATI(KA) ! saturated water vapor for ice water    [kg/kg]
 
-    real(RP) :: Sliq(KA)            ! saturated ratio S for liquid water (0-1)
-    real(RP) :: Sice(KA)            ! saturated ratio S for ice water    (0-1)
+    real(RP) :: Sliq(KS:KE)            ! saturated ratio S for liquid water (0-1)
+    real(RP) :: Sice(KS:KE)            ! saturated ratio S for ice water    (0-1)
 
-    real(RP) :: Rdens(KA)           ! 1 / density
-    real(RP) :: rho_fact(KA)        ! density factor
-    real(RP) :: temc(KA)            ! T - T0 [K]
+    real(RP) :: rho_fact(KS:KE)        ! density factor
+    real(RP) :: temc(KS:KE)            ! T - T0 [K]
 
-    real(RP) :: N0r(KA), N0s(KA), N0g(KA)
+    real(RP) :: N0r(KS:KE), N0s(KS:KE), N0g(KS:KE)
 
-    real(RP) :: RLMDr(KA), RLMDr_2(KA), RLMDr_3(KA)
+    real(RP) :: RLMDr(KS:KE), RLMDr_2(KS:KE), RLMDr_3(KS:KE)
     real(RP) :: RLMDs, RLMDs_2, RLMDs_3
-    real(RP) :: RLMDg(KA), RLMDg_2(KA), RLMDg_3(KA)
-    real(RP) :: RLMDr_1br(KA), RLMDr_2br(KA), RLMDr_3br(KA)
+    real(RP) :: RLMDg(KS:KE), RLMDg_2(KS:KE), RLMDg_3(KS:KE)
+    real(RP) :: RLMDr_1br(KS:KE), RLMDr_2br(KS:KE), RLMDr_3br(KS:KE)
     real(RP) :: RLMDs_1bs, RLMDs_2bs, RLMDs_3bs
-    real(RP) :: RLMDr_dr(KA), RLMDr_3dr(KA), RLMDr_5dr(KA)
+    real(RP) :: RLMDr_dr(KS:KE), RLMDr_3dr(KS:KE), RLMDr_5dr(KS:KE)
     real(RP) :: RLMDs_ds, RLMDs_3ds, RLMDs_5ds
-    real(RP) :: RLMDg_dg(KA), RLMDg_3dg(KA), RLMDg_5dg(KA)
-    real(RP) :: RLMDr_7(KA)
-    real(RP) :: RLMDr_6dr(KA)
+    real(RP) :: RLMDg_dg(KS:KE), RLMDg_3dg(KS:KE), RLMDg_5dg(KS:KE)
+    real(RP) :: RLMDr_7(KS:KE)
+    real(RP) :: RLMDr_6dr(KS:KE)
 
     !---< Roh and Satoh (2014) >---
     real(RP) :: tems, Xs2
-    real(RP) :: MOMs_0(KA), MOMs_1(KA), MOMs_2(KA)
-    real(RP) :: MOMs_0bs(KA), MOMs_1bs(KA), MOMs_2bs(KA)
-    real(RP) :: MOMs_2ds(KA), MOMs_5ds_h(KA), RMOMs_Vt(KA)
+    real(RP) :: MOMs_0(KS:KE), MOMs_1(KS:KE), MOMs_2(KS:KE)
+    real(RP) :: MOMs_0bs(KS:KE), MOMs_1bs(KS:KE), MOMs_2bs(KS:KE)
+    real(RP) :: MOMs_2ds(KS:KE), MOMs_5ds_h(KS:KE), RMOMs_Vt(KS:KE)
     real(RP) :: coef_at(4), coef_bt(4)
     real(RP) :: loga_, b_, nm
 
-    real(RP) :: Vti(KA), Vtr(KA), Vts(KA), Vtg(KA) !< terminal velocity
+    real(RP) :: Vti(KS:KE), Vtr(KS:KE), Vts(KS:KE), Vtg(KS:KE) !< terminal velocity
     real(RP) :: Esi_mod, Egs_mod(KA)           !< modified accretion efficiency
     real(RP) :: rhoqc                          !< rho * qc
-    real(RP) :: Nc(KA)                         !< Number concentration of cloud water [1/cc]
-    real(RP) :: Pracw                          !< accretion       term by orig  & k-k scheme
-    real(RP) :: Praut                          !< auto-conversion term by berry & k-k scheme
+    real(RP) :: Nc(KS:KE)                      !< Number concentration of cloud water [1/cc]
+    real(RP) :: Pracw_orig,  Pracw_kk          !< accretion       term by orig  & k-k scheme
+    real(RP) :: Praut_berry, Praut_kk          !< auto-conversion term by berry & k-k scheme
     real(RP) :: Dc                             !< relative variance
     real(RP) :: betai, betas                   !< sticky parameter for auto-conversion
     real(RP) :: Da                             !< thermal diffusion coefficient of air
     real(RP) :: Kd                             !< diffusion coefficient of water vapor in air
-    real(RP) :: Nu(KA)                         !< kinematic viscosity of air
-    real(RP) :: Glv(KA), Giv(KA), Gil(KA)      !< thermodynamic function
+    real(RP) :: Nu(KS:KE)                      !< kinematic viscosity of air
+    real(RP) :: Glv(KS:KE), Giv(KS:KE), Gil(KS:KE)      !< thermodynamic function
     real(RP) :: ventr, vents, ventg            !< ventilation factor
     real(RP) :: net, fac, fack(KA), fac_sw
-    real(RP) :: zerosw, tmp, tmpk(KA)
+    real(RP) :: zerosw, tmp
 
     !---< Bergeron process >---
-    real(RP) :: sw_bergeron(KA)       !< if 0C<T<30C, sw=1
+    real(RP) :: sw_bergeron(KS:KE)           !< if 0C<T<30C, sw=1
     real(RP) :: a1, a2
     real(RP) :: ma2 !< 1-a2
     real(RP) :: dt1                   !< time during which the an ice particle of 40um grows to 50um
@@ -952,32 +949,32 @@ contains
     real(RP) :: sw, rhoqi, XNi, XMi, Di, Nig, Qig
 
     logical :: HIST_sw(w_nmax), hist_flag
-    real(RP) :: w(KA,w_nmax)
+    real(RP) :: w(KS:KE,w_nmax)
 
     integer  :: k, i, j, ip
 
     ! for lightning
     integer, parameter :: I_Qgaci = 1
     integer, parameter :: I_Qgacs = 2
-    real(RP) :: qcrg_c(KA), qcrg_r(KA)
-    real(RP) :: qcrg_i(KA), qcrg_s(KA), qcrg_g(KA)
-    real(RP) :: w_q(KA,w_nmax)
-    real(RP) :: w_qcrg(KA,2)            ! charge separation [fC/kg]
+    real(RP) :: qcrg_c(KS:KE), qcrg_r(KS:KE)
+    real(RP) :: qcrg_i(KS:KE), qcrg_s(KS:KE), qcrg_g(KS:KE)
+    real(RP) :: w_q(KS:KE,w_nmax)
+    real(RP) :: w_qcrg(KS:KE,2)            ! charge separation [fC/kg]
     real(RP) :: rdens_r, rdens_i, rdens_s, rdens_g
-    real(RP) :: dcrg(KA), beta1_crg(KA), re_qs(KA)
+    real(RP) :: dcrg(KS:KE), beta1_crg(KS:KE), re_qs(KS:KE)
     real(RP) :: Re(KA,IA,JA,N_HYD)
     real(RP) :: alpha
     real(RP) :: facq_QC, facq_QR, facq_QI, facq_QS, facq_QG
     logical  :: flg_lt_l
     integer  :: pp, qq, iq
-    real(RP) :: qc_crg_t(KA), qr_crg_t(KA), qi_crg_t(KA), qs_crg_t(KA), qg_crg_t(KA)
+    real(RP) :: qc_crg_t(KS:KE), qr_crg_t(KS:KE), qi_crg_t(KS:KE), qs_crg_t(KS:KE), qg_crg_t(KS:KE)
     real(RP) :: rlambda(I_QC:I_QG)
     !---------------------------------------------------------------------------
 
     call PROF_rapstart('MP_tomita08', 3)
 
-    !$acc data copy(TEMP0, QTRC0, CPtot0, CVtot0) &
-    !$acc      copyin(DENS0, PRES0, CCN) &
+    !$acc data copy(TEMP, QTRC, CPtot0, CVtot0) &
+    !$acc      copyin(DENS, PRES, CCN) &
     !$acc      copyout(RHOE_t) &
     !$acc      create(HIST_sw)
 
@@ -1006,8 +1003,8 @@ contains
 
        call ATMOS_PHY_MP_tomita08_effective_radius( &
        KA, KS, KE, IA, IS, IE, JA, JS, JE, &
-       DENS0, TEMP0, QTRC0, &
-       Re                   )
+       DENS, TEMP, QTRC, &
+       Re                )
     endif
 
     hist_flag = .false.
@@ -1019,7 +1016,7 @@ contains
 
     !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
     !$omp shared(KA,KS,KE,IS,IE,JS,JE, &
-    !$omp        DENS0,TEMP0,PRES0,QTRC0,CCN,CPtot0,CVtot0,dt, &
+    !$omp        DENS,TEMP,PRES,QTRC,CCN,CPtot0,CVtot0,dt, &
     !$omp        RHOE_t, &
     !$omp        UNDEF,EPS,PRE00,LHV,LHF,LHF0,CP_VAPOR,CP_WATER,CP_ICE,CV_VAPOR,CV_WATER,CV_ICE, &
     !$omp        do_couple_aerosol,sw_expice,enable_WDXZ2014,enable_RS2014,enable_KK2000,enable_HZDFHI2007,enable_TRAWLBG2017, &
@@ -1031,8 +1028,8 @@ contains
     !$omp        re_qc,re_qi,d0_crg,v0_crg,rdens_i,Ecoal_Gi,Ecoal_GS, &
     !$omp        flg_lt_l,flg_ecoali,flg_ecoals, &
     !$omp        w3d,HIST_sw,hist_flag) &
-    !$omp private(dens,temp,cptot,cvtot,qv,qc,qr,qi,qs,qg,qv_t,qc_t,qr_t,qi_t,qs_t,qg_t,e_t,cp_t,cv_t, &
-    !$omp         QSATL,QSATI,Sliq,Sice,Rdens,rho_fact,temc,N0r,N0s,N0g, &
+    !$omp private(cvtot,qv,qc,qr,qi,qs,qg,qv_t,qc_t,qr_t,qi_t,qs_t,qg_t,e_t,cp_t,cv_t, &
+    !$omp         QSATL,QSATI,Sliq,Sice,rho_fact,temc,N0r,N0s,N0g, &
     !$omp         RLMDr,RLMDr_2,RLMDr_3,RLMDs,RLMDs_2,RLMDs_3,RLMDg,RLMDg_2,RLMDg_3, &
     !$omp         RLMDr_1br,RLMDr_2br,RLMDr_3br,RLMDs_1bs,RLMDs_2bs,RLMDs_3bs, &
     !$omp         RLMDr_dr,RLMDr_3dr,RLMDr_5dr,RLMDs_ds,RLMDs_3ds,RLMDs_5ds, &
@@ -1042,16 +1039,16 @@ contains
     !$omp         coef_at,coef_bt,loga_,b_,nm, &
     !$omp         coef_a0,coef_a1,coef_b0,coef_b1, &
     !$omp         Vti,Vtr,Vts,Vtg,Esi_mod,Egs_mod,rhoqc,Nc, &
-    !$omp         Pracw,Praut,Dc,betai,betas,Da,Kd,Nu, &
-    !$omp         Glv,Giv,Gil,ventr,vents,ventg,net,fac,fack,fac_sw,zerosw,tmp,tmpk, &
+    !$omp         Pracw_orig,Pracw_kk,Praut_berry,Praut_kk,Dc,betai,betas,Da,Kd,Nu, &
+    !$omp         Glv,Giv,Gil,ventr,vents,ventg,net,fac,fack,fac_sw,zerosw,tmp, &
     !$omp         qc_crg_t,qr_crg_t,qi_crg_t,qs_crg_t,qg_crg_t,qcrg_c,qcrg_r,qcrg_i,qcrg_s,qcrg_g, &
     !$omp         w_q,w_qcrg,re_qs,dcrg,beta1_crg,alpha,facq_QC,facq_QR,facq_QI,facq_QS,facq_QG,rlambda, &
     !$omp         sw_bergeron,a1,a2,ma2,dt1,Ni50, &
     !$omp         sw,rhoqi,XNi,XMi,Di,Nig,Qig,w)
     !$acc kernels
     do j = JS, JE
-    !$acc loop private(dens, temp, cvtot, qv, qc, qr, qi, qs, qg, qv_t, qc_t, qr_t, qi_t, qs_t, qg_t, &
-    !$acc              QSATL, QSATI, Sliq, Sice, Rdens, rho_fact, temc, N0r, N0s, N0g, &
+    !$acc loop private(cvtot, qv, qc, qr, qi, qs, qg, qv_t, qc_t, qr_t, qi_t, qs_t, qg_t, &
+    !$acc              QSATL, QSATI, Sliq, Sice, rho_fact, temc, N0r, N0s, N0g, &
     !$acc              RLMDr, RLMDr_2, RLMDr_3, RLMDg, RLMDg_2, RLMDg_3, &
     !$acc              RLMDr_1br, RLMDr_2br, RLMDr_3br, RLMDr_dr, RLMDr_3dr, RLMDr_5dr, &
     !$acc              RLMDg_dg, RLMDg_3dg, RLMDg_5dg, RLMDr_7, RLMDr_6dr, &
@@ -1072,36 +1069,101 @@ contains
        endif
 
        ! store to work
-       do k = KS, KE
-          dens(k) = DENS0(k,i,j)
-          temp(k) = TEMP0(k,i,j)
-          temc(k) = temp(k) - TEM00
-       end do
-
        call SATURATION_dens2qsat_liq( KA, KS, KE, &
-                                      temp(:), dens(:), & ! [IN]
+                                      temp(:,i,j), dens(:,i,j), & ! [IN]
                                       QSATL(:)          ) ! [OUT]
 
        call SATURATION_dens2qsat_ice( KA, KS, KE, &
-                                      temp(:), dens(:), & ! [IN]
+                                      temp(:,i,j), dens(:,i,j), & ! [IN]
                                       QSATI(:)          ) ! [OUT]
 
        ! store to work
        do k = KS, KE
-          qv(k) = max( QTRC0(k,i,j,I_QV), 0.0_RP )
-          qc(k) = max( QTRC0(k,i,j,I_QC), 0.0_RP )
-          qr(k) = max( QTRC0(k,i,j,I_QR), 0.0_RP )
-          qi(k) = max( QTRC0(k,i,j,I_QI), 0.0_RP )
-          qs(k) = max( QTRC0(k,i,j,I_QS), 0.0_RP )
-          qg(k) = max( QTRC0(k,i,j,I_QG), 0.0_RP )
+          qv(k) = max( QTRC(k,i,j,I_QV), 0.0_RP )
+       end do
+       do k = KS, KE
+          qc(k) = max( QTRC(k,i,j,I_QC), 0.0_RP )
+       end do
+       do k = KS, KE
+          qr(k) = max( QTRC(k,i,j,I_QR), 0.0_RP )
+       end do
+       do k = KS, KE
+          qi(k) = max( QTRC(k,i,j,I_QI), 0.0_RP )
+       end do
+       do k = KS, KE
+          qs(k) = max( QTRC(k,i,j,I_QS), 0.0_RP )
+       end do
+       do k = KS, KE
+          qg(k) = max( QTRC(k,i,j,I_QG), 0.0_RP )
+       end do
+
+       if ( flg_lt_l ) then
+          ! store to work
+          do k = KS, KE
+             qcrg_c(k) = QTRC_crg0(k,i,j,I_QC-1)
+          enddo
+          do k = KS, KE
+             qcrg_r(k) = QTRC_crg0(k,i,j,I_QR-1)
+          enddo
+          do k = KS, KE
+             qcrg_i(k) = QTRC_crg0(k,i,j,I_QI-1)
+          enddo
+          do k = KS, KE
+             qcrg_s(k) = QTRC_crg0(k,i,j,I_QS-1)
+          enddo
+          do k = KS, KE
+             qcrg_g(k) = QTRC_crg0(k,i,j,I_QG-1)
+          enddo
+          do k = KS, KE
+             re_qs(k) = Re(k,i,j,I_HS) * 1.0E-2_RP   ! [cm] -> [m]
+          enddo
+          do k = KS, KE
+             beta1_crg(k) = beta_crg(k,i,j)
+             dcrg(k) = - dqcrg(k,i,j)
+          end do
+       end if
+
+       ! saturation ratio S
+       do k = KS, KE
+          Sliq(k) = qv(k) / max( QSATL(k), EPS )
+          Sice(k) = qv(k) / max( QSATI(k), EPS )
+
+          rho_fact(k) = sqrt( dens00 / dens(k,i,j) )
+          temc(k)     = temp(k,i,j) - TEM00
+       end do
+
+       do k = KS, KE
+          w(k,I_delta1) = ( 0.5_RP + sign(0.5_RP, qr(k) - 1.E-4_RP ) )
+
+          w(k,I_delta2) = ( 0.5_RP + sign(0.5_RP, 1.E-4_RP - qr(k) ) ) &
+                        * ( 0.5_RP + sign(0.5_RP, 1.E-4_RP - qs(k) ) )
+
+          w(k,I_spsati) = 0.5_RP + sign(0.5_RP, Sice(k) - 1.0_RP )
+
+          w(k,I_iceflg) = 0.5_RP - sign( 0.5_RP, temc(k) ) ! 0: warm, 1: ice
+       end do
+
+       do k = KS, KE
+          w(k,I_dqv_dt) = qv(k) / dt
+          w(k,I_dqc_dt) = qc(k) / dt
+          w(k,I_dqr_dt) = qr(k) / dt
+          w(k,I_dqi_dt) = qi(k) / dt
+          w(k,I_dqs_dt) = qs(k) / dt
+          w(k,I_dqg_dt) = qg(k) / dt
+       end do
+
+       do k = KS, KE
+          sw_bergeron(k) = ( 0.5_RP + sign(0.5_RP, temc(k) + 30.0_RP ) ) &
+                         * ( 0.5_RP + sign(0.5_RP, 0.0_RP - temc(k)  ) ) &
+                         * ( 1.0_RP - sw_expice                     )
        end do
 
        ! intercept parameter N0
        if ( enable_WDXZ2014 ) then ! Wainwright et al. (2014)
           do k = KS, KE
-             N0r(k) = 1.16E+5_RP * exp( log( max( dens(k)*qr(k)*1000.0_RP, 1.E-2_RP ) )*0.477_RP )
-             N0s(k) = 4.58E+9_RP * exp( log( max( dens(k)*qs(k)*1000.0_RP, 1.E-2_RP ) )*0.788_RP )
-             N0g(k) = 9.74E+8_RP * exp( log( max( dens(k)*qg(k)*1000.0_RP, 1.E-2_RP ) )*0.816_RP )
+             N0r(k) = 1.16E+5_RP * exp( log( max( dens(k,i,j)*qr(k)*1000.0_RP, 1.E-2_RP ) )*0.477_RP )
+             N0s(k) = 4.58E+9_RP * exp( log( max( dens(k,i,j)*qs(k)*1000.0_RP, 1.E-2_RP ) )*0.788_RP )
+             N0g(k) = 9.74E+8_RP * exp( log( max( dens(k,i,j)*qg(k)*1000.0_RP, 1.E-2_RP ) )*0.816_RP )
           end do
        else
           do k = KS, KE
@@ -1111,15 +1173,34 @@ contains
           end do
        end if
 
+       ! slope parameter lambda (Rain)
+       do k = KS, KE
+          zerosw = 0.5_RP - sign(0.5_RP, qr(k) - 1.E-12_RP )
+          RLMDr    (k) = sqrt(sqrt( dens(k,i,j) * qr(k) / ( Ar * N0r(k) * GAM_1br ) + zerosw )) * ( 1.0_RP-zerosw )
+
+          RLMDr_dr (k) = sqrt( RLMDr(k) )       ! **Dr
+          RLMDr_2  (k) = RLMDr(k)**2
+          RLMDr_3  (k) = RLMDr(k)**3
+          RLMDr_7  (k) = RLMDr(k)**7
+          RLMDr_1br(k) = RLMDr(k)**4 ! (1+Br)
+          RLMDr_2br(k) = RLMDr(k)**5 ! (2+Br)
+          RLMDr_3br(k) = RLMDr(k)**6 ! (3+Br)
+          RLMDr_3dr(k) = RLMDr(k)**3 * RLMDr_dr(k)
+          RLMDr_5dr(k) = RLMDr(k)**5 * RLMDr_dr(k)
+          RLMDr_6dr(k) = RLMDr(k)**6 * RLMDr_dr(k)
+
+          w(k,I_RLMDr) = RLMDr(k)
+       end do
+
        ! slope parameter lambda (Snow)
        if ( enable_RS2014 ) then
           !$acc loop private(coef_at, coef_bt)
           do k = KS, KE
              !---< modification by Roh and Satoh (2014) >---
              ! bimodal size distribution of snow
-             zerosw = 0.5_RP - sign(0.5_RP, dens(k) * qs(k) - 1.E-12_RP )
+             zerosw = 0.5_RP - sign(0.5_RP, dens(k,i,j) * qs(k) - 1.E-12_RP )
 
-             Xs2    = dens(k) * qs(k) / As
+             Xs2    = dens(k,i,j) * qs(k) / As
              tems       = min( -0.1_RP, temc(k) )
              coef_at(1) = coef_a01 + tems * ( coef_a02 + tems * ( coef_a05 + tems * coef_a09 ) )
              coef_at(2) = coef_a03 + tems * ( coef_a04 + tems *   coef_a07 )
@@ -1175,9 +1256,9 @@ contains
           end do
        else
           do k = KS, KE
-             zerosw = 0.5_RP - sign(0.5_RP, dens(k) * qs(k) - 1.E-12_RP )
+             zerosw = 0.5_RP - sign(0.5_RP, dens(k,i,j) * qs(k) - 1.E-12_RP )
 
-             RLMDs  = sqrt(sqrt( dens(k) * qs(k) / ( As * N0s(k) * GAM_1bs ) + zerosw )) * ( 1.0_RP-zerosw )
+             RLMDs  = sqrt(sqrt( dens(k,i,j) * qs(k) / ( As * N0s(k) * GAM_1bs ) + zerosw )) * ( 1.0_RP-zerosw )
              RLMDs_ds  = sqrt( sqrt(RLMDs) ) ! **Ds
              RLMDs_2   = RLMDs**2
              RLMDs_3   = RLMDs_2 * RLMDs
@@ -1201,55 +1282,10 @@ contains
           end do
        end if
 
-!OCL LOOP_FISSION_TARGET(LS)
-       do k = KS, KE
-          ! saturation ratio S
-          Sliq(k) = qv(k) / max( QSATL(k), EPS )
-          Sice(k) = qv(k) / max( QSATI(k), EPS )
-
-          Rdens(k)    = 1.0_RP / dens(k)
-          rho_fact(k) = sqrt( dens00 * Rdens(k) )
-
-          w(k,I_delta1) = ( 0.5_RP + sign(0.5_RP, qr(k) - 1.E-4_RP ) )
-
-          w(k,I_delta2) = ( 0.5_RP + sign(0.5_RP, 1.E-4_RP - qr(k) ) ) &
-                        * ( 0.5_RP + sign(0.5_RP, 1.E-4_RP - qs(k) ) )
-
-          w(k,I_spsati) = 0.5_RP + sign(0.5_RP, Sice(k) - 1.0_RP )
-
-          w(k,I_iceflg) = 0.5_RP - sign( 0.5_RP, temc(k) ) ! 0: warm, 1: ice
-
-          w(k,I_dqv_dt) = qv(k) / dt
-          w(k,I_dqc_dt) = qc(k) / dt
-          w(k,I_dqr_dt) = qr(k) / dt
-          w(k,I_dqi_dt) = qi(k) / dt
-          w(k,I_dqs_dt) = qs(k) / dt
-          w(k,I_dqg_dt) = qg(k) / dt
-       end do
-
-       do k = KS, KE
-          ! slope parameter lambda (Rain)
-          zerosw = 0.5_RP - sign(0.5_RP, qr(k) - 1.E-12_RP )
-          RLMDr    (k) = sqrt(sqrt( dens(k) * qr(k) / ( Ar * N0r(k) * GAM_1br ) + zerosw )) * ( 1.0_RP-zerosw )
-
-          RLMDr_dr (k) = sqrt( RLMDr(k) )       ! **Dr
-          RLMDr_2  (k) = RLMDr(k)**2
-          RLMDr_3  (k) = RLMDr(k)**3
-          RLMDr_7  (k) = RLMDr(k)**7
-          RLMDr_1br(k) = RLMDr(k)**4 ! (1+Br)
-          RLMDr_2br(k) = RLMDr(k)**5 ! (2+Br)
-          RLMDr_3br(k) = RLMDr(k)**6 ! (3+Br)
-          RLMDr_3dr(k) = RLMDr(k)**3 * RLMDr_dr(k)
-          RLMDr_5dr(k) = RLMDr(k)**5 * RLMDr_dr(k)
-          RLMDr_6dr(k) = RLMDr(k)**6 * RLMDr_dr(k)
-
-          w(k,I_RLMDr) = RLMDr(k)
-       end do
-
        do k = KS, KE
           ! slope parameter lambda (Graupel)
           zerosw = 0.5_RP - sign(0.5_RP, qg(k) - 1.E-12_RP )
-          RLMDg(k)  = sqrt(sqrt( dens(k) * qg(k) / ( Ag * N0g(k) * GAM_1bg ) + zerosw )) * ( 1.0_RP-zerosw )
+          RLMDg(k)  = sqrt(sqrt( dens(k,i,j) * qg(k) / ( Ag * N0g(k) * GAM_1bg ) + zerosw )) * ( 1.0_RP-zerosw )
 
           RLMDg_dg (k) = sqrt( RLMDg(k) )       ! **Dg
           RLMDg_2  (k) = RLMDg(k)**2
@@ -1266,13 +1302,13 @@ contains
              zerosw = 0.5_RP - sign(0.5_RP, qi(k) - 1.E-8_RP )
              Vti(k) = min( 0.0_RP, &
                   - ( coef_a0 + coef_a1 * temc(k) ) &
-                  * exp( log( dens(k)*qi(k)*1000.0_RP+zerosw ) * ( coef_b0 + coef_b1 * temc(k) ) ) &
+                  * exp( log( dens(k,i,j)*qi(k)*1000.0_RP+zerosw ) * ( coef_b0 + coef_b1 * temc(k) ) ) &
                   * 1E-2_RP * ( 1.0_RP-zerosw ) )
           end do
        else
           do k = KS, KE
              zerosw = 0.5_RP - sign(0.5_RP, qi(k) - 1.E-8_RP )
-             Vti(k) = -3.29_RP * exp( log( dens(k)*qi(k)+zerosw )*0.16_RP ) * ( 1.0_RP-zerosw )
+             Vti(k) = -3.29_RP * exp( log( dens(k,i,j)*qi(k)+zerosw )*0.16_RP ) * ( 1.0_RP-zerosw )
           end do
        end if
 
@@ -1287,11 +1323,8 @@ contains
        ! [Pigen] ice nucleation
        do k = KS, KE
           Nig = max( exp(-0.1_RP*temc(k)), 1.0_RP ) * 1000.0_RP
-          Qig = 4.92E-11_RP * exp(log(Nig)*1.33_RP) * Rdens(k)
-          tmpk(k) = Qig - qi(k)
-       end do
-       do k = KS, KE
-          w(k,I_Pigen) = max( min( tmpk(k), qv(k)-QSATI(k) ), 0.0_RP ) / dt
+          Qig = 4.92E-11_RP * exp(log(Nig)*1.33_RP) / dens(k,i,j)
+          w(k,I_Pigen) = max( min( Qig-qi(k), qv(k)-QSATI(k) ), 0.0_RP ) / dt
        end do
 
 
@@ -1300,14 +1333,14 @@ contains
        ! [Pracw] accretion rate of cloud water by rain
        if ( enable_KK2000 ) then
           do k = KS, KE
-             zerosw = 0.5_RP - sign(0.5_RP, qc(k)*qr(k) - 1.E-12_RP )
-             Pracw  = 67.0_RP * exp( log( qc(k)*qr(k)+zerosw )*1.15_RP ) * ( 1.0_RP-zerosw ) ! eq.(33) in KK(2000)
-             w(k,I_Pracw) = Pracw
+             zerosw    = 0.5_RP - sign(0.5_RP, qc(k)*qr(k) - 1.E-12_RP )
+             Pracw_kk  = 67.0_RP * exp( log( qc(k)*qr(k)+zerosw )*1.15_RP ) * ( 1.0_RP-zerosw ) ! eq.(33) in KK(2000)
+             w(k,I_Pracw) = Pracw_kk
           end do
        else
           do k = KS, KE
-             Pracw = qc(k) * 0.25_RP * PI * Erw * N0r(k) * Cr * GAM_3dr * RLMDr_3dr(k) * rho_fact(k)
-             w(k,I_Pracw) = Pracw
+             Pracw_orig = qc(k) * 0.25_RP * PI * Erw * N0r(k) * Cr * GAM_3dr * RLMDr_3dr(k) * rho_fact(k)
+             w(k,I_Pracw) = Pracw_orig
           end do
        end if
 
@@ -1332,7 +1365,7 @@ contains
 
        do k = KS, KE
           ! [Psacr] accretion rate of rain by snow
-          w(k,I_Psacr) = Ar * 0.25_RP * PI * Rdens(k) * Esr * N0r(k)          * abs(Vtr(k)-Vts(k)) &
+          w(k,I_Psacr) = Ar * 0.25_RP * PI / dens(k,i,j) * Esr * N0r(k)          * abs(Vtr(k)-Vts(k)) &
                        * (          GAM_1br * RLMDr_1br(k) * MOMs_2(k)          &
                          + 2.0_RP * GAM_2br * RLMDr_2br(k) * MOMs_1(k)          &
                          +          GAM_3br * RLMDr_3br(k) * MOMs_0(k)          )
@@ -1340,7 +1373,7 @@ contains
 
        do k = KS, KE
           ! [Pgacr] accretion rate of rain by graupel
-          w(k,I_Pgacr) = Ar * 0.25_RP * PI * Rdens(k) * Egr * N0g(k) * N0r(k) * abs(Vtg(k)-Vtr(k)) &
+          w(k,I_Pgacr) = Ar * 0.25_RP * PI / dens(k,i,j) * Egr * N0g(k) * N0r(k) * abs(Vtg(k)-Vtr(k)) &
                        * (          GAM_1br * RLMDr_1br(k) * GAM_3 * RLMDg_3(k) &
                          + 2.0_RP * GAM_2br * RLMDr_2br(k) * GAM_2 * RLMDg_2(k) &
                          +          GAM_3br * RLMDr_3br(k) * GAM   * RLMDg  (k) )
@@ -1348,7 +1381,7 @@ contains
 
        do k = KS, KE
           ! [Pracs] accretion rate of snow by rain
-          w(k,I_Pracs) = As * 0.25_RP * PI * Rdens(k) * Esr       *  N0r(k)   * abs(Vtr(k)-Vts(k)) &
+          w(k,I_Pracs) = As * 0.25_RP * PI / dens(k,i,j) * Esr       *  N0r(k)   * abs(Vtr(k)-Vts(k)) &
                        * (          MOMs_0bs(k)            * GAM_3 * RLMDr_3(k) &
                          + 2.0_RP * MOMs_1bs(k)            * GAM_2 * RLMDr_2(k) &
                          +          MOMs_2bs(k)            * GAM   * RLMDr  (k) )
@@ -1357,10 +1390,11 @@ contains
        do k = KS, KE
           ! [Pgacs] accretion rate of snow by graupel
           Egs_mod(k) = min( Egs, Egs * exp( gamma_gacs * temc(k) ) )
-          w(k,I_Pgacs) = As * 0.25_RP * PI * Rdens(k) * Egs_mod(k) * N0g(k)   * abs(Vtg(k)-Vts(k)) &
+          w(k,I_Pgacs) = As * 0.25_RP * PI / dens(k,i,j) * Egs_mod(k) * N0g(k)   * abs(Vtg(k)-Vts(k)) &
                        * (          MOMs_0bs(k)            * GAM_3 * RLMDg_3(k) &
                          + 2.0_RP * MOMs_1bs(k)            * GAM_2 * RLMDg_2(k) &
                          +          MOMs_2bs(k)            * GAM   * RLMDg  (k) )
+
        end do
 
 
@@ -1370,17 +1404,17 @@ contains
        if ( enable_KK2000 ) then
           do k = KS, KE
              zerosw = 0.5_RP - sign(0.5_RP, qc(k) - 1.E-12_RP )
-             Praut  = 1350.0_RP                                              &
-                    * exp( log( qc(k)+zerosw )*2.47_RP + log( Nc(k) )*(-1.79_RP) ) &
-                    * ( 1.0_RP-zerosw ) ! eq.(29) in KK(2000)
-             w(k,I_Praut) = Praut
+             Praut_kk = 1350.0_RP                                              &
+                      * exp( log( qc(k)+zerosw )*2.47_RP + log( Nc(k) )*(-1.79_RP) ) &
+                      * ( 1.0_RP-zerosw ) ! eq.(29) in KK(2000)
+             w(k,I_Praut) = Praut_kk
           end do
        else
           do k = KS, KE
-             rhoqc = dens(k) * qc(k) * 1000.0_RP ! [g/m3]
+             rhoqc = dens(k,i,j) * qc(k) * 1000.0_RP ! [g/m3]
              Dc    = 0.146_RP - 5.964E-2_RP * log( Nc(k) / 2000.0_RP )
-             Praut = Rdens(k) * 1.67E-5_RP * rhoqc * rhoqc / ( 5.0_RP + 3.66E-2_RP * Nc(k) / ( Dc * rhoqc + EPS ) )
-             w(k,I_Praut) = Praut
+             Praut_berry = 1.67E-5_RP * rhoqc * rhoqc / ( ( 5.0_RP + 3.66E-2_RP * Nc(k) / ( Dc * rhoqc + EPS ) ) * dens(k,i,j) )
+             w(k,I_Praut) = Praut_berry
           end do
        end if
 
@@ -1397,28 +1431,28 @@ contains
        !---< Evaporation, Sublimation, Melting, and Freezing >---
 
        do k = KS, KE
-          Da = ( Da0 + dDa_dT * temc(k) )
-          Kd = ( Dw0 + dDw_dT * temc(k) ) * PRE00 / PRES0(k,i,j)
-          NU(k) = ( mu0 + dmu_dT * temc(k) ) * Rdens(k)
+          Da    = ( Da0 + dDa_dT * temc(k) )
+          Kd    = ( Dw0 + dDw_dT * temc(k) ) * PRE00 / PRES(k,i,j)
+          NU(k) = ( mu0 + dmu_dT * temc(k) ) / dens(k,i,j)
 
-          Glv(k) = 1.0_RP / ( LHV0/(Da*temp(k)) * ( LHV0/(Rvap*temp(k)) - 1.0_RP ) + 1.0_RP/(Kd*dens(k)*QSATL(k)) )
-          Giv(k) = 1.0_RP / ( LHS0/(Da*temp(k)) * ( LHS0/(Rvap*temp(k)) - 1.0_RP ) + 1.0_RP/(Kd*dens(k)*QSATI(k)) )
+          Glv(k) = 1.0_RP / ( LHV0/(Da*temp(k,i,j)) * ( LHV0/(Rvap*temp(k,i,j)) - 1.0_RP ) + 1.0_RP/(Kd*dens(k,i,j)*QSATL(k)) )
+          Giv(k) = 1.0_RP / ( LHS0/(Da*temp(k,i,j)) * ( LHS0/(Rvap*temp(k,i,j)) - 1.0_RP ) + 1.0_RP/(Kd*dens(k,i,j)*QSATI(k)) )
           Gil(k) = ( Da * temc(k) ) / LHF0
        end do
 
        do k = KS, KE
           ! [Prevp] evaporation rate of rain
           ventr = f1r * GAM_2 * RLMDr_2(k) + f2r * sqrt( Cr * rho_fact(k) / NU(k) * RLMDr_5dr(k) ) * GAM_5dr_h
-          w(k,I_Prevp) = 2.0_RP * PI * Rdens(k) * N0r(k) * ( 1.0_RP-min(Sliq(k),1.0_RP) ) * Glv(k) * ventr
+          w(k,I_Prevp) = 2.0_RP * PI / dens(k,i,j) * N0r(k) * ( 1.0_RP-min(Sliq(k),1.0_RP) ) * Glv(k) * ventr
        end do
 
        do k = KS, KE
           ! [Pidep,Pisub] deposition/sublimation rate for ice
-          rhoqi = max(dens(k)*qi(k), EPS)
+          rhoqi = max(dens(k,i,j)*qi(k), EPS)
           XNi   = min( max( 5.38E+7_RP * exp( log(rhoqi)*0.75_RP ), 1.E+3_RP ), 1.E+6_RP )
           XMi   = rhoqi / XNi
           Di    = min( Di_a * sqrt(XMi), Di_max )
-          tmp = 4.0_RP * Di * XNi * Rdens(k) * ( Sice(k)-1.0_RP ) * Giv(k)
+          tmp = 4.0_RP * Di * XNi / dens(k,i,j) * ( Sice(k)-1.0_RP ) * Giv(k)
           w(k,I_Pidep) = (        w(k,I_spsati) ) * ( tmp) ! Sice > 1
           w(k,I_Pisub) = ( 1.0_RP-w(k,I_spsati) ) * (-tmp) ! Sice < 1
 
@@ -1429,7 +1463,7 @@ contains
           ! [Pihtr] heteroginous freezing at -40C < T < 0C
           sw = ( 0.5_RP + sign(0.5_RP, temc(k) + 40.0_RP ) ) &
              * ( 0.5_RP - sign(0.5_RP, temc(k)           ) ) ! if -40C < T < 0C, sw=1
-          w(k,I_Pihtr) = sw * ( dens(k) / DWATR * qc(k)**2 / ( Nc_ihtr * 1.E+6_RP ) ) &
+          w(k,I_Pihtr) = sw * ( dens(k,i,j) / DWATR * qc(k)**2 / ( Nc_ihtr * 1.E+6_RP ) ) &
                        * B_frz * ( exp(-A_frz*temc(k)) - 1.0_RP )
 
           ! [Pimlt] ice melting at T > 0C
@@ -1440,11 +1474,11 @@ contains
        do k = KS, KE
           ! [Psdep,Pssub] deposition/sublimation rate for snow
           vents = f1s * MOMs_1(k)          + f2s * sqrt( Cs * rho_fact(k) / NU(k)             ) * MOMs_5ds_h(k)
-          tmp = 2.0_RP * PI * Rdens(k) *       ( Sice(k)-1.0_RP ) * Giv(k) * vents
+          tmp = 2.0_RP * PI / dens(k,i,j) *       ( Sice(k)-1.0_RP ) * Giv(k) * vents
           w(k,I_Psdep) = (        w(k,I_spsati) ) * ( tmp) ! Sice > 1
           w(k,I_Pssub) = ( 1.0_RP-w(k,I_spsati) ) * (-tmp) ! Sice < 1
           ! [Psmlt] melting rate of snow
-          w(k,I_Psmlt) = 2.0_RP * PI * Rdens(k) *       Gil(k) * vents &
+          w(k,I_Psmlt) = 2.0_RP * PI / dens(k,i,j) *       Gil(k) * vents &
                        + CL * temc(k) / LHF0 * ( w(k,I_Psacw) + w(k,I_Psacr) )
           w(k,I_Psmlt) = max( w(k,I_Psmlt), 0.0_RP )
        end do
@@ -1452,21 +1486,19 @@ contains
        do k = KS, KE
           ! [Pgdep/pgsub] deposition/sublimation rate for graupel
           ventg = f1g * GAM_2 * RLMDg_2(k) + f2g * sqrt( Cg * rho_fact(k) / NU(k) * RLMDg_5dg(k) ) * GAM_5dg_h
-          tmp = 2.0_RP * PI * Rdens(k) * N0g(k) * ( Sice(k)-1.0_RP ) * Giv(k) * ventg
+          tmp = 2.0_RP * PI / dens(k,i,j) * N0g(k) * ( Sice(k)-1.0_RP ) * Giv(k) * ventg
           w(k,I_Pgdep) = (        w(k,I_spsati) ) * ( tmp) ! Sice > 1
           w(k,I_Pgsub) = ( 1.0_RP-w(k,I_spsati) ) * (-tmp) ! Sice < 1
           ! [Pgmlt] melting rate of graupel
-          w(k,I_Pgmlt) = 2.0_RP * PI * Rdens(k) * N0g(k) * Gil(k) * ventg &
+          w(k,I_Pgmlt) = 2.0_RP * PI / dens(k,i,j) * N0g(k) * Gil(k) * ventg &
                        + CL * temc(k) / LHF0 * ( w(k,I_Pgacw) + w(k,I_Pgacr) )
           w(k,I_Pgmlt) = max( w(k,I_Pgmlt), 0.0_RP )
        end do
 
        ! [Pgfrz] freezing rate of graupel
        do k = KS, KE
-          tmpk(k) = ( exp(-A_frz*temc(k)) - 1.0_RP ) * RLMDr_7(k) ! to avoid floating overflow
-       end do
-       do k = KS, KE
-          w(k,I_Pgfrz) = 2.0_RP * PI * Rdens(k) * N0r(k) * 60.0_RP * B_frz * Ar * tmpk(k)
+          tmp = ( exp(-A_frz*temc(k)) - 1.0_RP ) * RLMDr_7(k) ! to avoid floating overflow
+          w(k,I_Pgfrz) = 2.0_RP * PI / dens(k,i,j) * N0r(k) * 60.0_RP * B_frz * Ar * tmp
        end do
 
        do k = KS, KE
@@ -1483,8 +1515,8 @@ contains
           dt1  = ( exp( log(mi50)*ma2 ) &
                  - exp( log(mi40)*ma2 ) ) / ( a1 * ma2 )
           Ni50 = qi(k) * dt / ( mi50 * dt1 )
-          w(k,I_Psfw ) = Ni50 * ( a1 * exp( log(mi50)*a2 ) &
-                                + PI * Eiw * dens(k) * qc(k) * Ri50*Ri50 * vti50 )
+          w(k,I_Psfw ) = Ni50 * ( a1 * exp( log(mi50)*a2 )                 &
+                                + PI * Eiw * dens(k,i,j) * qc(k) * Ri50*Ri50 * vti50 )
           w(k,I_Psfi ) = qi(k) / dt1
        end do
 
@@ -1498,14 +1530,9 @@ contains
           w(k,I_Pracw) = w(k,I_Pracw)                          &
                        + w(k,I_Psacw) * ( 1.0_RP-w(k,I_iceflg) ) & ! c->r by s
                        + w(k,I_Pgacw) * ( 1.0_RP-w(k,I_iceflg) )   ! c->r by g
-
        end do
 
        do k = KS, KE
-          sw_bergeron(k) = ( 0.5_RP + sign(0.5_RP, temc(k) + 30.0_RP ) ) &
-                         * ( 0.5_RP + sign(0.5_RP, 0.0_RP - temc(k)  ) ) &
-                         * ( 1.0_RP - sw_expice                     )
-
           w(k,I_Praut) = min( w(k,I_Praut), w(k,I_dqc_dt) )
           w(k,I_Pracw) = min( w(k,I_Pracw), w(k,I_dqc_dt) )
           w(k,I_Pihom) = min( w(k,I_Pihom), w(k,I_dqc_dt) ) * (        w(k,I_iceflg) ) * sw_expice
@@ -1827,35 +1854,6 @@ contains
           qg_t(k) = max( qg_t(k), -w(k,I_dqg_dt) )
        end do
 
-       do k = KS, KE
-          qv_t(k) = - ( qc_t(k) + qr_t(k) + qi_t(k) + qs_t(k) + qg_t(k) )
-          QTRC0(k,i,j,I_QV) = QTRC0(k,i,j,I_QV) + qv_t(k) * dt
-          QTRC0(k,i,j,I_QC) = QTRC0(k,i,j,I_QC) + qc_t(k) * dt
-          QTRC0(k,i,j,I_QR) = QTRC0(k,i,j,I_QR) + qr_t(k) * dt
-          QTRC0(k,i,j,I_QI) = QTRC0(k,i,j,I_QI) + qi_t(k) * dt
-          QTRC0(k,i,j,I_QS) = QTRC0(k,i,j,I_QS) + qs_t(k) * dt
-          QTRC0(k,i,j,I_QG) = QTRC0(k,i,j,I_QG) + qg_t(k) * dt
-       end do
-
-       do k = KS, KE
-          cv_t = CV_VAPOR * qv_t(k) &
-               + CV_WATER * ( qc_t(k) + qr_t(k) ) &
-               + CV_ICE   * ( qi_t(k) + qs_t(k) + qg_t(k) )
-          cvtot(k) = CVtot0(k,i,j) + cv_t * dt
-
-          e_t = - LHV * qv_t(k) + LHF * ( qi_t(k) + qs_t(k) + qg_t(k) ) ! internal energy change
-          RHOE_t(k,i,j) = dens(k) * e_t
-          TEMP0(k,i,j) = ( temp(k) * CVtot0(k,i,j) + e_t * dt ) / cvtot(k)
-
-          CVtot0(k,i,j) = cvtot(k)
-
-          cp_t = CP_VAPOR * qv_t(k) &
-               + CP_WATER * ( qc_t(k) + qr_t(k) ) &
-               + CP_ICE   * ( qi_t(k) + qs_t(k) + qg_t(k) )
-          cptot = CPtot0(k,i,j) + cp_t * dt
-          CPtot0(k,i,j) = cptot
-       end do
-
        if ( flg_lt_l ) then
           do k = KS, KE
              ! store to work
@@ -1873,7 +1871,7 @@ contains
              ! [Qgaci] charge separation of cloud ice
              alpha = 5.0_RP * ( 2.0_RP * re_qi / d0_crg )**2 * ( -Vtg(k) ) / v0_crg
              alpha = min( alpha, 10.0_RP )
-             w_qcrg(k,I_Qgaci) = dens(k) * qi(k) * 1.5_RP &
+             w_qcrg(k,I_Qgaci) = dens(k,i,j) * qi(k) * 1.5_RP &
                                * Cg * GAM_3dg * RLMDg_3dg(k) * rho_fact(k) * rdens_i &
                                * sign( min( abs(dcrg(k)*alpha),20.0_RP ),dcrg(k)*alpha ) * beta1_crg(k) &
                                * N0g(k) / ( 2.0_RP * re_qi )**3 &
@@ -1889,7 +1887,7 @@ contains
 !             w_qcrg(I_Qgacs) = 0.0_RP
              alpha = 5.0_RP * ( 2.0_RP * re_qs(k) / d0_crg )**2 * ( -Vtg(k) ) / v0_crg
              alpha = min( alpha, 10.0_RP )
-             w_qcrg(k,I_Qgacs) = 0.25_RP * PI * Rdens(k) &
+             w_qcrg(k,I_Qgacs) = 0.25_RP * PI / dens(k,i,j) &
                                * N0g(k) * N0s(k) * abs(Vtg(k)-Vts(k)) * beta1_crg(k) &
                                * sign( min( abs(dcrg(k)*alpha),50.0_RP ),dcrg(k)*alpha ) &
                                * ( GAM_3 * GAM   * w(k,I_RLMDs)**3 * RLMDg  (k) &
@@ -2068,7 +2066,55 @@ contains
                            - w_qcrg(k,I_Qgaci) & ! [prod] Charge Split by g-i coll.
                            - w_qcrg(k,I_Qgacs)   ! [prod] Charge Split by g-s coll.
           end do
+       end if
 
+       do k = KS, KE
+          qv_t(k) = - ( qc_t(k) + qr_t(k) + qi_t(k) + qs_t(k) + qg_t(k) )
+       end do
+
+       do k = KS, KE
+          QTRC(k,i,j,I_QV) = QTRC(k,i,j,I_QV) + qv_t(k) * dt
+       end do
+       do k = KS, KE
+          QTRC(k,i,j,I_QC) = QTRC(k,i,j,I_QC) + qc_t(k) * dt
+       end do
+       do k = KS, KE
+          QTRC(k,i,j,I_QR) = QTRC(k,i,j,I_QR) + qr_t(k) * dt
+       end do
+       do k = KS, KE
+          QTRC(k,i,j,I_QI) = QTRC(k,i,j,I_QI) + qi_t(k) * dt
+       end do
+       do k = KS, KE
+          QTRC(k,i,j,I_QS) = QTRC(k,i,j,I_QS) + qs_t(k) * dt
+       end do
+       do k = KS, KE
+          QTRC(k,i,j,I_QG) = QTRC(k,i,j,I_QG) + qg_t(k) * dt
+       end do
+       do k = KS, KE
+          cv_t = CV_VAPOR * qv_t(k) &
+               + CV_WATER * ( qc_t(k) + qr_t(k) ) &
+               + CV_ICE   * ( qi_t(k) + qs_t(k) + qg_t(k) )
+          cvtot(k) = CVtot0(k,i,j) + cv_t * dt
+       end do
+
+       do k = KS, KE
+          e_t = - LHV * qv_t(k) + LHF * ( qi_t(k) + qs_t(k) + qg_t(k) ) ! internal energy change
+          RHOE_t(k,i,j) = dens(k,i,j) * e_t
+          TEMP(k,i,j) = ( temp(k,i,j) * CVtot0(k,i,j) + e_t * dt ) / cvtot(k)
+       end do
+
+       do k = KS, KE
+          CVtot0(k,i,j) = cvtot(k)
+       end do
+
+       do k = KS, KE
+          cp_t = CP_VAPOR * qv_t(k) &
+               + CP_WATER * ( qc_t(k) + qr_t(k) ) &
+               + CP_ICE   * ( qi_t(k) + qs_t(k) + qg_t(k) )
+          CPtot0(k,i,j) = CPtot0(k,i,j) + cp_t * dt
+       end do
+
+       if (flg_lt_l) then
           do k = KS, KE
              QTRC_crg0(k,i,j,I_QC-1) = QTRC_crg0(k,i,j,I_QC-1) + qc_crg_t(k) * dt
              QTRC_crg0(k,i,j,I_QR-1) = QTRC_crg0(k,i,j,I_QR-1) + qr_crg_t(k) * dt
@@ -2080,13 +2126,13 @@ contains
 !OCL LOOP_FISSION_TARGET(LS)
           !$acc loop private(rlambda)
           do k = KS, KE
-             rlambda(I_QR) = sqrt(sqrt( DENS0(k,i,j) * max( QTRC0(k,i,j,I_QR),0.0_RP ) / ( Ar * N0r(k) * GAM_1br ) ))
-             rlambda(I_QS) = sqrt(sqrt( DENS0(k,i,j) * max( QTRC0(k,i,j,I_QS),0.0_RP ) / ( As * N0s(k) * GAM_1bs ) ))
-             rlambda(I_QG) = sqrt(sqrt( DENS0(k,i,j) * max( QTRC0(k,i,j,I_QG),0.0_RP ) / ( Ag * N0g(k) * GAM_1bg ) ))
+             rlambda(I_QR) = sqrt(sqrt( DENS(k,i,j) * max( QTRC(k,i,j,I_QR),0.0_RP ) / ( Ar * N0r(k) * GAM_1br ) ))
+             rlambda(I_QS) = sqrt(sqrt( DENS(k,i,j) * max( QTRC(k,i,j,I_QS),0.0_RP ) / ( As * N0s(k) * GAM_1bs ) ))
+             rlambda(I_QG) = sqrt(sqrt( DENS(k,i,j) * max( QTRC(k,i,j,I_QG),0.0_RP ) / ( Ag * N0g(k) * GAM_1bg ) ))
              Sarea(k,i,j,I_QC-1) = 6.0_RP / ( re_qc*2.0_RP * DWATR ) &
-                                 * max( QTRC0(k,i,j,I_QC),0.0_RP ) * DENS0(k,i,j)
+                                 * max( QTRC(k,i,j,I_QC),0.0_RP ) * DENS(k,i,j)
              Sarea(k,i,j,I_QI-1) = 6.0_RP / ( re_qi*2.0_RP * DICE ) &
-                                 * max( QTRC0(k,i,j,I_QI),0.0_RP ) * DENS0(k,i,j)
+                                 * max( QTRC(k,i,j,I_QI),0.0_RP ) * DENS(k,i,j)
              Sarea(k,i,j,I_QR-1) = PI * N0r(k) * GAM_3 * rlambda(I_QR)**3
              Sarea(k,i,j,I_QS-1) = PI * N0s(k) * GAM_3 * rlambda(I_QS)**3
              Sarea(k,i,j,I_QG-1) = PI * N0g(k) * GAM_3 * rlambda(I_QG)**3
@@ -2094,7 +2140,7 @@ contains
 
           do iq = 1, 3
           do k = KS, KE
-             QSPLT_in(k,i,j,iq) = QSPLT_in(k,i,j,iq) * DENS0(k,i,j)
+             QSPLT_in(k,i,j,iq) = QSPLT_in(k,i,j,iq) * DENS(k,i,j)
           enddo
           enddo
        end if
@@ -2135,33 +2181,66 @@ contains
 !OCL SERIAL
   subroutine ATMOS_PHY_MP_tomita08_terminal_velocity( &
        KA, KS, KE, &
-       DENS0, TEMP0, RHOQ0, &
-       vterm                )
+       DENS, TEMP, RHOQ, &
+       vterm             )
     !$acc routine vector
     use scale_const, only: &
        TEM00 => CONST_TEM00
     implicit none
     integer,  intent(in), value :: KA, KS, KE
 
-    real(RP), intent(in)  :: DENS0(KA)
-    real(RP), intent(in)  :: TEMP0(KA)
-    real(RP), intent(in)  :: RHOQ0(KA,QA_MP-1)
+    real(RP), intent(in)  :: DENS(KA)
+    real(RP), intent(in)  :: TEMP(KA)
+    real(RP), intent(in)  :: RHOQ(KA,QA_MP-1)
 
     real(RP), intent(out) :: vterm(KA,QA_MP-1)
 
-    real(RP) :: dens(KA)
-    real(RP) :: temc(KA)
-    real(RP) :: qr(KA), qi(KA), qs(KA), qg(KA)
+#ifdef _OPENACC
+    real(RP) :: temc_tv
+    real(RP) :: qr_tv
+    real(RP) :: qi_tv
+    real(RP) :: qs_tv
+    real(RP) :: qg_tv
+    real(RP) :: rho_fact_tv
+#define temc_tv(k) temc_tv
+#define qr_tv(k) qr_tv
+#define qi_tv(k) qi_tv
+#define qs_tv(k) qs_tv
+#define qg_tv(k) qg_tv
+#define rho_fact_tv(k) rho_fact_tv
+#else
+    real(RP) :: temc_tv(KA)
+    real(RP) :: qr_tv(KA)
+    real(RP) :: qi_tv(KA)
+    real(RP) :: qs_tv(KA)
+    real(RP) :: qg_tv(KA)
+    real(RP) :: rho_fact_tv(KA) ! density factor
+#endif
 
-    real(RP) :: rho_fact(KA) ! density factor
-
-    real(RP) :: N0r(KA), N0s(KA), N0g(KA)
+#ifdef _OPENACC
+    real(RP) :: N0r_tv
+    real(RP) :: N0s_tv
+    real(RP) :: N0g_tv
+#define N0r_tv(k) N0r_tv
+#define N0s_tv(k) N0s_tv
+#define N0g_tv(k) N0g_tv
+#else
+    real(RP) :: N0r_tv(KA)
+    real(RP) :: N0s_tv(KA)
+    real(RP) :: N0g_tv(KA)
+#endif
     real(RP) :: RLMDr, RLMDs, RLMDg
     real(RP) :: RLMDr_dr, RLMDs_ds, RLMDg_dg
 
     !---< Roh and Satoh (2014) >---
     real(RP) :: tems, Xs2
-    real(RP) :: MOMs_0bs, RMOMs_Vt(KA)
+    real(RP) :: MOMs_0bs
+#ifdef _OPENACC
+    real(RP) :: RMOMs_Vt_tv
+#define RMOMs_Vt_tv(k) RMOMs_Vt_tv
+#else
+    real(RP) :: RMOMs_Vt_tv(KA)
+#endif
     real(RP) :: coef_at(4), coef_bt(4)
     real(RP) :: loga_, b_, nm
 
@@ -2169,70 +2248,93 @@ contains
     integer  :: k
     !---------------------------------------------------------------------------
 
+    !$acc loop private(coef_at, coef_bt)
     do k = KS, KE
        ! store to work
-       dens(k) = DENS0(k)
-       temc(k) = TEMP0(k) - TEM00
-       qr  (k) = RHOQ0(k,I_hyd_QR) / dens(k)
-       qi  (k) = RHOQ0(k,I_hyd_QI) / dens(k)
-       qs  (k) = RHOQ0(k,I_hyd_QS) / dens(k)
-       qg  (k) = RHOQ0(k,I_hyd_QG) / dens(k)
+       temc_tv(k) = TEMP(k) - TEM00
+       qr_tv  (k) = RHOQ(k,I_hyd_QR) / dens(k)
+       qi_tv  (k) = RHOQ(k,I_hyd_QI) / dens(k)
+       qs_tv  (k) = RHOQ(k,I_hyd_QS) / dens(k)
+       qg_tv  (k) = RHOQ(k,I_hyd_QG) / dens(k)
 
-       rho_fact(k) = sqrt( dens00 / dens(k) )
+       rho_fact_tv(k) = sqrt( dens00 / dens(k) )
+#ifndef _OPENACC
     end do
+#endif
 
     if ( enable_WDXZ2014 ) then
        ! Wainwright et al. (2014)
+       ! intercept parameter N0
+#ifndef _OPENACC
        do k = KS, KE
-          ! intercept parameter N0
-          N0r(k) = 1.16E+5_RP * exp( log( max( dens(k)*qr(k)*1000.0_RP, 1.E-2_RP ) )*0.477_RP )
-          N0s(k) = 4.58E+9_RP * exp( log( max( dens(k)*qs(k)*1000.0_RP, 1.E-2_RP ) )*0.788_RP )
-          N0g(k) = 9.74E+8_RP * exp( log( max( dens(k)*qg(k)*1000.0_RP, 1.E-2_RP ) )*0.816_RP )
+#endif
+          N0r_tv(k) = 1.16E+5_RP * exp( log( max( dens(k)*qr_tv(k)*1000.0_RP, 1.E-2_RP ) )*0.477_RP )
+          N0s_tv(k) = 4.58E+9_RP * exp( log( max( dens(k)*qs_tv(k)*1000.0_RP, 1.E-2_RP ) )*0.788_RP )
+          N0g_tv(k) = 9.74E+8_RP * exp( log( max( dens(k)*qg_tv(k)*1000.0_RP, 1.E-2_RP ) )*0.816_RP )
+#ifndef _OPENACC
        end do
+#endif
     else
+       ! intercept parameter N0
+#ifndef _OPENACC
        do k = KS, KE
-          ! intercept parameter N0
-          N0r(k) = N0r_def ! Marshall and Palmer (1948)
-          N0s(k) = N0s_def ! Gunn and Marshall (1958)
-          N0g(k) = N0g_def
+#endif
+          N0r_tv(k) = N0r_def ! Marshall and Palmer (1948)
+          N0s_tv(k) = N0s_def ! Gunn and Marshall (1958)
+          N0g_tv(k) = N0g_def
+#ifndef _OPENACC
        end do
+#endif
     end if
 
     !---< terminal velocity >
     if ( enable_HZDFHI2007 ) then
+#ifndef _OPENACC
        do k = KS, KE
-          zerosw = 0.5_RP - sign(0.5_RP, qi(k) - 1.E-8_RP )
+#endif
+          zerosw = 0.5_RP - sign(0.5_RP, qi_tv(k) - 1.E-8_RP )
           vterm(k,I_hyd_QI) = min( 0.0_RP, &
-               - ( coef_a0 + coef_a1 * temc(k) ) &
-               * exp( log( dens(k)*qi(k)*1000.0_RP+zerosw ) * ( coef_b0 + coef_b1 * temc(k) ) ) &
+               - ( coef_a0 + coef_a1 * temc_tv(k) ) &
+               * exp( log( dens(k)*qi_tv(k)*1000.0_RP+zerosw ) * ( coef_b0 + coef_b1 * temc_tv(k) ) ) &
                * 1E-2_RP * ( 1.0_RP-zerosw ) )
+#ifndef _OPENACC
        end do
+#endif
     else
+#ifndef _OPENACC
        do k = KS, KE
-          zerosw = 0.5_RP - sign(0.5_RP, qi(k) - 1.E-8_RP )
-          vterm(k,I_hyd_QI) = -3.29_RP * exp( log( dens(k)*qi(k)+zerosw )*0.16_RP ) * ( 1.0_RP-zerosw )
+#endif
+          zerosw = 0.5_RP - sign(0.5_RP, qi_tv(k) - 1.E-8_RP )
+          vterm(k,I_hyd_QI) = -3.29_RP * exp( log( dens(k)*qi_tv(k)+zerosw )*0.16_RP ) * ( 1.0_RP-zerosw )
+#ifndef _OPENACC
        end do
+#endif
     end if
 
 
+    ! slope parameter lambda (Rain)
+#ifndef _OPENACC
     do k = KS, KE
-       ! slope parameter lambda (Rain)
-       zerosw = 0.5_RP - sign(0.5_RP, qr(k) - 1.E-12_RP )
-       RLMDr  = sqrt(sqrt( dens(k) * qr(k) / ( Ar * N0r(k) * GAM_1br ) + zerosw )) * ( 1.0_RP-zerosw )
+#endif
+       zerosw = 0.5_RP - sign(0.5_RP, qr_tv(k) - 1.E-12_RP )
+       RLMDr  = sqrt(sqrt( dens(k) * qr_tv(k) / ( Ar * N0r_tv(k) * GAM_1br ) + zerosw )) * ( 1.0_RP-zerosw )
        RLMDr_dr = sqrt( RLMDr )       ! **Dr
-       vterm(k,I_hyd_QR) = -Cr * rho_fact(k) * GAM_1brdr / GAM_1br * RLMDr_dr
+       vterm(k,I_hyd_QR) = -Cr * rho_fact_tv(k) * GAM_1brdr / GAM_1br * RLMDr_dr
+#ifndef _OPENACC
     end do
+#endif
 
 
     if ( enable_RS2014 ) then
        !---< modification by Roh and Satoh (2014) >---
        ! bimodal size distribution of snow
-       !$acc loop private(coef_at, coef_bt)
+#ifndef _OPENACC
        do k = KS, KE
-          zerosw = 0.5_RP - sign(0.5_RP, dens(k) * qs(k) - 1.E-12_RP )
-          Xs2    = dens(k) * qs(k) / As
+#endif
+          zerosw = 0.5_RP - sign(0.5_RP, dens(k) * qs_tv(k) - 1.E-12_RP )
+          Xs2    = dens(k) * qs_tv(k) / As
 
-          tems       = min( -0.1_RP, temc(k) )
+          tems       = min( -0.1_RP, temc_tv(k) )
           coef_at(1) = coef_a01 + tems * ( coef_a02 + tems * ( coef_a05 + tems * coef_a09 ) )
           coef_at(2) = coef_a03 + tems * ( coef_a04 + tems *   coef_a07 )
           coef_at(3) = coef_a06 + tems *   coef_a08
@@ -2250,67 +2352,97 @@ contains
           nm = 2.25_RP
           loga_  = coef_at(1) + nm * ( coef_at(2) + nm * ( coef_at(3) + nm * coef_at(4) ) )
           b_  = coef_bt(1) + nm * ( coef_bt(2) + nm * ( coef_bt(3) + nm * coef_bt(4) ) )
-          RMOMs_Vt(k) = exp( ln10 * loga_ + log(Xs2+zerosw) * b_ ) * ( 1.0_RP-zerosw ) / ( MOMs_0bs + zerosw )
+          RMOMs_Vt_tv(k) = exp( ln10 * loga_ + log(Xs2+zerosw) * b_ ) * ( 1.0_RP-zerosw ) / ( MOMs_0bs + zerosw )
+#ifndef _OPENACC
        end do
+#endif
     else
        ! slope parameter lambda (Snow)
+#ifndef _OPENACC
        do k = KS, KE
-          zerosw = 0.5_RP - sign(0.5_RP, qs(k) - 1.E-12_RP )
-          RLMDs  = sqrt(sqrt( dens(k) * qs(k) / ( As * N0s(k) * GAM_1bs ) + zerosw )) * ( 1.0_RP-zerosw )
+#endif
+          zerosw = 0.5_RP - sign(0.5_RP, qs_tv(k) - 1.E-12_RP )
+          RLMDs  = sqrt(sqrt( dens(k) * qs_tv(k) / ( As * N0s_tv(k) * GAM_1bs ) + zerosw )) * ( 1.0_RP-zerosw )
           RLMDs_ds = sqrt( sqrt(RLMDs) ) ! **Ds
-          RMOMs_Vt(k) = GAM_1bsds / GAM_1bs * RLMDs_ds
+          RMOMs_Vt_tv(k) = GAM_1bsds / GAM_1bs * RLMDs_ds
+#ifndef _OPENACC
        end do
+#endif
     end if
 
+#ifndef _OPENACC
     do k = KS, KE
-       vterm(k,I_hyd_QS) = -Cs * rho_fact(k) * RMOMs_Vt(k)
+#endif
+       vterm(k,I_hyd_QS) = -Cs * rho_fact_tv(k) * RMOMs_Vt_tv(k)
+#ifndef _OPENACC
     end do
 
-
     do k = KS, KE
+#endif
        ! slope parameter lambda (Graupel)
-       zerosw = 0.5_RP - sign(0.5_RP, qg(k) - 1.E-12_RP )
-       RLMDg  = sqrt(sqrt( dens(k) * qg(k) / ( Ag * N0g(k) * GAM_1bg ) + zerosw )) * ( 1.0_RP-zerosw )
+       zerosw = 0.5_RP - sign(0.5_RP, qg_tv(k) - 1.E-12_RP )
+       RLMDg  = sqrt(sqrt( dens(k) * qg_tv(k) / ( Ag * N0g_tv(k) * GAM_1bg ) + zerosw )) * ( 1.0_RP-zerosw )
        RLMDg_dg = sqrt( RLMDg )       ! **Dg
-       vterm(k,I_hyd_QG) = -Cg * rho_fact(k) * GAM_1bgdg / GAM_1bg * RLMDg_dg
+       vterm(k,I_hyd_QG) = -Cg * rho_fact_tv(k) * GAM_1bgdg / GAM_1bg * RLMDg_dg
+#ifndef _OPENACC
     enddo
 
 
 !OCL XFILL
     do k = KS, KE
+#endif
        vterm(k,I_hyd_QC) = 0.0_RP
+#ifndef _OPENACC
     end do
+#endif
 
     if ( nofall_qr ) then
 !OCL XFILL
+#ifndef _OPENACC
        do k = KS, KE
+#endif
           vterm(k,I_hyd_QR) = 0.0_RP
+#ifndef _OPENACC
        enddo
+#endif
     endif
 
     if ( nofall_qi ) then
 !OCL XFILL
+#ifndef _OPENACC
        do k = KS, KE
+#endif
           vterm(k,I_hyd_QI) = 0.0_RP
+#ifndef _OPENACC
        enddo
+#endif
     endif
 
     if ( nofall_qs ) then
 !OCL XFILL
+#ifndef _OPENACC
        do k = KS, KE
+#endif
           vterm(k,I_hyd_QS) = 0.0_RP
+#ifndef _OPENACC
        enddo
+#endif
     endif
 
     if ( nofall_qg ) then
 !OCL XFILL
+#ifndef _OPENACC
        do k = KS, KE
+#endif
           vterm(k,I_hyd_QG) = 0.0_RP
+#ifndef _OPENACC
        enddo
+#endif
     endif
 
-    vterm(    1:KS-1,:) = 0.0_RP
-    vterm(KE+1:KA   ,:) = 0.0_RP
+#ifdef _OPENACC
+    end do
+#endif
 
     return
   end subroutine ATMOS_PHY_MP_tomita08_terminal_velocity
