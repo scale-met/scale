@@ -23,15 +23,15 @@ First, move to the directory \verb|sno|:
 \end{verbatim}
 There are some configuration files and a binary file in this directory.
 The binary file is linked to the executable file compiled in Section \ref{sec:compile_sno}.
-As an example, a procedure to convert the all variables are explained here.
+As an example, a procedure to convert all variables are explained here.
  
-When \verb|sno| is executed, the number of processes needs to be a divison of the number of the processes used for the simulation. 
+When \verb|sno| is executed, the number of processes needs to be a divisor of the number of the grids in the calculation domain. 
 The number of processes is four here.
 Since \verb|sno| cannot simultaneously convert the data for the vertical and horizontal direction,
 they must be converted separately as follows:
 \begin{verbatim}
  $ mpirun -n 4 ./sno sno.vgridope.d01.conf
- $ mpirun -n 4 ./sno sno.hgridope.d01.conf
+ $ mpirun -n 1 ./sno sno.hgridope.d01.conf
 \end{verbatim}
 The conversion succeeds only if the following messages are found in the standard output without an error message:
 \msgbox{
@@ -53,7 +53,7 @@ This is because the syntax is different according to the version of \grads.
   real_prec.png
   real_wind.png
 \end{verbatim}
-If the calculation are successful,
+If the calculation is successful,
 the same figures as Figs. \ref{fig:real_mslp}, \ref{fig:real_prec}, and \ref{fig:real_wind} are obtained.
 
 \begin{figure}[tbh]

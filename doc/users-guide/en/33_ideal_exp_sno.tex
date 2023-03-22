@@ -25,8 +25,8 @@ the conversion is completed without problem:
 \verb|*** End   SCALE-NetCDF Operator| \\
 }
 
-The execution of \sno should be handled,
-so that the number of MPI processes is identical to, or a divisor of, that used for the run of \scalerm.
+The execution of \sno should be handled, 
+so that the number of MPI processes is a divisor of the number of the grids in the calculation domain which does not contain the halo region.
 The following file is generated under the same directory by this execution:
 \begin{alltt}
   merged_history.pe000000.nc
@@ -44,7 +44,7 @@ If a warning appears, the \grads script should be rewritten appropriately:
 If it is successfully completed, the following files are generated:
 
 \begin{verbatim}
-   ideal_QHYD.png
+   ideal_qhyd.png
    ideal_W.png
 \end{verbatim}
 The same figures as Fig. \ref{fig_ideal} can be found in the simulation,

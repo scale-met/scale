@@ -25,7 +25,7 @@ When a realistic atmospheric experiment is conducted, boundary data need to be p
     & &  \multicolumn{1}{l}{land and sea map in the parent model}\\
     & &  \multicolumn{1}{l}{\color{blue}{surface skin temperature}}\\
     & &  \multicolumn{1}{l}{{\color{blue}{information of depth of soil data in the parent model, soil temperature,}}}\\
-    & &  \multicolumn{1}{l}{{{soil moisture(volume content or degree of saturation)}}}\\
+    & &  \multicolumn{1}{l}{{{soil moisture (volume content or degree of saturation)}}}\\
     &  \multicolumn{2}{l}{--- 2D ocean data at the surface ---}\\
     & &  \multicolumn{1}{l}{\color{blue}{sea surface temperature (omitted if skin temperature is also used for SST)}}\\ \hline
   \end{tabularx}
@@ -43,13 +43,12 @@ and land-use classification data from the GLCCv2 are provided in \scalerm.
 These files have already been formatted for \scalerm.
 \begin{enumerate}
 \item Downloading database\\
-Obtain the data for altitude and land-use classification formatted for \scalerm  from \url{https://scale.riken.jp/download/scale_database.tar.gz}, and extract them to any directory:
-\begin{verbatim}
-  $ tar -zxvf scale_database.tar.gz
-  $ ls
-    scale_database/topo/    <- altitude data
-    scale_database/landuse/ <- land use classification data
-\end{verbatim}
+Obtain the data for altitude and land-use classification formatted for \scalerm  from \url{https://scale.riken.jp/download/scale_database.tar.gz}, and extract them to any directory:\\
+\\
+\verb|  $ tar -zxvf scale_database.tar.gz|\\
+\verb|  $ ls|\\
+\verb|    scale_database/topo/    <-| altitude data\\
+\verb|    scale_database/landuse/ <-| land use classification data
 \item Setting of the path\\
 To prepare the files used in the realistic atmospheric experiment,
 the ``making tool for the complete settings of the experiment" is available.

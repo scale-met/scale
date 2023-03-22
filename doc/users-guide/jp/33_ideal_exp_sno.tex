@@ -23,8 +23,7 @@
 \verb|*** End   SCALE-NetCDF Operator| \\
 }
 
-\sno を実行する際には、{\scalerm}の実行時に使用した MPI プロセス数と同じか、
-その約数のプロセス数を使用しなければならない。
+\sno 実行時のプロセス数は、1領域に含まれる\texttt{HALO}領域を除いた格子点数の約数でなければならない。
 %HDDの読み書き速度に依存するが、本書の必要要件にあった計算機であれば2分程度で計算が終わる。
 この実行によって、実行ディレクトリ下に下記のファイルが作成される。
 \begin{alltt}
@@ -42,7 +41,7 @@
 \end{verbatim}
 コマンドが成功すれば、下記のファイルが生成される。
 \begin{verbatim}
-   ideal_QHYD.png
+   ideal_qhyd.png
    ideal_W.png
 \end{verbatim}
 シミュレーションと後処理が問題なく行われていれば、図\ref{fig_ideal}と同じ図が得られる。
