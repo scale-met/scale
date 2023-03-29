@@ -2461,13 +2461,6 @@ contains
        missing_value_ = 0.0_<%=rp%>
     end if
 
-    if ( present(count) ) then
-       if ( <%=(1..d).map{|i| "count(#{i}).ne.size(var,#{i})"}.join(" .or. ")%> ) then
-          LOG_ERROR("FILE_read_var_real<%=rp%>_<%=d%>D",*) 'size is different: ', count(:), shape(var)
-          call PRC_abort
-       end if
-    end if
-
     !--- get data information
     error = file_get_datainfo_c( dinfo,                & ! (out)
                                  FILE_files(fid)%fid,  & ! (in)
