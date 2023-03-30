@@ -3980,13 +3980,6 @@ contains
        missing_value_ = 0.0_SP
     end if
 
-    if ( present(count) ) then
-       if ( count(1).ne.size(var,1) ) then
-          LOG_ERROR("FILE_read_var_realSP_1D",*) 'size is different: ', count(:), shape(var)
-          call PRC_abort
-       end if
-    end if
-
     !--- get data information
     error = file_get_datainfo_c( dinfo,                & ! (out)
                                  FILE_files(fid)%fid,  & ! (in)
@@ -4133,13 +4126,6 @@ contains
        missing_value_ = missing_value
     else
        missing_value_ = 0.0_DP
-    end if
-
-    if ( present(count) ) then
-       if ( count(1).ne.size(var,1) ) then
-          LOG_ERROR("FILE_read_var_realDP_1D",*) 'size is different: ', count(:), shape(var)
-          call PRC_abort
-       end if
     end if
 
     !--- get data information
@@ -4290,13 +4276,6 @@ contains
        missing_value_ = 0.0_SP
     end if
 
-    if ( present(count) ) then
-       if ( count(1).ne.size(var,1) .or. count(2).ne.size(var,2) ) then
-          LOG_ERROR("FILE_read_var_realSP_2D",*) 'size is different: ', count(:), shape(var)
-          call PRC_abort
-       end if
-    end if
-
     !--- get data information
     error = file_get_datainfo_c( dinfo,                & ! (out)
                                  FILE_files(fid)%fid,  & ! (in)
@@ -4443,13 +4422,6 @@ contains
        missing_value_ = missing_value
     else
        missing_value_ = 0.0_DP
-    end if
-
-    if ( present(count) ) then
-       if ( count(1).ne.size(var,1) .or. count(2).ne.size(var,2) ) then
-          LOG_ERROR("FILE_read_var_realDP_2D",*) 'size is different: ', count(:), shape(var)
-          call PRC_abort
-       end if
     end if
 
     !--- get data information
@@ -4600,13 +4572,6 @@ contains
        missing_value_ = 0.0_SP
     end if
 
-    if ( present(count) ) then
-       if ( count(1).ne.size(var,1) .or. count(2).ne.size(var,2) .or. count(3).ne.size(var,3) ) then
-          LOG_ERROR("FILE_read_var_realSP_3D",*) 'size is different: ', count(:), shape(var)
-          call PRC_abort
-       end if
-    end if
-
     !--- get data information
     error = file_get_datainfo_c( dinfo,                & ! (out)
                                  FILE_files(fid)%fid,  & ! (in)
@@ -4753,13 +4718,6 @@ contains
        missing_value_ = missing_value
     else
        missing_value_ = 0.0_DP
-    end if
-
-    if ( present(count) ) then
-       if ( count(1).ne.size(var,1) .or. count(2).ne.size(var,2) .or. count(3).ne.size(var,3) ) then
-          LOG_ERROR("FILE_read_var_realDP_3D",*) 'size is different: ', count(:), shape(var)
-          call PRC_abort
-       end if
     end if
 
     !--- get data information
@@ -4910,13 +4868,6 @@ contains
        missing_value_ = 0.0_SP
     end if
 
-    if ( present(count) ) then
-       if ( count(1).ne.size(var,1) .or. count(2).ne.size(var,2) .or. count(3).ne.size(var,3) .or. count(4).ne.size(var,4) ) then
-          LOG_ERROR("FILE_read_var_realSP_4D",*) 'size is different: ', count(:), shape(var)
-          call PRC_abort
-       end if
-    end if
-
     !--- get data information
     error = file_get_datainfo_c( dinfo,                & ! (out)
                                  FILE_files(fid)%fid,  & ! (in)
@@ -5063,13 +5014,6 @@ contains
        missing_value_ = missing_value
     else
        missing_value_ = 0.0_DP
-    end if
-
-    if ( present(count) ) then
-       if ( count(1).ne.size(var,1) .or. count(2).ne.size(var,2) .or. count(3).ne.size(var,3) .or. count(4).ne.size(var,4) ) then
-          LOG_ERROR("FILE_read_var_realDP_4D",*) 'size is different: ', count(:), shape(var)
-          call PRC_abort
-       end if
     end if
 
     !--- get data information
