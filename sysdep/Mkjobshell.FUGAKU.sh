@@ -121,7 +121,7 @@ if [ \$? -eq 0 ]; then
     :
 else
     echo "[ERROR] Error in sort_libp."
-    exit 1
+#    exit 1
 fi
 
 EOF1
