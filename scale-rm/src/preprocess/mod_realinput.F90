@@ -888,7 +888,11 @@ contains
     do n = 1, NUMBER_OF_FILES_OCEAN
 
        if ( NUMBER_OF_FILES_LAND > 1 .OR. BASENAME_ADD_NUM_LAND ) then
-          write(BASENAME_LAND,'(A,I5.5)') '_', n-1
+          if ( multi_land ) then
+             write(BASENAME_LAND,'(A,I5.5)') '_', n-1
+          else
+             write(BASENAME_LAND,'(A,I5.5)') '_', NUMBER_OF_SKIP_TSTEPS_LAND / NUMBER_OF_TSTEPS_LAND
+          end if
        else
           BASENAME_LAND = ''
        endif
@@ -921,7 +925,7 @@ contains
           if ( multi_land ) then
              listep = oistep
           else
-             listep = NUMBER_OF_SKIP_TSTEPS_LAND + 1
+             listep = mod(NUMBER_OF_SKIP_TSTEPS_LAND, NUMBER_OF_TSTEPS_LAND) + 1
           end if
 
           ! read all prepared data
@@ -1091,7 +1095,7 @@ contains
        end do ! oistep
 
        ! required one-step data only
-       if( .not. ( multi_land .or. multi_ocean ) ) exit
+       if( t > 0 .and. .not. ( multi_land .or. multi_ocean ) ) exit
 
     enddo
 
