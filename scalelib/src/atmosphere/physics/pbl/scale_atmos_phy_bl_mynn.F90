@@ -90,9 +90,6 @@ module scale_atmos_phy_bl_mynn
   real(RP), private, parameter :: PrN = 0.74_RP
   !$acc declare create(A1, A2, C1, G2, Rf1, Rf2, Rfc, AF12)
 
-  real(RP), private, parameter :: zeta_min = -5.0_RP
-  real(RP), private, parameter :: zeta_max =  2.0_RP
-
   real(RP), private            :: SQRT_2PI
   real(RP), private            :: RSQRT_2PI
   real(RP), private            :: RSQRT_2
@@ -302,7 +299,7 @@ contains
 
   !-----------------------------------------------------------------------------
   !> ATMOS_PHY_BL_MYNN_tendency
-  !! calculate tendency by the virtical eddy viscosity
+  !! calculate tendency by the vertical eddy viscosity
   !<
   subroutine ATMOS_PHY_BL_MYNN_tendency( &
        KA, KS, KE, IA, IS, IE, JA, JS, JE, &
@@ -572,7 +569,7 @@ contains
 
           z1 = CZ(KS,i,j) - FZ(KS-1,i,j)
 
-          zeta = min( max( z1 * RLmo(i,j), zeta_min ), zeta_max )
+          zeta = z1 * RLmo(i,j)
 
           select case ( I_B_TYPE )
           case ( I_B71 )
@@ -623,6 +620,8 @@ contains
 #ifdef _OPENACC
                                      work(:,:),                       & ! (work)
 #endif
+                                     us(i,j), ts(i,j), qs(i,j),       & ! (in)
+                                     phi_m, phi_h, z1,                & ! (in)
                                      dudz2(:,i,j), dtldz(:), dqwdz(:) ) ! (out)
 
        us3 = us(i,j)**3
@@ -647,6 +646,11 @@ contains
              !n2_new(k) = GRAV * POTV(k,i,j) * dtldz(k)
              Ri(k,i,j) = n2_new(k) / dudz2(k,i,j)
           end do
+          if ( initialize ) then
+             dudz2(KS,i,j) = max( dudz2(KS,i,j), 1E-2_RP )
+             n2_new(KS) = min( n2_new(KS), 0.0_RP )
+             Ri(KS,i,j) = n2_new(KS) / dudz2(KS,i,j)
+          end if
 
           SFLX_BUOY(i,j) = - us3 * RLmo(i,j) / KARMAN
 
@@ -779,10 +783,10 @@ contains
              Nu_f(k) = lq(k) * sm25(k)
              Kh_f(k) = lq(k) * sh25(k)
           end do
-!          if ( ATMOS_PHY_BL_MYNN_similarity ) then
-!             Nu_f(KS) = KARMAN * z1 * us(i,j) / phi_m
-!             Kh_f(KS) = KARMAN * z1 * us(i,j) / phi_h
-!          end if
+          if ( ATMOS_PHY_BL_MYNN_similarity ) then
+             Nu_f(KS) = KARMAN * z1 * us(i,j) / phi_m
+             Kh_f(KS) = KARMAN * z1 * us(i,j) / phi_h
+          end if
 
           do k = KS, KE_PBL-1
              Nu(k,i,j) = min( F2H(k,1,i,j) * Nu_f(k+1) + F2H(k,2,i,j) * Nu_f(k), &
@@ -1130,8 +1134,7 @@ contains
                                    - ( sh25(k) * n2_new(k) - shpgh(k) ) )
           end do
           if ( ATMOS_PHY_BL_MYNN_similarity ) then
-             prod(KS,i,j) = us3 / ( KARMAN * z1 ) * ( phi_m - zeta ) &
-                          + lq(KS) * ( smp(KS) * dudz2(KS,i,j) + shpgh(KS) )
+             prod(KS,i,j) = us3 / ( KARMAN * z1 ) * ( phi_m - zeta )
           end if
 
           do k = KS, KE_PBL
@@ -1139,6 +1142,7 @@ contains
              diss(k,i,j) = - 2.0_RP * q(k) / ( B1 * l(k,i,j) )
 !             prod(k,i,j) = max( prod(k,i,j), - tke_p(k) / dt - diss(k,i,j) * tke_p(k) )
           end do
+
           do k = KE_PBL+1, KE
              diss(k,i,j) = 0.0_RP
              prod(k,i,j) = 0.0_RP
@@ -1393,6 +1397,8 @@ contains
 
     real(RP), intent(out) :: l(KA)
 
+    real(RP), parameter :: zeta_min = -5.0_RP
+    real(RP), parameter :: zeta_max =  2.0_RP
     real(RP), parameter :: ls_fact_max = 2.0_RP
 
     real(RP) :: ls     !> L_S
@@ -1786,13 +1792,15 @@ contains
 #ifdef _OPENACC
        work,                 &
 #endif
+       us, ts, qs,           &
+       phi_m, phi_h, z1,     &
        dudz2, dtldz, dqwdz   )
     !$acc routine vector
     use scale_const, only: &
-       EPS => CONST_EPS
+       EPS => CONST_EPS, &
+       KARMAN => CONST_KARMAN
     integer,  intent(in), value  :: KA, KS, KE
     integer,  intent(in), value  :: i, j  ! for debug
-
     real(RP), intent(in) :: U   (KA)
     real(RP), intent(in) :: V   (KA)
     real(RP), intent(in) :: POTL(KA)
@@ -1801,6 +1809,12 @@ contains
     real(RP), intent(in) :: CDZ (KA)
     real(RP), intent(in) :: FDZ (KA)
     real(RP), intent(in) :: F2H (KA,2)
+    real(RP), intent(in) :: us
+    real(RP), intent(in) :: ts
+    real(RP), intent(in) :: qs
+    real(RP), intent(in) :: phi_m
+    real(RP), intent(in) :: phi_h
+    real(RP), intent(in) :: z1
 
     real(RP), intent(out) :: dudz2(KA)
     real(RP), intent(out) :: dtldz(KA)
@@ -1825,8 +1839,12 @@ contains
        Vh(k) = f2h(k,1) * V(k+1) + f2h(k,2) * V(k)
     end do
 
-    dudz2(KS) = ( ( Uh(KS) - U(KS) )**2 + ( Vh(KS) - V(KS) )**2 ) / ( CDZ(KS) * 0.5_RP )**2
-!    dudz2(KS) = ( ( Uh(KS) )**2 + ( Vh(KS) )**2 ) / CDZ(KS)**2
+    if ( ATMOS_PHY_BL_MYNN_similarity ) then
+       dudz2(KS) = ( us * phi_m / ( KARMAN * z1 ) )**2
+    else
+       dudz2(KS) = ( ( Uh(KS) - U(KS) )**2 + ( Vh(KS) - V(KS) )**2 ) / ( CDZ(KS) * 0.5_RP )**2
+!       dudz2(KS) = ( ( Uh(KS) )**2 + ( Vh(KS) )**2 ) / CDZ(KS)**2
+    end if
     dudz2(KS) = max( dudz2(KS), 1e-20_RP )
     do k = KS+1, KE
        dudz2(k) = ( ( Uh(k) - Uh(k-1) )**2 + ( Vh(k) - Vh(k-1) )**2 ) / CDZ(k)**2
@@ -1841,8 +1859,12 @@ contains
     do k = KS, KE
        qh(k) = f2h(k,1) * POTL(k+1) + f2h(k,2) * POTL(k)
     end do
-    dtldz(KS) = ( qh(KS) - POTL(KS) ) / ( CDZ(KS) * 0.5_RP )
-!    dtldz(KS) = ( POTL(KS+1) - POTL(KS) ) / FDZ(KS)
+    if ( ATMOS_PHY_BL_MYNN_similarity ) then
+       dtldz(KS) = ts * phi_h / ( KARMAN * z1 )
+    else
+       dtldz(KS) = ( qh(KS) - POTL(KS) ) / ( CDZ(KS) * 0.5_RP )
+!       dtldz(KS) = ( POTL(KS+1) - POTL(KS) ) / FDZ(KS)
+    end if
     do k = KS+1, KE
        dtldz(k) = ( qh(k) - qh(k-1) ) / CDZ(k)
 !       dtldz(k) = ( POTL(k+1) * FDZ(k-1)**2 - POTL(k-1) * FDZ(k)**2 + POTL(k) * ( FDZ(k)**2 - FDZ(k-1)**2 ) ) &
@@ -1856,9 +1878,13 @@ contains
 !       qh(k) = f2h(k,1) * Qw(k+1) + f2h(k,2) * Qw(k)
        qh(k) = f2h(k,1) * qw2(k+1) + f2h(k,2) * qw2(k)
     end do
-    dqwdz(KS) = ( qh(KS) - qw2(KS) ) / ( CDZ(KS) * 0.5_RP )
-!    dqwdz(KS) = ( qh(KS) - Qw(KS) ) / ( CDZ(KS) * 0.5_RP )
-!    dqwdz(KS) = ( Qw(KS+1) - Qw(KS) ) / FDZ(KS)
+    if ( ATMOS_PHY_BL_MYNN_similarity ) then
+       dqwdz(KS) = qs * phi_h / ( KARMAN * z1 )
+    else
+       dqwdz(KS) = ( qh(KS) - qw2(KS) ) / ( CDZ(KS) * 0.5_RP )
+!       dqwdz(KS) = ( qh(KS) - Qw(KS) ) / ( CDZ(KS) * 0.5_RP )
+!       dqwdz(KS) = ( Qw(KS+1) - Qw(KS) ) / FDZ(KS)
+    end if
     do k = KS+1, KE
        dqwdz(k) = ( qh(k) - qh(k-1) ) / CDZ(k)
 !       dqwdz(k) = ( Qw(k+1) * FDZ(k-1)**2 - Qw(k-1) * FDZ(k)**2 + Qw(k) * ( FDZ(k)**2 - FDZ(k-1)**2 ) ) &
