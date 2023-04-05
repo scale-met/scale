@@ -210,7 +210,7 @@ contains
        IA, IS, IE, JA, JS, JE, &
        SFLX_MW, SFLX_MU, SFLX_MV, &
        SFLX_SH, SFLX_QV,          &
-       SFC_DENS, SFC_TEMP, PBL,   &
+       SFC_DENS, SFC_POTV, PBL,   &
        Ustar, Tstar, Qstar,       &
        Wstar, RLmo,               &
        mask                       )
@@ -230,7 +230,7 @@ contains
     real(RP), intent(in) :: SFLX_SH (IA,JA)
     real(RP), intent(in) :: SFLX_QV (IA,JA)
     real(RP), intent(in) :: SFC_DENS(IA,JA)
-    real(RP), intent(in) :: SFC_TEMP(IA,JA)
+    real(RP), intent(in) :: SFC_POTV(IA,JA)
     real(RP), intent(in) :: PBL     (IA,JA)
 
     real(RP), intent(out) :: Ustar(IA,JA)
@@ -251,7 +251,7 @@ contains
           if ( mask(i,j) ) then
              call BULKFLUX_diagnose_scales_0D( SFLX_MW(i,j), SFLX_MU(i,j), SFLX_MV(i,j), & ! (in)
                                                SFLX_SH(i,j), SFLX_QV(i,j),               & ! (in)
-                                               SFC_DENS(i,j), SFC_TEMP(i,j), PBL(i,j),   & ! (in)
+                                               SFC_DENS(i,j), SFC_POTV(i,j), PBL(i,j),   & ! (in)
                                                Ustar(i,j), Tstar(i,j), Qstar(i,j),       & ! (out)
                                                Wstar(i,j), RLmo(i,j)                     ) ! (out)
           end if
@@ -265,7 +265,7 @@ contains
        do i = IS, IE
           call BULKFLUX_diagnose_scales_0D( SFLX_MW(i,j), SFLX_MU(i,j), SFLX_MV(i,j), & ! (in)
                                             SFLX_SH(i,j), SFLX_QV(i,j),               & ! (in)
-                                            SFC_DENS(i,j), SFC_TEMP(i,j), PBL(i,j),   & ! (in)
+                                            SFC_DENS(i,j), SFC_POTV(i,j), PBL(i,j),   & ! (in)
                                             Ustar(i,j), Tstar(i,j), Qstar(i,j),       & ! (out)
                                             Wstar(i,j), RLmo(i,j)                     ) ! (out)
        end do
@@ -279,7 +279,7 @@ contains
   subroutine BULKFLUX_diagnose_scales_0D( &
        SFLX_MW, SFLX_MU, SFLX_MV, &
        SFLX_SH, SFLX_QV,          &
-       SFC_DENS, SFC_TEMP, PBL,   &
+       SFC_DENS, SFC_POTV, PBL,   &
        Ustar, Tstar, Qstar,       &
        Wstar, RLmo                )
     !$acc routine seq
@@ -296,7 +296,7 @@ contains
     real(RP), intent(in) :: SFLX_SH
     real(RP), intent(in) :: SFLX_QV
     real(RP), intent(in) :: SFC_DENS
-    real(RP), intent(in) :: SFC_TEMP
+    real(RP), intent(in) :: SFC_POTV
     real(RP), intent(in) :: PBL
 
     real(RP), intent(out) :: Ustar
@@ -315,10 +315,10 @@ contains
     sw = 0.5_RP - sign( 0.5_RP, Ustar - EPS )
     Tstar = - SFLX_SH / ( SFC_DENS * Ustar * CPdry + sw ) * ( 1.0_RP - sw )
     Qstar = - SFLX_QV / ( SFC_DENS * Ustar + sw ) * ( 1.0_RP - sw )
-    BFLX = - Ustar * Tstar - EPSTvap * Ustar * Qstar * SFC_TEMP
-    RLmo = - KARMAN * GRAV * BFLX / ( Ustar**3 * SFC_TEMP + sw ) * ( 1.0_RP - sw )
+    BFLX = - Ustar * Tstar - EPSTvap * Ustar * Qstar * SFC_POTV
+    RLmo = - KARMAN * GRAV * BFLX / ( Ustar**3 * SFC_POTV + sw ) * ( 1.0_RP - sw )
     if ( ws_flag ) then
-       tmp = PBL * GRAV / SFC_TEMP * BFLX
+       tmp = PBL * GRAV / SFC_POTV * BFLX
        sw  = 0.5_RP + sign( 0.5_RP, tmp ) ! if tmp is plus, sw = 1
        Wstar = ( tmp * sw )**( 1.0_RP / 3.0_RP )
     else
