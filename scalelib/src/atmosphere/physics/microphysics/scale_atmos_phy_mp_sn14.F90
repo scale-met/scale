@@ -865,6 +865,9 @@ contains
        QTRC,           &
        mask_criterion, &
        cldfrac         )
+    use scale_atmos_hydrometeor, only: &
+       I_HC,  &
+       I_HG
     implicit none
     integer, intent(in) :: KA, KS, KE
     integer, intent(in) :: IA, IS, IE
@@ -885,7 +888,7 @@ contains
     do i  = IS, IE
     do k  = KS, KE
        qhydro = 0.0_RP
-       do iq = 1, QA_MP-1
+       do iq = I_HC, I_HG
           qhydro = qhydro + QTRC(k,i,j,iq)
        enddo
        cldfrac(k,i,j) = 0.5_RP + sign(0.5_RP,qhydro-mask_criterion)
