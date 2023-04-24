@@ -885,7 +885,7 @@ contains
     do i  = IS, IE
     do k  = KS, KE
        qhydro = 0.0_RP
-       do iq = 1, QA_MP-1
+       do iq = I_mp_QC, I_mp_QG
           qhydro = qhydro + QTRC(k,i,j,iq)
        enddo
        cldfrac(k,i,j) = 0.5_RP + sign(0.5_RP,qhydro-mask_criterion)
