@@ -15,7 +15,7 @@ FFLAGS_FAST  = -Mpreprocess -m64 -fast                \
                -Mbyteswapio                           \
                -Mflushz -Mfprelaxed -Mfpapprox -Kieee \
                -Mvect=assoc \
-	       -DVECTLEN=${VECLEN}
+	       -DVECTLEN=${VECTLEN}
 
 FFLAGS_AGGRESSIVE = -gpu=safecache
 

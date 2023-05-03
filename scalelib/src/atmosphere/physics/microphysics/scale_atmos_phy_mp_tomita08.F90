@@ -996,9 +996,9 @@ contains
 
 !OCL ZFILL
        !$omp parallel workshare
-       !$omp kernels
+       !$acc kernels
        QSPLT_in(:,:,:,:) = 0.0_RP
-       !$omp end kernels
+       !$acc end kernels
        !$omp end parallel workshare
 
        call ATMOS_PHY_MP_tomita08_effective_radius( &

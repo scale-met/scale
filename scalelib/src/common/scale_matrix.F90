@@ -13,8 +13,6 @@
 #endif
 #endif
 
-#define LSIZE CACHELINESIZE / RP
-
 #include "scalelib.h"
 module scale_matrix
   !-----------------------------------------------------------------------------
@@ -49,7 +47,7 @@ module scale_matrix
      module procedure MATRIX_SOLVER_tridiagonal_1D_TA
 #endif
      module procedure MATRIX_SOLVER_tridiagonal_2D
-     module procedure MATRIX_SOLVER_tridiagonal_2D_trans
+     module procedure MATRIX_SOLVER_tridiagonal_2D_block
      module procedure MATRIX_SOLVER_tridiagonal_3D
   end interface MATRIX_SOLVER_tridiagonal
 
@@ -526,6 +524,62 @@ contains
 
     return
   end subroutine MATRIX_SOLVER_tridiagonal_2D
+
+  subroutine MATRIX_SOLVER_tridiagonal_2D_block( &
+       KA, KS, KE, &
+       ud, md, ld, &
+       iv,         &
+       ov          )
+    !$acc routine vector
+    implicit none
+    integer,  intent(in)  :: KA, KS, KE
+
+    real(RP), intent(in)  :: ud(KA,LSIZE) ! upper  diagonal
+    real(RP), intent(in)  :: md(KA,LSIZE) ! middle diagonal
+    real(RP), intent(in)  :: ld(KA,LSIZE) ! lower  diagonal
+    real(RP), intent(in)  :: iv(KA,LSIZE) ! input  vector
+
+    real(RP), intent(out) :: ov(KA,LSIZE) ! output vector
+
+    real(RP) :: c(LSIZE,KS:KE)
+    real(RP) :: d(LSIZE,KS:KE)
+    real(RP) :: work(LSIZE,KS:KE)
+    real(RP) :: rdenom
+
+    integer :: k, l
+    !---------------------------------------------------------------------------
+
+    ! foward reduction
+    do l = 1, LSIZE
+       c(l,KS) = ud(KS,l) / md(KS,l)
+       d(l,KS) = iv(KS,l) / md(KS,l)
+    end do
+    do k = KS+1, KE-1
+       do l = 1, LSIZE
+          rdenom = 1.0_RP / ( md(k,l) - ld(k,l) * c(l,k-1) )
+          c(l,k) =            ud(k,l)              * rdenom
+          d(l,k) = ( iv(k,l) - ld(k,l) * d(l,k-1) ) * rdenom
+       end do
+    end do
+
+    ! backward substitution
+    do l = 1, LSIZE
+       work(l,KE) = ( iv(KE,l) - ld(KE,l) * d(l,KE-1) ) / ( md(KE,l) - ld(KE,l) * c(l,KE-1) )
+    end do
+    do k = KE-1, KS, -1
+       do l = 1, LSIZE
+          work(l,k) = d(l,k) - c(l,k) * work(l,k+1)
+       end do
+    end do
+
+    do l = 1, LSIZE
+    do k = KS, KE
+       ov(k,l) = work(l,k)
+    end do
+    end do
+
+    return
+  end subroutine MATRIX_SOLVER_tridiagonal_2D_block
 
   subroutine MATRIX_SOLVER_tridiagonal_2D_trans( &
        KA, KS, KE, &

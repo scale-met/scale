@@ -1021,7 +1021,7 @@ contains
     endif
 
     if ( ATMOS_USE_AVERAGE ) then
-       !$omp parellel workshare
+       !$omp workshare
        !$acc kernels
        DENS_av(:,:,:)   = DENS(:,:,:)
        !$acc end kernels
@@ -1040,7 +1040,7 @@ contains
        !$acc kernels
        QTRC_av(:,:,:,:) = QTRC(:,:,:,:)
        !$acc end kernels
-       !$omp end parellel workshare
+       !$omp end workshare
     endif
 
     if( ATMOS_sw_dyn )    call ATMOS_DYN_vars_restart_open

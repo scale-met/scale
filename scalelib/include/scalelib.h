@@ -16,5 +16,15 @@
 #define CACHELINESIZE 128
 #endif
 
+#ifdef _OPENACC
+#define LSIZE 1
+#else
+#ifdef SINGLE
+#define LSIZE (CACHELINESIZE / 8)
+#else
+#define LSIZE (CACHELINESIZE / 16)
+#endif
+#endif
+
 
 #endif

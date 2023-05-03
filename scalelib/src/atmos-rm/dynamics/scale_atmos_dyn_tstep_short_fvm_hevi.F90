@@ -17,12 +17,6 @@
 #define PROFILE_STOP(name)
 #endif
 
-#ifdef _OPENACC
-#define LSIZE 1
-#else
-#define LSIZE VECTLEN
-#endif
-
 #include "scalelib.h"
 module scale_atmos_dyn_tstep_short_fvm_hevi
   !-----------------------------------------------------------------------------
