@@ -5155,7 +5155,7 @@ contains
       irsl = ifrsl( ibnd(ijk),isml,ilrg )
 
       call RANDOM_uniform( rndm )
-      det = int( rndm(1,1,1)*(IA*JA*KA-1)+1 )
+      det = int( rndm(1,1,1)*IA*JA*KA + 1 )
       nbinr = real( nbin )
       mbinr = real( mbin )
       nums( 1:mbin ) = bsml( det,1:mbin )
