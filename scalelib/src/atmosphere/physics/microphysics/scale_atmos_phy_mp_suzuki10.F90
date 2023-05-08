@@ -5120,21 +5120,13 @@ contains
   do ijk = 1, ijkmax
      !--- judgement of particle existence
      do n = 1, nbin
-       csum( il,ijk ) = csum( il,ijk ) + gc( n,il,ijk )*dxmic
-       csum( ic,ijk ) = csum( ic,ijk ) + gc( n,ic,ijk )*dxmic
-       csum( ip,ijk ) = csum( ip,ijk ) + gc( n,ip,ijk )*dxmic
-       csum( id,ijk ) = csum( id,ijk ) + gc( n,id,ijk )*dxmic
-       csum( iss,ijk ) = csum( iss,ijk ) + gc( n,iss,ijk )*dxmic
-       csum( ig,ijk ) = csum( ig,ijk ) + gc( n,ig,ijk )*dxmic
-       csum( ih,ijk ) = csum( ih,ijk ) + gc( n,ih,ijk )*dxmic
+       do isml = 1, nspc
+          csum( isml,ijk ) = csum( isml,ijk ) + gc( n,isml,ijk )*dxmic
+       enddo
      enddo
-     if ( csum( il,ijk ) > cldmin ) iflg( il,ijk ) = 1
-     if ( csum( ic,ijk ) > cldmin ) iflg( ic,ijk ) = 1
-     if ( csum( ip,ijk ) > cldmin ) iflg( ip,ijk ) = 1
-     if ( csum( id,ijk ) > cldmin ) iflg( id,ijk ) = 1
-     if ( csum( iss,ijk ) > cldmin ) iflg( iss,ijk ) = 1
-     if ( csum( ig,ijk ) > cldmin ) iflg( ig,ijk ) = 1
-     if ( csum( ih,ijk ) > cldmin ) iflg( ih,ijk ) = 1
+     do isml = 1, nspc
+        if ( csum( isml,ijk ) > cldmin ) iflg( isml,ijk ) = 1
+     enddo
 
      if ( temp(ijk) < tcrit ) then
         ibnd(ijk) = 1
@@ -5163,7 +5155,7 @@ contains
       irsl = ifrsl( ibnd(ijk),isml,ilrg )
 
       call RANDOM_uniform( rndm )
-      det = int( rndm(1,1,1)*IA*JA*KA )
+      det = int( rndm(1,1,1)*(IA*JA*KA-1)+1 )
       nbinr = real( nbin )
       mbinr = real( mbin )
       nums( 1:mbin ) = bsml( det,1:mbin )
