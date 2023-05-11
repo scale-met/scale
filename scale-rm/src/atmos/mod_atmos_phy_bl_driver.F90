@@ -110,7 +110,8 @@ contains
     use scale_atmos_phy_bl_mynn_jmapplib, only: &
        ATMOS_PHY_BL_MYNN_JMAPPLIB_setup
     use scale_atmos_grid_cartesC, only: &
-       CZ => ATMOS_GRID_CARTESC_CZ
+       CZ => ATMOS_GRID_CARTESC_CZ, &
+       DX
     use mod_atmos_admin, only: &
        ATMOS_PHY_BL_TYPE, &
        ATMOS_sw_phy_bl
@@ -132,7 +133,8 @@ contains
        case ( 'MYNN' )
           call ATMOS_PHY_BL_MYNN_setup( &
                KA, KS, KE, IA, IS, IE, JA, JS, JE, &
-               BULKFLUX_type ) ! (in)
+               BULKFLUX_type, & ! (in)
+               dx = DX        ) ! (in)
        case ( 'MYNN-JMAPPLIB' )
           call ATMOS_PHY_BL_MYNN_JMAPPLIB_setup( &
                KA, KS, KE, &
@@ -209,6 +211,8 @@ contains
        I_QV
     use scale_bulkflux, only: &
        BULKFLUX_type
+    use scale_landuse, only: &
+       frac_land => LANDUSE_frac_land
     use mod_atmos_admin, only: &
        ATMOS_PHY_BL_TYPE, &
        ATMOS_sw_phy_bl
@@ -217,6 +221,7 @@ contains
        QTRC => QTRC_av, &
        U,     &
        V,     &
+       W,     &
        POTT,  &
        PRES,  &
        EXNER, &
@@ -300,7 +305,7 @@ contains
           end if
           call ATMOS_PHY_BL_MYNN_tendency( &
                KA, KS, KE, IA, IS, IE, JA, JS, JE, &
-               DENS(:,:,:), U(:,:,:), V(:,:,:),                        & ! (in)
+               DENS(:,:,:), U(:,:,:), V(:,:,:), W(:,:,:),              & ! (in)
                POTT(:,:,:), QTRC(:,:,:,QS:QE),                         & ! (in)
                PRES(:,:,:), EXNER(:,:,:), N2(:,:,:),                   & ! (in)
                QDRY(:,:,:), QV(:,:,:), QW(:,:,:),                      & ! (in)
@@ -308,6 +313,7 @@ contains
                SFC_DENS(:,:),                                          & ! (in)
                SFLX_MU(:,:), SFLX_MV(:,:), SFLX_SH(:,:), SFLX_QV(:,:), & ! (in)
                Ustar(:,:), Tstar(:,:), Qstar(:,:), RLmo(:,:),          & ! (in)
+               frac_land(:,:),                                         & ! (in)
                CZ(:,:,:), FZ(:,:,:), F2H(:,:,:,:), dt_BL,              & ! (in)
                BULKFLUX_type,                                          & ! (in)
                RHOU_t_BL(:,:,:), RHOV_t_BL(:,:,:), RHOT_t_BL(:,:,:),   & ! (out)
