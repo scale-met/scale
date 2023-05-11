@@ -27,6 +27,7 @@ module scale_bulkflux
   public :: BULKFLUX_setup
   public :: BULKFLUX_diagnose_scales
   public :: BULKFLUX_diagnose_surface
+  public :: BULKFLUX_univfunc
 
   interface BULKFLUX_diagnose_scales
      module procedure BULKFLUX_diagnose_scales_0D
@@ -84,7 +85,7 @@ module scale_bulkflux
   !
   !++ Public parameters & variables
   !
-  character(len=H_SHORT), public :: BULKFLUX_type = 'B91W01' ! 'U95', 'B91', and 'B91W01'
+  character(len=H_SHORT), public :: BULKFLUX_type = 'B91W01' ! 'U95', 'B71', 'B91', and 'B91W01'
   !$acc declare create(BULKFLUX_type)
 
   !-----------------------------------------------------------------------------
@@ -93,10 +94,18 @@ module scale_bulkflux
   !
   private :: BULKFLUX_U95
   private :: BULKFLUX_B91W01
+  private :: pm_unstable
   private :: fm_unstable
+  private :: fmm_unstable
+  private :: ph_unstable
   private :: fh_unstable
+  private :: fhm_unstable
+  private :: pm_stable
   private :: fm_stable
+  private :: fmm_stable
+  private :: ph_stable
   private :: fh_stable
+  private :: fhm_stable
 
   !-----------------------------------------------------------------------------
   !
@@ -122,8 +131,9 @@ module scale_bulkflux
   logical,  private :: BULKFLUX_surfdiag_neutral = .true. ! calculate surface diagnoses with neutral condition
   !$acc declare create(BULKFLUX_surfdiag_neutral)
 
+  logical,  private :: flag_B71
   logical,  private :: flag_W01
-  !$acc declare create(flag_W01)
+  !$acc declare create(flag_B71, flag_W01)
 
 contains
 
@@ -177,14 +187,23 @@ contains
 #ifndef _OPENACC
        BULKFLUX => BULKFLUX_U95
 #endif
+    case('B71')
+       LOG_INFO_CONT(*) '=> Businger et al. (1971)'
+       FLAG_B71 = .true.
+       FLAG_W01 = .false.
+#ifndef _OPENACC
+       BULKFLUX => BULKFLUX_B91W01
+#endif
     case('B91W01')
        LOG_INFO_CONT(*) '=> Beljaars and Holtslag (1991) and Wilson (2001)'
+       FLAG_B71 = .false.
        FLAG_W01 = .true.
 #ifndef _OPENACC
        BULKFLUX => BULKFLUX_B91W01
 #endif
     case('B91')
        LOG_INFO_CONT(*) '=> Beljaars and Holtslag (1991)'
+       FLAG_B71 = .false.
        FLAG_W01 = .false.
 #ifndef _OPENACC
        BULKFLUX => BULKFLUX_B91W01
@@ -198,7 +217,7 @@ contains
     !$acc update device(BULKFLUX_WSCF)
     !$acc update device(BULKFLUX_Uabs_min, BULKFLUX_Wstar_min)
     !$acc update device(BULKFLUX_surfdiag_neutral)
-    !$acc update device(flag_W01)
+    !$acc update device(flag_B71, flag_W01)
 
     return
   end subroutine BULKFLUX_setup
@@ -537,7 +556,7 @@ contains
        Ustar, Tstar, Qstar,    &
        Wstar, RLmo, Ra,        &
        FracU10, FracT2, FracQ2 )
-    case('B91W01', 'B91')
+    case('B71', 'B91W01', 'B91')
        call BULKFLUX_B91W01( &
        T1, T0,                 &
        P1, P0,                 &
@@ -1052,8 +1071,69 @@ contains
   end subroutine calc_scales_B91W01
 
   !-----------------------------------------------------------------------------
+  subroutine BULKFLUX_univfunc( &
+       KA, KS, KE, &
+       Z, IL, &
+       phi_m, phi_h )
+    !$acc routine vector
+    implicit none
+    integer :: KA, KS, KE
+    real(RP), intent(in) :: Z(KA)
+    real(RP), intent(in) :: IL
+    real(RP), intent(out) :: phi_m(KA)
+    real(RP), intent(out) :: phi_h(KA)
+    integer :: k
+
+    if ( IL > 0.0_RP ) then
+       do k = KS, KE
+          phi_m(k) = pm_stable( Z(k), IL )
+          phi_h(k) = ph_stable( Z(k), IL )
+       end do
+    else
+       do k = KS, KE
+          phi_m(k) = pm_unstable( Z(k), IL )
+          phi_h(k) = ph_unstable( Z(k), IL )
+       end do
+    end if
+
+    return
+  end subroutine BULKFLUX_univfunc
+
+  !-----------------------------------------------------------------------------
+  ! universal function for momemtum in unstable condition
+  real(DP) function pm_unstable( Z, IL )
+    !$acc routine seq
+    implicit none
+
+    ! argument
+    real(DP), intent(in) :: Z
+    real(DP), intent(in) :: IL
+
+    ! Wilson (2001)
+    real(DP), parameter :: gamma = 3.6_DP
+
+    ! works
+    real(DP) :: R
+    !---------------------------------------------------------------------------
+
+    R = min( Z * IL, 0.0_DP )
+
+    if ( flag_B71 ) then
+       ! Businger (1971)
+       pm_unstable = 1.0_DP / sqrt( sqrt( 1.0_DP - 15.0_DP * R ) )
+    else if ( flag_W01 ) then
+       ! Wilson (2001)
+       pm_unstable = 1.0_DP / sqrt( 1.0_DP + gamma * (-R)**(2.0_DP/3.0_DP) )
+    else
+       ! Beljaars and Holtslag (1991), originally Paulson (1974) and Dyer (1974)
+       pm_unstable = 1.0_DP / sqrt( sqrt( 1.0_DP - 16.0_DP * R ) )
+    end if
+
+    return
+  end function pm_unstable
+  !-----------------------------------------------------------------------------
   ! stability function for momemtum in unstable condition
-  function fm_unstable( Z, IL )
+  real(DP) function fm_unstable( Z, IL )
     !$acc routine seq
     use scale_const, only: &
          PI => CONST_PI
@@ -1062,9 +1142,6 @@ contains
     ! argument
     real(DP), intent(in) :: Z
     real(DP), intent(in) :: IL
-
-    ! function
-    real(DP) :: fm_unstable
 
     ! Wilson (2001)
     real(DP), parameter :: gamma = 3.6_DP
@@ -1076,7 +1153,11 @@ contains
 
     R = min( Z * IL, 0.0_DP )
 
-    if ( flag_W01 ) then
+    if ( flag_B71 ) then
+       ! Businger (1971)
+       r4R = sqrt( sqrt( 1.0_DP - 15.0_DP * R ) )
+       fm_unstable = log( ( 1.0_DP + r4R )**2 * ( 1.0_DP + r4R * r4R ) * 0.125_DP ) - 2.0_DP * atan( r4R ) + PI * 0.5_DP
+    elseif ( flag_W01 ) then
        ! Wilson (2001)
        fm_unstable = 3.0_DP * log( ( 1.0_DP + sqrt( 1.0_DP + gamma * (-R)**(2.0_DP/3.0_DP) ) ) * 0.5_DP )
     else
@@ -1087,7 +1168,7 @@ contains
 
     return
   end function fm_unstable
-  function fmm_unstable( Z, IL )
+  real(DP) function fmm_unstable( Z, IL )
     !$acc routine seq
     use scale_const, only: &
       PI  => CONST_PI
@@ -1096,9 +1177,6 @@ contains
     ! argument
     real(DP), intent(in) :: Z
     real(DP), intent(in) :: IL
-
-    ! function
-    real(DP) :: fmm_unstable
 
     ! Wilson (2001)
     real(DP), parameter :: gamma = 3.6_DP
@@ -1111,7 +1189,19 @@ contains
 
     R = min( Z * IL, 0.0_DP )
 
-    if ( flag_W01 ) then
+    if ( flag_B71 ) then
+       ! Businger (1971)
+       if ( R > -EPS ) then ! |R|<EPS, now R < 0
+          fmm_unstable = - 15.0_DP * R / 8.0_DP
+       else
+          r2R = sqrt( 1.0_DP - 15.0_DP * R )
+          r4R = sqrt( r2R )
+          fmm_unstable = log( ( 1.0_DP + r4R )**2 * ( 1.0_DP + r2R ) * 0.125_DP ) &
+                        - 2.0_DP * atan( r4R ) &
+                        + ( 1.0_DP - r4R*r2R ) / ( 12.0_DP * R ) &
+                        + PI * 0.5_DP - 1.0_DP
+       end if
+    else if ( flag_W01 ) then
        ! Wilson (2001)
        r3 = (-R)**(1.0_DP/3.0_DP)
        if ( R > -EPS ) then
@@ -1141,8 +1231,8 @@ contains
   end function fmm_unstable
 
   !-----------------------------------------------------------------------------
-  ! stability function for heat/vapor in unstable condition
-  function fh_unstable( Z, IL )
+  ! universal function for heat/vapor in unstable condition
+  real(DP) function ph_unstable( Z, IL )
     !$acc routine seq
     implicit none
 
@@ -1150,11 +1240,11 @@ contains
     real(DP), intent(in) :: Z
     real(DP), intent(in) :: IL
 
-    ! function
-    real(DP) :: fh_unstable
+    ! Businger (1971)
+    real(DP), parameter :: PtB = 0.74_DP
 
     ! Wilson (2001)
-    real(DP), parameter :: Pt = 0.95_DP ! turbulent Prandtl number
+    real(DP), parameter :: PtW = 0.95_DP ! turbulent Prandtl number
     real(DP), parameter :: gamma = 7.9_DP
 
     ! works
@@ -1163,18 +1253,22 @@ contains
 
     R = min( Z * IL, 0.0_DP )
 
-    if ( flag_W01 ) then
+    if ( flag_B71 ) then
+       ! Businger (1971)
+       ph_unstable = PtB / sqrt( 1.0_DP - 9.0_DP * R )
+    else if ( flag_W01 ) then
        ! Wilson (2001)
-       fh_unstable = 3.0_DP * log( ( 1.0_DP + sqrt( 1.0_DP + gamma * (-R)**(2.0_DP/3.0_DP) ) ) * 0.5_DP ) * PT &
-                   + log( Z ) * ( 1.0_DP - Pt )
+       ph_unstable = PtW / sqrt( 1.0_DP + gamma * (-R)**(2.0_DP/3.0_DP) )
     else
        ! Beljaars and Holtslag (1991), originally Paulson (1974); Dyer (1974)
-       fh_unstable = 2.0_DP * log( ( 1.0_DP + sqrt( 1.0_DP - 16.0_DP * R ) ) * 0.5_DP )
+       ph_unstable = 1.0_DP / sqrt( 1.0_DP - 16.0_DP * R )
     end if
 
     return
-  end function fh_unstable
-  function fhm_unstable( Z, IL )
+  end function ph_unstable
+  !-----------------------------------------------------------------------------
+  ! stability function for heat/vapor in unstable condition
+  real(DP) function fh_unstable( Z, IL )
     !$acc routine seq
     implicit none
 
@@ -1182,11 +1276,47 @@ contains
     real(DP), intent(in) :: Z
     real(DP), intent(in) :: IL
 
-    ! function
-    real(DP) :: fhm_unstable
+    ! Businger (1971)
+    real(DP), parameter :: PtB = 0.74_DP
 
     ! Wilson (2001)
-    real(DP), parameter :: Pt = 0.95_DP ! turbulent Prandtl number
+    real(DP), parameter :: PtW = 0.95_DP ! turbulent Prandtl number
+    real(DP), parameter :: gamma = 7.9_DP
+
+    ! works
+    real(DP) :: R
+    !---------------------------------------------------------------------------
+
+    R = min( Z * IL, 0.0_DP )
+
+    if ( flag_B71 ) then
+       ! Businger (1971)
+       fh_unstable = 2.0_DP * log( ( 1.0_DP + sqrt( 1.0_DP - 9.0_DP * R ) ) * 0.5_DP ) * PtB &
+                   + log( Z ) * ( 1.0_DP - PtB )
+    else if ( flag_W01 ) then
+       ! Wilson (2001)
+       fh_unstable = 3.0_DP * log( ( 1.0_DP + sqrt( 1.0_DP + gamma * (-R)**(2.0_DP/3.0_DP) ) ) * 0.5_DP ) * PtW &
+                   + log( Z ) * ( 1.0_DP - PtW )
+    else
+       ! Beljaars and Holtslag (1991), originally Paulson (1974); Dyer (1974)
+       fh_unstable = 2.0_DP * log( ( 1.0_DP + sqrt( 1.0_DP - 16.0_DP * R ) ) * 0.5_DP )
+    end if
+
+    return
+  end function fh_unstable
+  real(DP) function fhm_unstable( Z, IL )
+    !$acc routine seq
+    implicit none
+
+    ! argument
+    real(DP), intent(in) :: Z
+    real(DP), intent(in) :: IL
+
+    ! Businger (1971)
+    real(DP), parameter :: PtB = 0.74_DP
+
+    ! Wilson (2001)
+    real(DP), parameter :: PtW = 0.95_DP ! turbulent Prandtl number
     real(DP), parameter :: gamma = 7.9_DP
 
     ! works
@@ -1197,7 +1327,18 @@ contains
 
     R = min( Z * IL, 0.0_DP )
 
-    if ( flag_W01 ) then
+    if ( flag_B71 ) then
+       ! Businger (1971)
+       if ( R > -EPS ) then ! |R| < EPS, now R < 0
+          fhm_unstable = - 4.0_DP * R
+       else
+          r2R = sqrt( 1.0_DP - 9.0_DP * R )
+          fhm_unstable = 2.0_DP * log( ( 1.0_DP + r2R ) * 0.5_DP ) &
+                       + ( 1.0_DP - r2R ) / ( 4.5_DP * R ) &
+                       - 1.0_DP
+          fhm_unstable = fhm_unstable * PtB + ( log( Z ) - 1.0_DP ) * ( 1.0_DP - PtB )
+       end if
+    else if ( flag_W01 ) then
        ! Wilson (2001)
        r3 = (-R)**(1.0_DP/3.0_DP)
        if ( R > -EPS ) then
@@ -1208,7 +1349,7 @@ contains
                        + 1.5_DP / ( sqrt(gamma)**3 * R) * asinh( sqrt(gamma) * r3 ) &
                        + 1.5_DP * f / ( gamma * r3**2 ) &
                        - 1.0_DP
-          fhm_unstable = fhm_unstable * Pt + ( log( Z ) - 1.0_DP ) * ( 1.0_DP - Pt )
+          fhm_unstable = fhm_unstable * PtW + ( log( Z ) - 1.0_DP ) * ( 1.0_DP - PtW )
        end if
     else
        ! Beljaars and Holtslag (1991), originally Paulson (1974); Dyer (1974)
@@ -1226,17 +1367,14 @@ contains
   end function fhm_unstable
 
   !-----------------------------------------------------------------------------
-  ! stability function for momemtum in stable condition
-  function fm_stable( Z, IL )
+  ! universal function for momemtum in stable condition
+  real(DP) function pm_stable( Z, IL )
     !$acc routine seq
     implicit none
 
     ! argument
     real(DP), intent(in) :: Z
     real(DP), intent(in) :: IL
-
-    ! function
-    real(DP) :: fm_stable
 
     ! parameters of stability functions (Beljaars and Holtslag 1991)
     real(DP), parameter :: a = 1.0_DP
@@ -1250,25 +1388,63 @@ contains
 
     R = max( Z * IL, 0.0_DP )
 
-    ! Holtslag and DeBruin (1988)
+    if ( flag_B71 ) then
+       ! Businger (1971)
+       pm_stable = 4.7_DP * R + 1.0_DP
+    else
+       ! Holtslag and DeBruin (1988)
 #if defined(NVIDIA) || defined(SX)
-    fm_stable = - a*R - b*( R - c/d )*exp( -min( d*R, 1.E+3_RP ) ) - b*c/d ! apply exp limiter
+       pm_stable = a*R - b*( d*R - c - 1.0_DP )*R*exp( -min( d*R, 1.E+3_RP ) ) + 1.0_DP ! apply exp limiter
 #else
-    fm_stable = - a*R - b*( R - c/d )*exp( -d*R ) - b*c/d
+       pm_stable = a*R - b*( d*R - c - 1.0_DP )*R*exp( -d*R ) + 1.0_DP
 #endif
+    end if
+
+    return
+  end function pm_stable
+  !-----------------------------------------------------------------------------
+  ! stability function for momemtum in stable condition
+  real(DP) function fm_stable( Z, IL )
+    !$acc routine seq
+    implicit none
+
+    ! argument
+    real(DP), intent(in) :: Z
+    real(DP), intent(in) :: IL
+
+    ! parameters of stability functions (Beljaars and Holtslag 1991)
+    real(DP), parameter :: a = 1.0_DP
+    real(DP), parameter :: b = 0.667_DP
+    real(DP), parameter :: c = 5.0_DP
+    real(DP), parameter :: d = 0.35_DP
+
+    ! works
+    real(DP) :: R
+    !---------------------------------------------------------------------------
+
+    R = max( Z * IL, 0.0_DP )
+
+    if ( flag_B71 ) then
+       ! Businger (1971)
+       fm_stable = - 4.7_DP * R
+    else
+       ! Holtslag and DeBruin (1988)
+#if defined(NVIDIA) || defined(SX)
+       fm_stable = - a*R - b*( R - c/d )*exp( -min( d*R, 1.E+3_RP ) ) - b*c/d ! apply exp limiter
+#else
+       fm_stable = - a*R - b*( R - c/d )*exp( -d*R ) - b*c/d
+#endif
+    end if
 
     return
   end function fm_stable
-  function fmm_stable( Z, IL )
+  real(DP) function fmm_stable( Z, IL )
     !$acc routine seq
     implicit none
 
     ! argument
     real(DP), intent(in) :: Z
     real(DP), intent(in) :: IL
-
-    ! function
-    real(DP) :: fmm_stable
 
     ! parameters of stability functions (Beljaars and Holtslag 1991)
     real(DP), parameter :: a = 1.0_DP
@@ -1282,27 +1458,32 @@ contains
 
     R = max( Z * IL, 0.0_DP )
 
-    ! Holtslag and DeBruin (1988)
-    if ( R < EPS ) then
-       fmm_stable = - 0.5_DP * ( a + b * c + d ) * R
+    if ( flag_B71 ) then
+       ! Businger (1971)
+       fmm_stable = - 4.7_DP * 0.5_DP * R
     else
-       fmm_stable = b * ( d*R - c + 1.0_DP ) / ( d**2 * R ) &
+       ! Holtslag and DeBruin (1988)
+       if ( R < EPS ) then
+          fmm_stable = - 0.5_DP * ( a + b * c + d ) * R
+       else
+          fmm_stable = b * ( d*R - c + 1.0_DP ) / ( d**2 * R ) &
 #if defined(NVIDIA) || defined(SX)
     ! apply exp limiter
-                    * exp( -min( d*R, 1.E+3_DP ) ) &
+                         * exp( -min( d*R, 1.E+3_DP ) ) &
 #else
-                    * exp( -d*R ) &
+                         * exp( -d*R ) &
 #endif
-                  - a * R * 0.5_DP &
-                  - b * ( c*d*R - c + 1.0_DP ) / ( d**2 * R )
+                    - a * R * 0.5_DP &
+                    - b * ( c*d*R - c + 1.0_DP ) / ( d**2 * R )
+       end if
     end if
 
     return
   end function fmm_stable
 
   !-----------------------------------------------------------------------------
-  ! stability function for heat/vapor in stable condition
-  function fh_stable( Z, IL )
+  ! universal function for heat/vapor in stable condition
+  real(DP) function ph_stable( Z, IL )
     !$acc routine seq
     implicit none
 
@@ -1310,8 +1491,8 @@ contains
     real(DP), intent(in) :: Z
     real(DP), intent(in) :: IL
 
-    ! function
-    real(DP) :: fh_stable
+    ! Businger (1971)
+    real(DP), parameter :: PtB = 0.74_DP
 
     ! parameters of stability functions (Beljaars and Holtslag 1991)
     real(DP), parameter :: a = 1.0_DP
@@ -1325,16 +1506,61 @@ contains
 
     R = max( Z * IL, 0.0_DP )
 
-    ! Beljaars and Holtslag (1991)
+    if ( flag_B71 ) then
+       ! Businger (1971)
+       ph_stable = 4.7_DP * R + PtB
+    else
+       ! Beljaars and Holtslag (1991)
 #if defined(NVIDIA) || defined(SX)
-    fh_stable = 1.0_DP - ( 1.0_DP + 2.0_DP/3.0_DP * a*R )**1.5_DP - b*( R - c/d )*exp( -min( d*R, 1.E+3_RP ) ) - b*c/d ! apply exp limiter
+       ph_stable = 1.0_DP - a*R*sqrt( 1.0_DP + 2.0_DP/3.0_DP * a*R ) - b*R*( d*R - c - 1.0_DP )*exp( -min(d*R, 1.E+3_RP) ) ! apply exp limiter
 #else
-    fh_stable = 1.0_DP - ( 1.0_DP + 2.0_DP/3.0_DP * a*R )**1.5_DP - b*( R - c/d )*exp( -d*R ) - b*c/d
+       ph_stable = 1.0_DP - a*R*sqrt( 1.0_DP + 2.0_DP/3.0_DP * a*R ) - b*R*( d*R - c - 1.0_DP )*exp( -d*R )
 #endif
+    end if
+
+    return
+  end function ph_stable
+  !-----------------------------------------------------------------------------
+  ! stability function for heat/vapor in stable condition
+  real(DP) function fh_stable( Z, IL )
+    !$acc routine seq
+    implicit none
+
+    ! argument
+    real(DP), intent(in) :: Z
+    real(DP), intent(in) :: IL
+
+    ! Businger (1971)
+    real(DP), parameter :: PtB = 0.74_DP
+
+    ! parameters of stability functions (Beljaars and Holtslag 1991)
+    real(DP), parameter :: a = 1.0_DP
+    real(DP), parameter :: b = 0.667_DP
+    real(DP), parameter :: c = 5.0_DP
+    real(DP), parameter :: d = 0.35_DP
+
+    ! works
+    real(DP) :: R
+    !---------------------------------------------------------------------------
+
+    R = max( Z * IL, 0.0_DP )
+
+    if ( flag_B71 ) then
+       ! Businger (1971)
+       fh_stable = - 4.7_DP * R &
+                 + log( Z ) * ( 1.0_DP - PtB )
+    else
+       ! Beljaars and Holtslag (1991)
+#if defined(NVIDIA) || defined(SX)
+       fh_stable = 1.0_DP - ( 1.0_DP + 2.0_DP/3.0_DP * a*R )**1.5_DP - b*( R - c/d )*exp( -min( d*R, 1.E+3_RP ) ) - b*c/d ! apply exp limiter
+#else
+       fh_stable = 1.0_DP - ( 1.0_DP + 2.0_DP/3.0_DP * a*R )**1.5_DP - b*( R - c/d )*exp( -d*R ) - b*c/d
+#endif
+    end if
 
     return
   end function fh_stable
-  function fhm_stable( Z, IL )
+  real(DP) function fhm_stable( Z, IL )
     !$acc routine seq
     implicit none
 
@@ -1342,8 +1568,8 @@ contains
     real(DP), intent(in) :: Z
     real(DP), intent(in) :: IL
 
-    ! function
-    real(DP) :: fhm_stable
+    ! Businger (1971)
+    real(DP), parameter :: PtB = 0.74_DP
 
     ! parameters of stability functions (Beljaars and Holtslag 1991)
     real(DP), parameter :: a = 1.0_DP
@@ -1357,19 +1583,25 @@ contains
 
     R = max( Z * IL, 0.0_DP )
 
-    ! Beljaars and Holtslag (1991)
-    if ( R < EPS ) then
-       fhm_stable = - 0.5_DP * ( a + b*c + b ) * R
+    if ( flag_B71 ) then
+       ! Businger (1971)
+       fhm_stable = - 4.7_DP * 0.5_DP * R &
+                  + ( log( Z ) - 1.0_DP ) * ( 1.0_DP - PtB )
     else
-       fhm_stable = b * ( d*R - c + 1.0_DP ) / ( d**2 * R ) &
+       ! Beljaars and Holtslag (1991)
+       if ( R < EPS ) then
+          fhm_stable = - 0.5_DP * ( a + b*c + b ) * R
+       else
+          fhm_stable = b * ( d*R - c + 1.0_DP ) / ( d**2 * R ) &
 #if defined(NVIDIA) || defined(SX)
-                    * exp( -min( d*R, 1.E+3_DP) ) &
+                         * exp( -min( d*R, 1.E+3_DP) ) &
 #else
-                    * exp( -d*R ) &
+                         * exp( -d*R ) &
 #endif
-                  - 3.0_DP * sqrt( 1.0_DP + 2.0_DP*a*R/3.0_DP )**5 / ( 5.0_DP * a * R ) &
-                  - b * ( c*d*R - c + 1.0_DP ) / ( d**2 * R ) &
-                  + 0.6_RP / ( a * R ) + 1.0_DP
+                     - 3.0_DP * sqrt( 1.0_DP + 2.0_DP*a*R/3.0_DP )**5 / ( 5.0_DP * a * R ) &
+                     - b * ( c*d*R - c + 1.0_DP ) / ( d**2 * R ) &
+                     + 0.6_RP / ( a * R ) + 1.0_DP
+       end if
     end if
 
     return
