@@ -261,6 +261,7 @@ program sno
                          nvars,                        & ! [OUT]
                          varname(:),                   & ! [OUT]
                          isnormalvar,                  & ! [IN]
+                         output_grads,                 & ! [IN]
                          debug                         ) ! [IN]
 
   ! in->out mapping table (global)
