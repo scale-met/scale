@@ -982,13 +982,13 @@ contains
                                      File_haszcoord(fid), & ! [IN]
                                      start(:)             ) ! [IN]
 
-       ! Tell PnetCDF library to use a buffer of size write_buf_amount to aggregate write requests to be post in FILE_CARTESC_write_var
-       if ( FILE_get_AGGREGATE(fid) ) then
-          call FILE_Flush( fid )
-          call FILE_Attach_Buffer( fid, write_buf_amount(fid) )
-       endif
-
        File_axes_written(fid) = .true.
+    endif
+
+    ! Tell PnetCDF library to use a buffer of size write_buf_amount to aggregate write requests to be post in FILE_CARTESC_write_var
+    if ( FILE_get_AGGREGATE(fid) ) then
+       call FILE_Flush( fid )
+       call FILE_Attach_Buffer( fid, write_buf_amount(fid) )
     endif
 
     call PROF_rapend('FILE_O_NetCDF', 2, disable_barrier = FILE_single(fid) )
