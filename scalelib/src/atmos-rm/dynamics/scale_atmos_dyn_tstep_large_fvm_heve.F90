@@ -1730,8 +1730,10 @@ contains
 
        !- monitor mass budget ------------------------------------
        call MONITOR_put( MONIT_damp_mass, damp_t_DENS(:,:,:) )
+       if ( IS>0 ) &
        call MONITOR_put_lateral_flux( MONIT_mflx_west, BND_W .and. MONIT_mflx_west > 0, mflx(:,IS-1,:,XDIR), zero_x )
        call MONITOR_put_lateral_flux( MONIT_mflx_east, BND_E .and. MONIT_mflx_east > 0, mflx(:,IE,:,XDIR), zero_x )
+       if ( JS>0 ) &
        call MONITOR_put_lateral_flux( MONIT_mflx_south, BND_S .and. MONIT_mflx_south > 0, mflx(:,:,JS-1,YDIR), zero_y )
        call MONITOR_put_lateral_flux( MONIT_mflx_north, BND_N .and. MONIT_mflx_north > 0, mflx(:,:,JE,YDIR), zero_y )
 
