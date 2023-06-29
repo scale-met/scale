@@ -471,6 +471,10 @@ contains
     integer :: KE_PBL
     integer :: k, i, j
     integer :: nit, it
+
+#ifdef _OPENACC
+    real(RP) :: work(KA,2)
+#endif
     !---------------------------------------------------------------------------
 
     dt = real(dt_DP, RP)
@@ -881,6 +885,9 @@ contains
 
              call MATRIX_SOLVER_tridiagonal( &
                   KA, KS, KE_PBL, &
+#ifdef _OPENACC
+                  work(:,:),              & ! (work)
+#endif
                   a(:), b(:), c(:), d(:), & ! (in)
                   dummy(:)                ) ! (out)
 !                  phi_n(:)                ) ! (out)
@@ -919,6 +926,9 @@ contains
 
              call MATRIX_SOLVER_tridiagonal( &
                   KA, KS, KE_PBL, &
+#ifdef _OPENACC
+                  work(:,:),              & ! (work)
+#endif
                   a(:), b(:), c(:), d(:), & ! (in)
                   phi_n(:)                ) ! (out)
 
@@ -966,6 +976,9 @@ contains
 
              call MATRIX_SOLVER_tridiagonal( &
                   KA, KS, KE_PBL, &
+#ifdef _OPENACC
+                  work(:,:),              & ! (work)
+#endif
                   a(:), b(:), c(:), d(:), & ! (in)
                   phi_n(:)                ) ! (out)
 
@@ -1016,6 +1029,9 @@ contains
 
              call MATRIX_SOLVER_tridiagonal( &
                   KA, KS, KE_PBL, &
+#ifdef _OPENACC
+                  work(:,:),              & ! (work)
+#endif
                   a(:), b(:), c(:), d(:), & ! (in)
                   phi_n(:)                ) ! (out)
 
@@ -1077,6 +1093,9 @@ contains
 
           call MATRIX_SOLVER_tridiagonal( &
                KA, KS, KE_PBL, &
+#ifdef _OPENACC
+               work(:,:),              & ! (work)
+#endif
                a(:), b(:), c(:), d(:), & ! (in)
                phi_n(:)                ) ! (out)
 
@@ -1124,6 +1143,9 @@ contains
 
           call MATRIX_SOLVER_tridiagonal( &
                KA, KS, KE_PBL, &
+#ifdef _OPENACC
+               work(:,:),              & ! (work)
+#endif
                a(:), b(:), c(:), d(:), & ! (in)
                tsq(:)                  ) ! (out)
 
@@ -1152,6 +1174,9 @@ contains
 
           call MATRIX_SOLVER_tridiagonal( &
                KA, KS, KE_PBL, &
+#ifdef _OPENACC
+               work(:,:),              & ! (work)
+#endif
                a(:), b(:), c(:), d(:), & ! (in)
                qsq(:)                  ) ! (out)
 
@@ -1180,6 +1205,9 @@ contains
 
           call MATRIX_SOLVER_tridiagonal( &
                KA, KS, KE_PBL, &
+#ifdef _OPENACC
+               work(:,:),              & ! (work)
+#endif
                a(:), b(:), c(:), d(:), & ! (in)
                cov(:)                  ) ! (out)
 

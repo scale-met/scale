@@ -114,6 +114,7 @@ module scale_atmos_phy_mp_suzuki10
   !++ Private parameters
   !
   integer :: QA
+  !$acc declare create(QA)
   integer, parameter :: I_QV = 1
 
   character(len=3)  :: namspc (8) = (/ 'Qcl', &
@@ -197,6 +198,7 @@ module scale_atmos_phy_mp_suzuki10
   real(RP) :: xaend                          !--- exponential of mass of aerosol for largest aerosol bin
 
   real(RP), allocatable, save :: vterm(:)    !--- terminal velocity
+  !$acc declare create(vterm)
 
   !--- constant for bin
   real(RP), parameter :: cldmin       = 1.0E-10_RP      !--- threshould for cloud is regarded existing
@@ -380,6 +382,8 @@ contains
        write(ATMOS_PHY_MP_suzuki10_tracer_names       (1+nbin*nspc+n),'(a,i0)') trim(namspc (8)), n
        write(ATMOS_PHY_MP_suzuki10_tracer_descriptions(1+nbin*nspc+n),'(a,i0)') trim(lnamspc(8)), n
     enddo
+
+    !$acc update device(QA)
 
     return
   end subroutine ATMOS_PHY_MP_suzuki10_tracer_setup
@@ -867,6 +871,8 @@ contains
     rho_sdf(3)   = 100.0_RP
     rho_sdf(4)   = 400.0_RP
     rho_sdf(5)   = 400.0_RP ! to be corrected
+
+    !$acc update device(vterm)
 
     return
   end subroutine ATMOS_PHY_MP_suzuki10_setup
@@ -1393,6 +1399,7 @@ contains
   subroutine ATMOS_PHY_MP_suzuki10_terminal_velocity( &
        KA,     &
        vterm_o )
+    !$acc routine vector
     implicit none
 
     integer, intent(in) :: KA

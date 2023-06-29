@@ -101,6 +101,9 @@ contains
     integer :: KE_PBL
     integer :: k, i, j
 
+#ifdef _OPENACC
+    real(RP) :: work(KS:KE,2)
+#endif
     dt = real( DDT, kind=RP )
 
 !OCL INDEPENDENT
@@ -156,6 +159,9 @@ contains
 
        call MATRIX_SOLVER_tridiagonal( &
                KA, KS, KE_PBL, &
+#ifdef _OPENACC
+               work(:,:), & ! (wrok)
+#endif
                a(:), b(:), c(:), d(:), & ! (in)
                QTRC_n(:)               ) ! (out)
 
