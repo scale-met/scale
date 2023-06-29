@@ -233,6 +233,8 @@ contains
     real(RP) :: Ts
     real(RP) :: QVs
 
+    logical :: converged
+
     integer  :: k, i, j
     !---------------------------------------------------------------------------
 
@@ -247,10 +249,11 @@ contains
     QC(:) = 0.0_RP
 
     call buildrho( KA, KS, KE, &
-                   PT(:), QV(:), QC(:),         & ! (in)
-                   Ps, pt_ini(1), QVs, 0.0_RP,  & ! (in)
-                   CZ(:), FZ(:),                & ! (in)
-                   RHO(:), TEMP(:), PRES(:), Ts ) ! (out)
+                   PT(:), QV(:), QC(:),          & ! (in)
+                   Ps, pt_ini(1), QVs, 0.0_RP,   & ! (in)
+                   CZ(:), FZ(:),                 & ! (in)
+                   RHO(:), TEMP(:), PRES(:), Ts, & ! (out)
+                   converged                     ) ! (out)
 
     do j = 1, JA
     do i = 1, IA
