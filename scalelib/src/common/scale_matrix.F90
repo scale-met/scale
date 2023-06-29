@@ -287,6 +287,14 @@ contains
                 ldl(l,k) = ld(k,idx(l),j)
                 ivl(l,k) = iv(k,idx(l),j)
              end do
+#if defined DEBUG || defined QUICKDEBUG
+             do l = len+1, LSIZE
+                udl(l,k) = 0.0_RP
+                mdl(l,k) = 1.0_RP
+                ldl(l,k) = 0.0_RP
+                ivl(l,k) = 0.0_RP
+             end do
+#endif
              end do
              call MATRIX_SOLVER_tridiagonal_2D_trans( KA, KS, KE, &
                                                       udl(:,:), mdl(:,:), ldl(:,:),   & ! (in)
