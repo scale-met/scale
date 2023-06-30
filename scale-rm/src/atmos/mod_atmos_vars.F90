@@ -718,7 +718,7 @@ contains
     ! water content
     if ( ATMOS_HYDROMETEOR_dry ) then
        allocate( ZERO(KA,IA,JA) )
-       !$acc enter data create (ZERO)
+       !$acc enter data create(ZERO)
        !$omp parallel workshare
        !$acc kernels
 !OCL XFILL
@@ -1234,6 +1234,7 @@ contains
                                         SFC_PRES(:,:)    ) ! [IN]
 
     !$acc end data
+
     call PROF_rapend('ATM_History', 1)
 
     return
@@ -2022,6 +2023,7 @@ contains
        !$acc kernels
        var(KS:KE,:,:) = TEML(KS:KE,:,:)
        !$acc end kernels
+
        !$omp end parallel workshare
 
     case ( 'POTL' )
@@ -3515,7 +3517,9 @@ contains
           !$acc end kernels
           DV_calculated(I_W_MEAN) = .true.
        end if
+       !$acc kernels
        var(:) = W_MEAN(:)
+       !$acc end kernels
 
     case ( 'U_MEAN' )
        if ( .not. DV_calculated(I_U_MEAN) ) then
@@ -3956,7 +3960,7 @@ contains
     LOG_INFO("ATMOS_vars_finalize",*) 'Finalize'
 
     if ( ATMOS_USE_AVERAGE ) then
-!       !$acc exit data delete(DENS_avw, MOMZ_avw, MOMX_avw, MOMY_avw, RHOT_avw, QTRC_avw)
+       !$acc exit data delete(DENS_avw, MOMZ_avw, MOMX_avw, MOMY_avw, RHOT_avw, QTRC_avw)
        deallocate( DENS_avw )
        deallocate( MOMZ_avw )
        deallocate( MOMX_avw )
@@ -3965,7 +3969,7 @@ contains
        deallocate( QTRC_avw )
     endif
 
-!    !$acc exit data delete(DENS, MOMZ, MOMX, MOMY, RHOT, QTRC)
+    !$acc exit data delete(DENS, MOMZ, MOMX, MOMY, RHOT, QTRC)
     deallocate( DENS )
     deallocate( MOMZ )
     deallocate( MOMX )
@@ -3973,7 +3977,7 @@ contains
     deallocate( RHOT )
     deallocate( QTRC )
 
-!    !$acc exit data delete(DENS_tp, MOMZ_tp, RHOU_tp, RHOV_tp, RHOT_tp, RHOH_p, RHOQ_tp)
+    !$acc exit data delete(DENS_tp, MOMZ_tp, RHOU_tp, RHOV_tp, RHOT_tp, RHOH_p, RHOQ_tp)
     deallocate( DENS_tp )
     deallocate( MOMZ_tp )
     deallocate( RHOU_tp )
@@ -3982,17 +3986,17 @@ contains
     deallocate( RHOH_p  )
     deallocate( RHOQ_tp )
     ! obsolute
-!    !$acc exit data delete(MOMX_tp, MOMY_tp)
+    !$acc exit data delete(MOMX_tp, MOMY_tp)
     deallocate( MOMX_tp )
     deallocate( MOMY_tp )
 
 
-!    !$acc exit data delete(W, U, V)
+    !$acc exit data delete(W, U, V)
     deallocate( W )
     deallocate( U )
     deallocate( V )
 
-!    !$acc exit data delete(POTT, TEMP, PRES, EXNER, PHYD, PHYDH)
+    !$acc exit data delete(POTT, TEMP, PRES, EXNER, PHYD, PHYDH)
     deallocate( POTT  )
     deallocate( TEMP  )
     deallocate( PRES  )
@@ -4000,17 +4004,17 @@ contains
     deallocate( PHYD  )
     deallocate( PHYDH )
 
-!    !$acc exit data delete(Qdry, Rtot, CVtot, CPtot)
+    !$acc exit data delete(Qdry, Rtot, CVtot, CPtot)
     deallocate( Qdry )
     deallocate( Rtot )
     deallocate( CVtot)
     deallocate( CPtot)
 
-!    !$acc exit data delete(PREC, PREC_ENGI)
+    !$acc exit data delete(PREC, PREC_ENGI)
     deallocate( PREC      )
     deallocate( PREC_ENGI )
 
-!    !$acc exit data delete(WORK3D, WORK2D, WORK1D)
+    !$acc exit data delete(WORK3D, WORK2D, WORK1D)
     deallocate( WORK3D )
     deallocate( WORK2D )
     deallocate( WORK1D )
@@ -4029,11 +4033,11 @@ contains
 
     ! water content
     if ( ATMOS_HYDROMETEOR_dry ) then
-!       !$acc exit data delete(ZERO)
+       !$acc exit data delete(ZERO)
        deallocate( ZERO )
 
     else
-!       !$acc exit data delete(Qe)
+       !$acc exit data delete(Qe)
        deallocate( Qe )
     end if
 

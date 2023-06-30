@@ -69,13 +69,11 @@ module mod_atmos_phy_mp_vars
   real(RP), public, allocatable :: ATMOS_PHY_MP_RHOQ_t(:,:,:,:)  ! tendency rho*QTRC [kg/m3/s]
   real(RP), public, allocatable :: ATMOS_PHY_MP_RHOC_t(:,:,:,:)  ! tendency rho*QTRC (charge) [fC/m3/s]
   real(RP), public, allocatable :: ATMOS_PHY_MP_RHOH  (:,:,:)    ! diabatic heating rate [J/kg/s]
-  !$acc declare create(ATMOS_PHY_MP_DENS_t, ATMOS_PHY_MP_MOMZ_t, ATMOS_PHY_MP_RHOU_t, ATMOS_PHY_MP_RHOV_t, ATMOS_PHY_MP_RHOT_t, ATMOS_PHY_MP_RHOQ_t, ATMOS_PHY_MP_RHOC_t, ATMOS_PHY_MP_RHOH)
 
   real(RP), public, allocatable :: ATMOS_PHY_MP_EVAPORATE(:,:,:) ! number concentration of evaporated cloud [/m3]
   real(RP), public, allocatable :: ATMOS_PHY_MP_SFLX_rain(:,:)   ! precipitation flux (liquid) [kg/m2/s]
   real(RP), public, allocatable :: ATMOS_PHY_MP_SFLX_snow(:,:)   ! precipitation flux (solid)  [kg/m2/s]
   real(RP), public, allocatable :: ATMOS_PHY_MP_SFLX_ENGI(:,:)   ! internal energy flux        [J/m2/s]
-  !$acc declare create(ATMOS_PHY_MP_EVAPORATE, ATMOS_PHY_MP_SFLX_rain, ATMOS_PHY_MP_SFLX_snow, ATMOS_PHY_MP_SFLX_ENGI)
 
   integer, public :: QA_MP = 0
   integer, public :: QS_MP = -1
@@ -111,7 +109,6 @@ module mod_atmos_phy_mp_vars
   logical, private :: DIAG_Re
   logical, private :: DIAG_Qe
   logical, private :: DIAG_Ne
-  !$acc declare create(ATMOS_PHY_MP_CLDFRAC, ATMOS_PHY_MP_Re, ATMOS_PHY_MP_Qe, ATMOS_PHY_MP_Ne)
 
   ! for history
   integer, private              :: HIST_CLDFRAC_id
@@ -177,8 +174,7 @@ contains
     ATMOS_PHY_MP_RHOQ_t   (:,:,:,:) = 0.0_RP
     ATMOS_PHY_MP_RHOH     (:,:,:)   = 0.0_RP
     ATMOS_PHY_MP_EVAPORATE(:,:,:)   = 0.0_RP
-!    !$acc update device(ATMOS_PHY_MP_DENS_t, ATMOS_PHY_MP_MOMZ_t, ATMOS_PHY_MP_RHOU_t, ATMOS_PHY_MP_RHOV_t, ATMOS_PHY_MP_RHOT_t, ATMOS_PHY_MP_RHOQ_t, ATMOS_PHY_MP_RHOH, ATMOS_PHY_MP_EVAPORATE)
-    !$acc enter data create(ATMOS_PHY_MP_DENS_t, ATMOS_PHY_MP_MOMZ_t, ATMOS_PHY_MP_RHOU_t, ATMOS_PHY_MP_RHOV_t, ATMOS_PHY_MP_RHOT_t, ATMOS_PHY_MP_RHOQ_t, ATMOS_PHY_MP_RHOH, ATMOS_PHY_MP_EVAPORATE)
+    !$acc enter data copyin(ATMOS_PHY_MP_DENS_t, ATMOS_PHY_MP_MOMZ_t, ATMOS_PHY_MP_RHOU_t, ATMOS_PHY_MP_RHOV_t, ATMOS_PHY_MP_RHOT_t, ATMOS_PHY_MP_RHOQ_t, ATMOS_PHY_MP_RHOH, ATMOS_PHY_MP_EVAPORATE)
 
     allocate( ATMOS_PHY_MP_SFLX_rain(IA,JA) )
     allocate( ATMOS_PHY_MP_SFLX_snow(IA,JA) )
@@ -186,7 +182,6 @@ contains
     ATMOS_PHY_MP_SFLX_rain(:,:) = UNDEF
     ATMOS_PHY_MP_SFLX_snow(:,:) = UNDEF
     ATMOS_PHY_MP_SFLX_ENGI(:,:) = UNDEF
-!    !$acc update device(ATMOS_PHY_MP_SFLX_rain, ATMOS_PHY_MP_SFLX_snow, ATMOS_PHY_MP_SFLX_ENGI)
     !$acc enter data create(ATMOS_PHY_MP_SFLX_rain, ATMOS_PHY_MP_SFLX_snow, ATMOS_PHY_MP_SFLX_ENGI)
 
     !--- read namelist
@@ -282,6 +277,7 @@ contains
     LOG_NEWLINE
     LOG_INFO("ATMOS_PHY_MP_vars_finalize",*) 'Finalize'
 
+    !$acc exit data delete(ATMOS_PHY_MP_DENS_t,ATMOS_PHY_MP_MOMZ_t,ATMOS_PHY_MP_RHOU_t,ATMOS_PHY_MP_RHOV_t,ATMOS_PHY_MP_RHOT_t,ATMOS_PHY_MP_RHOH,ATMOS_PHY_MP_EVAPORATE)
     deallocate( ATMOS_PHY_MP_DENS_t     )
     deallocate( ATMOS_PHY_MP_MOMZ_t     )
     deallocate( ATMOS_PHY_MP_RHOU_t     )
@@ -290,19 +286,18 @@ contains
     deallocate( ATMOS_PHY_MP_RHOQ_t     )
     deallocate( ATMOS_PHY_MP_RHOH       )
     deallocate( ATMOS_PHY_MP_EVAPORATE  )
-    !$acc exit data delete(ATMOS_PHY_MP_DENS_t,ATMOS_PHY_MP_MOMZ_t,ATMOS_PHY_MP_RHOU_t,ATMOS_PHY_MP_RHOV_t,ATMOS_PHY_MP_RHOT_t,ATMOS_PHY_MP_RHOH,ATMOS_PHY_MP_EVAPORATE)
 
+    !$acc exit data delete(ATMOS_PHY_MP_SFLX_rain,ATMOS_PHY_MP_SFLX_snow,ATMOS_PHY_MP_SFLX_ENGI)
     deallocate( ATMOS_PHY_MP_SFLX_rain )
     deallocate( ATMOS_PHY_MP_SFLX_snow )
     deallocate( ATMOS_PHY_MP_SFLX_ENGI )
-    !$acc exit data delete(ATMOS_PHY_MP_SFLX_rain,ATMOS_PHY_MP_SFLX_snow,ATMOS_PHY_MP_SFLX_ENGI)
 
     ! diagnostices
+    !$acc exit data delete(ATMOS_PHY_MP_CLDFRAC,ATMOS_PHY_MP_Re,ATMOS_PHY_MP_Qe,ATMOS_PHY_MP_Ne)
     deallocate( ATMOS_PHY_MP_CLDFRAC )
     deallocate( ATMOS_PHY_MP_Re      )
     deallocate( ATMOS_PHY_MP_Qe      )
     deallocate( ATMOS_PHY_MP_Ne      )
-    !$acc exit data delete(ATMOS_PHY_MP_CLDFRAC,ATMOS_PHY_MP_Re,ATMOS_PHY_MP_Qe,ATMOS_PHY_MP_Ne)
 
 
     ! history
@@ -546,7 +541,6 @@ contains
           call ATMOS_PHY_MP_vars_get_diagnostic( &
                DENS(:,:,:), TEMP(:,:,:), QTRC(:,:,:,:), & ! [IN]
                CLDFRAC=WORK(:,:,:,1)                    ) ! [OUT]
-!          !$acc update host(WORK(:,:,:,1))
           call FILE_HISTORY_put( HIST_CLDFRAC_id, WORK(:,:,:,1) )
        end if
     end if
@@ -568,7 +562,6 @@ contains
              if ( HIST_Re_id(ih) > 0 ) then
                 call FILE_HISTORY_query( HIST_Re_id(ih), do_put )
                 if ( do_put ) then
-!                   !$acc update host(WORK(:,:,:,ih))
                    call FILE_HISTORY_put( HIST_Re_id(ih), WORK(:,:,:,ih) )
                 end if
              end if
@@ -593,7 +586,6 @@ contains
              if ( HIST_Qe_id(ih) > 0 ) then
                 call FILE_HISTORY_query( HIST_Qe_id(ih), do_put )
                 if( do_put ) then
-!                   !$acc update host(WORK(:,:,:,ih))
                    call FILE_HISTORY_put( HIST_Qe_id(ih), WORK(:,:,:,ih) )
                 end if
              end if
@@ -618,7 +610,6 @@ contains
              if ( HIST_Ne_id(ih) > 0 ) then
                 call FILE_HISTORY_query( HIST_Ne_id(ih), do_put )
                 if( do_put ) then
-!                   !$acc update host(WORK(:,:,:,ih))
                    call FILE_HISTORY_put( HIST_Ne_id(ih), WORK(:,:,:,ih) )
                 end if
              end if
@@ -716,6 +707,7 @@ contains
        end do
        end do
        !$acc end kernels
+
        !$acc end data
     end if
 
@@ -763,6 +755,7 @@ contains
        end do
        end do
        !$acc end kernels
+
        !$acc end data
     end if
 
@@ -810,6 +803,7 @@ contains
        end do
        end do
        !$acc end kernels
+
        !$acc end data
     end if
 
@@ -844,6 +838,7 @@ contains
        end do
        end do
        !$acc end kernels
+
        !$acc end data
     end if
 

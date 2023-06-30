@@ -55,7 +55,6 @@ module mod_atmos_phy_lt_vars
 
   real(RP), public, allocatable :: ATMOS_PHY_LT_Epot(:,:,:) ! tendency QTRC [kg/kg/s]
   real(RP), public, allocatable :: ATMOS_PHY_LT_Sarea(:,:,:,:)
-!  !$acc declare create(ATMOS_PHY_LT_Epot,ATMOS_PHY_LT_Sarea)
 
   integer, public :: QA_LT = 0
   integer, public :: QS_LT = -1
@@ -119,7 +118,6 @@ contains
     allocate( ATMOS_PHY_LT_Epot(KA,IA,JA) )
     ATMOS_PHY_LT_Epot(:,:,:) = UNDEF
     !$acc enter data create(ATMOS_PHY_LT_Epot)
-!    !$acc update device (ATMOS_PHY_LT_Epot)
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -162,7 +160,7 @@ contains
     ! for cloud microphysics
     allocate( ATMOS_PHY_MP_RHOC_t(KA,IA,JA,QS_LT:QE_LT) )
     ATMOS_PHY_MP_RHOC_t(:,:,:,:) = 0.0_RP
-    !$acc update device (ATMOS_PHY_MP_RHOC_t)
+    !$acc enter data copyin(ATMOS_PHY_MP_RHOC_t)
 
 
     return
@@ -183,6 +181,7 @@ contains
     deallocate( ATMOS_PHY_LT_Epot )
 
     ! for cloud microphysics
+    !$acc exit data delete(ATMOS_PHY_MP_RHOC_t)
     deallocate( ATMOS_PHY_MP_RHOC_t )
 
     return
