@@ -121,6 +121,8 @@ contains
        call PRC_abort
     end select
 
+    !$acc enter data copyin(CORIOLIS_f)
+
     return
   end subroutine CORIOLIS_setup
 
@@ -130,6 +132,7 @@ contains
     implicit none
     !---------------------------------------------------------------------------
 
+    !$acc exit data delete(CORIOLIS_f)
     deallocate( CORIOLIS_f )
 
     return

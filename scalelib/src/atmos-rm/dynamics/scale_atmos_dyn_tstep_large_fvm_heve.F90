@@ -667,7 +667,7 @@ contains
     !$acc             MFLUX_OFFSET_X, MFLUX_OFFSET_Y) &
     !$acc      create(num_diff, num_diff_q, &
     !$acc             DENS00, qflx, DDIV, DPRES0, RT2P, REF_rhot, &
-    !$acc             DENS_tq, diff, damp_t_DENS, damp_t_MOMZ, damp_t_MOMX, damp_t_MOMY, damp_t_RHOT, damp_t_QTRC, &
+    !$acc             DENS_tq, diff, diff2, diff3, damp_t_DENS, damp_t_MOMZ, damp_t_MOMX, damp_t_MOMY, damp_t_RHOT, damp_t_QTRC, &
     !$acc             tflx, mflx_av, &
     !$acc             qflx_west, qflx_east, qflx_south, qflx_north)
 
