@@ -123,7 +123,7 @@ contains
     ATMOS_GRID_CARTESC_METRIC_J13G (:,:,:,:) = 0.0_RP
     ATMOS_GRID_CARTESC_METRIC_J23G (:,:,:,:) = 0.0_RP
     ATMOS_GRID_CARTESC_METRIC_J33G = 1.0_RP
-    !$acc enter data copyin(ATMOS_GRID_CARTESC_METRIC_GSQRT, ATMOS_GRID_CARTESC_METRIC_J13G, ATMOS_GRID_CARTESC_METRIC_J23G) async
+    !$acc enter data copyin(ATMOS_GRID_CARTESC_METRIC_GSQRT, ATMOS_GRID_CARTESC_METRIC_J13G, ATMOS_GRID_CARTESC_METRIC_J23G, ATMOS_GRID_CARTESC_METRIC_J33G) async
 
     allocate( ATMOS_GRID_CARTESC_METRIC_LIMYZ(KA,IA,JA,7) )
     allocate( ATMOS_GRID_CARTESC_METRIC_LIMXZ(KA,IA,JA,7) )
@@ -158,9 +158,10 @@ contains
        call PRC_abort
     end select
 
+    !$acc wait
+
     ! output metrics (for debug)
     call ATMOS_GRID_CARTESC_METRIC_write
-    !$acc wait
 
     return
   end subroutine ATMOS_GRID_CARTESC_METRIC_setup
@@ -231,6 +232,8 @@ contains
          ATMOS_GRID_CARTESC_REAL_LATUV(1:,1:), ATMOS_GRID_CARTESC_METRIC_MAPF(:,:,1,I_UV), ATMOS_GRID_CARTESC_METRIC_MAPF (:,:,2,I_UV))
     end if
 
+    !$acc update device(ATMOS_GRID_CARTESC_METRIC_MAPF)
+
     call TOPOGRAPHY_calc_tan_slope( IA, IS, IE, JA, JS, JE, &
          ATMOS_GRID_CARTESC_RCDX(:), ATMOS_GRID_CARTESC_RCDY(:), &
          ATMOS_GRID_CARTESC_METRIC_MAPF(:,:,:,I_XY) )
@@ -254,6 +257,8 @@ contains
          ATMOS_GRID_CARTESC_REAL_LAT   (:,:),   & ! [IN]
          ATMOS_GRID_CARTESC_METRIC_ROTC(:,:,1), & ! [OUT]
          ATMOS_GRID_CARTESC_METRIC_ROTC(:,:,2)  ) ! [OUT]
+
+    !$acc update device(ATMOS_GRID_CARTESC_METRIC_ROTC)
 
     return
   end subroutine ATMOS_GRID_CARTESC_METRIC_rotcoef
@@ -388,6 +393,10 @@ contains
     end if
 
     ATMOS_GRID_CARTESC_METRIC_J33G = 1.0_RP ! - 1 / G^1/2 * G^1/2
+
+    !$acc update device(ATMOS_GRID_CARTESC_METRIC_GSQRT)
+    !$acc update device(ATMOS_GRID_CARTESC_METRIC_J13G,ATMOS_GRID_CARTESC_METRIC_J23G,ATMOS_GRID_CARTESC_METRIC_J33G)
+
 
     if ( .not. PRC_TwoD ) then
     call COMM_vars8( ATMOS_GRID_CARTESC_METRIC_J13G(:,:,:,I_XYZ),  8 )
@@ -638,6 +647,8 @@ contains
        enddo
     enddo
 
+    !  !$acc update device(ATMOS_GRID_CARTESC_METRIC_LIMXY,ATMOS_GRID_CARTESC_METRIC_LIMXZ,ATMOS_GRID_CARTESC_METRIC_LIMYZ)
+
     call COMM_vars8( ATMOS_GRID_CARTESC_METRIC_LIMYZ(:,:,:,I_XYZ),  1 )
     call COMM_vars8( ATMOS_GRID_CARTESC_METRIC_LIMYZ(:,:,:,I_XYW),  2 )
     call COMM_vars8( ATMOS_GRID_CARTESC_METRIC_LIMYZ(:,:,:,I_UYW),  3 )
@@ -716,6 +727,9 @@ contains
        enddo
        enddo
     enddo
+
+    !  !$acc update device(ATMOS_GRID_CARTESC_METRIC_LIMXY,ATMOS_GRID_CARTESC_METRIC_LIMXZ,ATMOS_GRID_CARTESC_METRIC_LIMYZ)
+
 
     call COMM_vars8( ATMOS_GRID_CARTESC_METRIC_LIMYZ(:,:,:,I_XYZ),  1 )
     call COMM_vars8( ATMOS_GRID_CARTESC_METRIC_LIMYZ(:,:,:,I_XYW),  2 )
