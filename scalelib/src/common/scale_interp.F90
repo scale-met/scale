@@ -368,17 +368,20 @@ contains
     integer,  intent(out) :: idx_j(IA,JA,4)
     real(RP), intent(out) :: hfact(IA,JA,4)
 
+    real(RP) :: workh(4)
+    integer  :: worki(4), workj(4)
+
     real(RP) :: f1, f2
     integer  :: i, j, ii, jj
 
     call PROF_rapstart('INTERP_fact',3)
 
     !$omp parallel do schedule(dynamic) collapse(2) &
-    !$omp private(f1,f2)
+    !$omp private(f1,f2,workh,worki,workj)
     !$acc kernels
     !$acc loop independent
     do j = 1, JA
-    !$acc loop independent
+    !$acc loop independent private(workh, worki, workj)
     do i = 1, IA
 
        ! longitude
@@ -443,9 +446,19 @@ contains
           end do
        end if
 
+       do ii = 1, 4
+          workh(ii) = hfact(i,j,ii)
+          worki(ii) = idx_i(i,j,ii)
+          workj(ii) = idx_j(i,j,ii)
+       end do
        call SORT_exec( 4,                                        & ! [IN]
-                       hfact(i,j,:), idx_i(i,j,:), idx_j(i,j,:), & ! [INOUT]
+                       workh(:), worki(:), workj(:),             & ! [INOUT]
                        reverse = .true.                          ) ! [IN]
+       do ii = 1, 4
+          hfact(i,j,ii) = workh(ii)
+          idx_i(i,j,ii) = worki(ii)
+          idx_j(i,j,ii) = workj(ii)
+       end do
 
     end do
     end do
@@ -495,6 +508,9 @@ contains
     logical  :: error, err
     logical  :: zonal_, pole_
 
+    real(RP) :: workh(4)
+    integer  :: worki(4), workj(4)
+
     integer :: ii0, jj0
     integer :: ii, jj
     integer :: i1, i2, i3, i4
@@ -522,12 +538,12 @@ contains
     ite_max = IA_ref + JA_ref
 
     !$omp parallel do &
-    !$omp private(inc_i,inc_j,ii,jj,i1,i2,i3,i4,j1,j2,j3,j4,u,v,err) &
+    !$omp private(inc_i,inc_j,ii,jj,i1,i2,i3,i4,j1,j2,j3,j4,u,v,err,workh,worki,workj) &
     !$omp firstprivate(ii0,jj0)
     !$acc kernels
     !$acc loop independent reduction(.or.:error)
     do j = 1, JA
-    !$acc loop independent reduction(.or.:error)
+    !$acc loop independent private(inc_i,inc_j,ii,jj,i1,i2,i3,i4,j1,j2,j3,j4,u,v,err,workh,worki,workj) reduction(.or.:error)
     do i = 1, IA
 
 #ifndef _OPENACC
@@ -538,6 +554,7 @@ contains
 #ifndef _OPENACC
        end if
 #endif
+       !$acc loop seq
        do ite = 1, ite_max
           i1 = ii
           i2 = ii + 1
@@ -679,9 +696,19 @@ contains
        if ( error ) exit
 #endif
 
+       do ii = 1, 4
+          workh(ii) = hfact(i,j,ii)
+          worki(ii) = idx_i(i,j,ii)
+          workj(ii) = idx_j(i,j,ii)
+       end do
        call SORT_exec( 4,                                        & ! [IN]
-                       hfact(i,j,:), idx_i(i,j,:), idx_j(i,j,:), & ! [INOUT]
+                       workh(:), worki(:), workj(:),             & ! [INOUT]
                        reverse = .true.                          ) ! [IN]
+       do ii = 1, 4
+          hfact(i,j,ii) = workh(ii)
+          idx_i(i,j,ii) = worki(ii)
+          idx_j(i,j,ii) = workj(ii)
+       end do
 
     end do
     end do
@@ -1374,7 +1401,9 @@ contains
     !$omp private(fact,valn,f,w,sw)
     !$acc kernels
 !OCL PREFETCH
+    !$acc loop independent
     do j = 1, JA
+    !$acc loop independent
     do i = 1, IA
        fact = 0.0_RP
        valn = 0.0_RP
