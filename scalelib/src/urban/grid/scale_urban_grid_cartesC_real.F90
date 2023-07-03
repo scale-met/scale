@@ -84,10 +84,15 @@ contains
 
     integer :: k, i, j
 
-    URBAN_GRID_CARTESC_REAL_TOTAREA = 0.0_RP
     do j = 1, UJA
     do i = 1, UIA
        URBAN_GRID_CARTESC_REAL_AREA(i,j) = ATMOS_GRID_CARTESC_REAL_AREA(i,j) * LANDUSE_fact_urban(i,j)
+    end do
+    end do
+
+    URBAN_GRID_CARTESC_REAL_TOTAREA = 0.0_RP
+    do j = UJS, UJE
+    do i = UIS, UIE
        URBAN_GRID_CARTESC_REAL_TOTAREA = URBAN_GRID_CARTESC_REAL_TOTAREA + URBAN_GRID_CARTESC_REAL_AREA(i,j)
     end do
     end do

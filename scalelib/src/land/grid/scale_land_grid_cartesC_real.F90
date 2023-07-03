@@ -83,10 +83,15 @@ contains
 
     integer :: k, i, j
 
-    LAND_GRID_CARTESC_REAL_TOTAREA = 0.0_RP
     do j = 1, LJA
     do i = 1, LIA
        LAND_GRID_CARTESC_REAL_AREA(i,j) = ATMOS_GRID_CARTESC_REAL_AREA(i,j) * LANDUSE_fact_land(i,j)
+    end do
+    end do
+
+    LAND_GRID_CARTESC_REAL_TOTAREA = 0.0_RP
+    do j = LJS, LJE
+    do i = LIS, LIE
        LAND_GRID_CARTESC_REAL_TOTAREA = LAND_GRID_CARTESC_REAL_TOTAREA + LAND_GRID_CARTESC_REAL_AREA(i,j)
     end do
     end do

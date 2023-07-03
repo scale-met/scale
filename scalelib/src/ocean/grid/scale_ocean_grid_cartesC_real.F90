@@ -86,10 +86,15 @@ contains
 
     integer :: k, i, j
 
-    OCEAN_GRID_CARTESC_REAL_TOTAREA = 0.0_RP
     do j = 1,   OJA
     do i = 1,   OIA
        OCEAN_GRID_CARTESC_REAL_AREA(i,j) = ATMOS_GRID_CARTESC_REAL_AREA(i,j) * LANDUSE_fact_ocean(i,j)
+    end do
+    end do
+
+    OCEAN_GRID_CARTESC_REAL_TOTAREA = 0.0_RP
+    do j = OJS, OJE
+    do i = OIS, OIE
        OCEAN_GRID_CARTESC_REAL_TOTAREA = OCEAN_GRID_CARTESC_REAL_TOTAREA + OCEAN_GRID_CARTESC_REAL_AREA(i,j)
     end do
     end do
