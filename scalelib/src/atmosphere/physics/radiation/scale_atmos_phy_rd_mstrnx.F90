@@ -210,7 +210,7 @@ module scale_atmos_phy_rd_mstrnx
   real(RP), private :: W(2)             ! discrete quadrature w  for two-stream approximation
   real(RP), private :: Wmns(2), Wpls(2) ! W-, W+
   real(RP), private :: Wbar(2), Wscale(2)
-  !$acc declare create(m, w, wmns, wpls, wscale)
+!  !$acc declare create(m, w, wmns, wpls, wscale)
 
   !-----------------------------------------------------------------------------
 contains
@@ -1269,11 +1269,11 @@ contains
        Wscale(im) = Wpls(im) / Wbar(im)
     end do
 
-    !$acc enter data &
-    !$acc& pcopyin(wgtch, fitPLK, logfitP, logfitT, fitT) &
-    !$acc& pcopyin(radmode, ngasabs, igasabs, radmode, ptype_nradius) &
-    !$acc& pcopyin(fsol, q, qmol, rayleigh, acfc_pow, nch, AKD, SKD) &
-    !$acc& pcopyin(Wmns, Wpls, Wscale, W, M)
+!!$    !$acc enter data &
+!!$    !$acc& pcopyin(wgtch, fitPLK, logfitP, logfitT, fitT) &
+!!$    !$acc& pcopyin(radmode, ngasabs, igasabs, radmode, ptype_nradius) &
+!!$    !$acc& pcopyin(fsol, q, qmol, rayleigh, acfc_pow, nch, AKD, SKD) &
+!!$    !$acc& pcopyin(Wmns, Wpls, Wscale, W, M)
 
     return
   end subroutine RD_MSTRN_setup
@@ -1405,15 +1405,15 @@ contains
     integer  :: k, i, j
     !---------------------------------------------------------------------------
 
-    !$acc data &
-    !$acc& pcopyin(solins, cosSZA, rhodz, pres, temp, temph, temp_sfc, gas, cfc) &
-    !$acc& pcopyin(aerosol_conc, aerosol_radi, aero2ptype, cldfrac, albedo_sfc) &
-    !$acc& pcopyin(fact_ocean, fact_land, fact_urban) &
-    !$acc& pcopyout(rflux, rflux_sfc_dn, tauCLD_067u, emisCLD_105u)
-
-    !$acc kernels
-
-    !$acc loop gang
+!!$    !$acc data &
+!!$    !$acc& pcopyin(solins, cosSZA, rhodz, pres, temp, temph, temp_sfc, gas, cfc) &
+!!$    !$acc& pcopyin(aerosol_conc, aerosol_radi, aero2ptype, cldfrac, albedo_sfc) &
+!!$    !$acc& pcopyin(fact_ocean, fact_land, fact_urban) &
+!!$    !$acc& pcopyout(rflux, rflux_sfc_dn, tauCLD_067u, emisCLD_105u)
+!!$
+!!$    !$acc kernels
+!!$
+!!$    !$acc loop gang
     !$omp parallel do default(none) &
     !$omp private(ip, ir, irgn, irgn_alb, iptype, nradius, valsum, chmax, A1, A2, A3, factPT, qv, length, gasno, zerosw, &
     !$omp         q_fit, dp_P, wl, beta, &
@@ -1428,24 +1428,24 @@ contains
     !$omp        MSTRN_nband, RHO_std, logfitP, fitT, logfitT, fitPLK, ptype_nradius, &
     !$omp        nch, ngasabs, igasabs, radmode, waveh, iflgb, AKD, SKD, acfc_pow, rayleigh, qmol, q, fsol, fsol_tot, wgtch)
     do j = JS, JE
-    !$acc loop gang vector &
-    !$acc& private(dz_std, logP, logT, indexP, factP, factT32, factT21, indexR, factR, tauGAS, &
-    !$acc&         tauPR, omgPR, optparam, bbar, bbarh, b_sfc, &
-    !$acc&         tau, omg, b, g, fsol_rgn, flux, flux_direct, tauCLD, emisCLD)
+!!$    !$acc loop gang vector &
+!!$    !$acc& private(dz_std, logP, logT, indexP, factP, factT32, factT21, indexR, factR, tauGAS, &
+!!$    !$acc&         tauPR, omgPR, optparam, bbar, bbarh, b_sfc, &
+!!$    !$acc&         tau, omg, b, g, fsol_rgn, flux, flux_direct, tauCLD, emisCLD)
     do i = IS, IE
 
-       !$acc loop gang vector
+!       !$acc loop gang vector
        do k = 1, rd_kmax
           dz_std(k) = rhodz(k,i,j) / RHO_std * 100.0_RP ! [cm]
        enddo
 
-       !$acc loop gang vector
+!       !$acc loop gang vector
        do k = 1, rd_kmax
           logP = log10( pres(k,i,j) )
           logT = log10( temp(k,i,j) )
 
           indexP(k) = MSTRN_nfitP
-          !$acc loop seq
+!          !$acc loop seq
           do ip = MSTRN_nfitP, 2, -1
              if( logP >= logfitP(ip) ) indexP(k) = ip
           enddo
@@ -1465,7 +1465,7 @@ contains
           iptype  = aero2ptype(iaero)
           nradius = ptype_nradius(iptype)
 
-          !$acc loop gang vector
+!          !$acc loop gang vector
           do k = 1, rd_kmax
              ! [Note] Extrapolation sometimes makes unexpected value
              if ( aerosol_radi(k,i,j,iaero) <= radmode(iptype,1) ) then
@@ -1480,7 +1480,7 @@ contains
 
              else
                 indexR(k,iaero) = -1
-                !$acc loop seq
+!                !$acc loop seq
                 do ir = 1, nradius-1
                    if (       aerosol_radi(k,i,j,iaero) <= radmode(iptype,ir+1) &
                         .AND. aerosol_radi(k,i,j,iaero) >  radmode(iptype,ir  ) ) then ! interpolation
@@ -1521,7 +1521,7 @@ contains
 
           !---< interpolation of gas parameters (P-T fitting) >---
           do ich = 1, chmax
-          !$acc loop gang vector
+!          !$acc loop gang vector
           do k = 1, rd_kmax
              tauGAS(k,ich) = 0.0_RP
           enddo
@@ -1535,7 +1535,7 @@ contains
           do igas = 1, ngasabs(iw)
              gasno = igasabs(igas,iw)
              do ich = 1, chmax
-                !$acc loop gang vector
+!                !$acc loop gang vector
                 do k = 1, rd_kmax
                    ip = indexP(k)
                    A1 = AKD(ip-1,ich,1,gasno,iw) * ( 1.0_RP - factP(k) )&
@@ -1556,7 +1556,7 @@ contains
           !--- Gas broad absorption
           if ( iflgb(I_H2O_continuum,iw) == 1 ) then
              do ich = 1, chmax
-                !$acc loop gang vector
+!                !$acc loop gang vector
                 do k = 1, rd_kmax
                    ip = indexP(k)
                    A1 = SKD(ip-1,ich,1,iw) * ( 1.0_RP-factP(k) )&
@@ -1575,16 +1575,16 @@ contains
           endif
 
           if ( iflgb(I_CFC_continuum,iw) == 1 ) then
-             !$acc loop gang vector
+!             !$acc loop gang vector
              do k = 1, rd_kmax
                 valsum = 0.0_RP
-                !$acc loop seq
+!                !$acc loop seq
                 do icfc = 1, ncfc
                    valsum = valsum + acfc_pow(icfc,iw) * cfc(k,i,j,icfc)
                 enddo
                 valsum = valsum * PPM * dz_std(k)
 
-                !$acc loop seq
+!                !$acc loop seq
                 do ich = 1, chmax
                    tauGAS(k,ich) = tauGAS(k,ich) + valsum
                 enddo
@@ -1598,12 +1598,12 @@ contains
           ! im=2,3,4: moments of the volume scattering phase function
 
           !--- Rayleigh scattering
-          !$acc loop gang vector
+!          !$acc loop gang vector
           do k = 1, rd_kmax
              dp_P = rhodz(k,i,j) * GRAV / Pstd
              length = rayleigh(iw) * dp_P
 
-             !$acc loop seq
+!             !$acc loop seq
              do im = 1, MSTRN_nstream*2+2
                 optparam(k,im,I_Cloud   ) = qmol(im,iw) * length
                 optparam(k,im,I_ClearSky) = qmol(im,iw) * length
@@ -1614,13 +1614,13 @@ contains
           do iaero = hydro_str, hydro_end
              iptype = aero2ptype(iaero)
 
-             !$acc loop gang vector
+!             !$acc loop gang vector
              do k = 1, rd_kmax
                 ir = indexR(k,iaero)
 
                 length = aerosol_conc(k,i,j,iaero) * PPM * dz_std(k)
 
-                !$acc loop seq
+!                !$acc loop seq
                 do im = 1, MSTRN_nstream*2+2
                    q_fit = q(ir  ,iptype,im,iw) * ( 1.0_RP-factR(k,iaero) ) &
                          + q(ir+1,iptype,im,iw) * (        factR(k,iaero) )
@@ -1641,13 +1641,13 @@ contains
           do iaero = aero_str, aero_end
              iptype = aero2ptype(iaero)
 
-             !$acc loop gang vector
+!             !$acc loop gang vector
              do k = 1, rd_kmax
                 ir = indexR(k,iaero)
 
                 length = aerosol_conc(k,i,j,iaero) * PPM * dz_std(k)
 
-                !$acc loop seq
+!                !$acc loop seq
                 do im = 1, MSTRN_nstream*2+2
                    q_fit = q(ir  ,iptype,im,iw) * ( 1.0_RP-factR(k,iaero) ) &
                          + q(ir+1,iptype,im,iw) * (        factR(k,iaero) )
@@ -1660,7 +1660,7 @@ contains
           enddo
 
           do icloud = 1, MSTRN_ncloud
-             !$acc loop gang vector
+!             !$acc loop gang vector
              do k = 1, rd_kmax
                 tauPR(k,icloud) = optparam(k,1,icloud)
                 omgPR(k,icloud) = optparam(k,1,icloud) - optparam(k,2,icloud)
@@ -1677,7 +1677,7 @@ contains
           enddo
 
           if ( waveh(iw) <= 1.493E+4_RP .AND. 1.493E+4_RP < waveh(iw+1) ) then ! 0.67 micron
-             !$acc loop gang vector
+!             !$acc loop gang vector
              do k = 1, rd_kmax
                 tauCLD_067u(k,i,j) = tauCLD(k) ! 0.67 micron tau for resolved clouds
              enddo
@@ -1686,7 +1686,7 @@ contains
           if ( irgn == I_SW ) then ! solar
              do ich = 1, chmax
                 do icloud = 1, MSTRN_ncloud
-                   !$acc loop gang vector
+!                   !$acc loop gang vector
                    do k = 1, rd_kmax
                       b(k,0,icloud,ich) = 0.0_RP
                       b(k,1,icloud,ich) = 0.0_RP
@@ -1703,10 +1703,10 @@ contains
              wl = 10000.0_RP / sqrt( waveh(iw) * waveh(iw+1) )
 
              ! from temp at cell center
-             !$acc loop gang vector
+!             !$acc loop gang vector
              do k = 1, rd_kmax
                 beta = 0.0_RP
-                !$acc loop seq
+!                !$acc loop seq
                 do iplk = MSTRN_nfitPLK, 1, -1
                    beta = beta / ( wl*temp(k,i,j) ) + fitPLK(iplk,iw)
                 enddo
@@ -1714,10 +1714,10 @@ contains
              enddo
 
              ! from temp at cell wall
-             !$acc loop gang vector
+!             !$acc loop gang vector
              do k = 1, rd_kmax+1
                 beta = 0.0_RP
-                !$acc loop seq
+!                !$acc loop seq
                 do iplk = MSTRN_nfitPLK, 1, -1
                    beta = beta / ( wl*temph(k,i,j) ) + fitPLK(iplk,iw)
                 enddo
@@ -1726,7 +1726,7 @@ contains
 
             ! from temp_sfc
              beta = 0.0_RP
-             !$acc loop seq
+!             !$acc loop seq
              do iplk = MSTRN_nfitPLK, 1, -1
                 beta = beta / ( wl*temp_sfc(i,j) ) + fitPLK(iplk,iw)
              enddo
@@ -1741,7 +1741,7 @@ contains
 
              !--- total tau & omega
              do icloud = 1, MSTRN_ncloud
-                !$acc loop gang vector
+!                !$acc loop gang vector
                 do k = 1, rd_kmax
                    tau(k,icloud,ich) = tauGAS(k,ich) + tauPR(k,icloud)
                    !tau(k,icloud,ich) = max( tauGAS(k,ich) + tauPR(k,icloud), 0.0_RP )
@@ -1758,7 +1758,7 @@ contains
              if( irgn == I_LW ) then ! IR
 
                 do icloud = 1, MSTRN_ncloud
-                   !$acc loop gang vector
+!                   !$acc loop gang vector
                    do k = 1, rd_kmax
                       zerosw = 0.5_RP - sign( 0.5_RP, tau(k,icloud,ich)-RD_EPS ) ! if tau < EPS, zerosw = 1
 
@@ -1802,7 +1802,7 @@ contains
           do ich = 1, chmax
 
              do icloud = 1, MSTRN_ncloud
-                !$acc loop gang vector
+!                !$acc loop gang vector
                 do k = 1, rd_kmax+1
                    rflux(k,i,j,irgn,I_up,icloud) = rflux(k,i,j,irgn,I_up,icloud) + flux(k,I_up,icloud,ich) * wgtch(ich,iw)
                    rflux(k,i,j,irgn,I_dn,icloud) = rflux(k,i,j,irgn,I_dn,icloud) + flux(k,I_dn,icloud,ich) * wgtch(ich,iw)
@@ -1816,7 +1816,7 @@ contains
 
 
              if ( waveh(iw) <= 952.0_RP .AND. 952.0_RP < waveh(iw+1) ) then ! 10.5 micron
-                !$acc loop gang vector
+!                !$acc loop gang vector
                 do k = 1, rd_kmax
                    emisCLD_105u(k,i,j) = emisCLD(k,ich) ! 10.5 micron emissivity for resolved clouds
                 enddo
@@ -1827,11 +1827,11 @@ contains
 
     end do
     end do
-    !$acc end kernels
-
-    !$acc wait
-
-    !$acc end data
+!!$    !$acc end kernels
+!!$
+!!$    !$acc wait
+!!$
+!!$    !$acc end data
 
     return
   end subroutine RD_MSTRN_DTRN3
@@ -1855,7 +1855,7 @@ contains
        flux,        &
        flux_direct, &
        emisCLD      )
-    !$acc routine vector
+!    !$acc routine vector
     use scale_const, only: &
        PI   => CONST_PI,   &
        EPS  => CONST_EPS,  &
@@ -1953,7 +1953,7 @@ contains
 
        do icloud = 1, MSTRN_ncloud
 !OCL LOOP_FISSION_TARGET(LS)
-          !$acc loop vector
+!          !$acc loop vector
           do k = 1, rd_kmax
 
              !---< two-stream truncation >---
@@ -2056,33 +2056,33 @@ contains
 
        do icloud = 1, MSTRN_ncloud
           if ( icloud == I_ClearSky ) then
-             !$acc loop vector
+!             !$acc loop vector
              do k = 1, rd_kmax
                 cf(k,icloud) = 0.0_RP
              enddo
           else
-             !$acc loop vector
+!             !$acc loop vector
              do k = 1, rd_kmax
                 cf(k,icloud) = cldfrac(k)
              enddo
           endif
 
           tau_bar_sol(1,icloud) = fsol
-          !$acc loop seq
+!          !$acc loop seq
           do k = 2, rd_kmax+1 ! k-recurrence
              Tdir = (        cf(k-1,icloud) ) * Tdir0(k-1,I_Cloud   ) &
                   + ( 1.0_RP-cf(k-1,icloud) ) * Tdir0(k-1,I_ClearSky)
              tau_bar_sol(k,icloud) = tau_bar_sol(k-1,icloud) * Tdir
           end do
 
-          !$acc loop vector
+!          !$acc loop vector
           do k = 1, rd_kmax+1
              flux_direct(k,icloud,ich) = cosSZA * tau_bar_sol(k,icloud)
           end do
 
           ic = icloud + ( ich - 1 ) * MSTRN_ncloud
 
-          !$acc loop vector
+!          !$acc loop vector
           do k = 1, rd_kmax
              Em(k,ic) = (        cf(k,icloud) ) * ( Em_LW(k,I_Cloud   ) &
                                                   + Em_SW(k,I_Cloud   ) * tau_bar_sol(k,icloud) ) &
@@ -2112,7 +2112,7 @@ contains
           !---< Adding-Doubling method >---
           ! [note] TOA->Surface is positive direction. "pls" means upper to lower altitude.
 
-          !$acc loop seq
+!          !$acc loop seq
           do k = 1, rd_kmax
              R(k,ic) = (        cf(k,icloud) ) * R0(k,I_Cloud   ) &
                      + ( 1.0_RP-cf(k,icloud) ) * R0(k,I_ClearSky)
@@ -2126,13 +2126,13 @@ contains
 
     do ich = 1, chmax
        ic = I_Cloud + ( ich - 1 ) * MSTRN_ncloud
-       !$acc loop vector
+!       !$acc loop vector
        do k = 1, rd_kmax
           emisCLD(k,ich) = 1.0_RP - R(k,ic) - T(k,ic)
        enddo
     end do
 
-    !$acc loop vector
+!    !$acc loop vector
     do ic = 1, chmax * MSTRN_ncloud
        R12pls(ic,rd_kmax+1) = R (rd_kmax+1,ic)
        E12mns(ic,rd_kmax+1) = Em(rd_kmax+1,ic)
@@ -2141,7 +2141,7 @@ contains
     end do
     do kk = 1, rd_kmax
 !OCL ITERATIONS(max=20)
-       !$acc loop vector
+!       !$acc loop vector
        do ic = 1, chmax * MSTRN_ncloud
           ! adding: surface to TOA
           k = rd_kmax - kk + 1
@@ -2168,7 +2168,7 @@ contains
        Umns = E12mns(ic,1) + R12pls(ic,1) * Upls
        flux(1,I_up,icloud,ich) = Wscale_irgn * Umns
        flux(1,I_dn,icloud,ich) = Wscale_irgn * Upls + flux_direct(1,icloud,ich)
-       !$acc loop vector
+!       !$acc loop vector
        do k = 2, rd_kmax+1
           Upls = ( E12pls(ic,k-1) + R12mns(ic,k-1)*E12mns(ic,k) ) / ( 1.0_RP - R12mns(ic,k-1)*R12pls(ic,k) )
           Umns = E12mns(ic,k) + R12pls(ic,k) * Upls
