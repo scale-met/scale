@@ -38,6 +38,7 @@ module scale_ocean_grid_cartesC_real
   real(RP), public              :: OCEAN_GRID_CARTESC_REAL_TOTAREA     !< total area
   real(RP), public, allocatable :: OCEAN_GRID_CARTESC_REAL_VOL (:,:,:) !< volume of grid cell
   real(RP), public              :: OCEAN_GRID_CARTESC_REAL_TOTVOL      !< total volume
+  !$acc declare create(OCEAN_GRID_CARTESC_REAL_TOTAREA,OCEAN_GRID_CARTESC_REAL_TOTVOL)
 
   !-----------------------------------------------------------------------------
   !
@@ -57,6 +58,7 @@ contains
     ! at this moment, horizontal grid is identical to that of the atmosphere
     allocate( OCEAN_GRID_CARTESC_REAL_AREA(    OIA,OJA) )
     allocate( OCEAN_GRID_CARTESC_REAL_VOL (OKA,OIA,OJA) )
+    !$acc enter data create(OCEAN_GRID_CARTESC_REAL_AREA,OCEAN_GRID_CARTESC_REAL_VOL)
 
     return
   end subroutine OCEAN_GRID_CARTESC_REAL_setup
@@ -66,6 +68,7 @@ contains
   subroutine OCEAN_GRID_CARTESC_REAL_finalize
     implicit none
 
+    !$acc exit data delete(OCEAN_GRID_CARTESC_REAL_AREA,OCEAN_GRID_CARTESC_REAL_VOL)
     deallocate( OCEAN_GRID_CARTESC_REAL_AREA )
     deallocate( OCEAN_GRID_CARTESC_REAL_VOL )
 
@@ -118,6 +121,8 @@ contains
 
     call FILE_CARTESC_set_coordinates_ocean( OCEAN_GRID_CARTESC_REAL_VOL(:,:,:) ) ! [IN]
 
+    !$acc update device(OCEAN_GRID_CARTESC_REAL_AREA,OCEAN_GRID_CARTESC_REAL_VOL)
+    !$acc update device(OCEAN_GRID_CARTESC_REAL_TOTAREA,OCEAN_GRID_CARTESC_REAL_TOTVOL)
     return
   end subroutine OCEAN_GRID_CARTESC_REAL_set_areavol
 

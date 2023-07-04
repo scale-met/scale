@@ -81,7 +81,9 @@ contains
 
     integer :: i, j, n
     !---------------------------------------------------------------------------
+    !$acc data copyin(cosSZA) copyout(SFC_albedo)
 
+    !$acc kernels
     !$omp parallel do private(am1,s)
     do j = OJS, OJE
     do i = OIS, OIE
@@ -90,6 +92,7 @@ contains
 
        s = 0.0_RP
 !OCL UNROLL
+       !$acc loop seq
        do n = 1, 5
           ! power of am1 is different form the paper, in which the number is wrong.
 !         s = s + c_ocean_albedo(n,1) * tr1**(n-1) &
@@ -104,7 +107,9 @@ contains
        SFC_albedo(i,j,I_R_diffuse) = SFC_albedo(i,j,I_R_direct)
     enddo
     enddo
+    !$acc end kernels 
 
+    !$acc end data
     return
   end subroutine OCEAN_PHY_ALBEDO_nakajima00
 
