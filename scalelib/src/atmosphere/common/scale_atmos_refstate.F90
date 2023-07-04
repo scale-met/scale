@@ -399,6 +399,12 @@ contains
     real(RP) :: qsat(KA)
     real(RP) :: psat_sfc
 
+#ifdef _OPENACC
+    real(RP) :: work1(KA)
+    real(RP) :: work2(KA)
+    real(RP) :: work3(KA)
+#endif
+
     logical :: converged
     integer :: k
     !---------------------------------------------------------------------------
@@ -421,6 +427,9 @@ contains
                                pott(:), qv(:), qc(:),              & ! [IN]
                                pres_sfc, pott_sfc, qv_sfc, qc_sfc, & ! [IN]
                                CZ(:), FZ(:),                       & ! [IN]
+#ifdef _OPENACC
+                               work1(:), work2(:), work3(:),       & ! [WORK]
+#endif
                                dens(:), temp(:), pres(:),          & ! [OUT]
                                temp_sfc,                           & ! [OUT]
                                converged                           ) ! [OUT]
@@ -447,6 +456,9 @@ contains
                                pott(:), qv(:), qc(:),              & ! [IN]
                                pres_sfc, pott_sfc, qv_sfc, qc_sfc, & ! [IN]
                                CZ(:), FZ(:),                       & ! [IN]
+#ifdef _OPENACC
+                               work1(:), work2(:), work3(:),       & ! [WORK]
+#endif
                                dens(:), temp(:), pres(:),          & ! [OUT]
                                temp_sfc,                           & ! [OUT]
                                converged                           )
@@ -512,6 +524,12 @@ contains
     real(RP) :: qsat(KA)
     real(RP) :: psat_sfc
 
+#ifdef _OPENACC
+    real(RP) :: work1(KA)
+    real(RP) :: work2(KA)
+    real(RP) :: work3(KA)
+#endif
+
     logical :: converged
     integer :: k
     !---------------------------------------------------------------------------
@@ -532,6 +550,9 @@ contains
                                pott(:), qv(:), qc(:),              & ! [IN]
                                pres_sfc, pott_sfc, qv_sfc, qc_sfc, & ! [IN]
                                CZ(:), FZ(:),                       & ! [IN]
+#ifdef _OPENACC
+                               work1(:), work2(:), work3(:),       & ! [WORK]
+#endif
                                dens(:), temp(:), pres(:),          & ! [OUT]
                                temp_sfc,                           & ! [OUT]
                                converged                           ) ! [OUT]
@@ -557,6 +578,9 @@ contains
                                pott(:), qv(:), qc(:),              & ! [IN]
                                pres_sfc, pott_sfc, qv_sfc, qc_sfc, & ! [IN]
                                CZ(:), FZ(:),                       & ! [IN]
+#ifdef _OPENACC
+                               work1(:), work2(:), work3(:),       & ! [WORK]
+#endif
                                dens(:), temp(:), pres(:),          & ! [OUT]
                                temp_sfc,                           & ! [OUT]
                                converged                           ) ! [OUT]
@@ -673,7 +697,7 @@ contains
                               work(:,:,:)                         ) ! [OUT]
        call STATISTICS_horizontal_mean( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
                                         work(:,:,:), area(:,:),  & ! [IN]
-                                        ATMOS_REFSTATE1D_temp(:) ) ! [IN]
+                                        ATMOS_REFSTATE1D_temp(:) ) ! [OUT]
 
        call INTERP_VERT_xi2z( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
                               CZ(:), REAL_CZ(:,:,:), PRES(:,:,:), & ! [IN]

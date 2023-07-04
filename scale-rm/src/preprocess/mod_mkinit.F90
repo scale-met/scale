@@ -1352,6 +1352,12 @@ contains
 
     logical :: converged
 
+#ifdef _OPENACC
+    real(RP) :: work1(KA)
+    real(RP) :: work2(KA)
+    real(RP) :: work3(KA)
+#endif
+
     integer :: ierr
 
     namelist / PARAM_MKINIT_SOUNDING / &
@@ -1450,6 +1456,9 @@ contains
                                pott(:), qv(:), qc(:),                                  & ! [IN]
                                pres_sfc(1,1), pott_sfc(1,1), qv_sfc(1,1), qc_sfc(1,1), & ! [IN]
                                CZ(:), FZ(:),                                           & ! [IN]
+#ifdef _OPENACC
+                               work1(:), work2(:), work3(:),                           & ! [WORK]
+#endif
                                DENS(:), temp(:), pres(:), temp_sfc(1,1),               & ! [OUT]
                                converged                                               ) ! [OUT]
 
@@ -1664,6 +1673,12 @@ contains
 
     logical :: converged
 
+#ifdef _OPENACC
+    real(RP) :: work1(KA)
+    real(RP) :: work2(KA)
+    real(RP) :: work3(KA)
+#endif
+
     integer :: k, i, j
     integer :: ierr
     !---------------------------------------------------------------------------
@@ -1700,6 +1715,9 @@ contains
                                pott(:,1,1), qv(:,1,1), qc(:,1,1),                      & ! [IN]
                                pres_sfc(1,1), pott_sfc(1,1), qv_sfc(1,1), qc_sfc(1,1), & ! [IN]
                                CZ(:), FZ(:),                                           & ! [IN]
+#ifdef _OPENACC
+                               work1(:), work2(:), work3(:),                           & ! [WORK]
+#endif
                                DENS(:,1,1), temp(:,1,1), pres(:,1,1), temp_sfc(1,1),   & ! [OUT]
                                converged                                               ) ! [OUT]
 
@@ -1772,6 +1790,12 @@ contains
 
     logical :: converged
 
+#ifdef _OPENACC
+    real(RP) :: work1(KA)
+    real(RP) :: work2(KA)
+    real(RP) :: work3(KA)
+#endif
+
     integer :: ierr
     integer :: k, i, j
     !---------------------------------------------------------------------------
@@ -1810,6 +1834,9 @@ contains
                                pott(:,1,1), qv(:,1,1), qc(:,1,1),                      & ! [IN]
                                pres_sfc(1,1), pott_sfc(1,1), qv_sfc(1,1), qc_sfc(1,1), & ! [IN]
                                CZ(:), FZ(:),                                           & ! [IN]
+#ifdef _OPENACC
+                               work1(:), work2(:), work3(:),                           & ! [WORK]
+#endif
                                DENS(:,1,1), temp(:,1,1), pres(:,1,1), temp_sfc(1,1),   & ! [OUT]
                                converged                                               ) ! [OUT]
 
@@ -1922,6 +1949,12 @@ contains
 
     logical :: converged
 
+#ifdef _OPENACC
+    real(RP) :: work1(KA)
+    real(RP) :: work2(KA)
+    real(RP) :: work3(KA)
+#endif
+
     integer :: ierr
     integer :: k, i, j
     !---------------------------------------------------------------------------
@@ -1957,6 +1990,9 @@ contains
                                pott(:,1,1), qv(:,1,1), qc(:,1,1),                      & ! [IN]
                                pres_sfc(1,1), pott_sfc(1,1), qv_sfc(1,1), qc_sfc(1,1), & ! [IN]
                                CZ(:), FZ(:),                                           & ! [IN]
+#ifdef _OPENACC
+                               work1(:), work2(:), work3(:),                           & ! [WORK]
+#endif
                                DENS(:,1,1), temp(:,1,1), pres(:,1,1), temp_sfc(1,1),   & ! [OUT]
                                converged                                               ) ! [OUT]
 
@@ -2011,6 +2047,12 @@ contains
 
     logical :: converged
 
+#ifdef _OPENACC
+    real(RP) :: work1(KA)
+    real(RP) :: work2(KA)
+    real(RP) :: work3(KA)
+#endif
+
     integer :: ierr
     integer :: k, i, j
     !---------------------------------------------------------------------------
@@ -2050,6 +2092,9 @@ contains
                                pott(:,1,1), qv(:,1,1), qc(:,1,1),                      & ! [IN]
                                pres_sfc(1,1), pott_sfc(1,1), qv_sfc(1,1), qc_sfc(1,1), & ! [IN]
                                CZ(:), FZ(:),                                           & ! [IN]
+#ifdef _OPENACC
+                               work1(:), work2(:), work3(:),                           & ! [WORK]
+#endif
                                DENS(:,1,1), temp(:,1,1), pres(:,1,1), temp_sfc(1,1),   & ! [OUT]
                                converged                                               ) ! [OUT]
 
@@ -2121,6 +2166,12 @@ contains
 
     logical :: converged
 
+#ifdef _OPENACC
+    real(RP) :: work1(KA)
+    real(RP) :: work2(KA)
+    real(RP) :: work3(KA)
+#endif
+
     integer :: ierr
     integer :: k, i, j
     !---------------------------------------------------------------------------
@@ -2157,6 +2208,9 @@ contains
                                pott(:,1,1), qv(:,1,1), qc(:,1,1),                      & ! [IN]
                                pres_sfc(1,1), pott_sfc(1,1), qv_sfc(1,1), qc_sfc(1,1), & ! [IN]
                                CZ(:), FZ(:),                                           & ! [IN]
+#ifdef _OPENACC
+                               work1(:), work2(:), work3(:),                           & ! [WORK]
+#endif
                                DENS(:,1,1), temp(:,1,1), pres(:,1,1), temp_sfc(1,1),   & ! [OUT]
                                converged                                               ) ! [OUT]
 
@@ -2472,6 +2526,12 @@ contains
 
     integer :: itr
 
+#ifdef _OPENACC
+    real(RP) :: work1(KA)
+    real(RP) :: work2(KA)
+    real(RP) :: work3(KA)
+#endif
+
     integer,  parameter :: ITRMAX = 1000
     real(RP), parameter :: CONV_EPS = 1E-15_RP
     !---------------------------------------------------------------------------
@@ -2561,6 +2621,9 @@ contains
                                   pott(:,i,j), qv(:,i,j), qc(:,i,j),                      & ! [IN]
                                   pres_sfc(i,j), pott_sfc(i,j), qv_sfc(i,j), qc_sfc(i,j), & ! [IN]
                                   REAL_CZ(:,i,j), REAL_FZ(:,i,j),                         & ! [IN]
+#ifdef _OPENACC
+                                  work1(:), work2(:), work3(:),                           & ! [WORK]
+#endif
                                   DENS(:,i,j), temp(:,i,j), pres(:,i,j), temp_sfc(i,j),   & ! [OUT]
                                   converged                                               ) ! [OUT]
     enddo
@@ -2634,6 +2697,12 @@ contains
 
     logical :: converged
 
+#ifdef _OPENACC
+    real(RP) :: work1(KA)
+    real(RP) :: work2(KA)
+    real(RP) :: work3(KA)
+#endif
+
     integer :: ierr
     integer :: k, i, j
     !---------------------------------------------------------------------------
@@ -2680,6 +2749,9 @@ contains
                                pott(:,1,1), qv(:,1,1), qc(:,1,1),                      & ! [IN]
                                pres_sfc(1,1), pott_sfc(1,1), qv_sfc(1,1), qc_sfc(1,1), & ! [IN]
                                CZ(:), FZ(:),                                           & ! [IN]
+#ifdef _OPENACC
+                               work1(:), work2(:), work3(:),                           & ! [WORK]
+#endif
                                DENS(:,1,1), temp(:,1,1), pres(:,1,1), temp_sfc(1,1),   & ! [OUT]
                                converged                                               ) ! [OUT]
 
@@ -2707,6 +2779,9 @@ contains
                                pott(:,1,1), qv(:,1,1), qc(:,1,1),                      & ! [IN]
                                pres_sfc(1,1), pott_sfc(1,1), qv_sfc(1,1), qc_sfc(1,1), & ! [IN]
                                CZ(:), FZ(:),                                           & ! [IN]
+#ifdef _OPENACC
+                               work1(:), work2(:), work3(:),                           & ! [WORK]
+#endif
                                DENS(:,1,1), temp(:,1,1), pres(:,1,1), temp_sfc(1,1),   & ! [OUT]
                                converged                                               ) ! [OUT]
 
@@ -4558,6 +4633,12 @@ contains
 
     logical :: converged
 
+#ifdef _OPENACC
+    real(RP) :: work1(KA)
+    real(RP) :: work2(KA)
+    real(RP) :: work3(KA)
+#endif
+
     integer :: ierr
     integer :: k, i, j
     !---------------------------------------------------------------------------
@@ -4605,6 +4686,9 @@ contains
                                pott(:,1,1), qv(:,1,1), qc(:,1,1),                      & ! [IN]
                                pres_sfc(1,1), pott_sfc(1,1), qv_sfc(1,1), qc_sfc(1,1), & ! [IN]
                                CZ(:), FZ(:),                                           & ! [IN]
+#ifdef _OPENACC
+                               work1(:), work2(:), work3(:),                           & ! [WORK]
+#endif
                                DENS(:,1,1), temp(:,1,1), pres(:,1,1), temp_sfc(1,1),   & ! [OUT]
                                converged                                               ) ! [OUT]
 
@@ -4632,6 +4716,9 @@ contains
                                pott(:,1,1), qv(:,1,1), qc(:,1,1),                      & ! [IN]
                                pres_sfc(1,1), pott_sfc(1,1), qv_sfc(1,1), qc_sfc(1,1), & ! [IN]
                                CZ(:), FZ(:),                                           & ! [IN]
+#ifdef _OPENACC
+                               work1(:), work2(:), work3(:),                           & ! [WORK]
+#endif
                                DENS(:,1,1), temp(:,1,1), pres(:,1,1), temp_sfc(1,1),   & ! [OUT]
                                converged                                               ) ! [OUT]
 

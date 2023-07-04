@@ -48,6 +48,9 @@ module scale_atmos_hydrostatic
   public :: ATMOS_HYDROSTATIC_barometric_law_pres
 
   interface ATMOS_HYDROSTATIC_buildrho
+#ifdef _OPENACC
+     module procedure ATMOS_HYDROSTATIC_buildrho_1D_cpu
+#endif
      module procedure ATMOS_HYDROSTATIC_buildrho_1D
      module procedure ATMOS_HYDROSTATIC_buildrho_3D
   end interface ATMOS_HYDROSTATIC_buildrho
@@ -155,12 +158,60 @@ contains
 
   !-----------------------------------------------------------------------------
   !> Build up density from surface (1D)
+#ifdef _OPENACC
+!OCL SERIAL
+  subroutine ATMOS_HYDROSTATIC_buildrho_1D_cpu( &
+       KA, KS, KE, &
+       pott, qv, qc,                       &
+       pres_sfc, pott_sfc, qv_sfc, qc_sfc, &
+       cz, fz,                             &
+       dens, temp, pres,                   &
+       temp_sfc,                           &
+       converged                           )
+    implicit none
+
+    integer,  intent(in)  :: KA, KS, KE
+    real(RP), intent(in)  :: pott(KA)        !< potential temperature [K]
+    real(RP), intent(in)  :: qv  (KA)        !< water vapor           [kg/kg]
+    real(RP), intent(in)  :: qc  (KA)        !< liquid water          [kg/kg]
+    real(RP), intent(in)  :: pres_sfc        !< surface pressure              [Pa]
+    real(RP), intent(in)  :: pott_sfc        !< surface potential temperature [K]
+    real(RP), intent(in)  :: qv_sfc          !< surface water vapor           [kg/kg]
+    real(RP), intent(in)  :: qc_sfc          !< surface liquid water          [kg/kg]
+    real(RP), intent(in)  :: cz  (KA)
+    real(RP), intent(in)  :: fz  (0:KA)
+    real(RP), intent(out) :: dens(KA)        !< density               [kg/m3]
+    real(RP), intent(out) :: temp(KA)        !< temperature           [K]
+    real(RP), intent(out) :: pres(KA)        !< pressure              [Pa]
+    real(RP), intent(out) :: temp_sfc        !< surface temperature           [K]
+    logical,  intent(out) :: converged
+
+    real(RP) :: dz(KA)
+    real(RP) :: work1(KA)
+    real(RP) :: work2(KA)
+
+    call ATMOS_HYDROSTATIC_buildrho_1D( &
+         KA, KS, KE, &
+         pott, qv, qc,                       &
+         pres_sfc, pott_sfc, qv_sfc, qc_sfc, &
+         cz, fz,                             &
+         dz, work1, work2,                   &
+         dens, temp, pres,                   &
+         temp_sfc,                           &
+         converged                           )
+
+    return
+  end subroutine ATMOS_HYDROSTATIC_buildrho_1D_cpu
+#endif
 !OCL SERIAL
   subroutine ATMOS_HYDROSTATIC_buildrho_1D( &
        KA, KS, KE, &
        pott, qv, qc,                       &
        pres_sfc, pott_sfc, qv_sfc, qc_sfc, &
        cz, fz,                             &
+#ifdef _OPENACC
+       dz, work1, work2,                   &
+#endif
        dens, temp, pres,                   &
        temp_sfc,                           &
        converged                           )
@@ -190,6 +241,14 @@ contains
     real(RP), intent(out) :: temp_sfc        !< surface temperature           [K]
     logical,  intent(out) :: converged
 
+#ifdef _OPENACC
+    real(RP), intent(out) :: dz(KA)
+    real(RP), intent(out) :: work1(KA)
+    real(RP), intent(out) :: work2(KA)
+#else
+    real(RP) :: dz(KA)
+#endif
+
     real(RP) :: dens_sfc
     real(RP) :: Rtot_sfc
     real(RP) :: CVtot_sfc
@@ -199,7 +258,6 @@ contains
     real(RP) :: CVtot
     real(RP) :: CPtot
     real(RP) :: CPovCV
-    real(RP) :: dz(KA)
 
     logical  :: error
     integer  :: k
@@ -260,6 +318,9 @@ contains
        call ATMOS_HYDROSTATIC_buildrho_atmos_1D( KA, KS, KE, &
                                                  pott(:), qv(:), qc(:), & ! [IN]
                                                  dz(:),                 & ! [IN]
+#ifdef _OPENACC
+                                                 work1(:), work2(:),    & ! [WORK]
+#endif
                                                  dens(:),               & ! [INOUT]
                                                  temp(:), pres(:),      & ! [OUT]
                                                  converged              ) ! [OUT]
@@ -321,6 +382,12 @@ contains
 
     real(RP) :: dens_mean
 
+#ifdef _OPENACC
+    real(RP) :: work1(KA,IA,JA)
+    real(RP) :: work2(KA,IA,JA)
+    real(RP) :: work3(KA,IA,JA)
+#endif
+
     logical  :: converged
     integer  :: k, i, j
     !---------------------------------------------------------------------------
@@ -343,6 +410,9 @@ contains
                                            pott(:,i,j), qv(:,i,j), qc(:,i,j),                      & ! [IN]
                                            pres_sfc(i,j), pott_sfc(i,j), qv_sfc(i,j), qc_sfc(i,j), & ! [IN]
                                            cz(:,i,j), fz(:,i,j),                                   & ! [IN]
+#ifdef _OPENACC
+                                           work1(:,i,j), work2(:,i,j), work3(:,i,j),               & ! [WORK]
+#endif
                                            dens(:,i,j), temp(:,i,j), pres(:,i,j),                  & ! [OUT]
                                            temp_sfc(i,j),                                          & ! [OUT]
                                            converged                                               ) ! [OUT]
@@ -659,6 +729,9 @@ contains
        KA, KS, KE, &
        pott, qv, qc, &
        dz,           &
+#ifdef _OPENACC
+       Rtot, CPovCV, &
+#endif
        dens,         &
        temp, pres,   &
        converged     )
@@ -686,8 +759,13 @@ contains
     real(RP), intent(out)   :: pres(KA) !< pressure              [Pa]
     logical,  intent(out)   :: converged
 
+#ifdef _OPENACC
+    real(RP), intent(out) :: Rtot  (KA)
+    real(RP), intent(out) :: CPovCV(KA)
+#else
     real(RP) :: Rtot  (KA)
     real(RP) :: CPovCV(KA)
+#endif
     real(RP) :: CVtot
     real(RP) :: CPtot
 
@@ -770,6 +848,9 @@ contains
        KA, KS, KE, &
        pott, qv, qc, &
        dz,           &
+#ifdef _OPENACC
+       Rtot, CPovCV, &
+#endif
        dens,         &
        temp, pres,   &
        converged     )
@@ -797,8 +878,13 @@ contains
     real(RP), intent(out)   :: pres(KA) !< pressure              [Pa]
     logical,  intent(out)   :: converged
 
+#ifdef _OPENACC
+    real(RP), intent(out) :: Rtot  (KA)
+    real(RP), intent(out) :: CPovCV(KA)
+#else
     real(RP) :: Rtot  (KA)
     real(RP) :: CPovCV(KA)
+#endif
     real(RP) :: CVtot
     real(RP) :: CPtot
 
@@ -866,9 +952,9 @@ contains
           temp(k) = pres(k) / ( dens(k) * Rtot(k) )
        enddo
 
-       dens(   1:KS-1) = dens(KS)
-       pres(   1:KS-1) = pres(KS)
-       temp(   1:KS-1) = temp(KS)
+!!$       dens(   1:KS-1) = dens(KS)
+!!$       pres(   1:KS-1) = pres(KS)
+!!$       temp(   1:KS-1) = temp(KS)
     end if
 
     return
@@ -1020,6 +1106,11 @@ contains
 
     integer, pointer :: kref_(:,:)
 
+#ifdef _OPENACC
+    real(RP) :: work1(KA,IA,JA)
+    real(RP) :: work2(KA,IA,JA)
+#endif
+
     logical :: converged
     integer :: i, j
     !---------------------------------------------------------------------------
@@ -1050,6 +1141,9 @@ contains
        call ATMOS_HYDROSTATIC_buildrho_atmos_1D( KA, kref_(i,j), KE, &
                                                  pott(:,i,j), qv(:,i,j), qc(:,i,j), & ! [IN]
                                                  dz(:,i,j),                         & ! [IN]
+#ifdef _OPENACC
+                                                 work1(:,i,j), work2(:,i,j),        & ! [WORK]
+#endif
                                                  dens(:,i,j),                       & ! [INOUT]
                                                  temp(:,i,j), pres(:,i,j),          & ! [OUT]
                                                  converged                          ) ! [OUT]
@@ -1098,6 +1192,10 @@ contains
     integer, pointer :: kref_(:,:)
     logical :: converged
     integer :: i, j
+#ifdef _OPENACC
+    real(RP) :: work1(KA,IA,JA)
+    real(RP) :: work2(KA,IA,JA)
+#endif
     !---------------------------------------------------------------------------
 
     converged = .true.
@@ -1114,6 +1212,9 @@ contains
           call ATMOS_HYDROSTATIC_buildrho_atmos_rev_1D( KA, KS, kref_(i,j), &
                                                         pott(:,i,j), qv(:,i,j), qc(:,i,j), & ! [IN]
                                                         dz(:,i,j),                         & ! [IN]
+#ifdef _OPENACC
+                                                        work1(:,i,j), work2(:,i,j),        & ! [WORK]
+#endif
                                                         dens(:,i,j),                       & ! [INOUT]
                                                         temp(:,i,j), pres(:,i,j),          & ! [OUT]
                                                         converged                          ) ! [OUT]
@@ -1131,6 +1232,9 @@ contains
           call ATMOS_HYDROSTATIC_buildrho_atmos_rev_1D( KA, KS, KE,                        &
                                                         pott(:,i,j), qv(:,i,j), qc(:,i,j), & ! [IN]
                                                         dz(:,i,j),                         & ! [IN]
+#ifdef _OPENACC
+                                                        work1(:,i,j), work2(:,i,j),        & ! [WORK]
+#endif
                                                         dens(:,i,j),                       & ! [INOUT]
                                                         temp(:,i,j), pres(:,i,j),          & ! [OUT]
                                                         converged                          ) ! [OUT]
@@ -1155,6 +1259,9 @@ contains
        temp, qv, qc,                       &
        pres_sfc, temp_sfc, qv_sfc, qc_sfc, &
        cz, fz,                             &
+#ifdef _OPENACC
+       dz, work1, work2, work3,            &
+#endif
        dens, pott, pres, pott_sfc,         &
        converged                           )
     !$acc routine seq
@@ -1184,6 +1291,15 @@ contains
     real(RP), intent(out) :: pott_sfc !< surface potential temperature [K]
     logical,  intent(out) :: converged
 
+#ifdef _OPENACC
+    real(RP), intent(out) :: dz(KA)
+    real(RP), intent(out) :: work1(KA)
+    real(RP), intent(out) :: work2(KA)
+    real(RP), intent(out) :: work3(KA)
+#else
+    real(RP) :: dz(KA)
+#endif
+
     real(RP) :: dens_sfc
 
     real(RP) :: Rtot_sfc
@@ -1196,8 +1312,6 @@ contains
     real(RP) :: RovCP_sfc
     real(RP) :: dens_s, dhyd, dgrd
     integer  :: ite
-
-    real(RP) :: dz(KA)
 
     integer :: k
     !---------------------------------------------------------------------------
@@ -1261,6 +1375,9 @@ contains
        call ATMOS_HYDROSTATIC_buildrho_bytemp_atmos_1D( KA, KS, KE, &
                                                         temp(:), qv(:), qc(:), & ! [IN]
                                                         dz  (:),               & ! [IN]
+#ifdef _OPENACC
+                                                        work1(:), work2(:), work3(:), & ! [WORK]
+#endif
                                                         dens(:),               & ! [INOUT]
                                                         pott(:), pres(:),      & ! [OUT]
                                                         converged              ) ! [OUT]
@@ -1310,6 +1427,13 @@ contains
 
     logical :: converged
 
+#ifdef _OPENACC
+    real(RP) :: work1(KA,IA,JA)
+    real(RP) :: work2(KA,IA,JA)
+    real(RP) :: work3(KA,IA,JA)
+    real(RP) :: work4(KA,IA,JA)
+#endif
+
     integer  :: i, j
     !---------------------------------------------------------------------------
 
@@ -1326,6 +1450,9 @@ contains
                                                   temp(:,i,j), qv(:,i,j), qc(:,i,j),                      & ! [IN]
                                                   pres_sfc(i,j), temp_sfc(i,j), qv_sfc(i,j), qc_sfc(i,j), & ! [IN]
                                                   cz(:,i,j), fz(:,i,j),                                   & ! [IN]
+#ifdef _OPENACC
+                                                  work1(:,i,j), work2(:,i,j), work3(:,i,j), work4(:,i,j), & ! [WORK]
+#endif
                                                   dens(:,i,j), pott(:,i,j), pres(:,i,j),                  & ! [OUT]
                                                   pott_sfc(i,j),                                          & ! [OUT]
                                                   converged                                               ) ! [OUT]
@@ -1348,6 +1475,11 @@ contains
        KA, KS, KE, &
        temp, qv, qc, &
        dz,           &
+#ifdef _OPENACC
+       Rtot,         &
+       CVtot,        &
+       CPtot,        &
+#endif
        dens,         &
        pott, pres,   &
        converged     )
@@ -1373,9 +1505,15 @@ contains
     real(RP), intent(out)   :: pres(KA) !< pressure              [Pa]
     logical,  intent(out)   :: converged
 
+#ifdef _OPENACC
+    real(RP), intent(out) :: Rtot  (KA)
+    real(RP), intent(out) :: CVtot (KA)
+    real(RP), intent(out) :: CPtot (KA)
+#else
     real(RP) :: Rtot  (KA)
     real(RP) :: CVtot (KA)
     real(RP) :: CPtot (KA)
+#endif
 
     real(RP) :: RovCP
     real(RP) :: dens_s, dhyd, dgrd
@@ -1452,6 +1590,11 @@ contains
        KA, KS, KE, &
        temp, qv, qc, &
        dz,           &
+#ifdef _OPENACC
+       Rtot,         &
+       CVtot,        &
+       CPtot,        &
+#endif
        dens,         &
        pott, pres,   &
        converged     )
@@ -1477,9 +1620,15 @@ contains
     real(RP), intent(out)   :: pres(KA) !< pressure              [Pa]
     logical,  intent(out)   :: converged
 
+#ifdef _OPENACC
+    real(RP), intent(out) :: Rtot  (KA)
+    real(RP), intent(out) :: CVtot (KA)
+    real(RP), intent(out) :: CPtot (KA)
+#else
     real(RP) :: Rtot  (KA)
     real(RP) :: CVtot (KA)
     real(RP) :: CPtot (KA)
+#endif
 
     real(RP) :: RovCP
     real(RP) :: dens_s, dhyd, dgrd
@@ -1575,6 +1724,11 @@ contains
 
     logical :: converged
 
+#ifdef _OPENACC
+    real(RP) :: work1(KA,IA,JA)
+    real(RP) :: work2(KA,IA,JA)
+    real(RP) :: work3(KA,IA,JA)
+#endif
     integer  :: i, j
     !---------------------------------------------------------------------------
 
@@ -1589,6 +1743,9 @@ contains
        call ATMOS_HYDROSTATIC_buildrho_bytemp_atmos_1D( KA, KS, KE, &
                                                         temp(:,i,j), qv(:,i,j), qc(:,i,j), & ! [IN]
                                                         dz(:,i,j),                         & ! [IN]
+#ifdef _OPENACC
+                                                        work1(:,i,j), work2(:,i,j), work3(:,i,j), & ! [WORK]
+#endif
                                                         dens(:,i,j),                       & ! [INOUT]
                                                         pott(:,i,j), pres(:,i,j),          & ! [OUT]
                                                         converged                          ) ! [OUT]
