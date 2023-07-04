@@ -473,7 +473,7 @@ contains
     integer :: nit, it
 
 #ifdef _OPENACC
-    real(RP) :: work(KA,2)
+    real(RP) :: work(KA,4)
 #endif
     !---------------------------------------------------------------------------
 
