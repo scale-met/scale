@@ -55,6 +55,7 @@ contains
     ! at this moment, horizontal grid is identical to that of the atmosphere
     allocate( LAND_GRID_CARTESC_REAL_AREA(    LIA,LJA) )
     allocate( LAND_GRID_CARTESC_REAL_VOL (LKA,LIA,LJA) )
+    !$acc enter data create(LAND_GRID_CARTESC_REAL_AREA, LAND_GRID_CARTESC_REAL_VOL)
 
     return
   end subroutine LAND_GRID_CARTESC_REAL_setup
@@ -64,6 +65,7 @@ contains
   subroutine LAND_GRID_CARTESC_REAL_finalize
     implicit none
 
+    !$acc exit data delete(LAND_GRID_CARTESC_REAL_AREA, LAND_GRID_CARTESC_REAL_VOL)
     deallocate( LAND_GRID_CARTESC_REAL_AREA  )
     deallocate( LAND_GRID_CARTESC_REAL_VOL   )
 
@@ -95,6 +97,7 @@ contains
        LAND_GRID_CARTESC_REAL_TOTAREA = LAND_GRID_CARTESC_REAL_TOTAREA + LAND_GRID_CARTESC_REAL_AREA(i,j)
     end do
     end do
+    !$acc update device(LAND_GRID_CARTESC_REAL_AREA) async
 
     do j = 1,   LJA
     do i = 1,   LIA
@@ -103,6 +106,7 @@ contains
     enddo
     enddo
     enddo
+    !$acc update device(LAND_GRID_CARTESC_REAL_VOL) async
 
     LAND_GRID_CARTESC_REAL_TOTVOL = 0.0_RP
     do j = LJS, LJE
@@ -114,6 +118,7 @@ contains
     end do
 
     call FILE_CARTESC_set_coordinates_land( LAND_GRID_CARTESC_REAL_VOL(:,:,:) ) ! [IN]
+    !$acc wait
 
     return
   end subroutine LAND_GRID_CARTESC_REAL_set_areavol

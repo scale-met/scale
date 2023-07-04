@@ -98,6 +98,7 @@ contains
     allocate( LAND_GRID_CARTESC_CZ (LKS  :LKE) )
     allocate( LAND_GRID_CARTESC_FZ (LKS-1:LKE) )
     allocate( LAND_GRID_CARTESC_CDZ(LKS  :LKE) )
+    !$acc enter data create(LAND_GRID_CARTESC_CZ, LAND_GRID_CARTESC_FZ, LAND_GRID_CARTESC_CDZ) async
 
     LOG_NEWLINE
     LOG_INFO("LAND_GRID_CARTESC_setup",*) 'Land grid information '
@@ -130,6 +131,8 @@ contains
        LOG_INFO_CONT('(1x,A)')                  '|=================================|'
     endif
 
+    !$acc wait
+
     return
   end subroutine LAND_GRID_CARTESC_setup
 
@@ -142,6 +145,7 @@ contains
     LOG_NEWLINE
     LOG_INFO("LAND_GRID_CARTESC_finalize",*) 'Finalize'
 
+    !$acc exit data delete(LAND_GRID_CARTESC_CZ, LAND_GRID_CARTESC_FZ, LAND_GRID_CARTESC_CDZ)
     deallocate( LAND_GRID_CARTESC_CZ  )
     deallocate( LAND_GRID_CARTESC_FZ  )
     deallocate( LAND_GRID_CARTESC_CDZ )
@@ -170,6 +174,7 @@ contains
     call FILE_read( fid, 'LCZ',  LAND_GRID_CARTESC_CZ (:) )
     call FILE_read( fid, 'LCDZ', LAND_GRID_CARTESC_CDZ(:) )
     call FILE_read( fid, 'LFZ',  LAND_GRID_CARTESC_FZ (:) )
+    !$acc update device(LAND_GRID_CARTESC_CZ, LAND_GRID_CARTESC_CDZ, LAND_GRID_CARTESC_FZ)
 
     return
   end subroutine LAND_GRID_CARTESC_read
@@ -185,6 +190,7 @@ contains
     do k = LKS, LKE
        LAND_GRID_CARTESC_CDZ(k) = LDZ(k)
     enddo
+    !$acc update device(LAND_GRID_CARTESC_CDZ) async
 
     LAND_GRID_CARTESC_FZ(LKS-1) = 0.0_RP
 
@@ -192,6 +198,9 @@ contains
        LAND_GRID_CARTESC_CZ(k) = LAND_GRID_CARTESC_CDZ(k) / 2.0_RP + LAND_GRID_CARTESC_FZ(k-1)
        LAND_GRID_CARTESC_FZ(k) = LAND_GRID_CARTESC_CDZ(k)          + LAND_GRID_CARTESC_FZ(k-1)
     enddo
+    !$acc update device(LAND_GRID_CARTESC_CZ, LAND_GRID_CARTESC_FZ) async
+    
+    !$acc wait
 
     return
   end subroutine LAND_GRID_CARTESC_generate
