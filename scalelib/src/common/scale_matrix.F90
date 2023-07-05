@@ -525,6 +525,7 @@ contains
     return
   end subroutine MATRIX_SOLVER_tridiagonal_2D
 
+!OCL SERIAL
   subroutine MATRIX_SOLVER_tridiagonal_2D_block( &
        KA, KS, KE, &
        ud, md, ld, &
@@ -581,6 +582,7 @@ contains
     return
   end subroutine MATRIX_SOLVER_tridiagonal_2D_block
 
+!OCL SERIAL
   subroutine MATRIX_SOLVER_tridiagonal_2D_trans( &
        KA, KS, KE, &
        ud, md, ld, &
