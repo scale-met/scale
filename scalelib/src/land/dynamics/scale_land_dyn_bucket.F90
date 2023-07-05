@@ -207,7 +207,8 @@ contains
     use scale_file_external_input, only: &
        FILE_EXTERNAL_INPUT_update
     use scale_matrix, only: &
-       MATRIX_SOLVER_tridiagonal
+       MATRIX_SOLVER_tridiagonal, &
+       MATRIX_SOLVER_TRIDIAGONAL_1D_CR
     use scale_atmos_hydrometeor, only: &
        CV_WATER, &
        CV_ICE,   &
@@ -243,14 +244,24 @@ contains
 
     real(RP) :: TEMP1 (LKMAX,LIA,LJA)
     real(RP) :: WATER1(LKMAX,LIA,LJA)
-    real(RP) :: ICE1  (LKMAX,LIA,LJA)
 
-    real(RP) :: kappa      (LKMAX)
+    real(RP) :: kappa      (LKMAX,LSIZE)
 
-    real(RP) :: U(LKMAX,LIA,LJA)
-    real(RP) :: M(LKMAX,LIA,LJA)
-    real(RP) :: L(LKMAX,LIA,LJA)
-    real(RP) :: V(LKMAX,LIA,LJA)
+   !  real(RP) :: U(LKMAX,LIA,LJA)
+   !  real(RP) :: M(LKMAX,LIA,LJA)
+   !  real(RP) :: L(LKMAX,LIA,LJA)
+   !  real(RP) :: V(LKMAX,LIA,LJA)
+    real(RP) :: F1(LKMAX,LSIZE)
+    real(RP) :: F2(LKMAX,LSIZE)
+    real(RP) :: F3(LKMAX,LSIZE)
+    real(RP) :: V(LKMAX,LSIZE)
+    real(RP) :: TEMP2(LKMAX,LSIZE)
+    real(RP) :: WATER2(LKMAX,LSIZE)
+    real(RP) :: ICE2  (LKMAX,LSIZE)
+
+#ifdef _OPENACC
+    real(RP) :: work(LKMAX-1,4) ! for CR
+#endif    
 
     real(RP) :: NDG_TEMP (LKMAX,LIA,LJA)
     real(RP) :: NDG_WATER(LKMAX,LIA,LJA)
@@ -259,16 +270,22 @@ contains
     real(RP) :: MASS_water(LKMAX)
     real(RP) :: MASS_ice(LKMAX)
 
-    real(RP) :: ENGI(LKMAX,LIA,LJA)
+    real(RP) :: ENGI(LKMAX,LSIZE)
     real(RP) :: CS
     real(RP) :: CL
 
-    real(RP) :: flux(LKS-1:LKE)
+    real(RP) :: flux(LKS-1:LKE,LSIZE)
 
     real(RP) :: ro, rw, ri
     real(RP) :: sw
 
     integer :: k, i, j
+    integer :: ii
+#if LSIZE == 1
+    integer, parameter :: l = 1
+#else
+    integer  :: l
+#endif    
     !---------------------------------------------------------------------------
 
     LOG_PROGRESS(*) 'land / dynamics / bucket'
@@ -294,13 +311,25 @@ contains
           LOG_ERROR("LAND_DYN_BUCKET",*) 'Requested data is not found!'
           call PRC_abort
        end if
+    end if
 
+    !$acc data copy(TEMP, WATER, ICE, TEMP1, WATER1) &
+    !$acc      copyin(TEMP_t, WATER_t, ICE_t, WaterLimit, ThermalCond, HeatCapacity,  &
+    !$acc             WaterDiff, SFLX_GH, SFLX_water, SFLX_RHOE, exists_land, CDZ   ) &
+    !$acc      copyout(RUNOFF, RUNOFF_ENGI                                          ) &
+    !$acc      create(NDG_TEMP, NDG_WATER)
+
+    if ( LAND_DYN_BUCKET_nudging ) then
        if ( .not. replace ) then
           ! nudging is used
 
           !$omp parallel do
+          !$acc kernels
+          !$acc loop independent
           do j = LJS,LJE
+          !$acc loop independent
           do i = LIS,LIE
+          !$acc loop independent
           do k = LKS,LKE
              if ( TEMP1(k,i,j) == UNDEF ) then
                 NDG_TEMP (k,i,j) = 0.0_RP
@@ -310,10 +339,15 @@ contains
           end do
           end do
           end do
+          !$acc end kernels
 
           !$omp parallel do
+          !$acc kernels
+          !$acc loop independent
           do j = LJS,LJE
+          !$acc loop independent
           do i = LIS,LIE
+          !$acc loop independent
           do k = LKS,LKE
              if ( WATER1(k,i,j) == UNDEF ) then
                 NDG_WATER(k,i,j) = 0.0_RP
@@ -323,287 +357,286 @@ contains
           end do
           end do
           end do
+          !$acc end kernels
 
        end if
 
        if ( .not. LAND_DYN_BUCKET_UPDATE_BOTTOM_WATER ) then
           !$omp parallel do
+          !$acc kernels
+          !$acc loop independent
           do j = LJS, LJE
+          !$acc loop independent
           do i = LIS, LIE
              NDG_WATER(LKE,i,j) = 0.0_RP
           end do
           end do
+          !$acc end kernels
        end if
 
        if ( .not. LAND_DYN_BUCKET_UPDATE_BOTTOM_TEMP ) then
           !$omp parallel do
+          !$acc kernels
+          !$acc loop independent
           do j = LJS, LJE
+          !$acc loop independent
           do i = LIS, LIE
              NDG_TEMP(LKE,i,j) = 0.0_RP
           end do
           end do
+          !$acc end kernels
        end if
 
     else
        ! nudging is NOT used
-
+      
        !$omp parallel do
+       !$acc kernels
+       !$acc loop independent
        do j = LJS,LJE
+       !$acc loop independent
        do i = LIS,LIE
+       !$acc loop independent
        do k = LKS,LKE
           NDG_TEMP (k,i,j) = 0.0_RP
           NDG_WATER(k,i,j) = 0.0_RP
        end do
        end do
        end do
+       !$acc end kernels
 
     end if
 
     if ( .not. replace ) then
 
-       !$omp parallel do &
-       !$omp private(MASS_total, MASS_water, MASS_ice, CS)
+       !$omp parallel do private( i, ii, l, k, &
+       !$omp MASS_total, MASS_water, MASS_ice, &
+       !$omp F1, F2, F3, V, flux, kappa, CS, CL, sw )
+       !$acc kernels
+       !$acc loop independent
        do j = LJS, LJE
+#if LSIZE == 1
+       !$acc loop independent private( &
+       !$acc MASS_total, MASS_water, MASS_ice, &
+       !$acc TEMP2, WATER2, ICE2,              &
+       !$acc F1, F2, F3, V, work, flux, kappa )
        do i = LIS, LIE
-          if ( exists_land(i,j) ) then
-             do k = LKS, LKE
-                MASS_total(k) = DWATR * WATER(k,i,j) + DICE * ICE(k,i,j)
-             end do
-             MASS_total(LKS) = MASS_total(LKS) + dt * SFLX_water(i,j) / CDZ(LKS)
-
-             CS = ( 1.0_RP - WaterLimit(i,j) ) * HeatCapacity(i,j)
-             do k = LKS, LKE
-                ENGI(k,i,j) = ( CS + WATER_DENSCS * WATER(k,i,j) + ICE_DENSCS * ICE(k,i,j) ) * TEMP(k,i,j) - LHF * DICE * ICE(k,i,j)
-             end do
-             ENGI(LKS,i,j) = ENGI(LKS,i,j) + dt * ( SFLX_GH(i,j) + SFLX_RHOE(i,j) ) / CDZ(LKS)
-
-             ! phase change
-             do k = LKS, LKE
-                MASS_ice(k) = min( MASS_total(k), max( 0.0_RP, &
-                     ( ENGI(k,i,j) - ( CS + CV_WATER * MASS_total(k) ) * LAND_DYN_BUCKET_T_frz ) &
-                     / ( ( CV_ICE - CV_WATER ) * LAND_DYN_BUCKET_T_frz - LHF ) &
-                     ) )
-                MASS_water(k) = MASS_total(k) - MASS_ice(k)
-                V(k,i,j) = MASS_water(k) / DWATR
-                ICE1(k,i,j) = MASS_ice(k) / DICE
-                TEMP1(k,i,j) = ( ENGI(k,i,j) + LHF * MASS_ice(k) ) &
-                     / ( CS + CV_WATER * MASS_water(k) + CV_ICE * MASS_ice(k) )
-             end do
-          end if
-       end do
-       end do
-
-
-       !$omp parallel do
-       do j = LJS, LJE
-       do i = LIS, LIE
-          if ( exists_land(i,j) ) then
-             L(LKS,i,j) = 0.0_RP
-             U(LKS,i,j) = -2.0_RP * WaterDiff(i,j) / ( CDZ(LKS) * ( CDZ(LKS) + CDZ(LKS+1) ) ) * dt
-             M(LKS,i,j) = 1.0_RP - L(LKS,i,j) - U(LKS,i,j)
-          end if
-       end do
-       end do
-
-       if ( LAND_DYN_BUCKET_UPDATE_BOTTOM_WATER ) then
-          !$omp parallel do
-          do j = LJS, LJE
-          do i = LIS, LIE
+#else
+       do ii = LIS, LIE, LSIZE
+          do l = 1, LSIZE
+             i = ii + l - 1
+             if ( i > LIE ) exit
+#endif
              if ( exists_land(i,j) ) then
-                L(LKE,i,j) = -2.0_RP * WaterDiff(i,j) / ( CDZ(LKE) * ( CDZ(LKE) + CDZ(LKE-1) ) ) * dt
-             end if
-          end do
-          end do
-       else
-          !$omp parallel do
-          do j = LJS, LJE
-          do i = LIS, LIE
-             if ( exists_land(i,j) ) then
-                L(LKE,i,j) = 0.0_RP
-             end if
-          end do
-          end do
-       end if
-       !$omp parallel do
-       do j = LJS, LJE
-       do i = LIS, LIE
-          if ( exists_land(i,j) ) then
-             U(LKE,i,j) = 0.0_RP
-             M(LKE,i,j) = 1.0_RP - L(LKE,i,j) - U(LKE,i,j)
-          end if
-       end do
-       end do
 
-       !$omp parallel do
-       do j = LJS, LJE
-       do i = LIS, LIE
-       do k = LKS+1, LKE-1
-          if ( exists_land(i,j) ) then
-             L(k,i,j) = -2.0_RP * WaterDiff(i,j) / ( CDZ(k) * ( CDZ(k) + CDZ(k-1) ) ) * dt
-             U(k,i,j) = -2.0_RP * WaterDiff(i,j) / ( CDZ(k) * ( CDZ(k) + CDZ(k+1) ) ) * dt
-             M(k,i,j) = 1.0_RP - L(k,i,j) - U(k,i,j)
-          end if
-       end do
-       end do
-       end do
+                !$acc loop independent
+                do k = LKS, LKE
+                   MASS_total(k) = DWATR * WATER(k,i,j) + DICE * ICE(k,i,j)
+                end do
+                MASS_total(LKS) = MASS_total(LKS) + dt * SFLX_water(i,j) / CDZ(LKS)
+  
+                CS = ( 1.0_RP - WaterLimit(i,j) ) * HeatCapacity(i,j)
+                !$acc loop independent
+                do k = LKS, LKE
+                   ENGI(k,l) = ( CS + WATER_DENSCS * WATER(k,i,j) + ICE_DENSCS * ICE(k,i,j) ) * TEMP(k,i,j) - LHF * DICE * ICE(k,i,j)
+                end do
+                ENGI(LKS,l) = ENGI(LKS,l) + dt * ( SFLX_GH(i,j) + SFLX_RHOE(i,j) ) / CDZ(LKS)
+  
+                ! phase change
+                !$acc loop independent
+                do k = LKS, LKE
+                   MASS_ice(k) = min( MASS_total(k), max( 0.0_RP, &
+                       ( ENGI(k,l) - ( CS + CV_WATER * MASS_total(k) ) * LAND_DYN_BUCKET_T_frz ) &
+                       / ( ( CV_ICE - CV_WATER ) * LAND_DYN_BUCKET_T_frz - LHF ) &
+                       ) )
+                   MASS_water(k) = MASS_total(k) - MASS_ice(k)
+                   V(k,l) = MASS_water(k) / DWATR
+                   ICE2(k,l) = MASS_ice(k) / DICE
+                   TEMP2(k,l) = ( ENGI(k,l) + LHF * MASS_ice(k) ) &
+                       / ( CS + CV_WATER * MASS_water(k) + CV_ICE * MASS_ice(k) )
+                end do
 
-       call MATRIX_SOLVER_tridiagonal( LKMAX, 1, LKMAX, &
-                                       LIA, LIS, LIE,   &
-                                       LJA, LJS, LJE,   &
-                                       U(:,:,:), M(:,:,:), L(:,:,:), & ! [IN]
-                                       V(:,:,:),                     & ! [IN]
-                                       WATER1(:,:,:),                & ! [OUT]
-                                       mask = exists_land(:,:)       ) ! [IN]
+                !--
 
-       ! temperature
+                F3(LKS,l) = 0.0_RP
+                F1(LKS,l) = -2.0_RP * WaterDiff(i,j) / ( CDZ(LKS) * ( CDZ(LKS) + CDZ(LKS+1) ) ) * dt
+                F2(LKS,l) = 1.0_RP - F3(LKS,l) - F1(LKS,l)
 
-       flux(LKS-1) = 0.0_RP
-       flux(LKE)   = 0.0_RP
-
-       !$omp parallel do &
-       !$omp private(kappa,CS,CL,sw) &
-       !$omp firstprivate(flux)
-       do j = LJS, LJE
-       do i = LIS, LIE
-          if ( exists_land(i,j) ) then
-
-             CS = ( 1.0_RP - WaterLimit(i,j) ) * HeatCapacity(i,j)
-             do k = LKS, LKE
-                kappa(k) = ThermalCond(i,j) + 0.5_RP * WATER1(k,i,j)**(1.0_RP/3.0_RP)
-             end do
-
-             do k = LKS, LKE-1
-                flux(k) = - 2.0_RP *  DWATR * WaterDiff(i,j) * ( WATER1(k+1,i,j) - WATER1(k,i,j) ) / ( CDZ(k+1) + CDZ(k) )
-                sw = 0.5_RP - sign( 0.5_RP, flux(k) )
-                flux(k) = flux(k) * CV_WATER * ( TEMP1(k+1,i,j) * sw + TEMP1(k,i,j) * ( 1.0_RP - sw ) )
-             end do
-             if ( .not. LAND_DYN_BUCKET_UPDATE_BOTTOM_TEMP ) then
-                flux(LKE) = flux(LKE-1)
-             end if
-
-             do k = LKS, LKE
-                V(k,i,j) = ENGI(k,i,j) + LHF * DICE * ICE1(k,i,j) &
-                         - dt * ( flux(k) - flux(k-1) ) / CDZ(k)
-             end do
-
-             CL = CS + WATER_DENSCS * WATER1(LKS,i,j) + ICE_DENSCS * ICE1(LKS,i,j)
-             L(LKS,i,j) = 0.0_RP
-             U(LKS,i,j) = - ( kappa(LKS) + kappa(LKS+1) ) / ( CDZ(LKS) * ( CDZ(LKS) + CDZ(LKS+1) ) ) * dt
-             M(LKS,i,j) = CL - L(LKS,i,j) - U(LKS,i,j)
-
-             CL = CS + WATER_DENSCS * WATER1(LKE,i,j) + ICE_DENSCS * ICE1(LKE,i,j)
-             if ( LAND_DYN_BUCKET_UPDATE_BOTTOM_WATER ) then
-
-                L(LKE,i,j) = - ( kappa(LKE) + kappa(LKE-1) ) / ( CDZ(LKE) * ( CDZ(LKE) + CDZ(LKE-1) ) ) * dt
-             else
-                L(LKE,i,j) = 0.0_RP
-             end if
-             U(LKE,i,j) = 0.0_RP
-             M(LKE,i,j) = CL - L(LKE,i,j) - U(LKE,i,j)
-
-             do k = LKS+1, LKE-1
-                CL = CS + WATER_DENSCS * WATER1(k,i,j) + ICE_DENSCS * ICE1(k,i,j)
-                L(k,i,j) = - ( kappa(k) + kappa(k-1) ) / ( CDZ(k) * ( CDZ(k) + CDZ(k-1) ) ) * dt
-                U(k,i,j) = - ( kappa(k) + kappa(k+1) ) / ( CDZ(k) * ( CDZ(k) + CDZ(k+1) ) ) * dt
-                M(k,i,j) = CL - L(k,i,j) - U(k,i,j)
-             end do
-
-          end if
-       end do
-       end do
-
-       call MATRIX_SOLVER_tridiagonal( LKMAX, 1, LKMAX, &
-                                       LIA, LIS, LIE,   &
-                                       LJA, LJS, LJE,   &
-                                       U(:,:,:), M(:,:,:), L(:,:,:), & ! [IN]
-                                       V(:,:,:),                     & ! [IN]
-                                       TEMP1(:,:,:),                 & ! [OUT]
-                                       mask = exists_land(:,:)       ) ! [IN]
-
-
-       !$omp parallel do
-       do j = LJS, LJE
-       do i = LIS, LIE
-          if ( exists_land(i,j) ) then
-             do k = LKS, LKE
-                TEMP1(k,i,j) = TEMP1(k,i,j) + NDG_TEMP(k,i,j)
-             end do
-          end if
-       end do
-       end do
-
-
-       !$omp parallel do &
-       !$omp private(ro,rw,ri)
-       do j = LJS, LJE
-       do i = LIS, LIE
-          if ( exists_land(i,j) ) then
-             do k = LKS, LKE
-                if ( TEMP1(k,i,j) >= LAND_DYN_BUCKET_T_frz ) then
-                   WATER1(k,i,j) = WATER1(k,i,j) + NDG_WATER(k,i,j)
+                if ( LAND_DYN_BUCKET_UPDATE_BOTTOM_WATER ) then
+                   F3(LKE,l) = -2.0_RP * WaterDiff(i,j) / ( CDZ(LKE) * ( CDZ(LKE) + CDZ(LKE-1) ) ) * dt
                 else
-                   ICE1(k,i,j) = ICE1(k,i,j) + NDG_WATER(k,i,j)
+                   F3(LKE,l) = 0.0_RP
                 end if
+
+                F1(LKE,l) = 0.0_RP
+                F2(LKE,l) = 1.0_RP - F3(LKE,l) - F1(LKE,l)
+
+                do k = LKS+1, LKE-1
+                   F3(k,l) = -2.0_RP * WaterDiff(i,j) / ( CDZ(k) * ( CDZ(k) + CDZ(k-1) ) ) * dt
+                   F1(k,l) = -2.0_RP * WaterDiff(i,j) / ( CDZ(k) * ( CDZ(k) + CDZ(k+1) ) ) * dt
+                   F2(k,l) = 1.0_RP - F3(k,l) - F1(k,i,j)
+                end do
+
+#if LSIZE == 1
+                call MATRIX_SOLVER_tridiagonal_1D_CR( LKMAX, 1, LKMAX, &
+#ifdef _OPENACC
+                                                      work(:,:), &
+#endif
+                                                      F1(:,1), F2(:,1), F3(:,1), V(:,1), & ! [IN]
+                                                      WATER2(:,1)                        ) ! [OUT]
+#else
+          end do
+
+          call MATRIX_SOLVER_tridiagonal( LKMAX, 1, LKMAX, &
+                                          F1(:,:), F2(:,:), F3(:,:), V(:,:), & ! [IN]
+                                          WATER2(:,:)                        ) ! [IN]
+
+
+          do l = 1, LSIZE
+             i = ii + l - 1
+             if ( i > l ) exit
+#endif
+
+                ! temperature
+
+                flux(LKS-1,l) = 0.0_RP
+                flux(LKE,l)   = 0.0_RP
+
+                CS = ( 1.0_RP - WaterLimit(i,j) ) * HeatCapacity(i,j)
+                !$acc loop independent
+                do k = LKS, LKE
+                   kappa(k,l) = ThermalCond(i,j) + 0.5_RP * WATER2(k,l)**(1.0_RP/3.0_RP)
+                end do
+
+                !$acc loop independent
+                do k = LKS, LKE-1
+                  flux(k,l) = - 2.0_RP *  DWATR * WaterDiff(i,j) * ( WATER2(k+1,l) - WATER2(k,l) ) / ( CDZ(k+1) + CDZ(k) )
+                  sw = 0.5_RP - sign( 0.5_RP, flux(k,l) )
+                  flux(k,l) = flux(k,l) * CV_WATER * ( TEMP2(k+1,l) * sw + TEMP2(k,l) * ( 1.0_RP - sw ) )
+                end do
+                if ( .not. LAND_DYN_BUCKET_UPDATE_BOTTOM_TEMP ) then
+                   flux(LKE,l) = flux(LKE-1,l)
+                end if
+
+                !$acc loop independent
+                do k = LKS, LKE
+                   V(k,l) = ENGI(k,l) + LHF * DICE * ICE2(k,l) &
+                          - dt * ( flux(k,l) - flux(k-1,l) ) / CDZ(k)
+                end do
+
+                CL = CS + WATER_DENSCS * WATER2(LKS,l) + ICE_DENSCS * ICE2(LKS,l)
+                F3(LKS,l) = 0.0_RP
+                F1(LKS,l) = - ( kappa(LKS,l) + kappa(LKS+1,l) ) / ( CDZ(LKS) * ( CDZ(LKS) + CDZ(LKS+1) ) ) * dt
+                F2(LKS,l) = CL - F3(LKS,l) - F1(LKS,l)
+
+                CL = CS + WATER_DENSCS * WATER2(LKE,l) + ICE_DENSCS * ICE2(LKE,l)
+                if ( LAND_DYN_BUCKET_UPDATE_BOTTOM_WATER ) then
+                   F3(LKE,l) = - ( kappa(LKE,l) + kappa(LKE-1,l) ) / ( CDZ(LKE) * ( CDZ(LKE) + CDZ(LKE-1) ) ) * dt
+                else
+                   F3(LKE,l) = 0.0_RP
+                end if
+                F1(LKE,l) = 0.0_RP
+                F2(LKE,l) = CL - F3(LKE,l) - F1(LKE,l)
+
+                !$acc loop independent
+                do k = LKS+1, LKE-1
+                   CL = CS + WATER_DENSCS * WATER2(k,l) + ICE_DENSCS * ICE2(k,l)
+                   F3(k,l) = - ( kappa(k,l) + kappa(k-1,l) ) / ( CDZ(k) * ( CDZ(k) + CDZ(k-1) ) ) * dt
+                   F1(k,l) = - ( kappa(k,l) + kappa(k+1,l) ) / ( CDZ(k) * ( CDZ(k) + CDZ(k+1) ) ) * dt
+                   F2(k,l) = CL - F3(k,l) - F1(k,l)
+                end do
+
+
+#if LSIZE == 1
+                call MATRIX_SOLVER_tridiagonal_1D_CR( LKMAX, 1, LKMAX, &
+#ifdef _OPENACC
+                                                      work(:,:), &
+#endif
+                                                      F1(:,1), F2(:,1), F3(:,1), V(:,1), & ! [IN]
+                                                      TEMP2(:,1)                         ) ! [OUT]
+#else
+         end do
+
+         call MATRIX_SOLVER_tridiagonal( LKMAX, 1, LKMAX, &
+                                         F1(:,:), F2(:,:), F3(:,:), V(:,:), & ! [IN]
+                                         TEMP2(:,:)                         ) ! [IN]
+
+         do l = 1, LSIZE
+           i = ii + l - 1
+           if ( i > l ) exit                          
+#endif
+
+             !$acc loop independent
+             do k = LKS, LKE
+                TEMP2(k,l) = TEMP2(k,l) + NDG_TEMP(k,i,j)
+
+                if ( TEMP2(k,l) >= LAND_DYN_BUCKET_T_frz ) then
+                   WATER2(k,l) = WATER2(k,l) + NDG_WATER(k,i,j)
+                else
+                   ICE2(k,l) = ICE2(k,l) + NDG_WATER(k,i,j)
+                end if            
              end do
 
              ! runoff of soil moisture (vertical sum)
-             RUNOFF     (i,j) = 0.0_RP
+             RUNOFF(i,j)      = 0.0_RP
              RUNOFF_ENGI(i,j) = 0.0_RP
+
+             !$acc loop independent
              do k = LKS, LKE
-                ro = max( WATER1(k,i,j) + ICE1(k,i,j) - WaterLimit(i,j), 0.0_RP )
-                rw = min( ro, WATER1(k,i,j) )
+                ro = max( WATER2(k,l) + ICE2(k,l) - WaterLimit(i,j), 0.0_RP )
+                rw = min( ro, WATER2(k,l) )
                 ri = ro - rw
-                WATER1(k,i,j) = WATER1(k,i,j) - rw
-                ICE1(k,i,j) = ICE1(k,i,j) - ri
+                WATER2(k,l) = WATER2(k,l) - rw
+                ICE2(k,l) = ICE2(k,l) - ri
                 rw = rw * DWATR / dt
                 ri = ri * DICE / dt
                 RUNOFF(i,j) = RUNOFF(i,j) + ( rw + ri ) * CDZ(k)
                 RUNOFF_ENGI(i,j) = RUNOFF_ENGI(i,j) &
-                     + ( ( rw * CV_WATER + ri * CV_ICE ) * TEMP1(k,i,j) - ri * LHF ) * CDZ(k)
+                   + ( ( rw * CV_WATER + ri * CV_ICE ) * TEMP2(k,l) - ri * LHF ) * CDZ(k)
              end do
-          end if
-       end do
-       end do
 
-
-       if ( .not. LAND_DYN_BUCKET_UPDATE_BOTTOM_WATER ) then
-          !$omp parallel do
-          do j = LJS, LJE
-          do i = LIS, LIE
-             if ( exists_land(i,j) ) then
-                WATER1(LKE,i,j) = WATER(LKE,i,j)
-                ICE1  (LKE,i,j) = ICE  (LKE,i,j)
+             if ( .not. LAND_DYN_BUCKET_UPDATE_BOTTOM_WATER ) then
+                WATER2(LKE,l) = WATER(LKE,i,j)
+                ICE2  (LKE,l) = ICE  (LKE,i,j)
              end if
-          end do
-          end do
-       endif
-
-       if ( .not. LAND_DYN_BUCKET_UPDATE_BOTTOM_TEMP ) then
-          !$omp parallel do
-          do j = LJS, LJE
-          do i = LIS, LIE
-             if ( exists_land(i,j) ) then
-                TEMP1(LKE,i,j) = TEMP(LKE,i,j)
+             if ( .not. LAND_DYN_BUCKET_UPDATE_BOTTOM_TEMP ) then
+                TEMP2(LKE,l) = TEMP(LKE,i,j)      
              end if
-          end do
-          end do
-       endif
+#if LSIZE == 1
+#else
+         end do
+#endif
+             !$acc loop independent
+             do k = LKS, LKE
+                TEMP (k,i,j) = TEMP2 (k,l)
+                WATER(k,i,j) = WATER2(k,l)
+                ICE  (k,i,j) = ICE2  (k,l)
+             end do
 
-    end if
+          end if ! end if exists_land(i,j)
+      end do ! end for j
+      end do ! end for j
 
+     else  
+        ! if replace
 
-    !$omp parallel do
-    do j = LJS, LJE
-    do i = LIS, LIE
-       if( exists_land(i,j) ) then
-          do k = LKS, LKE
-             TEMP (k,i,j) = TEMP1 (k,i,j)
-             WATER(k,i,j) = WATER1(k,i,j)
-             ICE  (k,i,j) = ICE1  (k,i,j)
-          end do
-       end if
-    end do
-    end do
+        !$acc kernels
+        !$acc loop independent
+        do j = LJS, LJE
+        !$acc loop independent
+        do i = LIS, LIE
+             !$acc loop independent
+             do k = LKS, LKE
+              TEMP (k,i,j) = TEMP1 (k,i,j)
+              WATER(k,i,j) = WATER1(k,i,j)
+              ICE  (k,i,j) = 0.0_RP
+            end do          
+        end do
+        end do
+        !$acc end kernels
+     end if
+
+    !$acc end data
 
     return
   end subroutine LAND_DYN_BUCKET
