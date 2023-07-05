@@ -60,6 +60,7 @@ module scale_urban_dyn_kusaka01
                                               ! DTS_MAX * dt
   integer , private :: BOUND      =    1      ! Boundary Condition for Roof, Wall, Ground Layer Temp
                                               !       [1: Zero-Flux, 2: T = Constant]
+  !$acc declare create(DTS_MAX,BOUND)
 
   ! urban parameters
   real(RP), private :: ZR         =   10.0_RP ! roof level (building height) [m]
@@ -94,6 +95,7 @@ module scale_urban_dyn_kusaka01
   real(RP), private :: TGLEND     = 293.00_RP ! lower boundary condition of ground temperature [K]
 
   real(RP), private :: ahdiurnal(1:24)        ! AH diurnal profile
+  !$acc declare create(ZR,BETR_CONST,BETB_CONST,BETG_CONST,STRGR,STRGB,STRGG,CAPR,CAPB,CAPG,AKSR,AKSB,AKSG,ALBR,ALBB,ALBG,EPSR,EPSB,EPSG,Z0R,TRLEND,TBLEND,TGLEND)
 
   ! calculated in subroutine urban_param_set
   real(RP), private :: R                       ! Normalized roof wight (eq. building coverage ratio)
@@ -106,6 +108,7 @@ module scale_urban_dyn_kusaka01
   real(RP), private :: Z0HC_TBL                ! Roughness length above canyon for heat [m]
   real(RP), private :: ZDC_TBL                 ! Displacement height [m]
   real(RP), private :: SVF                     ! Sky view factor [-]
+  !$acc declare create(R,RW,HGT,Z0HR,Z0HB,Z0HG,SVF)
 
   ! history
   integer, private :: I_SHR, I_SHB, I_SHG
@@ -458,7 +461,6 @@ contains
     real(RP), intent(out) :: T2      (UIA,UJA)
     real(RP), intent(out) :: Q2      (UIA,UJA)
 
-
     ! parameter
     logical,  parameter :: LSOLAR = .false. ! [true=both, false=SSG only]
 
@@ -513,6 +515,8 @@ contains
     real(RP) :: MFLUX
     real(RP) :: w
 
+    logical :: converged
+
     integer :: k, i, j
     !---------------------------------------------------------------------------
 
@@ -522,8 +526,12 @@ contains
     DZB(:) = CDZ(:)
     DZG(:) = CDZ(:)
 
+    converged = .true.
+
     !$omp parallel do schedule(dynamic) collapse(2) &
     !$omp private(w,Uabs,TR,TB,TG,TC,QC,UC,TRL,TBL,TGL,RAINR,RAINB,RAING,ALBD_LW,ALBD_SW,QVsat,Ra,FracU10,FracT2,FracQ2,MFLUX)
+    !$acc kernels
+    !$acc loop collapse(2) private(TRL,TBL,TGL) reduction(.and.: converged)
     do j = UJS, UJE
     do i = UIS, UIE
 
@@ -611,7 +619,8 @@ contains
                       ZD      (i,j),      & ! [IN]
                       DZR(:), DZG(:), DZB(:), & ! [IN]
                       dt,                 & ! [IN]
-                      i, j                ) ! [IN]
+                      i, j,               & ! [IN]
+                      converged           ) ! [OUT]
 
        ! update
        TR_URB(i,j) = TR
@@ -697,6 +706,12 @@ contains
 
     end do
     end do
+    !$acc end kernels
+
+    if ( .not. converged ) then
+       LOG_ERROR("URBAN_DYN_kusaka01_SLC_main",*) "not converged"
+       call PRC_abort
+    end if
 
     call put_history( UIA, UJA, &
                       SHR(:,:), SHB(:,:), SHG(:,:), &
@@ -769,7 +784,9 @@ contains
         ZDC,          & ! (in)
         DZR, DZB, DZG, & ! (in)
         dt,           & ! (in)
-        i, j          ) ! (in)
+        i, j,         & ! (in)
+        converged     ) ! (out)
+    !$acc routine vector
     use scale_prc, only: &
        PRC_myrank, &
        PRC_abort
@@ -855,6 +872,7 @@ contains
     real(RP), intent(out)   :: LHR, LHB, LHG
     real(RP), intent(out)   :: GHR, GHB, GHG
     integer , intent(in)    :: i, j
+    logical,  intent(out)   :: converged
 
     !-- parameters
 !    real(RP), parameter     :: SRATIO    = 0.75_RP     ! ratio between direct/total solar [-]
@@ -978,11 +996,18 @@ contains
     !--- limiter for surface temp change
     DTS_MAX_onestep = DTS_MAX * dt_RP
 
+    ! "2.0m" has no special meaning, but it is related with BB formulation from Inoue (1963).
+    ! Please see subroutine "canopy_wind".
+    ! The canopy model is modeled under an assumption that urban canopy lies
+    ! below the lowest level of atmospheric model.
     if ( ZDC + Z0C + 2.0_RP >= ZA ) then
+#ifndef _OPENACC
        LOG_ERROR("URBAN_DYN_kusaka01_SLC_main",*) 'ZDC + Z0C + 2m must be less than the 1st level! STOP.'
        call PRC_abort
-       ! "2.0m" has no special meaning, but it is related with BB formulation from Inoue (1963). Please see subroutine "canopy_wind".
-       ! The canopy model is modeled under an assumption that urban canopy lies below the lowest level of atmospheric model.
+#else
+       write(*,*) "URBAN_DYN_kusaka01_SLC_main :",'ZDC + Z0C + 2m must be less than the 1st level! STOP.'
+       converged = .false.
+#endif
     endif
 
     W    = 2.0_RP * 1.0_RP * HGT
@@ -1132,6 +1157,7 @@ contains
 !            resi1, G0R
 !    end if
 
+#ifndef _OPENACC
      ! output for debug
      if ( iteration > 100 ) then
        LOG_WARN("URBAN_DYN_kusaka01_SLC_main",*) 'iteration for TR was not converged',PRC_myrank,i,j
@@ -1164,6 +1190,7 @@ contains
        LOG_INFO_CONT(*) 'DEBUG Message --- Z0HR: Thermal roughness length of roof            [m] :', Z0HR
        LOG_INFO_CONT(*) '---------------------------------------------------------------------------------'
      endif
+#endif
 
     !--- update only fluxes ----
      THS   = TR / EXN
@@ -1192,6 +1219,7 @@ contains
      TR    = TRL(1)
 
      if ( abs(resi1) > DTS_MAX_onestep ) then
+#ifndef _OPENACC
        if ( abs(resi1) > DTS_MAX_onestep*10.0_RP ) then
          LOG_ERROR("URBAN_DYN_Kusaka01_main",*) 'tendency of TR exceeded a limit! STOP.'
          LOG_ERROR_CONT(*) 'previous TR and updated TR(TRL(1)) is ',TR-resi1, TR
@@ -1199,6 +1227,15 @@ contains
        endif
        LOG_WARN("URBAN_DYN_Kusaka01_main",*) 'tendency of TR exceeded a limit'
        LOG_INFO_CONT(*) 'previous TR and updated TR(TRL(1)) is ', TR-resi1, TR
+#else
+       if ( abs(resi1) > DTS_MAX_onestep*10.0_RP ) then
+          write(*,*) "ERROR: URBAN_DYN_Kusaka01_main :",'tendency of TR exceeded a limit! STOP.'
+          write(*,*) 'ERROR: previous TR and updated TR(TRL(1)) is ',TR-resi1, TR
+          converged = .false.
+       endif
+       write(*,*) "WARNING: URBAN_DYN_Kusaka01_main :",'tendency of TR exceeded a limit!'
+       write(*,*) 'WARNING: previous TR and updated TR(TRL(1)) is ',TR-resi1, TR
+#endif
      endif
 
     !--------------------------------------------------
@@ -1368,6 +1405,7 @@ contains
 !    end if
 
      ! output for debug
+#ifndef _OPENACC
      if ( iteration > 200 ) then
        LOG_WARN("URBAN_DYN_Kusaka01_main",*) 'iteration for TB/TG was not converged',PRC_myrank,i,j
        LOG_INFO_CONT(*) '---------------------------------------------------------------------------------'
@@ -1405,6 +1443,7 @@ contains
        LOG_INFO_CONT(*) 'DEBUG Message --- Z0H/Z0E   : Thermal roughness length of canopy  [m] :', Z0HC
        LOG_INFO_CONT(*) '---------------------------------------------------------------------------------'
      endif
+#endif
 
      !--- update only fluxes ----
 
@@ -1466,6 +1505,7 @@ contains
      resi2 = TGL(1) - TG
      TG    = TGL(1)
 
+#ifndef _OPENACC
      if ( abs(resi1) > DTS_MAX_onestep ) then
         if ( abs(resi1) > DTS_MAX_onestep*10.0_RP ) then
            LOG_ERROR("URBAN_DYN_Kusaka01_main",*) 'tendency of TB exceeded a limit! STOP.'
@@ -1485,6 +1525,27 @@ contains
         LOG_WARN("URBAN_DYN_Kusaka01_main",*) 'tendency of TG exceeded a limit'
         LOG_INFO_CONT(*) 'previous TG and updated TG(TGL(1)) is ', TG-resi2, TG
      endif
+#else
+     if ( abs(resi1) > DTS_MAX_onestep ) then
+       if ( abs(resi1) > DTS_MAX_onestep*10.0_RP ) then
+          write(*,*) "ERROR: URBAN_DYN_Kusaka01_main :",'tendency of TB exceeded a limit! STOP.'
+          write(*,*) 'ERROR: previous TB and updated TB(TBL(1)) is ', TB-resi1,TB
+          converged = .false.
+       endif
+       write(*,*) "WARNING: URBAN_DYN_Kusaka01_main :",'tendency of TB exceeded a limit!'
+       write(*,*) 'WARNING: previous TB and updated TB(TBL(1)) is ',TB-resi1, TB
+     endif
+
+     if ( abs(resi2) > DTS_MAX_onestep ) then
+       if ( abs(resi2) > DTS_MAX_onestep*10.0_RP ) then
+          write(*,*) "ERROR: URBAN_DYN_Kusaka01_main :",'tendency of TG exceeded a limit! STOP.'
+          write(*,*) 'ERROR: previous TG and updated TG(TGL(1)) is ', TG-resi2, TG
+          converged = .false.
+       endif
+       write(*,*) "WARNING: URBAN_DYN_Kusaka01_main :",'tendency of TG exceeded a limit!'
+       write(*,*) 'WARNING: previous TG and updated TG(TGL(1)) is ',TG-resi2, TG
+    endif
+#endif
 
     !-----------------------------------------------------------
     ! Total Fluxes from Urban Canopy
@@ -1601,6 +1662,7 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine canopy_wind(ZA, UA, Z0C, ZDC, UC)
+    !$acc routine
     implicit none
 
     real(RP), intent(in)  :: ZA   ! height at 1st atmospheric level [m]
@@ -1631,6 +1693,7 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine cal_beta(BET, BET_CONST, WATER, STRG)
+   !$acc routine
     implicit none
 
     real(RP), intent(out) :: BET       ! evapolation efficiency [-]
@@ -1652,6 +1715,7 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine cal_psi(zeta,psim,psih)
+    !$acc routine
     use scale_const, only: &
        PI     => CONST_PI
     implicit none
@@ -1683,6 +1747,7 @@ contains
   !  PSIH:  = PSIT of LSM
 !OCL SERIAL
   subroutine mos(XXX,CH,CD,B1,RIB,Z,Z0,UA,TA,TSF,RHO)
+    !$acc routine
     use scale_const, only: &
        EPS   => CONST_EPS, &
        CPdry => CONST_CPdry ! CPP : heat capacity of dry air [J/K/kg]
@@ -1783,7 +1848,7 @@ contains
   !  multi-layer heat equation model
   !  Solving Heat Equation by Tri Diagonal Matrix Algorithm
   !-------------------------------------------------------------------
-
+    !$acc routine vector
     implicit none
 
     real(RP), intent(in)    :: G0
