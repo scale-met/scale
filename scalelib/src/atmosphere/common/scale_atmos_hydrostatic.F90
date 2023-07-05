@@ -400,7 +400,7 @@ contains
     converged = .true.
 
     !--- from surface to lowermost atmosphere
-    !$omp parallel do OMP_SCHEDULE_ collapse(2)
+    !$omp parallel do OMP_SCHEDULE_ collapse(2) reduction(.and.:converged)
     !$acc kernels
     !$acc loop reduction(.and.: converged)
     do j = JS, JE
@@ -994,7 +994,7 @@ contains
 
     converged = .true.
 
-    !$omp parallel do OMP_SCHEDULE_ collapse(2)
+    !$omp parallel do OMP_SCHEDULE_ collapse(2) reduction(.and.:converged)
     !$acc kernels copyin(pott_L2, qv_l2, qc_l2, dens_l1, pott_L1, qv_L1, qc_L1, dz) copyout(dens_L2, temp_L2, pres_L2)
     !$acc loop reduction(.and.: converged)
     do j = JS, JE
@@ -1052,7 +1052,7 @@ contains
 
     converged = .true.
 
-    !$omp parallel do OMP_SCHEDULE_ collapse(2)
+    !$omp parallel do OMP_SCHEDULE_ collapse(2) reduction(.and.:converged)
     !$acc kernels copyin(pott_L1, qv_L1, qc_L1, dens_L2, pott_L2, qv_L2, qc_L2, dz) copyout(dens_L1, temp_L1, pres_L1)
     !$acc loop reduction(.and.: converged)
     do j = JS, JE
@@ -1132,7 +1132,7 @@ contains
 
     converged = .true.
 
-    !$omp parallel do OMP_SCHEDULE_ collapse(2)
+    !$omp parallel do OMP_SCHEDULE_ collapse(2) reduction(.and.:converged)
     !$acc kernels copyin(pott, qv, qc, dz, kref_) copy(dens) copyout(temp, pres)
     !$acc loop reduction(.and.: converged)
     do j = JS, JE
@@ -1203,7 +1203,7 @@ contains
     if ( present(kref) ) then
        kref_ => kref
 
-       !$omp parallel do OMP_SCHEDULE_ collapse(2)
+       !$omp parallel do OMP_SCHEDULE_ collapse(2) reduction(.and.:converged)
        !$acc kernels copyin(pott, qv, qc, dz, kref_) copy(dens) copyout(temp, pres)
        !$acc loop reduction(.and.: converged)
        do j = JS, JE
@@ -1223,7 +1223,7 @@ contains
        !$acc end kernels
 
     else
-       !$omp parallel do OMP_SCHEDULE_ collapse(2)
+       !$omp parallel do OMP_SCHEDULE_ collapse(2) reduction(.and.:converged)
        !$acc kernels copyin(pott, qv, qc, dz) copy(dens) copyout(temp, pres)
        !$acc loop reduction(.and.: converged)
        do j = JS, JE
@@ -1440,7 +1440,7 @@ contains
     converged = .true.
 
     !--- from surface to lowermost atmosphere
-    !$omp parallel do OMP_SCHEDULE_ collapse(2)
+    !$omp parallel do OMP_SCHEDULE_ collapse(2) reduction(.and.:converged)
     !$acc kernels copyin(temp, qv, qc, pres_sfc, temp_sfc, qv_sfc, qc_sfc, cz, fz) copyout(dens, pott, pres, pott_sfc)
     !$acc loop reduction(.and.: converged)
     do j = JS, JE
@@ -1734,7 +1734,7 @@ contains
 
     converged = .true.
 
-    !$omp parallel do OMP_SCHEDULE_ collapse(2)
+    !$omp parallel do OMP_SCHEDULE_ collapse(2) reduction(.and.:converged)
     !$acc kernels copyin(temp, qv, qc, dz) copy(dens) copyout(pott, pres)
     !$acc loop reduction(.and.: converged)
     do j = JS, JE
