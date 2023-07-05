@@ -90,6 +90,7 @@ contains
        LAND_GRID_CARTESC_REAL_AREA(i,j) = ATMOS_GRID_CARTESC_REAL_AREA(i,j) * LANDUSE_fact_land(i,j)
     end do
     end do
+    !$acc update device(LAND_GRID_CARTESC_REAL_AREA) async
 
     LAND_GRID_CARTESC_REAL_TOTAREA = 0.0_RP
     do j = LJS, LJE
@@ -97,7 +98,6 @@ contains
        LAND_GRID_CARTESC_REAL_TOTAREA = LAND_GRID_CARTESC_REAL_TOTAREA + LAND_GRID_CARTESC_REAL_AREA(i,j)
     end do
     end do
-    !$acc update device(LAND_GRID_CARTESC_REAL_AREA) async
 
     do j = 1,   LJA
     do i = 1,   LIA
