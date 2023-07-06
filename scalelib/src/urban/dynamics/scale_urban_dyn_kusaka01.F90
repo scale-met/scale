@@ -93,8 +93,6 @@ module scale_urban_dyn_kusaka01
   real(RP), private :: TRLEND     = 293.00_RP ! lower boundary condition of roof temperature [K]
   real(RP), private :: TBLEND     = 293.00_RP ! lower boundary condition of wall temperature [K]
   real(RP), private :: TGLEND     = 293.00_RP ! lower boundary condition of ground temperature [K]
-
-  real(RP), private :: ahdiurnal(1:24)        ! AH diurnal profile
   !$acc declare create(ZR,BETR_CONST,BETB_CONST,BETG_CONST,STRGR,STRGB,STRGG,CAPR,CAPB,CAPG,AKSR,AKSB,AKSG,ALBR,ALBB,ALBG,EPSR,EPSB,EPSG,Z0R,TRLEND,TBLEND,TGLEND)
 
   ! calculated in subroutine urban_param_set
@@ -172,12 +170,17 @@ contains
     real(RP) :: rtime
     integer  :: itime
 
+    real(RP) :: ahdiurnal(1:24)        ! AH diurnal profile
+
     integer  :: i, j, k
     integer  :: ierr
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
     LOG_INFO("URBAN_DYN_kusaka01_setup",*) 'Setup'
+
+    !$acc data copyin(fact_urban) &
+    !$acc      copyout(Z0M, Z0H, Z0E, ZD, AH_URB, AHL_URB)
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -207,7 +210,7 @@ contains
     rtime = modulo(BASE_LON, 360.0_RP) / 15.0_RP
     itime = nint(rtime)
     AH_TOFFSET = rtime - itime                 ! currently not used: difference of time from domain center
-    ahdiurnal(:) = cshift(ahdiurnal, -1*itime) ! convert from LT to UTC
+    ahdiurnal(:) = cshift(ahdiurnal(:), -1*itime) ! convert from LT to UTC
 
     do j = UJS, UJE
     do i = UIS, UIE
@@ -224,12 +227,12 @@ contains
 
     !-- replace gridded Z0M data if there is a file
     if( URBAN_DYN_KUSAKA01_GRIDDED_Z0M_IN_FILENAME /= '' ) then
-     udata = 0.0_RP
+     udata(:,:) = 0.0_RP
      call read_urban_gridded_data_2D(                   &
             UIA, UJA,                                   &
             URBAN_DYN_KUSAKA01_GRIDDED_Z0M_IN_FILENAME, &
             URBAN_DYN_KUSAKA01_GRIDDED_Z0M_IN_VARNAME,  &
-            udata                                       )
+            udata(:,:)                                  )
 
       ! replace to gridded data
       do j = UJS, UJE
@@ -355,6 +358,9 @@ contains
     call FILE_HISTORY_reg( 'URBAN_RNB',   'urban net radiation on wall',         'W/m2', I_RNB  , ndims=2 )
     call FILE_HISTORY_reg( 'URBAN_RNG',   'urban net radiation on road',         'W/m2', I_RNG  , ndims=2 )
     call FILE_HISTORY_reg( 'URBAN_RNgrd', 'urban grid average of net radiation', 'W/m2', I_RNgrd, ndims=2 )
+
+    !$acc update device(Z0M, Z0H, Z0E, ZD, AH_URB, AHL_URB)
+    !$acc end data
 
     !$acc update device(DTS_MAX,BOUND)
     !$acc update device(ZR,BETR_CONST,BETB_CONST,BETG_CONST,STRGR,STRGB,STRGG,CAPR,CAPB,CAPG,AKSR,AKSB,AKSG,ALBR,ALBB,ALBG,EPSR,EPSB,EPSG,Z0R,TRLEND,TBLEND,TGLEND)
@@ -522,6 +528,18 @@ contains
     real(RP) :: MFLUX
     real(RP) :: w
 
+#ifdef _OPENACC
+    real(RP) :: TRLP(UKS:UKE,UIA,UJA)
+    real(RP) :: TBLP(UKS:UKE,UIA,UJA)
+    real(RP) :: TGLP(UKS:UKE,UIA,UJA)
+    real(RP) :: A(UKE,UIA,UJA)
+    real(RP) :: B(UKE,UIA,UJA)
+    real(RP) :: C(UKE,UIA,UJA)
+    real(RP) :: D(UKE,UIA,UJA)
+    real(RP) :: P(UKE,UIA,UJA)
+    real(RP) :: Q(UKE,UIA,UJA)
+#endif
+
     logical :: converged
 
     integer :: k, i, j
@@ -627,6 +645,17 @@ contains
                       DZR(:), DZG(:), DZB(:), & ! [IN]
                       dt,                 & ! [IN]
                       i, j,               & ! [IN]
+#ifdef _OPENACC
+                      TRLP(:,i,j),        &
+                      TBLP(:,i,j),        &
+                      TGLP(:,i,j),        &
+                      A(:,i,j),           &
+                      B(:,i,j),           &
+                      C(:,i,j),           &
+                      D(:,i,j),           &
+                      P(:,i,j),           &
+                      Q(:,i,j),           &
+#endif
                       converged           ) ! [OUT]
 
        ! update
@@ -792,8 +821,12 @@ contains
         DZR, DZB, DZG, & ! (in)
         dt,           & ! (in)
         i, j,         & ! (in)
+#ifdef _OPENACC
+        TRLP, TBLP, TGLP, &
+        A, B, C, D, P, Q, &
+#endif
         converged     ) ! (out)
-    !$acc routine vector
+    !$acc routine seq
     use scale_prc, only: &
        PRC_myrank, &
        PRC_abort
@@ -881,6 +914,22 @@ contains
     integer , intent(in)    :: i, j
     logical,  intent(out)   :: converged
 
+#ifdef _OPENACC
+    real(RP), intent(out) :: TRLP(UKS:UKE)    ! Layer temperature at previous step  [K]
+    real(RP), intent(out) :: TBLP(UKS:UKE)    ! Layer temperature at previous step  [K]
+    real(RP), intent(out) :: TGLP(UKS:UKE)    ! Layer temperature at previous step  [K]
+    real(RP), intent(out) :: A(UKE)
+    real(RP), intent(out) :: B(UKE)
+    real(RP), intent(out) :: C(UKE)
+    real(RP), intent(out) :: D(UKE)
+    real(RP), intent(out) :: P(UKE)
+    real(RP), intent(out) :: Q(UKE)
+#else
+    real(RP) :: TRLP(UKS:UKE)    ! Layer temperature at previous step  [K]
+    real(RP) :: TBLP(UKS:UKE)    ! Layer temperature at previous step  [K]
+    real(RP) :: TGLP(UKS:UKE)    ! Layer temperature at previous step  [K]
+#endif
+
     !-- parameters
 !    real(RP), parameter     :: SRATIO    = 0.75_RP     ! ratio between direct/total solar [-]
 !    real(RP), parameter     :: TFa       = 0.5_RP      ! factor a in Tomita (2009)
@@ -910,9 +959,6 @@ contains
     real(RP) :: TGP              ! TGP: at previous time step [K]
     real(RP) :: TCP              ! TCP: at previous time step [K]
     real(RP) :: QCP              ! QCP: at previous time step [kg/kg]
-    real(RP) :: TRLP(UKS:UKE)    ! Layer temperature at previous step  [K]
-    real(RP) :: TBLP(UKS:UKE)    ! Layer temperature at previous step  [K]
-    real(RP) :: TGLP(UKS:UKE)    ! Layer temperature at previous step  [K]
     !
     real(RP) :: RAINRP ! at previous step, rain amount in storage on roof     [kg/m2]
     real(RP) :: RAINBP ! at previous step, rain amount in storage on building [kg/m2]
@@ -977,6 +1023,8 @@ contains
 
     integer  :: iteration
 
+    integer :: k
+
     !-----------------------------------------------------------
     ! Set parameters
     !-----------------------------------------------------------
@@ -994,9 +1042,11 @@ contains
     TCP = TC
     QCP = QC
     !
-    TRLP(:) = TRL(:)
-    TBLP(:) = TBL(:)
-    TGLP(:) = TGL(:)
+    do k = UKS, UKE
+       TRLP(k) = TRL(k)
+       TBLP(k) = TBL(k)
+       TGLP(k) = TGL(k)
+    end do
     !
 
 
@@ -1097,6 +1147,7 @@ contains
      XXXR = 0.0_RP
      resi1p = 0.0_RP
      fact1 = 1.0_RP
+     !$acc loop seq
      do iteration = 1, 100
 
       THS   = TR / EXN ! potential temp
@@ -1131,8 +1182,14 @@ contains
     !! 1st layer's cap, aks are replaced.
     !! call multi_layer2(UKE,BOUND,G0R,CAPR,AKSR,TRL,DZR,dt_RP,TRLEND,CAPL1,AKSL1)
 
-      TRL(:) = TRLP(:)
-      call multi_layer(UKE,BOUND,G0R,CAPR,AKSR,TRL,DZR,dt_RP,TRLEND)
+      do k = UKS, UKE
+         TRL(k) = TRLP(k)
+      end do
+      call multi_layer(UKE,BOUND, &
+#ifdef _OPENACC
+           A, B, C, D, P, Q, &
+#endif
+           G0R,CAPR,AKSR,TRL,DZR,dt_RP,TRLEND)
       resi1  = TRL(1) - TR
 
      ! LOG_INFO("URBAN_DYN_kusaka01_SLC_main",'(a3,i5,f8.3,6f15.5)') "TR,",iteration,TR,G0R,SR,RR,HR,ELER,resi1
@@ -1220,8 +1277,14 @@ contains
      G0R     = SR + RR - HR - ELER
      RAINR   = max( RAINRP - EVPR * dt_RP, 0.0_RP )
 
-     TRL(:)  = TRLP(:)
-     call multi_layer(UKE,BOUND,G0R,CAPR,AKSR,TRL,DZR,dt_RP,TRLEND)
+     do k = UKS, UKE
+        TRL(k)  = TRLP(k)
+     end do
+     call multi_layer(UKE,BOUND, &
+#ifdef _OPENACC
+          A, B, C, D, P, Q, &
+#endif
+          G0R,CAPR,AKSR,TRL,DZR,dt_RP,TRLEND)
      resi1   = TRL(1) - TR
      TR      = TRL(1)
 
@@ -1266,6 +1329,7 @@ contains
      resi2p = 0.0_RP
      fact1 = 1.0_RP
      fact2 = 1.0_RP
+     !$acc loop seq
      do iteration = 1, 200
 
       THS1   = TB / EXN
@@ -1331,12 +1395,24 @@ contains
 !      G0G   = SG + RG - HG - ELEG + EFLX
       G0G   = SG + RG - HG - ELEG
 
-      TBL(:) = TBLP(:)
-      call multi_layer(UKE,BOUND,G0B,CAPB,AKSB,TBL,DZB,dt_RP,TBLEND)
+      do k = UKS, UKE
+         TBL(k) = TBLP(k)
+      end do
+      call multi_layer(UKE,BOUND, &
+#ifdef _OPENACC
+           A, B, C, D, P, Q, &
+#endif
+           G0B,CAPB,AKSB,TBL,DZB,dt_RP,TBLEND)
       resi1  = TBL(1) - TB
 
-      TGL(:) = TGLP(:)
-      call multi_layer(UKE,BOUND,G0G,CAPG,AKSG,TGL,DZG,dt_RP,TGLEND)
+      do k = UKS, UKE
+         TGL(k) = TGLP(k)
+      end do
+      call multi_layer(UKE,BOUND, &
+#ifdef _OPENACC
+           A, B, C, D, P, Q, &
+#endif
+           G0G,CAPG,AKSG,TGL,DZG,dt_RP,TGLEND)
       resi2 = TGL(1) - TG
 
       !-----------
@@ -1502,13 +1578,25 @@ contains
      G0G   = SG + RG - HG - ELEG
      RAING = max( RAINGP - EVPG * dt_RP, 0.0_RP )
 
-     TBL(:) = TBLP(:)
-     call multi_layer(UKE,BOUND,G0B,CAPB,AKSB,TBL,DZB,dt_RP,TBLEND)
+     do k = UKS, UKE
+        TBL(k) = TBLP(k)
+     end do
+     call multi_layer(UKE,BOUND, &
+#ifdef _OPENACC
+          A, B, C, D, P, Q, &
+#endif
+          G0B,CAPB,AKSB,TBL,DZB,dt_RP,TBLEND)
      resi1  = TBL(1) - TB
      TB     = TBL(1)
 
-     TGL(:) = TGLP(:)
-     call multi_layer(UKE,BOUND,G0G,CAPG,AKSG,TGL,DZG,dt_RP,TGLEND)
+     do k = UKS, UKE
+        TGL(k) = TGLP(k)
+     end do
+     call multi_layer(UKE,BOUND, &
+#ifdef _OPENACC
+          A, B, C, D, P, Q, &
+#endif
+          G0G,CAPG,AKSG,TGL,DZG,dt_RP,TGLEND)
      resi2  = TGL(1) - TG
      TG     = TGL(1)
 
@@ -1849,25 +1937,33 @@ contains
 
   !-------------------------------------------------------------------
 !OCL SERIAL
-  subroutine multi_layer(KM,BOUND,G0,CAP,AKS,TSL,DZ,DELT,TSLEND)
+  subroutine multi_layer( &
+       KM,BOUND, &
+#ifdef _OPENACC
+       A, B, C, D, P, Q, &
+#endif
+       G0,CAP,AKS,TSL,DZ,DELT,TSLEND)
   !
   !  calculate temperature in roof/building/road
   !  multi-layer heat equation model
   !  Solving Heat Equation by Tri Diagonal Matrix Algorithm
   !-------------------------------------------------------------------
-    !$acc routine vector
+    !$acc routine seq
     implicit none
-
+    integer,  intent(in)    :: KM
+    integer,  intent(in)    :: BOUND
     real(RP), intent(in)    :: G0
     real(RP), intent(in)    :: CAP
     real(RP), intent(in)    :: AKS
+    real(RP), intent(inout) :: TSL(KM)
+    real(RP), intent(in)    :: DZ(KM)
     real(RP), intent(in)    :: DELT      ! Tim setep [ s ]
     real(RP), intent(in)    :: TSLEND
-    integer,  intent(in)    :: KM
-    integer,  intent(in)    :: BOUND
-    real(RP), intent(in)    :: DZ(KM)
-    real(RP), intent(inout) :: TSL(KM)
+#ifdef _OPENACC
+    real(RP), intent(out)   :: A(KM), B(KM), C(KM), D(KM), P(KM), Q(KM)
+#else
     real(RP)                :: A(KM), B(KM), C(KM), D(KM), P(KM), Q(KM)
+#endif
     real(RP)                :: DZEND
     integer                 :: K
 
@@ -1902,6 +1998,7 @@ contains
     P(1) = -C(1) / B(1)
     Q(1) =  D(1) / B(1)
 
+    !$acc loop seq
     do K = 2, KM
       P(K) = -C(K) / ( A(K) * P(K-1) + B(K) )
       Q(K) = ( -A(K) * Q(K-1) + D(K) ) / ( A(K) * P(K-1) + B(K) )
@@ -1909,6 +2006,7 @@ contains
 
     TSL(KM) = Q(KM)
 
+    !$acc loop seq
     do K = KM-1, 1, -1
       TSL(K) = P(K) * TSL(K+1) + Q(K)
     end do
@@ -1973,6 +2071,7 @@ contains
     P(1) = -C(1) / B(1)
     Q(1) =  D(1) / B(1)
 
+    !$acc loop seq
     do K = 2, KM
       P(K) = -C(K) / ( A(K) * P(K-1) + B(K) )
       Q(K) = ( -A(K) * Q(K-1) + D(K) ) / ( A(K) * P(K-1) + B(K) )
@@ -1980,6 +2079,7 @@ contains
 
     X(KM) = Q(KM)
 
+    !$acc loop seq
     do K = KM-1, 1, -1
       X(K) = P(K) * X(K+1) + Q(K)
     end do
