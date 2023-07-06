@@ -247,10 +247,6 @@ contains
 
     real(RP) :: kappa      (LKMAX,LSIZE)
 
-   !  real(RP) :: U(LKMAX,LIA,LJA)
-   !  real(RP) :: M(LKMAX,LIA,LJA)
-   !  real(RP) :: L(LKMAX,LIA,LJA)
-   !  real(RP) :: V(LKMAX,LIA,LJA)
     real(RP) :: F1(LKMAX,LSIZE)
     real(RP) :: F2(LKMAX,LSIZE)
     real(RP) :: F3(LKMAX,LSIZE)
@@ -260,7 +256,7 @@ contains
     real(RP) :: ICE2  (LKMAX,LSIZE)
 
 #ifdef _OPENACC
-    real(RP) :: work(LKMAX-1,4) ! for CR
+    real(RP) :: work(LKMAX,4) ! for CR
 #endif    
 
     real(RP) :: NDG_TEMP (LKMAX,LIA,LJA)
@@ -313,12 +309,13 @@ contains
        end if
     end if
 
-    !$acc data copy(TEMP, WATER, ICE, TEMP1, WATER1) &
+    !$acc data copy(TEMP, WATER, ICE) &
     !$acc      copyin(TEMP_t, WATER_t, ICE_t, WaterLimit, ThermalCond, HeatCapacity,  &
-    !$acc             WaterDiff, SFLX_GH, SFLX_water, SFLX_RHOE, exists_land, CDZ   ) &
+    !$acc             WaterDiff, SFLX_GH, SFLX_water, SFLX_RHOE, exists_land, CDZ,    &
+    !$acc             TEMP1, WATER1                                                 ) &
     !$acc      copyout(RUNOFF, RUNOFF_ENGI                                          ) &
     !$acc      create(NDG_TEMP, NDG_WATER)
-
+    
     if ( LAND_DYN_BUCKET_nudging ) then
        if ( .not. replace ) then
           ! nudging is used
@@ -418,7 +415,7 @@ contains
 #if LSIZE == 1
        !$acc loop independent private( &
        !$acc MASS_total, MASS_water, MASS_ice, &
-       !$acc TEMP2, WATER2, ICE2,              &
+       !$acc TEMP2, WATER2, ICE2, ENGI,        &
        !$acc F1, F2, F3, V, work, flux, kappa )
        do i = LIS, LIE
 #else
@@ -471,10 +468,11 @@ contains
                 F1(LKE,l) = 0.0_RP
                 F2(LKE,l) = 1.0_RP - F3(LKE,l) - F1(LKE,l)
 
+                !$acc loop independent
                 do k = LKS+1, LKE-1
                    F3(k,l) = -2.0_RP * WaterDiff(i,j) / ( CDZ(k) * ( CDZ(k) + CDZ(k-1) ) ) * dt
                    F1(k,l) = -2.0_RP * WaterDiff(i,j) / ( CDZ(k) * ( CDZ(k) + CDZ(k+1) ) ) * dt
-                   F2(k,l) = 1.0_RP - F3(k,l) - F1(k,i,j)
+                   F2(k,l) = 1.0_RP - F3(k,l) - F1(k,l)
                 end do
 
 #if LSIZE == 1
@@ -559,7 +557,7 @@ contains
 
          call MATRIX_SOLVER_tridiagonal( LKMAX, 1, LKMAX, &
                                          F1(:,:), F2(:,:), F3(:,:), V(:,:), & ! [IN]
-                                         TEMP2(:,:)                         ) ! [IN]
+                                         TEMP2(:,:)                         ) ! [OUT]
 
          do l = 1, LSIZE
            i = ii + l - 1
@@ -616,6 +614,7 @@ contains
           end if ! end if exists_land(i,j)
       end do ! end for j
       end do ! end for j
+      !$acc end kernels
 
      else  
         ! if replace
@@ -630,7 +629,7 @@ contains
               TEMP (k,i,j) = TEMP1 (k,i,j)
               WATER(k,i,j) = WATER1(k,i,j)
               ICE  (k,i,j) = 0.0_RP
-            end do          
+             end do         
         end do
         end do
         !$acc end kernels
