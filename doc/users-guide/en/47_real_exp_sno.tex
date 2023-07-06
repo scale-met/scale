@@ -13,7 +13,7 @@ The simulation results are also validated using the converted \netcdf data.
 Use \verb|sno| to convert a single \netcdf file from the history files of \netcdf having divided every process.
 Only a minimum of the procedures is explained here. Refer to Section \ref{sec:sno} for their detailed use.
 
-First, move to the directory \verb|sno|:
+Move to the directory \verb|sno|:
 \begin{verbatim}
  $ cd ${Tutorial_DIR}/real/experiment/sno
  $ ls
@@ -23,20 +23,35 @@ First, move to the directory \verb|sno|:
 \end{verbatim}
 There are some configuration files and a binary file in this directory.
 The binary file is linked to the executable file compiled in Section \ref{sec:compile_sno}.
-As an example, a procedure to convert all variables are explained here.
+As an example, a procedure to convert 3-dim variables on model levels to pressure levels and interpolate to equivalent longitude-latitude data is explained here.
  
-When \verb|sno| is executed, the number of processes needs to be a divisor of the number of the grids in the calculation domain. 
-The number of processes is four here.
 Since \verb|sno| cannot simultaneously convert the data for the vertical and horizontal direction,
-they must be converted separately as follows:
+they must be converted separately as follows.
+First, \verb|sno| converts the data from model levels to pressure levels.
+When \verb|sno| is executed, the number of processes needs to be a divisor of the number of the grids in the calculation domain. 
+The number of processes used here is four.
 \begin{verbatim}
  $ mpirun -n 4 ./sno sno.vgridope.d01.conf
+\end{verbatim}
+Next, \verb|sno| converts the vertically interpolated data horizontally to longitude-latitude data and then combines the node-separated {\netcdf} files into a single file.
+Due to the limitation of the number of processes that can be used in parallel execution of {\sno}, one process is used here.
+\begin{verbatim}
  $ mpirun -n 1 ./sno sno.hgridope.d01.conf
 \end{verbatim}
+
 The conversion succeeds only if the following messages are found in the standard output without an error message:
 \msgbox{
 \verb| *** End   SCALE-NetCDF Operator| \\
 }
+If the process has succeeded, the below files are created.
+\begin{verbatim}
+  merged-p_history_d01.pe000000.nc
+  merged-p_history_d01.pe000001.nc
+  merged-p_history_d01.pe000002.nc
+  merged-p_history_d01.pe000003.nc
+  merged-h_history_d01.pe000000.nc
+\end{verbatim}
+
 
 \subsubsection{Validation of simulation result}
 %-----------------------------------------------------------------------------------
