@@ -29,9 +29,10 @@
 \end{tabularx}
 }}}\\
 
+
 \item {\bf 計算領域は変えず、水平格子間隔を変更したい}\\
 MPI並列数を変えない場合は、\namelist{PARAM_ATMOS_GRID_CARTESC}の\nmitem{DX, DY}と、\\
-\namelist{PARAM_ATMOS_GRID_CARTESC_INDEX}内の\nmitem{IMAXG,JMAXG}を変更する。
+\namelist{PARAM_ATMOS_GRID_CARTESC_INDEX}内の\nmitem{IMAXG,JMAXG}を変更する。\\
 
 \noindent {\small {\gt
 \ovalbox{
@@ -59,10 +60,11 @@ MPI並列数も変更している場合は、\verb|&PARAM_ATMOS_GRID_CARTESC|の
 && \nmitemeq{JMAXG} \bmod \nmitemeq{PRC_NUM_Y} = 0 \nonumber
 \end{eqnarray}
 
-これに加えて、力学変数の時間積分に対する時間刻み幅\nmitem{TIME_DT_ATMOS_DYN} と \\
-\nmitem{TIME_DT} の調整も必要である (第\ref{sec:timeintiv}節を参照)。
+これに加えて、力学変数の時間積分に対する時間刻み幅\nmitem{TIME_DT_ATMOS_DYN}や \\
+\nmitem{TIME_DT}などの調整も必要である (第\ref{sec:timeintiv}節を参照)。
+それに伴い、ヒストリ出力の時間間隔も設定し直す必要がある (第\ref{sec:output}節を参照)。
 また、緩和領域も格子間隔の20倍から40倍となるように設定しなければならない (第\ref{subsec:buffer}節を参照)。
-以下はその解答例であり、緩和領域を格子間隔の20倍に取った場合を示している。
+以下はその解答例であり、緩和領域を格子間隔の20倍に取った場合を示している。\\
 %
 \editboxtwo{
 \verb|&PARAM_PRC_CARTESC|  & \\
@@ -72,29 +74,27 @@ MPI並列数も変更している場合は、\verb|&PARAM_ATMOS_GRID_CARTESC|の
 }
 
 
-
 \item {\bf 計算領域の位置を変更したい}\\
-
 計算領域の中心位置の座標を下記の通り、変更すれば良い。
 ここで、単位を度で設定する必要があることに注意されたい。
-例えば、139度45.4分 = 139 + 45.5/60 度である。
+例えば、139度45.4分 = 139 + 45.5/60 度である。\\
 
 \noindent {\small {\gt
 \ovalbox{
 \begin{tabularx}{150mm}{ll}
 \verb|&PARAM_MAPPROJECTION                      | & \\
-\textcolor{red}{\verb| MPRPROJECTION_basepoint_lon = 139.7567D0,|} & (オリジナル設定は\verb|135.220404D0|)\\
-\textcolor{red}{\verb| MPRPROJECTION_basepoint_lat =  35.6883D0,|} & (オリジナル設定は\verb|34.653396D0|)\\
-\verb| MPRPROJECTION_type          = 'LC',         | & \\
-\verb| MPRPROJECTION_LC_lat1       =  30.00D0,     | & \\
-\verb| MPRPROJECTION_LC_lat2       =  40.00D0,     | & \\
+\textcolor{red}{\verb| MAPPROJECTION_basepoint_lon = 139.7567D0,|} & (オリジナル設定は\verb|135.220404D0|)\\
+\textcolor{red}{\verb| MAPPROJECTION_basepoint_lat =  35.6883D0,|} & (オリジナル設定は\verb|34.653396D0|)\\
+\verb| MAPPROJECTION_type          = 'LC',         | & \\
+\verb| MAPPROJECTION_LC_lat1       =  30.00D0,     | & \\
+\verb| MAPPROJECTION_LC_lat2       =  40.00D0,     | & \\
 \verb|/| & \\
 \end{tabularx}
 }}}\\
 
 
 \item {\bf 積分時間を変更したい}\\
-
+\\
 \noindent {\small {\gt
 \ovalbox{
 \begin{tabularx}{150mm}{ll}
@@ -113,12 +113,12 @@ MPI並列数も変更している場合は、\verb|&PARAM_ATMOS_GRID_CARTESC|の
 
 
 \item {\bf 出力変数の追加と出力時間間隔の変更を行いたい}\\
-
 %例えば、出力時間間隔を30分に変更したい時には、
 \namelist{PARAM_FILE_HISTORY}の中の
 \nmitem{FILE_HISTORY_DEFAULT_TINTERVAL}を下記のように変更する。
 出力変数は、\namelist{HISTORY_ITEM}の中の\nmitem{NAME}で指定する。
-ヒストリ変数の一覧は、リファレンスマニュアルで確認できる(第\ref{sec:reference_manual}節を参照)。 \\
+ヒストリ変数の一覧は、リファレンスマニュアルで確認できる(第\ref{sec:reference_manual}節を参照)。\\
+また、\namelist{HISTORY_ITEM}の\nmitem{TINTERVAL}で書き出し間隔を設定している変数を\sno で等緯度経度格子にリマッピングする場合は、\nmitem{TINTERVAL}と\nmitem{FILE_HISTORY_DEFAULT_TINTERVAL}は同じ値にしておく必要がある。 \\
 %以下では、地表面での上向き、下向き短波フラックスを追加した例である。\\
 
 \noindent {\small {\gt
@@ -132,17 +132,18 @@ MPI並列数も変更している場合は、\verb|&PARAM_ATMOS_GRID_CARTESC|の
 \\
 \textcolor{red}{\verb|&HISTORY_ITEM NAME="SFLX_SW_up" /|} & \textcolor{red}{追加}\\
 \textcolor{red}{\verb|&HISTORY_ITEM NAME="SFLX_SW_dn" /|} & \textcolor{red}{追加}\\
-\\
+\verb| ....(省略)....| & \\
+\textcolor{red}{\verb|&HISTORY_ITEM NAME="DENS", TINTERVAL=1800.D0 /|} & \sno でリマッピングする場合 \\
+ & (オリジナル設定は3600.D0) \\
+\verb| ....(省略)....| & \\
+\verb|/| & \\
 \end{tabularx}
 }}}\\
 
 
-
 \item {\bf リスタート計算をしたい}\\
-
-
-最初の３時間分の積分については、\verb|run.conf| を下記のように設定する。
-積分３時間目に、リスタートファイルが作成される。\\
+最初の3時間分の積分については、\verb|run.conf| を下記のように設定する。
+積分3時間目に、リスタートファイルが作成される。\\
 
 \noindent {\small {\gt
 \ovalbox{
@@ -164,9 +165,9 @@ MPI並列数も変更している場合は、\verb|&PARAM_ATMOS_GRID_CARTESC|の
 \verb|/| & \\
 \\
 \verb|&PARAM_RESTART | & \\
-\textcolor{red}{\verb| RESTART_OUTPUT      = .true.,|} ~~~~~~~~~~~~(オリジナル設定は\verb|.false.,|)& \\
+\textcolor{red}{\verb| RESTART_OUTPUT      = .true.,|} & \\
 \verb| RESTART_IN_BASENAME = "../init/init_d01_20070714-180000.000",| &  \\
-\textcolor{red}{\verb| RESTART_OUT_BASENAME = "restart_d01",|} ~~~~~~~~~~~~~~~追加 & \\
+\textcolor{red}{\verb| RESTART_OUT_BASENAME = "restart_d01",|}  & \\
 \verb|/| & \\
 \\
 \verb|&PARAM_ATMOS_BOUNDARY| & \\
@@ -191,7 +192,7 @@ MPI並列数も変更している場合は、\verb|&PARAM_ATMOS_GRID_CARTESC|の
 リスタート計算において連続計算と基準状態 (\ref{subsec:refstat}節参照) を一致させるために、\nmitem{ATMOS_REFSTAT_UPDATE_DT} に 3時間の約数を指定する。
 
 
-3時間目から６時間目までのリスタート計算に対する設定は下記である。\\
+3時間目から6時間目までのリスタート計算に対する設定は下記である。\\
 
 \noindent {\small {\gt
 \ovalbox{

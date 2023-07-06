@@ -102,16 +102,16 @@ Refer to Sections \ref{sec:atmos_dyn_cartesC} and \ref{sec:basic_usel_physics}  
 
 \subsubsection{Execution of simulation}
 
-The lists below are the necessary files for the execution. They have already been prepared:
-\begin{verbatim}
- $ ls
-    MIPAS  PARAG.29  PARAPC.29  VARDATA.RM29  cira.nc
-                                  : parameter file for radiation scheme
-    run.d01.conf      : configuration file
-    param.bucket.conf : parameter file for land schemes
-    scale-rm          : executable binary of \scalerm
-    run.launch.conf   : launch file for nesting calculations (not used in the tutorial)
-\end{verbatim}
+The lists below are the necessary files for the execution. They have already been prepared:\\
+\\
+\verb| $ ls|\\
+\verb|    MIPAS  PARAG.29  PARAPC.29  VARDATA.RM29  cira.nc|\\
+\verb|                      : |parameter file for radiation scheme\\
+\verb|    run.d01.conf      : |configuration file\\
+\verb|    param.bucket.conf : |parameter file for land schemes\\
+\verb|    scale-rm          : |executable binary of \scalerm \\
+\verb|    run.launch.conf   : |launch file for nesting calculations (not used in the tutorial)\\
+\\
 If all preparations are complete, execute \scalerm by using four-MPI parallel:
 \begin{verbatim}
   $ mpirun -n 4 ./scale-rm run.d01.conf >& log &

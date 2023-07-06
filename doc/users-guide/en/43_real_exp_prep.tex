@@ -7,31 +7,30 @@ many execution procedures and a large number of files are needed in comparison w
 In addition, it is necessary to maintain consistency between settings in the configuration file (\verb|***.conf|)
 between pre-processing \verb|pp|, initial value making \verb|init|, and simulation execution \verb|run|.
 The inconsistency between these settings and the lack of files in the preparation step may cause an abnormal model run.
-To avoid such situations, the tool "the making tool for the complete settings of the experiment"
+To avoid such situations, the tool ``the making tool for the complete settings of the experiment''
 is prepared for the generation of a set of necessary files.
-You first move to the following directory and prepare a series of files for the tutorial for the real atmospheric experiment using the next procedure:
-\begin{verbatim}
- $ cd ${Tutorial_DIR}/real/
- $ ls
-    Makefile : Makefile for generation of a set of necessary files.
-    README   : README related to use of the script
-    USER.sh  : Description of experimental setting.
-    config/  : Each of configurations for generation of a set of files
-               ( basically, unnecessary for users to be rewritten)
-    sample/  : sample script of USERS.sh
-    data/    : tools for the tutorial
-    tools/   : tools for initial condition used in the tutorial 
-               (basically, users do it themselves except for the tutorial case)
- $ make
- $ ls experiment/    : directories added by the above make command
-    init/
-    pp/
-    run/
-    sno/
-\end{verbatim}
-
+You first move to the following directory and prepare a series of files for the tutorial for the real atmospheric experiment using the next procedure:\\
+\\
+\verb| $ cd ${Tutorial_DIR}/real/|\\
+\verb| $ ls|\\
+\verb|    Makefile : Makefile |for generation of a set of necessary files.\\
+\verb|    README   : README |related to use of the script\\
+\verb|    USER.sh  : |Description of experimental setting.\\
+\verb|    config/  : |Each of configurations for generation of a set of files\\
+\verb|               |(basically, unnecessary for users to be rewritten)\\
+\verb|    sample/  : |sample script of \verb|USER.sh|\\
+\verb|    data/    : |tools for the tutorial\\
+\verb|    tools/   : |tools for initial condition used in the tutorial\\
+\verb|               |(basically, users do it themselves except for the tutorial case)\\
+\verb| $ make|\\
+\verb| $ ls experiment/    : |directories added by the above make command\\
+\verb|    init/|\\
+\verb|    pp/|\\
+\verb|    run/|\\
+\verb|    sno/|\\
+\\
 According to the settings described in \verb|USER.sh|,
 an experiment set is generated under the directory \verb|experiment| when the make command is executed.
-Refer to Section \ref{sec:basic_makeconf} for a detailed explanation of "the making tool for the complete settings of the experiment."
+Refer to Section \ref{sec:basic_makeconf} for a detailed explanation of ``the making tool for the complete settings of the experiment.''
 %Further, in case of nesting, the available files are prepared for the directory \verb|sample|. Referred to them if needed.
 

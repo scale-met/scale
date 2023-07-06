@@ -103,7 +103,7 @@ MPIプロセス数だけ生成される(今の場合4つずつ)。ここで、\v
  「gpview」がインストールされている場合は、次のコマンドによって
  地形データが正しく作成されているかを確認できる。
  \begin{verbatim}
-   $ gpview topo_d01.pe00000*@topo --aspect=1 --nocont
+   $ gpview topo_d01.pe00000*@topo --aspect=1 --nocont --range 0:1750 --int 50
    $ gpview landuse_d01.pe00000*@FRAC_LAND --aspect=1 --nocont
  \end{verbatim}
  結果が正常であれば、図 \ref{fig:tutorial_real_domain}と同様の図が表示される。

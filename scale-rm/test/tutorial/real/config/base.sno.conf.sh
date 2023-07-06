@@ -8,6 +8,10 @@ cat << EOF > base.sno.vgridope.conf
 #
 #################################################
 
+&PARAM_IO
+ IO_LOG_BASENAME = "sno_vgrid_LOG_d${FNUM}",
+/
+
 &PARAM_SNO
  basename_in     = '${RUNDIR}/history_d${FNUM}',
  dirpath_out     = '.',
@@ -41,6 +45,10 @@ cat << EOF > base.sno.hgridope.conf
 # post process configuration: sno
 #
 #################################################
+
+&PARAM_IO
+ IO_LOG_BASENAME = "sno_hgrid_LOG_d${FNUM}",
+/
 
 &PARAM_SNO
  basename_in     = 'merged-p_history_d${FNUM}',
