@@ -241,18 +241,33 @@ contains
 
     real(RP) :: MFLUX
 
+#ifdef _OPENACC
+    logical :: err_flag
+#endif
+
     integer  :: i, j, n
     !---------------------------------------------------------------------------
 
     LOG_PROGRESS(*) 'coupler / physics / surface / SKIN'
 
+    !$acc data copyin(TMPA,PRSA,WA,UA,VA,RHOA,QVA,LH,Z1,PBL,RHOS,PRSS,RFLXD,TG,WSTR,QVEF,ALBEDO,Rb,TC_dZ,Z0M,Z0H,Z0E,calc_flag) &
+    !$acc      copy(TMPS) &
+    !$acc      copyout(ZMFLX,XMFLX,YMFLX,SHFLX,LHFLX,QVFLX,GFLX,Ustar,Tstar,Qstar,Wstar,RLmo,U10,V10,T2,Q2) &
+    !$acc      create(TMPS1,QVS,FracU10,FracT2,FracQ2)
+
     ! copy surfce temperature for iteration
     !$omp parallel do
+    !$acc kernels
     do j = JS, JE
     do i = IS, IE
        TMPS1(i,j) = TMPS(i,j)
     enddo
     enddo
+    !$acc end kernels
+
+#ifdef _OPENACC
+    err_flag = .false.
+#endif
 
     ! update surface temperature
     !$omp parallel do schedule(dynamic) collapse(2) &
@@ -271,6 +286,11 @@ contains
     !$omp private(qdry,Rtot,flx_qv,redf,res,dts,olddts,emis,LWD,LWU,SWD,SWU,dres,oldres,dQVS, &
     !$omp         QVsat,dQVsat,dUstar,dTstar,dQstar,dWstar,dFracU10,dFracT2,dFracQ2, &
     !$omp         Uabs,dUabs,dRLmo,Ra,dRa,MFLUX)
+    !$acc parallel
+    !$acc loop collapse(2) reduction(.or.:err_flag) independent &
+    !$acc private(qdry,Rtot,flx_qv,redf,res,dts,olddts,emis,LWD,LWU,SWD,SWU,dres,oldres,dQVS, &
+    !$acc         QVsat,dQVsat,dUstar,dTstar,dQstar,dWstar,dFracU10,dFracT2,dFracQ2, &
+    !$acc         Uabs,dUabs,dRLmo,Ra,dRa,MFLUX)
     do j = JS, JE
     do i = IS, IE
        if ( calc_flag(i,j) ) then
@@ -283,6 +303,7 @@ contains
           olddts = CPL_PHY_SFC_SKIN_dTS_max * dt
 
           ! modified Newton-Raphson method (Tomita 2009)
+          !$acc loop seq
           do n = 1, CPL_PHY_SFC_SKIN_itr_max
 
              call qsat( TMPS1(i,j),      RHOS(i,j), QVsat  )
@@ -375,64 +396,72 @@ contains
 
           if ( n > CPL_PHY_SFC_SKIN_itr_max ) then
              ! surface temperature was not converged
+#ifdef _OPENACC
+             LOG_WARN("CPL_PHY_SFC_skin",*) 'surface tempearture was not converged. '
+!             LOG_WARN("CPL_PHY_SFC_skin",*) 'surface tempearture was not converged. ', model_name
+#else
              LOG_WARN("CPL_PHY_SFC_skin",*) 'surface tempearture was not converged. ', trim(model_name)
              LOG_NEWLINE
-             LOG_INFO_CONT('(A,I32)'   ) 'number of i                        [no unit]  :', i
-             LOG_INFO_CONT('(A,I32)'   ) 'number of j                        [no unit]  :', j
+             LOG_WARN_CONT('(A,I32)'   ) 'number of i                        [no unit]  :', i
+             LOG_WARN_CONT('(A,I32)'   ) 'number of j                        [no unit]  :', j
              LOG_NEWLINE
-             LOG_INFO_CONT('(A,I32)'   ) 'loop number                        [no unit]  :', n
-             LOG_INFO_CONT('(A,F32.16)') 'Residual                           [J/m2/s]   :', res
-             LOG_INFO_CONT('(A,F32.16)') 'delta Residual                     [J/m2/s]   :', dres
+             LOG_WARN_CONT('(A,I32)'   ) 'loop number                        [no unit]  :', n
+             LOG_WARN_CONT('(A,F32.16)') 'Residual                           [J/m2/s]   :', res
+             LOG_WARN_CONT('(A,F32.16)') 'delta Residual                     [J/m2/s]   :', dres
              LOG_NEWLINE
-             LOG_INFO_CONT('(A,F32.16)') 'temperature                        [K]        :', TMPA  (i,j)
-             LOG_INFO_CONT('(A,F32.16)') 'pressure                           [Pa]       :', PRSA  (i,j)
-             LOG_INFO_CONT('(A,F32.16)') 'velocity w                         [m/s]      :', WA    (i,j)
-             LOG_INFO_CONT('(A,F32.16)') 'velocity u                         [m/s]      :', UA    (i,j)
-             LOG_INFO_CONT('(A,F32.16)') 'velocity v                         [m/s]      :', VA    (i,j)
-             LOG_INFO_CONT('(A,F32.16)') 'absolute velocity                  [m/s]      :', Uabs
-             LOG_INFO_CONT('(A,F32.16)') 'density                            [kg/m3]    :', RHOA  (i,j)
-             LOG_INFO_CONT('(A,F32.16)') 'water vapor mass ratio             [kg/kg]    :', QVA   (i,j)
-             LOG_INFO_CONT('(A,F32.16)') 'cell center height                 [m]        :', Z1    (i,j)
-             LOG_INFO_CONT('(A,F32.16)') 'atmospheric mixing layer height    [m]        :', PBL   (i,j)
-             LOG_INFO_CONT('(A,F32.16)') 'pressure at the surface            [Pa]       :', PRSS  (i,j)
-             LOG_INFO_CONT('(A,F32.16)') 'downward radiation (IR, direct )   [J/m2/s]   :', RFLXD (i,j,I_R_direct ,I_R_IR )
-             LOG_INFO_CONT('(A,F32.16)') 'downward radiation (IR, diffuse)   [J/m2/s]   :', RFLXD (i,j,I_R_diffuse,I_R_IR )
-             LOG_INFO_CONT('(A,F32.16)') 'downward radiation (NIR,direct )   [J/m2/s]   :', RFLXD (i,j,I_R_direct ,I_R_NIR)
-             LOG_INFO_CONT('(A,F32.16)') 'downward radiation (NIR,diffuse)   [J/m2/s]   :', RFLXD (i,j,I_R_diffuse,I_R_NIR)
-             LOG_INFO_CONT('(A,F32.16)') 'downward radiation (VIS,direct )   [J/m2/s]   :', RFLXD (i,j,I_R_direct ,I_R_VIS)
-             LOG_INFO_CONT('(A,F32.16)') 'downward radiation (VIS,diffuse)   [J/m2/s]   :', RFLXD (i,j,I_R_diffuse,I_R_VIS)
+             LOG_WARN_CONT('(A,F32.16)') 'temperature                        [K]        :', TMPA  (i,j)
+             LOG_WARN_CONT('(A,F32.16)') 'pressure                           [Pa]       :', PRSA  (i,j)
+             LOG_WARN_CONT('(A,F32.16)') 'velocity w                         [m/s]      :', WA    (i,j)
+             LOG_WARN_CONT('(A,F32.16)') 'velocity u                         [m/s]      :', UA    (i,j)
+             LOG_WARN_CONT('(A,F32.16)') 'velocity v                         [m/s]      :', VA    (i,j)
+             LOG_WARN_CONT('(A,F32.16)') 'absolute velocity                  [m/s]      :', Uabs
+             LOG_WARN_CONT('(A,F32.16)') 'density                            [kg/m3]    :', RHOA  (i,j)
+             LOG_WARN_CONT('(A,F32.16)') 'water vapor mass ratio             [kg/kg]    :', QVA   (i,j)
+             LOG_WARN_CONT('(A,F32.16)') 'cell center height                 [m]        :', Z1    (i,j)
+             LOG_WARN_CONT('(A,F32.16)') 'atmospheric mixing layer height    [m]        :', PBL   (i,j)
+             LOG_WARN_CONT('(A,F32.16)') 'pressure at the surface            [Pa]       :', PRSS  (i,j)
+             LOG_WARN_CONT('(A,F32.16)') 'downward radiation (IR, direct )   [J/m2/s]   :', RFLXD (i,j,I_R_direct ,I_R_IR )
+             LOG_WARN_CONT('(A,F32.16)') 'downward radiation (IR, diffuse)   [J/m2/s]   :', RFLXD (i,j,I_R_diffuse,I_R_IR )
+             LOG_WARN_CONT('(A,F32.16)') 'downward radiation (NIR,direct )   [J/m2/s]   :', RFLXD (i,j,I_R_direct ,I_R_NIR)
+             LOG_WARN_CONT('(A,F32.16)') 'downward radiation (NIR,diffuse)   [J/m2/s]   :', RFLXD (i,j,I_R_diffuse,I_R_NIR)
+             LOG_WARN_CONT('(A,F32.16)') 'downward radiation (VIS,direct )   [J/m2/s]   :', RFLXD (i,j,I_R_direct ,I_R_VIS)
+             LOG_WARN_CONT('(A,F32.16)') 'downward radiation (VIS,diffuse)   [J/m2/s]   :', RFLXD (i,j,I_R_diffuse,I_R_VIS)
              LOG_NEWLINE
-             LOG_INFO_CONT('(A,F32.16)') 'soil temperature                   [K]        :', TG    (i,j)
-             LOG_INFO_CONT('(A,F32.16)') 'soil water                         [kg/m2]    :', WSTR  (i,j)
-             LOG_INFO_CONT('(A,F32.16)') 'surface temperature                [K]        :', TMPS  (i,j)
-             LOG_INFO_CONT('(A,F32.16)') 'surface density                    [kg/m3]    :', RHOS  (i,j)
-             LOG_INFO_CONT('(A,F32.16)') 'efficiency of evaporation          [1]        :', QVEF  (i,j)
-             LOG_INFO_CONT('(A,F32.16)') 'surface albedo (IR, direct )       [1]        :', ALBEDO(i,j,I_R_direct ,I_R_IR )
-             LOG_INFO_CONT('(A,F32.16)') 'surface albedo (IR, diffuse)       [1]        :', ALBEDO(i,j,I_R_diffuse,I_R_IR )
-             LOG_INFO_CONT('(A,F32.16)') 'surface albedo (NIR,direct )       [1]        :', ALBEDO(i,j,I_R_direct ,I_R_NIR)
-             LOG_INFO_CONT('(A,F32.16)') 'surface albedo (NIR,diffuse)       [1]        :', ALBEDO(i,j,I_R_diffuse,I_R_NIR)
-             LOG_INFO_CONT('(A,F32.16)') 'surface albedo (VIS,direct )       [1]        :', ALBEDO(i,j,I_R_direct ,I_R_VIS)
-             LOG_INFO_CONT('(A,F32.16)') 'surface albedo (VIS,diffuse)       [1]        :', ALBEDO(i,j,I_R_diffuse,I_R_VIS)
-             LOG_INFO_CONT('(A,F32.16)') 'latent heat                        [J/kg]     :', LH    (i,j)
-             LOG_INFO_CONT('(A,F32.16)') 'stomata registance                 [1/s]      :', Rb    (i,j)
-             LOG_INFO_CONT('(A,F32.16)') 'thermal conductivity / depth       [J/m2/s/K] :', TC_dZ (i,j)
-             LOG_INFO_CONT('(A,F32.16)') 'roughness length for momemtum      [m]        :', Z0M   (i,j)
-             LOG_INFO_CONT('(A,F32.16)') 'roughness length for heat          [m]        :', Z0H   (i,j)
-             LOG_INFO_CONT('(A,F32.16)') 'roughness length for vapor         [m]        :', Z0E   (i,j)
-             LOG_INFO_CONT('(A,F32.16)') 'time step                          [s]        :', dt
+             LOG_WARN_CONT('(A,F32.16)') 'soil temperature                   [K]        :', TG    (i,j)
+             LOG_WARN_CONT('(A,F32.16)') 'soil water                         [kg/m2]    :', WSTR  (i,j)
+             LOG_WARN_CONT('(A,F32.16)') 'surface temperature                [K]        :', TMPS  (i,j)
+             LOG_WARN_CONT('(A,F32.16)') 'surface density                    [kg/m3]    :', RHOS  (i,j)
+             LOG_WARN_CONT('(A,F32.16)') 'efficiency of evaporation          [1]        :', QVEF  (i,j)
+             LOG_WARN_CONT('(A,F32.16)') 'surface albedo (IR, direct )       [1]        :', ALBEDO(i,j,I_R_direct ,I_R_IR )
+             LOG_WARN_CONT('(A,F32.16)') 'surface albedo (IR, diffuse)       [1]        :', ALBEDO(i,j,I_R_diffuse,I_R_IR )
+             LOG_WARN_CONT('(A,F32.16)') 'surface albedo (NIR,direct )       [1]        :', ALBEDO(i,j,I_R_direct ,I_R_NIR)
+             LOG_WARN_CONT('(A,F32.16)') 'surface albedo (NIR,diffuse)       [1]        :', ALBEDO(i,j,I_R_diffuse,I_R_NIR)
+             LOG_WARN_CONT('(A,F32.16)') 'surface albedo (VIS,direct )       [1]        :', ALBEDO(i,j,I_R_direct ,I_R_VIS)
+             LOG_WARN_CONT('(A,F32.16)') 'surface albedo (VIS,diffuse)       [1]        :', ALBEDO(i,j,I_R_diffuse,I_R_VIS)
+             LOG_WARN_CONT('(A,F32.16)') 'latent heat                        [J/kg]     :', LH    (i,j)
+             LOG_WARN_CONT('(A,F32.16)') 'stomata registance                 [1/s]      :', Rb    (i,j)
+             LOG_WARN_CONT('(A,F32.16)') 'thermal conductivity / depth       [J/m2/s/K] :', TC_dZ (i,j)
+             LOG_WARN_CONT('(A,F32.16)') 'roughness length for momemtum      [m]        :', Z0M   (i,j)
+             LOG_WARN_CONT('(A,F32.16)') 'roughness length for heat          [m]        :', Z0H   (i,j)
+             LOG_WARN_CONT('(A,F32.16)') 'roughness length for vapor         [m]        :', Z0E   (i,j)
+             LOG_WARN_CONT('(A,F32.16)') 'time step                          [s]        :', dt
              LOG_NEWLINE
-             LOG_INFO_CONT('(A,F32.16)') 'friction velocity                  [m/s]      :', Ustar(i,j)
-             LOG_INFO_CONT('(A,F32.16)') 'friction potential temperature     [K]        :', Tstar(i,j)
-             LOG_INFO_CONT('(A,F32.16)') 'friction water vapor mass ratio    [kg/kg]    :', Qstar(i,j)
-             LOG_INFO_CONT('(A,F32.16)') 'free convection velocity scale     [m/s]      :', Wstar(i,j)
-             LOG_INFO_CONT('(A,F32.16)') 'd(friction velocity)               [m/s]      :', dUstar
-             LOG_INFO_CONT('(A,F32.16)') 'd(friction potential temperature)  [K]        :', dTstar
-             LOG_INFO_CONT('(A,F32.16)') 'd(friction water vapor mass ratio) [kg/kg]    :', dQstar
-             LOG_INFO_CONT('(A,F32.16)') 'd(free convection velocity scale)  [m/s]      :', dWstar
-             LOG_INFO_CONT('(A,F32.16)') 'next surface temperature           [K]        :', TMPS1(i,j)
+             LOG_WARN_CONT('(A,F32.16)') 'friction velocity                  [m/s]      :', Ustar(i,j)
+             LOG_WARN_CONT('(A,F32.16)') 'friction potential temperature     [K]        :', Tstar(i,j)
+             LOG_WARN_CONT('(A,F32.16)') 'friction water vapor mass ratio    [kg/kg]    :', Qstar(i,j)
+             LOG_WARN_CONT('(A,F32.16)') 'free convection velocity scale     [m/s]      :', Wstar(i,j)
+             LOG_WARN_CONT('(A,F32.16)') 'd(friction velocity)               [m/s]      :', dUstar
+             LOG_WARN_CONT('(A,F32.16)') 'd(friction potential temperature)  [K]        :', dTstar
+             LOG_WARN_CONT('(A,F32.16)') 'd(friction water vapor mass ratio) [kg/kg]    :', dQstar
+             LOG_WARN_CONT('(A,F32.16)') 'd(free convection velocity scale)  [m/s]      :', dWstar
+             LOG_WARN_CONT('(A,F32.16)') 'next surface temperature           [K]        :', TMPS1(i,j)
+#endif
 
              ! check NaN
              if ( .NOT. ( res > -1.0_RP .OR. res < 1.0_RP ) ) then ! must be NaN
+#ifdef _OPENACC
+                err_flag = .true.
+#else
                 LOG_ERROR("CPL_PHY_SFC_skin",*) 'NaN is detected for surface temperature. ', trim(model_name)
                 LOG_ERROR_CONT('(A,I32)'   ) 'number of i                        [no unit]  :', i
                 LOG_ERROR_CONT('(A,I32)'   ) 'number of j                        [no unit]  :', j
@@ -482,6 +511,7 @@ contains
                 LOG_ERROR_CONT('(A,F32.16)') 'd(free convection velocity scale)  [m/s]      :', dWstar
                 LOG_ERROR_CONT('(A,F32.16)') 'next surface temperature           [K]        :', TMPS1(i,j)
                 call PRC_abort
+#endif
              endif
           endif
 
@@ -563,6 +593,14 @@ contains
        endif
     enddo
     enddo
+    !$acc end parallel
+
+#ifdef _OPENACC
+    if ( err_flag ) then
+       LOG_ERROR("CPL_PHY_SFC_skin",*) 'NaN is detected for surface temperature. ', trim(model_name)
+       call PRC_abort
+    end if
+#endif
 
     call BULKFLUX_diagnose_surface( IA, IS, IE, JA, JS, JE, &
                                     UA(:,:), VA(:,:),                      & ! (in)
@@ -574,6 +612,8 @@ contains
                                     FracU10 = FracU10(:,:),                & ! (in)
                                     FracT2 = FracT2(:,:),                  & ! (in)
                                     FracQ2 = FracQ2(:,:)                   ) ! (in)
+
+    !$acc end data
 
     return
   end subroutine CPL_PHY_SFC_skin

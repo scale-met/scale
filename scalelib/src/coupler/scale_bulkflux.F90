@@ -38,6 +38,7 @@ module scale_bulkflux
      module procedure BULKFLUX_diagnose_surface_2D
   end interface BULKFLUX_diagnose_surface
 
+#ifndef _OPENACC
   abstract interface
      subroutine bc( &
           T1, T0,                 &
@@ -76,6 +77,7 @@ module scale_bulkflux
   end interface
 
   procedure(bc), pointer :: BULKFLUX => NULL()
+#endif
   public :: BULKFLUX
 
   !-----------------------------------------------------------------------------
@@ -83,6 +85,7 @@ module scale_bulkflux
   !++ Public parameters & variables
   !
   character(len=H_SHORT), public :: BULKFLUX_type = 'B91W01' ! 'U95', 'B91', and 'B91W01'
+  !$acc declare create(BULKFLUX_type)
 
   !-----------------------------------------------------------------------------
   !
@@ -105,17 +108,22 @@ module scale_bulkflux
 
   integer,  private :: BULKFLUX_itr_sa_max = 5  ! maximum iteration number for successive approximation
   integer,  private :: BULKFLUX_itr_nr_max = 10 ! maximum iteration number for Newton-Raphson method
+  !$acc declare create(BULKFLUX_NK2018, BULKFLUX_itr_sa_max, BULKFLUX_itr_nr_max)
 
   real(RP), private :: BULKFLUX_WSCF ! empirical scaling factor of Wstar (Beljaars 1994)
+  !$acc declare create(BULKFLUX_WSCF)
 
   ! limiter
   real(RP), private :: BULKFLUX_Uabs_min  = 1.0E-2_RP ! minimum of Uabs [m/s]
   real(RP), private :: BULKFLUX_Wstar_min = 1.0E-4_RP ! minimum of W* [m/s]
+  !$acc declare create(BULKFLUX_Uabs_min, BULKFLUX_Wstar_min)
 
   ! surface diagnose
   logical,  private :: BULKFLUX_surfdiag_neutral = .true. ! calculate surface diagnoses with neutral condition
+  !$acc declare create(BULKFLUX_surfdiag_neutral)
 
   logical,  private :: flag_W01
+  !$acc declare create(flag_W01)
 
 contains
 
@@ -166,19 +174,31 @@ contains
     select case(BULKFLUX_type)
     case('U95')
        LOG_INFO_CONT(*) '=> Uno et al.(1995)'
+#ifndef _OPENACC
        BULKFLUX => BULKFLUX_U95
+#endif
     case('B91W01')
        LOG_INFO_CONT(*) '=> Beljaars and Holtslag (1991) and Wilson (2001)'
        FLAG_W01 = .true.
+#ifndef _OPENACC
        BULKFLUX => BULKFLUX_B91W01
+#endif
     case('B91')
        LOG_INFO_CONT(*) '=> Beljaars and Holtslag (1991)'
        FLAG_W01 = .false.
+#ifndef _OPENACC
        BULKFLUX => BULKFLUX_B91W01
+#endif
     case default
        LOG_ERROR("BULKFLUX_setup",*) 'Unsupported BULKFLUX_type. STOP'
        call PRC_abort
     end select
+
+    !$acc update device(BULKFLUX_NK2018, BULKFLUX_itr_sa_max, BULKFLUX_itr_nr_max)
+    !$acc update device(BULKFLUX_WSCF)
+    !$acc update device(BULKFLUX_Uabs_min, BULKFLUX_Wstar_min)
+    !$acc update device(BULKFLUX_surfdiag_neutral)
+    !$acc update device(flag_W01)
 
     return
   end subroutine BULKFLUX_setup
@@ -225,6 +245,7 @@ contains
 
     if ( present(mask) ) then
        !$omp parallel do
+       !$acc kernels
        do j = JS, JE
        do i = IS, IE
           if ( mask(i,j) ) then
@@ -236,8 +257,10 @@ contains
           end if
        end do
        end do
+       !$acc end kernels
     else
        !$omp parallel do
+       !$acc kernels
        do j = JS, JE
        do i = IS, IE
           call BULKFLUX_diagnose_scales_0D( SFLX_MW(i,j), SFLX_MU(i,j), SFLX_MV(i,j), & ! (in)
@@ -247,6 +270,7 @@ contains
                                             Wstar(i,j), RLmo(i,j)                     ) ! (out)
        end do
        end do
+       !$acc end kernels
     end if
 
     return
@@ -258,6 +282,7 @@ contains
        SFC_DENS, SFC_TEMP, PBL,   &
        Ustar, Tstar, Qstar,       &
        Wstar, RLmo                )
+    !$acc routine seq
     use scale_const, only: &
        EPS     => CONST_EPS,    &
        GRAV    => CONST_GRAV,   &
@@ -346,6 +371,7 @@ contains
     if ( present(FracU10) ) then
        if ( present(mask) ) then
           !$omp parallel do
+          !$acc kernels
           do j = JS, JE
           do i = IS, IE
           if ( mask(i,j) ) then
@@ -359,9 +385,11 @@ contains
           end if
           end do
           end do
+          !$acc end kernels
 
        else
           !$omp parallel do
+          !$acc kernels
           do j = JS, JE
           do i = IS, IE
              call  BULKFLUX_diagnose_surface_0D( ATM_U(i,j), ATM_V(i,j),                   &
@@ -373,10 +401,12 @@ contains
                                                  FracU10(i,j), FracT2(i,j), FracQ2(i,j)    )
           end do
           end do
+          !$acc end kernels
        end if
     else
        if ( present(mask) ) then
           !$omp parallel do
+          !$acc kernels
           do j = JS, JE
           do i = IS, IE
           if ( mask(i,j) ) then
@@ -389,9 +419,11 @@ contains
           end if
           end do
           end do
+          !$acc end kernels
 
        else
           !$omp parallel do
+          !$acc kernels
           do j = JS, JE
           do i = IS, IE
              call  BULKFLUX_diagnose_surface_0D( ATM_U(i,j), ATM_V(i,j),                   &
@@ -402,6 +434,7 @@ contains
                                                  U10(i,j), V10(i,j), T2(i,j), Q2(i,j)      )
           end do
           end do
+          !$acc end kernels
        end if
     end if
 
@@ -416,6 +449,7 @@ contains
        SFC_Z0M, SFC_Z0H, SFC_Z0E, &
        U10, V10, T2, Q2,          &
        FracU10, FracT2, FracQ2    )
+    !$acc routine seq
     implicit none
     real(RP), intent(in) :: ATM_U
     real(RP), intent(in) :: ATM_V
@@ -458,6 +492,67 @@ contains
     return
   end subroutine BULKFLUX_diagnose_surface_0D
 
+#ifdef _OPENACC
+  subroutine BULKFLUX( &
+       T1, T0,                 &
+       P1, P0,                 &
+       Q1, Q0,                 &
+       Uabs, Z1, PBL,          &
+       Z0M, Z0H, Z0E,          &
+       Ustar, Tstar, Qstar,    &
+       Wstar, RLmo, Ra,        &
+       FracU10, FracT2, FracQ2 )
+    !$acc routine seq
+    real(RP), intent(in) :: T1  ! tempearature at the lowest atmospheric layer [K]
+    real(RP), intent(in) :: T0  ! skin temperature [K]
+    real(RP), intent(in) :: P1  ! pressure at the lowest atmospheric layer [Pa]
+    real(RP), intent(in) :: P0  ! surface pressure [Pa]
+    real(RP), intent(in) :: Q1  ! mixing ratio at the lowest atmospheric layer [kg/kg]
+    real(RP), intent(in) :: Q0  ! surface mixing ratio [kg/kg]
+    real(RP), intent(in) :: Uabs! absolute velocity at the lowest atmospheric layer [m/s]
+    real(RP), intent(in) :: Z1  ! height at the lowest atmospheric layer [m]
+    real(RP), intent(in) :: PBL ! the top of atmospheric mixing layer [m]
+    real(RP), intent(in) :: Z0M ! roughness length of momentum [m]
+    real(RP), intent(in) :: Z0H ! roughness length of heat [m]
+    real(RP), intent(in) :: Z0E ! roughness length of moisture [m]
+
+    real(RP), intent(out) :: Ustar   ! friction velocity [m/s]
+    real(RP), intent(out) :: Tstar   ! friction temperature [K]
+    real(RP), intent(out) :: Qstar   ! friction mixing rate [kg/kg]
+    real(RP), intent(out) :: Wstar   ! free convection velocity scale [m/s]
+    real(RP), intent(out) :: RLmo    ! inversed Obukhov length [1/m]
+    real(RP), intent(out) :: Ra      ! Aerodynamic resistance (=1/Ce)
+    real(RP), intent(out) :: FracU10 ! calculation parameter for U10 [-]
+    real(RP), intent(out) :: FracT2  ! calculation parameter for T2 [-]
+    real(RP), intent(out) :: FracQ2  ! calculation parameter for Q2 [-]
+
+    select case ( BULKFLUX_type )
+    case('U95')
+       call BULKFLUX_U95( &
+       T1, T0,                 &
+       P1, P0,                 &
+       Q1, Q0,                 &
+       Uabs, Z1, PBL,          &
+       Z0M, Z0H, Z0E,          &
+       Ustar, Tstar, Qstar,    &
+       Wstar, RLmo, Ra,        &
+       FracU10, FracT2, FracQ2 )
+    case('B91W01', 'B91')
+       call BULKFLUX_B91W01( &
+       T1, T0,                 &
+       P1, P0,                 &
+       Q1, Q0,                 &
+       Uabs, Z1, PBL,          &
+       Z0M, Z0H, Z0E,          &
+       Ustar, Tstar, Qstar,    &
+       Wstar, RLmo, Ra,        &
+       FracU10, FracT2, FracQ2 )
+    end select
+
+    return
+  end subroutine BULKFLUX
+#endif
+
   !-----------------------------------------------------------------------------
   ! ref. Uno et al. (1995)
   !-----------------------------------------------------------------------------
@@ -470,6 +565,7 @@ contains
        Ustar, Tstar, Qstar,    &
        Wstar, RLmo, Ra,        &
        FracU10, FracT2, FracQ2 )
+    !$acc routine seq
     use scale_const, only: &
       GRAV   => CONST_GRAV,   &
       KARMAN => CONST_KARMAN, &
@@ -627,6 +723,7 @@ contains
        Ustar, Tstar, Qstar,    &
        Wstar, RLmo, Ra,        &
        FracU10, FracT2, FracQ2 )
+    !$acc routine seq
     use scale_const, only: &
       GRAV    => CONST_GRAV,    &
       KARMAN  => CONST_KARMAN,  &
@@ -732,6 +829,7 @@ contains
     WstarC = BULKFLUX_Wstar_min
 
     ! Successive approximation
+    !$acc loop seq
     do n = 1, BULKFLUX_itr_sa_max
 
        call calc_scales_B91W01( &
@@ -747,6 +845,7 @@ contains
     end do
 
     ! Newton-Raphson method
+    !$acc loop seq
     do n = 1, BULKFLUX_itr_nr_max
 
        dWstar = WstarC
@@ -838,6 +937,7 @@ contains
        Wstar,                                 &
        Ustar, Tstar, Qstar, BFLX,             &
        FracU10, FracT2, FracQ2                )
+    !$acc routine seq
     use scale_const, only: &
        GRAV    => CONST_GRAV,    &
        KARMAN  => CONST_KARMAN,  &
@@ -954,6 +1054,7 @@ contains
   !-----------------------------------------------------------------------------
   ! stability function for momemtum in unstable condition
   function fm_unstable( Z, IL )
+    !$acc routine seq
     use scale_const, only: &
          PI => CONST_PI
     implicit none
@@ -987,6 +1088,7 @@ contains
     return
   end function fm_unstable
   function fmm_unstable( Z, IL )
+    !$acc routine seq
     use scale_const, only: &
       PI  => CONST_PI
     implicit none
@@ -1041,6 +1143,7 @@ contains
   !-----------------------------------------------------------------------------
   ! stability function for heat/vapor in unstable condition
   function fh_unstable( Z, IL )
+    !$acc routine seq
     implicit none
 
     ! argument
@@ -1072,6 +1175,7 @@ contains
     return
   end function fh_unstable
   function fhm_unstable( Z, IL )
+    !$acc routine seq
     implicit none
 
     ! argument
@@ -1124,6 +1228,7 @@ contains
   !-----------------------------------------------------------------------------
   ! stability function for momemtum in stable condition
   function fm_stable( Z, IL )
+    !$acc routine seq
     implicit none
 
     ! argument
@@ -1155,6 +1260,7 @@ contains
     return
   end function fm_stable
   function fmm_stable( Z, IL )
+    !$acc routine seq
     implicit none
 
     ! argument
@@ -1197,6 +1303,7 @@ contains
   !-----------------------------------------------------------------------------
   ! stability function for heat/vapor in stable condition
   function fh_stable( Z, IL )
+    !$acc routine seq
     implicit none
 
     ! argument
@@ -1228,6 +1335,7 @@ contains
     return
   end function fh_stable
   function fhm_stable( Z, IL )
+    !$acc routine seq
     implicit none
 
     ! argument
