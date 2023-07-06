@@ -356,6 +356,10 @@ contains
     call FILE_HISTORY_reg( 'URBAN_RNG',   'urban net radiation on road',         'W/m2', I_RNG  , ndims=2 )
     call FILE_HISTORY_reg( 'URBAN_RNgrd', 'urban grid average of net radiation', 'W/m2', I_RNgrd, ndims=2 )
 
+    !$acc update device(DTS_MAX,BOUND)
+    !$acc update device(ZR,BETR_CONST,BETB_CONST,BETG_CONST,STRGR,STRGB,STRGG,CAPR,CAPB,CAPG,AKSR,AKSB,AKSG,ALBR,ALBB,ALBG,EPSR,EPSB,EPSG,Z0R,TRLEND,TBLEND,TGLEND)
+    !$acc update device(R,RW,HGT,Z0HR,Z0HB,Z0HG,SVF)
+
     return
   end subroutine URBAN_DYN_kusaka01_setup
 
@@ -389,6 +393,9 @@ contains
        Ustar, Tstar, Qstar, Wstar,      &
        RLmo,                            &
        U10, V10, T2, Q2                 )
+    use scale_prc, only: &
+       PRC_myrank, &
+       PRC_abort
     use scale_const, only: &
        EPS   => CONST_EPS,  &
        UNDEF => CONST_UNDEF, &
@@ -531,7 +538,7 @@ contains
     !$omp parallel do schedule(dynamic) collapse(2) &
     !$omp private(w,Uabs,TR,TB,TG,TC,QC,UC,TRL,TBL,TGL,RAINR,RAINB,RAING,ALBD_LW,ALBD_SW,QVsat,Ra,FracU10,FracT2,FracQ2,MFLUX)
     !$acc kernels
-    !$acc loop collapse(2) private(TRL,TBL,TGL) reduction(.and.: converged)
+    !$acc loop collapse(2) private(TRL,TBL,TGL) reduction(.and.: converged) independent
     do j = UJS, UJE
     do i = UIS, UIE
 
@@ -987,9 +994,9 @@ contains
     TCP = TC
     QCP = QC
     !
-    TRLP = TRL
-    TBLP = TBL
-    TGLP = TGL
+    TRLP(:) = TRL(:)
+    TBLP(:) = TBL(:)
+    TGLP(:) = TGL(:)
     !
 
 
@@ -1124,9 +1131,9 @@ contains
     !! 1st layer's cap, aks are replaced.
     !! call multi_layer2(UKE,BOUND,G0R,CAPR,AKSR,TRL,DZR,dt_RP,TRLEND,CAPL1,AKSL1)
 
-      TRL = TRLP
+      TRL(:) = TRLP(:)
       call multi_layer(UKE,BOUND,G0R,CAPR,AKSR,TRL,DZR,dt_RP,TRLEND)
-      resi1 = TRL(1) - TR
+      resi1  = TRL(1) - TR
 
      ! LOG_INFO("URBAN_DYN_kusaka01_SLC_main",'(a3,i5,f8.3,6f15.5)') "TR,",iteration,TR,G0R,SR,RR,HR,ELER,resi1
 
@@ -1213,10 +1220,10 @@ contains
      G0R     = SR + RR - HR - ELER
      RAINR   = max( RAINRP - EVPR * dt_RP, 0.0_RP )
 
-     TRL   = TRLP
+     TRL(:)  = TRLP(:)
      call multi_layer(UKE,BOUND,G0R,CAPR,AKSR,TRL,DZR,dt_RP,TRLEND)
-     resi1 = TRL(1) - TR
-     TR    = TRL(1)
+     resi1   = TRL(1) - TR
+     TR      = TRL(1)
 
      if ( abs(resi1) > DTS_MAX_onestep ) then
 #ifndef _OPENACC
@@ -1324,11 +1331,11 @@ contains
 !      G0G   = SG + RG - HG - ELEG + EFLX
       G0G   = SG + RG - HG - ELEG
 
-      TBL = TBLP
+      TBL(:) = TBLP(:)
       call multi_layer(UKE,BOUND,G0B,CAPB,AKSB,TBL,DZB,dt_RP,TBLEND)
-      resi1 = TBL(1) - TB
+      resi1  = TBL(1) - TB
 
-      TGL = TGLP
+      TGL(:) = TGLP(:)
       call multi_layer(UKE,BOUND,G0G,CAPG,AKSG,TGL,DZG,dt_RP,TGLEND)
       resi2 = TGL(1) - TG
 
@@ -1495,15 +1502,15 @@ contains
      G0G   = SG + RG - HG - ELEG
      RAING = max( RAINGP - EVPG * dt_RP, 0.0_RP )
 
-     TBL   = TBLP
+     TBL(:) = TBLP(:)
      call multi_layer(UKE,BOUND,G0B,CAPB,AKSB,TBL,DZB,dt_RP,TBLEND)
-     resi1 = TBL(1) - TB
-     TB    = TBL(1)
+     resi1  = TBL(1) - TB
+     TB     = TBL(1)
 
-     TGL   = TGLP
+     TGL(:) = TGLP(:)
      call multi_layer(UKE,BOUND,G0G,CAPG,AKSG,TGL,DZG,dt_RP,TGLEND)
-     resi2 = TGL(1) - TG
-     TG    = TGL(1)
+     resi2  = TGL(1) - TG
+     TG     = TGL(1)
 
 #ifndef _OPENACC
      if ( abs(resi1) > DTS_MAX_onestep ) then
