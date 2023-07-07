@@ -195,7 +195,7 @@ contains
     !$omp private(qdry,Rtot,QVsat,Uabs,Ra,res,emis,LWD,LWU,SWD,SWU,MFLUX)
     !$acc kernels
     do j = JS, JE
-    !$acc loop private(qvsat)
+    !$acc loop private(qvsat,ra,Uabs)
     do i = IS, IE
        if ( calc_flag(i,j) ) then
 
