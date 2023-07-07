@@ -114,7 +114,6 @@ contains
     !---------------------------------------------------------------------------
     !$acc data copyin(Uabs,Z1,mask) copyout(Z0H,Z0E) copy(Z0M)
 
-    !$acc kernels
     !$omp parallel do default(none) OMP_SCHEDULE_ &
     !$omp shared(OJS,OJE,OIS,OIE, &
     !$omp        GRAV,UNDEF, &
@@ -122,7 +121,10 @@ contains
     !$omp        OCEAN_PHY_ROUGHNESS_Ustar_min,OCEAN_PHY_ROUGHNESS_visck,OCEAN_PHY_ROUGHNESS_moon07_itelim, &
     !$omp        Z0M,Z0H,Z0E,Uabs,Z1,mask) &
     !$omp private(i,j,ite,U10M,Ustar)
+    !$acc kernels
+    !$acc loop independent
     do j = OJS, OJE
+    !$acc loop independent
     do i = OIS, OIE
        if ( mask(i,j) ) then
 
