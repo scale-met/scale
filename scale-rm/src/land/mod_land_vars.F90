@@ -256,8 +256,6 @@ module mod_land_vars
                   'm',     &
                   's'      /
 
-  real(RP), private, allocatable :: LAND_PROPERTY_table(:,:)
-
   logical,  private :: LAND_RESTART_IN_CHECK_COORDINATES = .true.
 
   ! for monitor
@@ -312,6 +310,9 @@ contains
        LAND_RESTART_OUT_DTYPE,             &
        LAND_VARS_CHECKRANGE
 
+    real(RP), allocatable :: LAND_PROPERTY_table(:,:)
+
+
     integer :: ierr
     integer :: i, j, iv, p
     !---------------------------------------------------------------------------
@@ -331,12 +332,12 @@ contains
     allocate( LAND_ICE       (LKMAX,LIA,LJA)               )
     allocate( LAND_SFC_TEMP  (LIA,LJA)                     )
     allocate( LAND_SFC_albedo(LIA,LJA,N_RAD_DIR,N_RAD_RGN) )
-
     LAND_TEMP      (:,:,:)   = UNDEF
     LAND_WATER     (:,:,:)   = UNDEF
     LAND_ICE       (:,:,:)   = UNDEF
     LAND_SFC_TEMP  (:,:)     = UNDEF
     LAND_SFC_albedo(:,:,:,:) = UNDEF
+    !$acc enter data create(LAND_TEMP,LAND_WATER,LAND_ICE,LAND_SFC_TEMP,LAND_SFC_albedo)
 
     if ( SNOW_flag ) then
        allocate( SNOW_SFC_TEMP (LIA,LJA) )
@@ -357,6 +358,7 @@ contains
     LAND_TEMP_t (:,:,:) = UNDEF
     LAND_WATER_t(:,:,:) = UNDEF
     LAND_ICE_t  (:,:,:) = UNDEF
+    !$acc enter data create(LAND_TEMP_t,LAND_WATER_t,LAND_ICE_t)
 
     allocate( LAND_SFLX_GH   (LIA,LJA) )
     allocate( LAND_SFLX_water(LIA,LJA) )
@@ -364,11 +366,13 @@ contains
     LAND_SFLX_GH   (:,:) = UNDEF
     LAND_SFLX_water(:,:) = UNDEF
     LAND_SFLX_ENGI  (:,:) = UNDEF
+    !$acc enter data create(LAND_SFLX_GH,LAND_SFLX_water,LAND_SFLX_ENGI)
 
     allocate( LAND_RUNOFF     (LIA,LJA) )
     allocate( LAND_RUNOFF_ENGI(LIA,LJA) )
     LAND_RUNOFF     (:,:) = UNDEF
     LAND_RUNOFF_ENGI(:,:) = UNDEF
+    !$acc enter data create(LAND_RUNOFF,LAND_RUNOFF_ENGI)
 
     allocate( LAND_SFLX_MW  (LIA,LJA) )
     allocate( LAND_SFLX_MU  (LIA,LJA) )
@@ -382,6 +386,7 @@ contains
     LAND_SFLX_SH  (:,:)   = UNDEF
     LAND_SFLX_LH  (:,:)   = UNDEF
     LAND_SFLX_QTRC(:,:,:) = UNDEF
+    !$acc enter data create(LAND_SFLX_MW,LAND_SFLX_MU,LAND_SFLX_MV,LAND_SFLX_SH,LAND_SFLX_LH,LAND_SFLX_QTRC)
 
     allocate( LAND_U10      (LIA,LJA) )
     allocate( LAND_V10      (LIA,LJA) )
@@ -391,6 +396,7 @@ contains
     LAND_V10      (:,:) = UNDEF
     LAND_T2       (:,:) = UNDEF
     LAND_Q2       (:,:) = UNDEF
+    !$acc enter data create(LAND_U10,LAND_V10,LAND_T2,LAND_Q2)
 
     allocate( LAND_Ustar(LIA,LJA) )
     allocate( LAND_Tstar(LIA,LJA) )
@@ -402,6 +408,8 @@ contains
     LAND_Qstar(:,:) = UNDEF
     LAND_Wstar(:,:) = UNDEF
     LAND_RLmo (:,:) = UNDEF
+    !$acc enter data create(LAND_Ustar,LAND_Tstar,LAND_Qstar,LAND_Wstar,LAND_RLmo)
+
     if ( SNOW_flag ) then
        allocate( SOIL_Ustar(LIA,LJA) )
        allocate( SOIL_Tstar(LIA,LJA) )
@@ -413,6 +421,7 @@ contains
        SOIL_Qstar(:,:) = UNDEF
        SOIL_Wstar(:,:) = UNDEF
        SOIL_RLmo (:,:) = UNDEF
+       !$acc enter data create(SOIL_Ustar,SOIL_Tstar,SOIL_Qstar,SOIL_Wstar,SOIL_RLmo)
     else
        SOIL_Ustar => LAND_Ustar
        SOIL_Tstar => LAND_Tstar
@@ -461,6 +470,7 @@ contains
     ATMOS_cosSZA     (:,:)     = UNDEF
     ATMOS_SFLX_water (:,:)     = UNDEF
     ATMOS_SFLX_ENGI  (:,:)     = UNDEF
+    !$acc enter data create(ATMOS_TEMP,ATMOS_PRES,ATMOS_W,ATMOS_U,ATMOS_V,ATMOS_DENS,ATMOS_QV,ATMOS_PBL,ATMOS_SFC_DENS,ATMOS_SFC_PRES,ATMOS_SFLX_rad_dn,ATMOS_cosSZA,ATMOS_SFLX_water,ATMOS_SFLX_ENGI)
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -503,12 +513,15 @@ contains
     allocate( LAND_PROPERTY_table(LANDUSE_PFT_nmin:LANDUSE_PFT_nmax,LAND_PROPERTY_nmax) )
     LAND_PROPERTY_table(:,:) = UNDEF
 
-    call LAND_param_read
+    call LAND_param_read( LANDUSE_PFT_nmin, LANDUSE_PFT_nmax, LAND_PROPERTY_nmax, &
+                          LAND_PROPERTY_table(:,:) )
 
     ! Apply land property to 2D map
     allocate( LAND_PROPERTY(LIA,LJA,LAND_PROPERTY_nmax) )
+    !$acc enter data create(LAND_PROPERTY)
 
     ! tentative, mosaic is off
+    !$omp parallel do collapse(2)
     do p = 1, LAND_PROPERTY_nmax
     do j = LJS, LJE
     do i = LIS, LIE
@@ -517,12 +530,15 @@ contains
     enddo
     enddo
 
+    deallocate( LAND_PROPERTY_table )
+
     do p = 1, LAND_PROPERTY_nmax
        call COMM_vars8( LAND_PROPERTY(:,:,p), p )
     enddo
     do p = 1, LAND_PROPERTY_nmax
        call COMM_wait ( LAND_PROPERTY(:,:,p), p )
     enddo
+    !$acc update device(LAND_PROPERTY)
 
     ! monitor
     call MONITOR_reg( 'LND_TEMP',       'land temperature',                'K m3', & ! (in)
@@ -590,6 +606,7 @@ contains
        SNOW_flag = .true.
     end select
 
+    !$acc exit data delete(LAND_TEMP,LAND_WATER,LAND_ICE,LAND_SFC_TEMP,LAND_SFC_albedo)
     deallocate( LAND_TEMP       )
     deallocate( LAND_WATER      )
     deallocate( LAND_ICE        )
@@ -604,17 +621,21 @@ contains
        deallocate( SNOW_nosnowsec )
     end if
 
+    !$acc exit data delete(LAND_TEMP_t,LAND_WATER_t,LAND_ICE_t)
     deallocate( LAND_TEMP_t  )
     deallocate( LAND_WATER_t )
     deallocate( LAND_ICE_t   )
 
+    !$acc exit data delete(LAND_SFLX_GH,LAND_SFLX_water,LAND_SFLX_ENGI)
     deallocate( LAND_SFLX_GH    )
     deallocate( LAND_SFLX_water )
     deallocate( LAND_SFLX_ENGI  )
 
+    !$acc exit data delete(LAND_RUNOFF,LAND_RUNOFF_ENGI)
     deallocate( LAND_RUNOFF      )
     deallocate( LAND_RUNOFF_ENGI )
 
+    !$acc exit data delete(LAND_SFLX_MW,LAND_SFLX_MU,LAND_SFLX_MV,LAND_SFLX_SH,LAND_SFLX_LH,LAND_SFLX_QTRC)
     deallocate( LAND_SFLX_MW   )
     deallocate( LAND_SFLX_MU   )
     deallocate( LAND_SFLX_MV   )
@@ -622,17 +643,20 @@ contains
     deallocate( LAND_SFLX_LH   )
     deallocate( LAND_SFLX_QTRC )
 
+    !$acc exit data delete(LAND_U10,LAND_V10,LAND_T2,LAND_Q2)
     deallocate( LAND_U10       )
     deallocate( LAND_V10       )
     deallocate( LAND_T2        )
     deallocate( LAND_Q2        )
 
+    !$acc exit data delete(LAND_Ustar,LAND_Tstar,LAND_Qstar,LAND_Wstar,LAND_RLmo)
     deallocate( LAND_Ustar )
     deallocate( LAND_Tstar )
     deallocate( LAND_Qstar )
     deallocate( LAND_Wstar )
     deallocate( LAND_RLmo  )
     if ( SNOW_flag ) then
+       !$acc exit data delete(SOIL_Ustar,SOIL_Tstar,SOIL_Qstar,SOIL_Wstar,SOIL_RLmo)
        deallocate( SOIL_Ustar )
        deallocate( SOIL_Tstar )
        deallocate( SOIL_Qstar )
@@ -647,6 +671,7 @@ contains
        deallocate( SNOW_RLmo  )
     end if
 
+    !$acc exit data delete(ATMOS_TEMP,ATMOS_PRES,ATMOS_W,ATMOS_U,ATMOS_V,ATMOS_DENS,ATMOS_QV,ATMOS_PBL,ATMOS_SFC_DENS,ATMOS_SFC_PRES,ATMOS_SFLX_rad_dn,ATMOS_cosSZA,ATMOS_SFLX_water,ATMOS_SFLX_ENGI)
     deallocate( ATMOS_TEMP        )
     deallocate( ATMOS_PRES        )
     deallocate( ATMOS_W           )
@@ -662,8 +687,7 @@ contains
     deallocate( ATMOS_SFLX_water  )
     deallocate( ATMOS_SFLX_ENGI   )
 
-    deallocate( LAND_PROPERTY_table )
-
+    !$acc exit data delete(LAND_PROPERTY)
     deallocate( LAND_PROPERTY )
 
     return
@@ -772,6 +796,8 @@ contains
 
        if( FILE_get_AGGREGATE(restart_fid) ) call FILE_CARTESC_flush( restart_fid ) ! commit all pending read requests
 
+       !$acc update device(LAND_TEMP,LAND_WATER,LAND_ICE,LAND_SFC_TEMP,LAND_SFC_albedo)
+
        call LAND_vars_check( force = .true. )
     else
        LOG_ERROR("LAND_vars_restart_read",*) 'invalid restart file ID for land.'
@@ -802,6 +828,8 @@ contains
     call FILE_HISTORY_in( LAND_TEMP (:,:,:), VAR_NAME(I_TEMP),  VAR_DESC(I_TEMP),  VAR_UNIT(I_TEMP),  dim_type='LXY', standard_name=VAR_STDN(I_TEMP) )
     call FILE_HISTORY_in( LAND_WATER(:,:,:), VAR_NAME(I_WATER), VAR_DESC(I_WATER), VAR_UNIT(I_WATER), dim_type='LXY', standard_name=VAR_STDN(I_WATER) )
     call FILE_HISTORY_in( LAND_ICE  (:,:,:), VAR_NAME(I_ICE),   VAR_DESC(I_ICE),   VAR_UNIT(I_ICE), dim_type='LXY', standard_name=VAR_STDN(I_ICE) )
+    !$acc data create(LAND_WATERDS)
+    !$acc kernels
     do j = LJS, LJE
     do i = LIS, LIE
     do k = 1, LKMAX
@@ -809,8 +837,9 @@ contains
     end do
     end do
     end do
+    !$acc end kernels
     call FILE_HISTORY_in( LAND_WATERDS(:,:,:), VAR_NAME(I_WATERDS), VAR_DESC(I_WATERDS), VAR_UNIT(I_WATERDS), dim_type='LXY', fill_halo=.true., standard_name=VAR_STDN(I_WATERDS) )
-
+    !$acc end data
 
     call FILE_HISTORY_in( LAND_SFC_TEMP  (:,:),                     VAR_NAME(I_SFC_TEMP),                                     &
                           VAR_DESC(I_SFC_TEMP),        VAR_UNIT(I_SFC_TEMP),        standard_name=VAR_STDN(I_SFC_TEMP)        )
@@ -935,9 +964,12 @@ contains
     integer  :: k, i, j
     !---------------------------------------------------------------------------
 
+    !$acc data create(WORK3D,WORK2D)
+
     call MONITOR_put( MONIT_id(IM_TEMP),  LAND_TEMP(:,:,:) )
     if ( MONIT_id(IM_WATER) > 0 ) then
        !$omp parallel do
+       !$acc kernels
        do j = LJS, LJE
        do i = LIS, LIE
        do k = LKS, LKE
@@ -945,10 +977,12 @@ contains
        end do
        end do
        end do
+       !$acc end kernels
        call MONITOR_put( MONIT_id(IM_WATER), WORK3D(:,:,:) )
     end if
     if ( MONIT_id(IM_ICE) > 0 ) then
        !$omp parallel do
+       !$acc kernels
        do j = LJS, LJE
        do i = LIS, LIE
        do k = LKS, LKE
@@ -956,6 +990,7 @@ contains
        end do
        end do
        end do
+       !$acc end kernels
        call MONITOR_put( MONIT_id(IM_ICE),   WORK3D(:,:,:) )
     end if
 
@@ -965,17 +1000,20 @@ contains
     call MONITOR_put( MONIT_id(IM_ROFF), LAND_RUNOFF    (:,:) )
     if ( MONIT_id(IM_MASFLX) > 0 ) then
        !$omp parallel do
+       !$acc kernels
        do j = LJS, LJE
        do i = LIS, LIE
           WORK2D(i,j) = LAND_SFLX_water(i,j) - LAND_RUNOFF(i,j)
        end do
        end do
+       !$acc end kernels
        call MONITOR_put( MONIT_id(IM_MASFLX), WORK2D(:,:) )
     end if
 
     ! energy budget
     if ( MONIT_id(IM_ENGI) > 0 ) then
        !$omp parallel do
+       !$acc kernels
        do j = LJS, LJE
        do i = LIS, LIE
        do k = LKS, LKE
@@ -987,10 +1025,12 @@ contains
        end do
        end do
        end do
+       !$acc end kernels
        call MONITOR_put( MONIT_id(IM_ENGI), WORK3D(:,:,:) )
     end if
     if ( MONIT_id(IM_W_ENGI) > 0 ) then
        !$omp parallel do
+       !$acc kernels
        do j = LJS, LJE
        do i = LIS, LIE
        do k = LKS, LKE
@@ -998,10 +1038,12 @@ contains
        end do
        end do
        end do
+       !$acc end kernels
        call MONITOR_put( MONIT_id(IM_W_ENGI), WORK3D(:,:,:) )
     end if
     if ( MONIT_id(IM_I_ENGI) > 0 ) then
        !$omp parallel do
+       !$acc kernels
        do j = LJS, LJE
        do i = LIS, LIE
        do k = LKS, LKE
@@ -1009,6 +1051,7 @@ contains
        end do
        end do
        end do
+       !$acc end kernels
        call MONITOR_put( MONIT_id(IM_I_ENGI), WORK3D(:,:,:) )
     end if
 
@@ -1018,15 +1061,18 @@ contains
     call MONITOR_put( MONIT_id(IM_ROFF_EI),   LAND_RUNOFF_ENGI(:,:) )
     if ( MONIT_id(IM_ENGFLX) > 0 ) then
        !$omp parallel do
+       !$acc kernels
        do j = LJS, LJE
        do i = LIS, LIE
           WORK2D(i,j) = LAND_SFLX_GH(i,j) + LAND_SFLX_ENGI(i,j) &
                       - LAND_RUNOFF_ENGI(i,j)
        end do
        end do
+       !$acc end kernels
        call MONITOR_put( MONIT_id(IM_ENGFLX), WORK2D(:,:) )
     end if
 
+    !$acc end data
 
     return
   end subroutine LAND_vars_monitor
@@ -1201,13 +1247,18 @@ contains
 
   !-----------------------------------------------------------------------------
   !> Budget monitor for land
-  subroutine LAND_param_read
+  subroutine LAND_param_read( &
+       LANDUSE_PFT_nmin, &
+       LANDUSE_PFT_nmax, &
+       LAND_PROPERTY_nmax, &
+       LAND_PROPERTY_table )
     use scale_prc, only: &
        PRC_abort
-    use scale_landuse, only: &
-       LANDUSE_PFT_nmin, &
-       LANDUSE_PFT_nmax
     implicit none
+    integer, intent(in) :: LANDUSE_PFT_nmin
+    integer, intent(in) :: LANDUSE_PFT_nmax
+    integer, intent(in) :: LAND_PROPERTY_nmax
+    real(RP), intent(out) :: LAND_PROPERTY_table(LANDUSE_PFT_nmin:LANDUSE_PFT_nmax,LAND_PROPERTY_nmax)
 
     integer              :: index
     character(len=H_MID) :: description
@@ -1379,11 +1430,13 @@ contains
       num = I_WaterLimit
     end if
 
+    !$acc kernels
     do j = LJS, LJE
     do i = LIS, LIE
       VWC(i,j) = max( min( WS(i,j)*LAND_PROPERTY(i,j,num), LAND_PROPERTY(i,j,num) ), 0.0_RP )
     end do
     end do
+    !$acc end kernels
 
     return
   end function convert_WS2VWC
