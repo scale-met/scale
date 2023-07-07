@@ -759,8 +759,7 @@ contains
                                    DENS(:,:,:), POTT(:,:,:), TEMP(:,:,:), PRES(:,:,:), QV(:,:,:), & ! [IN]
                                    CZ(:), FZ(:), FDZ(:), RCDZ(:),                                 & ! [IN]
                                    REAL_CZ(:,:,:), REAL_FZ(:,:,:), REAL_PHI(:,:,:), AREA(:,:),    & ! [IN]
-                                   TIME_NOWDAYSEC,                                                & ! [IN]
-                                   force = .true.                                                 )
+                                   TIME_NOWDAYSEC                                                 )
        call PROF_rapend('ATM_Refstate', 2)
        call ATMOS_BOUNDARY_driver_set( TIME_NOWDAYSEC )
        call ATMOS_vars_calc_diagnostics

@@ -34,8 +34,6 @@ module scale_atmos_refstate
   !
   !++ Public parameters & variables
   !
-  logical,  public :: ATMOS_REFSTATE_UPDATE_FLAG = .false.
-
   real(RP), public, allocatable :: ATMOS_REFSTATE_pres(:,:,:) !< refernce pressure [Pa]
   real(RP), public, allocatable :: ATMOS_REFSTATE_temp(:,:,:) !< refernce temperature [K]
   real(RP), public, allocatable :: ATMOS_REFSTATE_dens(:,:,:) !< refernce density [kg/m3]
@@ -65,6 +63,7 @@ module scale_atmos_refstate
   real(RP),               private :: ATMOS_REFSTATE_RH           =   0.0_RP             !< surface & environment RH      [%]
   real(RP),               private :: ATMOS_REFSTATE_POTT_UNIFORM = 300.0_RP             !< uniform potential temperature [K]
   real(DP),               private :: ATMOS_REFSTATE_UPDATE_DT    =  -1.0_DP
+  logical,                private :: ATMOS_REFSTATE_UPDATE_FLAG  = .false.
 
   real(DP),               private :: last_updated
 
@@ -162,12 +161,12 @@ contains
        LOG_INFO_CONT(*) 'Output file of reference state : No output'
     endif
 
+    ATMOS_REFSTATE_UPDATE_FLAG = .false.
+
     ! input or generate reference profile
     if ( ATMOS_REFSTATE_IN_BASENAME /= '' ) then
 
        call ATMOS_REFSTATE_read( KA, KS, KE, IA, IS, IE, JA, JS, JE, & ! [IN]
-                                 CZ(:), FZ(:),                       & ! [IN]
-                                 REAL_CZ(:,:,:), REAL_FZ(:,:,:),     & ! [IN]
                                  REAL_PHI(:,:,:)                     ) ! [IN]
 
     else
@@ -200,12 +199,9 @@ contains
 
        elseif ( ATMOS_REFSTATE_TYPE == 'INIT' ) then
 
-          if ( ATMOS_REFSTATE_UPDATE_DT >= 0.0_RP ) then
-             ATMOS_REFSTATE_UPDATE_FLAG = .true.
-          endif
+          ATMOS_REFSTATE_UPDATE_FLAG = .true.
 
           LOG_INFO_CONT(*) 'Reference type                 : Generate from initial data'
-          LOG_INFO_CONT(*) 'Update state?                  : ', ATMOS_REFSTATE_UPDATE_FLAG
           LOG_INFO_CONT(*) 'Update interval [sec]          : ', ATMOS_REFSTATE_UPDATE_DT
 
        else
@@ -215,7 +211,7 @@ contains
 
     endif
 
-    last_updated = 0.0_DP
+    last_updated = -1.0_RP
 
     return
   end subroutine ATMOS_REFSTATE_setup
@@ -244,7 +240,7 @@ contains
   !> Read reference state profile
   subroutine ATMOS_REFSTATE_read( &
        KA, KS, KE, IA, IS, IE, JA, JS, JE, &
-       CZ, FZ, REAL_CZ, REAL_FZ, REAL_PHI )
+       REAL_PHI )
     use scale_file_cartesC, only: &
        FILE_CARTESC_open, &
        FILE_CARTESC_check_coordinates, &
@@ -253,15 +249,10 @@ contains
     use scale_prc, only: &
        PRC_abort
     implicit none
-
     integer,  intent(in) :: KA, KS, KE
     integer,  intent(in) :: IA, IS, IE
     integer,  intent(in) :: JA, JS, JE
-    real(RP), intent(in) :: CZ      (  KA)
-    real(RP), intent(in) :: FZ      (0:KA)
-    real(RP), intent(in) :: REAL_CZ (  KA,IA,JA)
-    real(RP), intent(in) :: REAL_FZ (0:KA,IA,JA)
-    real(RP), intent(in) :: REAL_PHI(  KA,IA,JA)
+    real(RP), intent(in) :: REAL_PHI(KA,IA,JA)
 
     integer :: fid
     !---------------------------------------------------------------------------
@@ -271,25 +262,26 @@ contains
 
     if ( ATMOS_REFSTATE_IN_BASENAME /= '' ) then
 
-       call FILE_CARTESC_open( ATMOS_REFSTATE_IN_BASENAME, fid )
-
-       if ( ATMOS_REFSTATE_IN_CHECK_COORDINATES ) then
-          call FILE_CARTESC_check_coordinates( fid, atmos=.true. )
-       end if
-
        ! 1D
+       call FILE_CARTESC_open( ATMOS_REFSTATE_IN_BASENAME, fid, single=.true. )
        call FILE_CARTESC_read( fid, 'PRES_ref', 'Z', ATMOS_REFSTATE1D_pres(:) )
        call FILE_CARTESC_read( fid, 'TEMP_ref', 'Z', ATMOS_REFSTATE1D_temp(:) )
        call FILE_CARTESC_read( fid, 'DENS_ref', 'Z', ATMOS_REFSTATE1D_dens(:) )
        call FILE_CARTESC_read( fid, 'POTT_ref', 'Z', ATMOS_REFSTATE1D_pott(:) )
        call FILE_CARTESC_read( fid, 'QV_ref',   'Z', ATMOS_REFSTATE1D_qv  (:) )
+       call FILE_CARTESC_close( fid )
 
        ! 3D
+       call FILE_CARTESC_open( ATMOS_REFSTATE_IN_BASENAME, fid )
+       if ( ATMOS_REFSTATE_IN_CHECK_COORDINATES ) then
+          call FILE_CARTESC_check_coordinates( fid, atmos=.true. )
+       end if
        call FILE_CARTESC_read( fid, 'PRES_ref3D', 'ZXY', ATMOS_REFSTATE_pres(:,:,:) )
        call FILE_CARTESC_read( fid, 'TEMP_ref3D', 'ZXY', ATMOS_REFSTATE_temp(:,:,:) )
        call FILE_CARTESC_read( fid, 'DENS_ref3D', 'ZXY', ATMOS_REFSTATE_dens(:,:,:) )
        call FILE_CARTESC_read( fid, 'POTT_ref3D', 'ZXY', ATMOS_REFSTATE_pott(:,:,:) )
        call FILE_CARTESC_read( fid, 'QV_ref3D',   'ZXY', ATMOS_REFSTATE_qv  (:,:,:) )
+       call FILE_CARTESC_close( fid )
 
     else
        LOG_ERROR("ATMOS_REFSTATE_read",*) 'refstate file is not specified.'
@@ -299,8 +291,7 @@ contains
     !$acc update device(ATMOS_REFSTATE_pres, ATMOS_REFSTATE_temp, ATMOS_REFSTATE_dens, ATMOS_REFSTATE_pott, ATMOS_REFSTATE_qv)
     !$acc update device(ATMOS_REFSTATE1D_pres, ATMOS_REFSTATE1D_temp, ATMOS_REFSTATE1D_dens, ATMOS_REFSTATE1D_pott, ATMOS_REFSTATE1D_qv)
 
-    call ATMOS_REFSTATE_calc3D( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
-                                CZ(:), FZ(:), REAL_CZ(:,:,:), REAL_FZ(:,:,:), REAL_PHI(:,:,:) )
+    call ATMOS_REFSTATE_fillhalo( KA, KS, KE, IA, IS, IE, JA, JS, JE, REAL_PHI(:,:,:) )
 
     return
   end subroutine ATMOS_REFSTATE_read
@@ -647,8 +638,7 @@ contains
        KA, KS, KE, IA, IS, IE, ISB, IEB, JA, JS, JE, JSB, JEB, &
        DENS, POTT, TEMP, PRES, QV,                          &
        CZ, FZ, FDZ, RCDZ, REAL_CZ, REAL_FZ, REAL_PHI, AREA, &
-       nowsec,                                              &
-       force                                                )
+       nowsec                                               )
     use scale_statistics, only: &
        STATISTICS_horizontal_mean
     use scale_interp_vert, only: &
@@ -672,21 +662,15 @@ contains
     real(RP), intent(in) :: REAL_PHI(  KA,IA,JA)
     real(RP), intent(in) :: AREA    (     IA,JA)
     real(DP), intent(in) :: nowsec
-    logical, intent(in), optional :: force
 
     real(RP) :: work(KA,IA,JA)
-    logical  :: force_
 
     integer  :: k
     !---------------------------------------------------------------------------
 
-    if ( present(force) ) then
-       force_ = force
-    else
-       force_ = .false.
-    end if
+    if ( .not. ATMOS_REFSTATE_UPDATE_FLAG ) return
 
-    if ( force_ .or. ( nowsec - last_updated >= ATMOS_REFSTATE_UPDATE_DT ) ) then
+    if ( last_updated < 0.0_RP .or. ( nowsec - last_updated >= ATMOS_REFSTATE_UPDATE_DT ) ) then
 
        !$acc data copyin(DENS, POTT, TEMP, PRES, QV, CZ, FZ, FDZ, RCDZ, REAL_CZ, REAL_FZ, REAL_PHI, AREA) create(work)
 
@@ -777,16 +761,8 @@ contains
   subroutine ATMOS_REFSTATE_calc3D( &
        KA, KS, KE, IA, IS, IE, JA, JS, JE, &
        CZ, FZ, REAL_CZ, REAL_FZ, REAL_PHI )
-    use scale_const, only: &
-       UNDEF => CONST_UNDEF, &
-       Rdry  => CONST_Rdry,  &
-       CPdry => CONST_CPdry, &
-       P00   => CONST_PRE00
     use scale_prc, only: &
        PRC_abort
-    use scale_comm_cartesC, only: &
-       COMM_vars8, &
-       COMM_wait
     use scale_interp_vert, only: &
        INTERP_VERT_z2xi
     use scale_atmos_hydrostatic, only: &
@@ -830,7 +806,6 @@ contains
     real(RP) :: dz_1D
 
     real(RP) :: work(KA,IA,JA)
-    real(RP) :: RovCP
 
     logical :: converged
     integer :: k, i, j
@@ -838,8 +813,6 @@ contains
 
     !$acc data copyin(CZ, FZ, REAL_CZ, REAL_FZ, REAL_PHI) &
     !$acc      create(dens, temp, pres, pott, qv, qc, dz, work, pott1, pott2, dens1, dens2, temp1, pres1, qv1, qv2, qc1, qc2, dz1)
-
-    RovCP = Rdry / CPdry
 
     !--- potential temperature
     !$acc kernels
@@ -981,16 +954,44 @@ contains
     enddo
     !$acc end kernels
 
-    ! boundary condition
+    !$acc end data
+
+    call ATMOS_REFSTATE_fillhalo( KA, KS, KE, IA, IS, IE, JA, JS, JE, REAL_PHI(:,:,:) )
+
+    return
+  end subroutine ATMOS_REFSTATE_calc3D
+
+  !-----------------------------------------------------------------------------
+  subroutine ATMOS_REFSTATE_fillhalo( &
+       KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+       REAL_PHI )
+    use scale_const, only: &
+       Rdry  => CONST_Rdry,  &
+       CPdry => CONST_CPdry, &
+       P00   => CONST_PRE00, &
+       UNDEF => CONST_UNDEF
+    use scale_comm_cartesC, only: &
+       COMM_vars8, &
+       COMM_wait
+    integer, intent(in) :: KA, KS, KE
+    integer, intent(in) :: IA, IS, IE
+    integer, intent(in) :: JA, JS, JE
+    real(RP), intent(in) :: REAL_PHI(KA,IA,JA)
+
+    real(RP) :: RovCP
+    integer :: i, j
+
+    RovCP = Rdry / CPdry
+
     !$acc kernels
+    !$acc loop collapse(2) independent
     do j = JS, JE
     do i = IS, IE
+       ATMOS_REFSTATE_temp(1:KS-1, i,j) = ATMOS_REFSTATE_temp(KS,i,j)
+       ATMOS_REFSTATE_temp(KE+1:KA,i,j) = ATMOS_REFSTATE_temp(KE,i,j)
 
-       ATMOS_REFSTATE_temp(1:KS-1, i,j) = temp(KS,i,j)
-       ATMOS_REFSTATE_temp(KE+1:KA,i,j) = temp_toa_1D
-
-       ATMOS_REFSTATE_qv  (1:KS-1, i,j) = qv  (KS,i,j)
-       ATMOS_REFSTATE_qv  (KE+1:KA,i,j) = qv  (KE,i,j)
+       ATMOS_REFSTATE_qv  (1:KS-1, i,j) = ATMOS_REFSTATE_qv  (KS,i,j)
+       ATMOS_REFSTATE_qv  (KE+1:KA,i,j) = ATMOS_REFSTATE_qv  (KE,i,j)
 
        ATMOS_REFSTATE_pres(1:KS-2, i,j) = UNDEF
        ATMOS_REFSTATE_pres(KS-1,   i,j) = ATMOS_REFSTATE_pres(KS+1,i,j) &
@@ -1023,12 +1024,10 @@ contains
     call COMM_wait ( ATMOS_REFSTATE_pott(:,:,:), 4, .false. )
     call COMM_wait ( ATMOS_REFSTATE_qv  (:,:,:), 5, .false. )
 
-    !$acc end data
-
     !$acc update host(ATMOS_REFSTATE_pres, ATMOS_REFSTATE_temp, ATMOS_REFSTATE_dens, ATMOS_REFSTATE_pott, ATMOS_REFSTATE_qv)
 
     return
-  end subroutine ATMOS_REFSTATE_calc3D
+  end subroutine ATMOS_REFSTATE_fillhalo
 
   !-----------------------------------------------------------------------------
 !OCL SERIAL

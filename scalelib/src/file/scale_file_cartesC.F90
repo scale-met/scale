@@ -748,6 +748,7 @@ contains
   subroutine FILE_CARTESC_open( &
        basename, &
        fid,      &
+       single,   &
        aggregate )
     use scale_file_h, only: &
        FILE_FREAD
@@ -760,6 +761,7 @@ contains
 
     character(len=*), intent(in)  :: basename !< basename of the file
     integer,          intent(out) :: fid      !< file ID
+    logical,          intent(in), optional :: single
     logical,          intent(in), optional :: aggregate
     !---------------------------------------------------------------------------
 
@@ -767,6 +769,7 @@ contains
 
     call FILE_Open( basename,            & ! [IN]
                     fid,                 & ! [OUT]
+                    single=single,       & ! [IN]
                     aggregate=aggregate, & ! [IN]
                     rankid=PRC_myrank    ) ! [IN]
 

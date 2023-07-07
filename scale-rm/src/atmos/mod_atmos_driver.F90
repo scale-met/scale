@@ -401,7 +401,6 @@ contains
        do_phy_mp => TIME_DOATMOS_PHY_MP, &
        do_phy_ae => TIME_DOATMOS_PHY_AE
     use scale_atmos_refstate, only: &
-       ATMOS_REFSTATE_UPDATE_FLAG, &
        ATMOS_REFSTATE_update
     use mod_atmos_vars, only: &
        ATMOS_vars_calc_diagnostics,&
@@ -504,15 +503,13 @@ contains
 
 
     !########## Reference State ###########
-    if ( ATMOS_REFSTATE_UPDATE_FLAG ) then
-       call PROF_rapstart('ATM_Refstate', 2)
-       call ATMOS_REFSTATE_update( KA, KS, KE, IA, IS, IE, ISB, IEB, JA, JS, JE, JSB, JEB, &
-                                   DENS(:,:,:), POTT(:,:,:), TEMP(:,:,:), PRES(:,:,:), QV(:,:,:), & ! [IN]
-                                   CZ(:), FZ(:), FDZ(:), RCDZ(:),                                 & ! [IN]
-                                   REAL_CZ(:,:,:), REAL_FZ(:,:,:), REAL_PHI(:,:,:), AREA(:,:),    & ! [IN]
-                                   TIME_NOWDAYSEC                                                 ) ! [IN]
-       call PROF_rapend  ('ATM_Refstate', 2)
-    endif
+    call PROF_rapstart('ATM_Refstate', 2)
+    call ATMOS_REFSTATE_update( KA, KS, KE, IA, IS, IE, ISB, IEB, JA, JS, JE, JSB, JEB, &
+                                DENS(:,:,:), POTT(:,:,:), TEMP(:,:,:), PRES(:,:,:), QV(:,:,:), & ! [IN]
+                                CZ(:), FZ(:), FDZ(:), RCDZ(:),                                 & ! [IN]
+                                REAL_CZ(:,:,:), REAL_FZ(:,:,:), REAL_PHI(:,:,:), AREA(:,:),    & ! [IN]
+                                TIME_NOWDAYSEC                                                 ) ! [IN]
+    call PROF_rapend  ('ATM_Refstate', 2)
 
     return
   end subroutine ATMOS_driver_update
