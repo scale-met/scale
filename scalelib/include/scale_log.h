@@ -9,16 +9,14 @@
   write(*,*)
 
 #define LOG_ERROR_CONT(format) \
-  write(*,*,advance='no') "on rank ",IO_UNIVERSALRANK,": "; \
   write(*,*)
 
 
 #define LOG_WARN(subroutine_name,format) \
-  if (IO_L) write(*,*,advance='no') "WARN  [",subroutine_name,"]"; \
-  if (IO_L) write(*,*)
+  write(*,*,advance='no') "WARN  [",subroutine_name,"]"; \
+  write(*,*)
 #define LOG_WARN_CONT(format) \
-  if (IO_L) write(*,*,advance='no');		\
-  if (IO_L) write(*,*)
+  write(*,*)
 
 
 #else
@@ -34,11 +32,11 @@
 
 
 #define LOG_WARN(subroutine_name,format) \
-  if (IO_L) write(*,'(3A)',advance='no') "WARN  [",subroutine_name,"]"; \
-  if (IO_L) write(*,format)
+  write(*,'(3A)',advance='no') "WARN  [",subroutine_name,"]"; \
+  write(*,format)
 #define LOG_WARN_CONT(format) \
-  if (IO_L) write(*,'(5x)',advance='no'); \
-  if (IO_L) write(*,format)
+  write(*,'(5x)',advance='no'); \
+  write(*,format)
 
 #endif
 
