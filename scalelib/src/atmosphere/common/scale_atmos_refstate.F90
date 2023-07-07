@@ -753,6 +753,8 @@ contains
 
     endif
 
+    if ( ATMOS_REFSTATE_UPDATE_DT < 0.0_RP ) ATMOS_REFSTATE_UPDATE_FLAG = .false.
+
     return
   end subroutine ATMOS_REFSTATE_update
 
