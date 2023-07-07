@@ -441,11 +441,7 @@ contains
           if ( exists_land(i,j) ) then
 #else
        do ii = 1, land_iindx_list_epos(j), LSIZE
-          if ( land_iindx_list_epos(j) < LSIZE ) then
-             len = land_iindx_list_epos(j)
-          else
-             len = min(ii+LSIZE,land_iindx_list_epos(j)+1) - ii
-          end if
+          len = min(ii+LSIZE,land_iindx_list_epos(j)+1) - ii
           do l = 1, len
              i = land_iindx_list(ii+l-1,j)
 #endif
@@ -509,7 +505,6 @@ contains
           end do
 
           call MATRIX_SOLVER_tridiagonal( LKMAX, 1, LKMAX, &
-                                          LSIZE, 1, len,   &
                                           F1(:,:), F2(:,:), F3(:,:), V(:,:), & ! [IN]
                                           WATER2(:,:)                        ) ! [IN]
 
@@ -578,7 +573,6 @@ contains
           end do
 
           call MATRIX_SOLVER_tridiagonal( LKMAX, 1, LKMAX, &
-                                          LSIZE, 1, len,   &
                                           F1(:,:), F2(:,:), F3(:,:), V(:,:), & ! [IN]
                                           TEMP2(:,:)                         ) ! [OUT]
 
