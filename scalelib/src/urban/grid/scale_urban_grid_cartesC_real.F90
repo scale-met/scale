@@ -56,6 +56,7 @@ contains
     ! at this moment, horizontal grid is identical to that of the atmosphere
     allocate( URBAN_GRID_CARTESC_REAL_AREA(    UIA,UJA) )
     allocate( URBAN_GRID_CARTESC_REAL_VOL (UKA,UIA,UJA) )
+    !$acc enter data create(URBAN_GRID_CARTESC_REAL_AREA,URBAN_GRID_CARTESC_REAL_VOL)
 
     return
   end subroutine URBAN_GRID_CARTESC_REAL_setup
@@ -65,6 +66,7 @@ contains
   subroutine URBAN_GRID_CARTESC_REAL_finalize
     implicit none
 
+    !$acc exit data delete(URBAN_GRID_CARTESC_REAL_AREA,URBAN_GRID_CARTESC_REAL_VOL)
     deallocate( URBAN_GRID_CARTESC_REAL_AREA )
     deallocate( URBAN_GRID_CARTESC_REAL_VOL  )
 
@@ -113,6 +115,8 @@ contains
     end do
     end do
     end do
+
+    !$acc update device(URBAN_GRID_CARTESC_REAL_AREA,URBAN_GRID_CARTESC_REAL_VOL)
 
     call FILE_CARTESC_set_coordinates_urban( URBAN_GRID_CARTESC_REAL_VOL(:,:,:) ) ! [IN]
 
