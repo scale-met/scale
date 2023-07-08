@@ -282,7 +282,7 @@ contains
     !---------------------------------------------------------------------------
 
     statval = 0.0_DP
-    !$acc update host(var(KS,IS,JE)) if(acc_is_present(var))
+    !$acc update host(var(KS,IS,JS)) if(acc_is_present(var))
     if ( var(KS,IS,JS) /= UNDEF ) then
        !$omp parallel do OMP_SCHEDULE_ reduction(+:statval) &
        !$omp private(work)
