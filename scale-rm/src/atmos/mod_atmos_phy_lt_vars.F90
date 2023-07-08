@@ -283,6 +283,7 @@ contains
 
        if ( FILE_get_aggregate( restart_fid ) ) then
           call FILE_CARTESC_flush( restart_fid ) ! X/Y halos have been read from file
+          !$acc update device(ATMOS_PHY_LT_Epot)
 
           ! fill K halos
           !$acc kernels

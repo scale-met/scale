@@ -732,6 +732,8 @@ contains
        call COMM_wait ( ATMOS_BOUNDARY_alpha_QTRC(:,:,:,iq), 5+iq, .false. )
     end do
 
+    !$acc update host(ATMOS_BOUNDARY_alpha_DENS,ATMOS_BOUNDARY_alpha_VELZ,ATMOS_BOUNDARY_alpha_VELX,ATMOS_BOUNDARY_alpha_VELY,ATMOS_BOUNDARY_alpha_POTT)
+
     return
   end subroutine ATMOS_BOUNDARY_alpha_fillhalo
 
@@ -967,7 +969,6 @@ contains
     enddo
     !$acc end kernels
 
-
     call ATMOS_BOUNDARY_alpha_fillhalo
 
     return
@@ -1058,6 +1059,7 @@ contains
        FILE_CARTESC_open, &
        FILE_CARTESC_check_coordinates, &
        FILE_CARTESC_read, &
+       FILE_CARTESC_flush, &
        FILE_CARTESC_close
     implicit none
 
@@ -1078,34 +1080,52 @@ contains
          .OR. ATMOS_BOUNDARY_USE_PT &
          ) then
        call FILE_CARTESC_read( fid, 'DENS', 'ZXY', ATMOS_BOUNDARY_DENS(:,:,:) )
+#ifdef _OPENACC
+       call FILE_CARTESC_flush(fid)
+#endif
        !$acc update device(ATMOS_BOUNDARY_DENS)
     end if
     if ( ATMOS_BOUNDARY_USE_DENS ) then
        call FILE_CARTESC_read( fid, 'ALPHA_DENS', 'ZXY', ATMOS_BOUNDARY_alpha_DENS(:,:,:) )
+#ifdef _OPENACC
+       call FILE_CARTESC_flush(fid)
+#endif
        !$acc update device(ATMOS_BOUNDARY_alpha_DENS)
     endif
 
     if ( ATMOS_BOUNDARY_USE_VELZ ) then
        call FILE_CARTESC_read( fid, 'VELZ', 'ZHXY', ATMOS_BOUNDARY_VELZ(:,:,:) )
        call FILE_CARTESC_read( fid, 'ALPHA_VELZ', 'ZHXY', ATMOS_BOUNDARY_alpha_VELZ(:,:,:) )
+#ifdef _OPENACC
+       call FILE_CARTESC_flush(fid)
+#endif
        !$acc update device(ATMOS_BOUNDARY_VELZ, ATMOS_BOUNDARY_alpha_VELZ)
     endif
 
     if ( ATMOS_BOUNDARY_USE_VELX ) then
        call FILE_CARTESC_read( fid, 'VELX', 'ZXHY', ATMOS_BOUNDARY_VELX(:,:,:) )
        call FILE_CARTESC_read( fid, 'ALPHA_VELX', 'ZXHY', ATMOS_BOUNDARY_alpha_VELX(:,:,:) )
+#ifdef _OPENACC
+       call FILE_CARTESC_flush(fid)
+#endif
        !$acc update device(ATMOS_BOUNDARY_VELX, ATMOS_BOUNDARY_alpha_VELX)
     endif
 
     if ( ATMOS_BOUNDARY_USE_VELY ) then
        call FILE_CARTESC_read( fid, 'VELY', 'ZXYH', ATMOS_BOUNDARY_VELY(:,:,:) )
        call FILE_CARTESC_read( fid, 'ALPHA_VELY', 'ZXYH', ATMOS_BOUNDARY_alpha_VELY(:,:,:) )
+#ifdef _OPENACC
+       call FILE_CARTESC_flush(fid)
+#endif
        !$acc update device(ATMOS_BOUNDARY_VELY, ATMOS_BOUNDARY_alpha_VELY)
     endif
 
     if ( ATMOS_BOUNDARY_USE_PT ) then
        call FILE_CARTESC_read( fid, 'PT', 'ZXY', ATMOS_BOUNDARY_POTT(:,:,:) )
        call FILE_CARTESC_read( fid, 'ALPHA_PT', 'ZXY', ATMOS_BOUNDARY_alpha_POTT(:,:,:) )
+#ifdef _OPENACC
+       call FILE_CARTESC_flush(fid)
+#endif
        !$acc update device(ATMOS_BOUNDARY_POTT, ATMOS_BOUNDARY_alpha_POTT)
     endif
 
@@ -1114,8 +1134,11 @@ contains
        if ( iqb > 0 ) then
           call FILE_CARTESC_read( fid, TRACER_NAME(iq), 'ZXY', ATMOS_BOUNDARY_QTRC(:,:,:,iqb) )
           call FILE_CARTESC_read( fid, 'ALPHA_'//trim(TRACER_NAME(iq)), 'ZXY', ATMOS_BOUNDARY_alpha_QTRC(:,:,:,iqb) )
-          !$acc update device(ATMOS_BOUNDARY_QTRC(:,:,:,iqb), ATMOS_BOUNDARY_alpha_QTRC(:,:,:,iqb))
        endif
+#ifdef _OPENACC
+       call FILE_CARTESC_flush(fid)
+       !$acc update device(ATMOS_BOUNDARY_QTRC, ATMOS_BOUNDARY_alpha_QTRC)
+#endif
     end do
 
     call FILE_CARTESC_close( fid )
@@ -1211,42 +1234,35 @@ contains
 
 
     if ( vid_dens > 0 ) then
-       !$acc update host(ATMOS_BOUNDARY_DENS)
        call FILE_CARTESC_write_var( fid, vid_dens, ATMOS_BOUNDARY_DENS(:,:,:), 'DENS', 'ZXY' )
     end if
 
     if ( vid_a_dens > 0 ) then
-       !$acc update host(ATMOS_BOUNDARY_alpha_DENS)
        call FILE_CARTESC_write_var( fid, vid_a_dens, ATMOS_BOUNDARY_alpha_DENS(:,:,:), 'ALPHA_DENS', 'ZXY' )
     end if
 
     if ( vid_velz > 0 ) then
-       !$acc update host(ATMOS_BOUNDARY_VELZ, ATMOS_BOUNDARY_alpha_VELZ)
        call FILE_CARTESC_write_var( fid, vid_velz, ATMOS_BOUNDARY_VELZ(:,:,:), 'VELZ', 'ZHXY' )
        call FILE_CARTESC_write_var( fid, vid_a_velz, ATMOS_BOUNDARY_alpha_VELZ(:,:,:), 'ALPHA_VELZ', 'ZHXY' )
     end if
 
     if ( vid_velx > 0 ) then
-       !$acc update host(ATMOS_BOUNDARY_VELX, ATMOS_BOUNDARY_alpha_VELX)
        call FILE_CARTESC_write_var( fid, vid_velx, ATMOS_BOUNDARY_VELX(:,:,:), 'VELX', 'ZXHY' )
        call FILE_CARTESC_write_var( fid, vid_a_velx, ATMOS_BOUNDARY_alpha_VELX(:,:,:), 'ALPHA_VELX', 'ZXHY' )
     endif
 
     if ( vid_vely > 0 ) then
-       !$acc update host(ATMOS_BOUNDARY_VELY, ATMOS_BOUNDARY_alpha_VELY)
        call FILE_CARTESC_write_var( fid, vid_vely, ATMOS_BOUNDARY_VELY(:,:,:), 'VELY', 'ZXYH' )
        call FILE_CARTESC_write_var( fid, vid_a_vely, ATMOS_BOUNDARY_alpha_VELY(:,:,:), 'ALPHA_VELY', 'ZXYH' )
     end if
 
     if ( vid_pott > 0 ) then
-       !$acc update host(ATMOS_BOUNDARY_POTT, ATMOS_BOUNDARY_alpha_POTT)
        call FILE_CARTESC_write_var( fid, vid_pott, ATMOS_BOUNDARY_POTT(:,:,:), 'PT', 'ZXY' )
        call FILE_CARTESC_write_var( fid, vid_a_pott, ATMOS_BOUNDARY_alpha_POTT(:,:,:), 'ALPHA_PT', 'ZXY' )
     end if
 
     do iqb = 1, BND_QA
        if ( vid_qtrc(iqb) > 0 ) then
-          !$acc update host(ATMOS_BOUNDARY_QTRC(:,:,:,iqb), ATMOS_BOUNDARY_alpha_QTRC(:,:,:,iqb))
           call FILE_CARTESC_write_var( fid, vid_qtrc(iqb), ATMOS_BOUNDARY_QTRC(:,:,:,iqb), TRACER_NAME(iqb), 'ZXY' )
           call FILE_CARTESC_write_var( fid, vid_a_qtrc(iqb), ATMOS_BOUNDARY_alpha_QTRC(:,:,:,iqb), 'ALPHA_'//trim(TRACER_NAME(iqb)), 'ZXY' )
        end if

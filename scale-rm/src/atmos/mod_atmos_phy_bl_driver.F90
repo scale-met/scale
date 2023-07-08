@@ -141,8 +141,10 @@ contains
        end select
     else
        LOG_INFO("ATMOS_PHY_BL_driver_setup",*) 'this component is never called.'
+       !$acc kernels
        ATMOS_PHY_BL_Zi       (:,:) = 0.0_RP
        ATMOS_PHY_BL_SFLX_BUOY(:,:) = 0.0_RP
+       !$acc end kernels
     endif
 
     return
@@ -270,13 +272,18 @@ contains
 
     if ( update_flag ) then
 
+       !$acc data create(Nu,Kh,QW,N2,POTL,POTV)
+
+       !$acc kernels
        RHOQ_t_BL(:,:,:,:) = 0.0_RP
+       !$acc end kernels
 
        select case ( ATMOS_PHY_BL_TYPE )
        case ( 'MYNN' )
           call ATMOS_vars_get_diagnostic( "N2",   N2   )
           call ATMOS_vars_get_diagnostic( "POTL", POTL )
           call ATMOS_vars_get_diagnostic( "POTV", POTV )
+          !$acc kernels
           do j = JSB, JEB
           do i = ISB, IEB
           do k = KS, KE
@@ -284,11 +291,14 @@ contains
           end do
           end do
           end do
+          !$acc end kernels
           if ( I_QV > 0 ) then
              RHOQV_t => RHOQ_t_BL(:,:,:,I_QV)
           else
              allocate( RHOQV_t(KA,IA,JA) )
+             !$acc enter data create(RHOQV_t)
           end if
+          !$acc update host(DENS,U,V,POTT,QTRC(:,:,:,QS:QE),PRES,EXNER,N2,QDRY,QV,QW,POTL,POTV,SFC_DENS,SFLX_MU,SFLX_MV,SFLX_SH,SFLX_QV,Ustar,Tstar,Qstar,RLmo)
           call ATMOS_PHY_BL_MYNN_tendency( &
                KA, KS, KE, IA, IS, IE, JA, JS, JE, &
                DENS(:,:,:), U(:,:,:), V(:,:,:),                        & ! (in)
@@ -305,13 +315,19 @@ contains
                RHOQV_t(:,:,:), RHOQ_t_BL(:,:,:,QS:QE),                 & ! (out)
                Nu(:,:,:), Kh(:,:,:),                                   & ! (out)
                QL(:,:,:), cldfrac(:,:,:), Zi(:,:), SFLX_BUOY(:,:)      ) ! (out)
-          if ( I_QV <= 0 ) deallocate( RHOQV_t )
+          !$acc update device(RHOU_t_BL,RHOV_t_BL,RHOT_t_BL,RHOQV_t,RHOQ_t_BL(:,:,:,QS:QE),Nu,Kh,QL,cldfrac,Zi,SFLX_BUOY)
+          if ( I_QV <= 0 ) then
+             !$acc exit data delete(RHOQV_t)
+             deallocate( RHOQV_t )
+          end if
        case ( 'MYNN-JMAPPLIB' )
           if ( I_QV > 0 ) then
              RHOQV_t => RHOQ_t_BL(:,:,:,I_QV)
           else
              allocate( RHOQV_t(KA,IA,JA) )
+             !$acc enter data create(RHOQV_t)
           end if
+          !$acc update host(DENS,U,V,POTT,QTRC(:,:,:,QS:QE),PRES,EXNER,QDRY,QV,QC,QI,SFC_DENS,SFC_PRES,SFLX_MU,SFLX_MV,SFLX_SH,SFLX_QV,Ustar,RLmo)
           call ATMOS_PHY_BL_MYNN_JMAPPLIB_tendency( &
                KA, KS, KE, IA, IS, IE, JA, JS, JE, &
                DENS(:,:,:), U(:,:,:), V(:,:,:),                        & ! (in)
@@ -326,12 +342,17 @@ contains
                RHOQV_t(:,:,:), RHOQ_t_BL(:,:,:,QS:QE),                 & ! (out)
                Nu(:,:,:), Kh(:,:,:),                                   & ! (out)
                Zi = Zi(:,:), SFLX_BUOY = SFLX_BUOY(:,:)                ) ! (out)
-          if ( I_QV <= 0 ) deallocate( RHOQV_t )
+          !$acc update device(RHOU_t_BL,RHOV_t_BL,RHOT_t_BL,RHOQV_t,RHOQ_t_BL,Nu,Kh,Zi,SFLX_BUOY)
+          if ( I_QV <= 0 ) then
+             !$acc exit data delete(RHOQV_t)
+             deallocate( RHOQV_t )
+          end if
        end select
 
        if ( ATMOS_PHY_BL_MIX_TRACERS ) then
           do iq = 1, QA
              if ( ( .not. TRACER_ADVC(iq) ) .or. iq==I_QV .or. (iq>=QS .and. iq<=QE) ) cycle
+             !$acc update host(QTRC(:,:,:,iq),SFLX_Q(:,:,iq))
              call ATMOS_PHY_BL_tendency_tracer( &
                   KA, KS, KE, IA, IS, IE, JA, JS, JE, &
                   DENS(:,:,:), QTRC(:,:,:,iq),        & ! (in)
@@ -341,6 +362,7 @@ contains
                   CZ(:,:,:), FZ(:,:,:), F2H(:,:,:,:), & ! (in)
                   dt_BL, TRACER_NAME(iq),             & ! (in)
                   RHOQ_t_BL(:,:,:,iq)                 ) ! (out)
+             !$acc update device(RHOQ_t_BL(:,:,:,iq))
           end do
        end if
 
@@ -393,10 +415,13 @@ contains
           enddo
        endif
 
+       !$acc end data
+
     endif
 
     !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
     !$omp shared(JS,JE,IS,IE,KS,KE,RHOU_t,RHOU_t_BL,RHOV_t,RHOV_t_BL,RHOT_t,RHOT_t_BL)
+    !$acc kernels
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -406,20 +431,28 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
 
     !$omp parallel private(iq,i,j,k)
+    !$acc kernels
     do iq = 1,  QA
+#ifndef _OPENACC
        if ( .not. TRACER_ADVC(iq) ) cycle
+#endif
        !$omp do OMP_SCHEDULE_ collapse(2)
        do j  = JS, JE
        do i  = IS, IE
        do k  = KS, KE
+#ifdef _OPENACC
+          if ( TRACER_ADVC(iq) ) &
+#endif
           RHOQ_t(k,i,j,iq) = RHOQ_t(k,i,j,iq) + RHOQ_t_BL(k,i,j,iq)
        enddo
        enddo
        enddo
        !$omp end do nowait
     enddo
+    !$acc end kernels
     !$omp end parallel
 
     return

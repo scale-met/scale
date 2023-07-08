@@ -165,11 +165,13 @@ contains
     ATMOS_PHY_CP_RHOT_t  (:,:,:)   = 0.0_RP
     ATMOS_PHY_CP_RHOQV_t (:,:,:)   = 0.0_RP
     ATMOS_PHY_CP_RHOHYD_t(:,:,:,:) = 0.0_RP
+    !$acc enter data copyin(ATMOS_PHY_CP_DENS_t,ATMOS_PHY_CP_MOMZ_t,ATMOS_PHY_CP_RHOT_t,ATMOS_PHY_CP_RHOQV_t,ATMOS_PHY_CP_RHOHYD_t)
 
     allocate( ATMOS_PHY_CP_w0mean        (KA,IA,JA) )
     allocate( ATMOS_PHY_CP_kf_nca        (IA,JA)    )
     ATMOS_PHY_CP_w0mean        (:,:,:) =    0.0_RP
     ATMOS_PHY_CP_kf_nca        (:,:)   = -100.0_RP
+    !$acc enter data copyin(ATMOS_PHY_CP_w0mean,ATMOS_PHY_CP_kf_nca)
 
     ! for surface flux and tendency restart
     VMAX_t = 6 + N_HYD
@@ -221,7 +223,7 @@ contains
     ATMOS_PHY_CP_cloudbase     (:,:)   =    0.0_RP
     ATMOS_PHY_CP_cldfrac_dp    (:,:,:) =    0.0_RP
     ATMOS_PHY_CP_cldfrac_sh    (:,:,:) =    0.0_RP
-
+    !$acc enter data copyin(ATMOS_PHY_CP_MFLX_cloudbase,ATMOS_PHY_CP_SFLX_rain,ATMOS_PHY_CP_SFLX_snow,ATMOS_PHY_CP_SFLX_ENGI,ATMOS_PHY_CP_cloudtop,ATMOS_PHY_CP_cloudbase,ATMOS_PHY_CP_cldfrac_dp,ATMOS_PHY_CP_cldfrac_sh)
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -278,12 +280,14 @@ contains
     LOG_NEWLINE
     LOG_INFO("ATMOS_PHY_CP_vars_finalize",*) 'Finalize'
 
+    !$acc exit data delete(ATMOS_PHY_CP_DENS_t,ATMOS_PHY_CP_MOMZ_t,ATMOS_PHY_CP_RHOT_t,ATMOS_PHY_CP_RHOQV_t,ATMOS_PHY_CP_RHOHYD_t)
     deallocate( ATMOS_PHY_CP_DENS_t     )
     deallocate( ATMOS_PHY_CP_MOMZ_t     )
     deallocate( ATMOS_PHY_CP_RHOT_t     )
     deallocate( ATMOS_PHY_CP_RHOQV_t      )
     deallocate( ATMOS_PHY_CP_RHOHYD_t )
 
+    !$acc exit data delete(ATMOS_PHY_CP_w0mean,ATMOS_PHY_CP_kf_nca)
     deallocate( ATMOS_PHY_CP_w0mean        )
     deallocate( ATMOS_PHY_CP_kf_nca        )
 
@@ -293,6 +297,7 @@ contains
     deallocate( VAR_t_UNIT )
     deallocate( VAR_t_ID   )
 
+    !$acc exit data delete(ATMOS_PHY_CP_MFLX_cloudbase,ATMOS_PHY_CP_SFLX_rain,ATMOS_PHY_CP_SFLX_snow,ATMOS_PHY_CP_SFLX_ENGI,ATMOS_PHY_CP_cloudtop,ATMOS_PHY_CP_cloudbase,ATMOS_PHY_CP_cldfrac_dp,ATMOS_PHY_CP_cldfrac_sh)
     deallocate( ATMOS_PHY_CP_MFLX_cloudbase    )
     deallocate( ATMOS_PHY_CP_SFLX_rain         )
     deallocate( ATMOS_PHY_CP_SFLX_snow         )
@@ -320,6 +325,7 @@ contains
     !---------------------------------------------------------------------------
 
     !$omp parallel do
+    !$acc kernels
     do j = JS, JE
     do i = IS, IE
        ATMOS_PHY_CP_w0mean (   1:KS-1,i,j) = ATMOS_PHY_CP_w0mean (KS,i,j)
@@ -332,8 +338,10 @@ contains
        ATMOS_PHY_CP_RHOQV_t(KE+1:KA  ,i,j) = ATMOS_PHY_CP_RHOQV_t(KE,i,j)
     end do
     end do
+    !$acc end kernels
+    !$omp parallel do collapse(2)
+    !$acc kernels
     do iq = 1, N_HYD
-       !$omp parallel do
        do j = JS, JE
        do i = IS, IE
           ATMOS_PHY_CP_RHOHYD_t(   1:KS-1,i,j,iq) = ATMOS_PHY_CP_RHOHYD_t(KS,i,j,iq)
@@ -341,6 +349,7 @@ contains
        enddo
        enddo
     end do
+    !$acc end kernels
 
     call COMM_vars8( ATMOS_PHY_CP_w0mean(:,:,:), 1 )
     call COMM_vars8( ATMOS_PHY_CP_kf_nca(:,:),   2 )
@@ -447,9 +456,11 @@ contains
 
        if ( FILE_get_AGGREGATE(restart_fid) ) then
           call FILE_CARTESC_flush( restart_fid ) ! X/Y halos have been read from file
+          !$acc update device(ATMOS_PHY_CP_w0mean,ATMOS_PHY_CP_kf_nca,ATMOS_PHY_CP_SFLX_rain,ATMOS_PHY_CP_SFLX_snow,ATMOS_PHY_CP_SFLX_ENGI,ATMOS_PHY_CP_DENS_t,ATMOS_PHY_CP_RHOT_t,ATMOS_PHY_CP_RHOQV_t,ATMOS_PHY_CP_RHOHYD_t)
 
           ! fill K halos
           !$omp parallel do
+          !$acc kernels
           do j  = 1, JA
           do i  = 1, IA
              ATMOS_PHY_CP_w0mean   (   1:KS-1,i,j) = ATMOS_PHY_CP_w0mean   (KS,i,j)
@@ -462,8 +473,10 @@ contains
              ATMOS_PHY_CP_RHOQV_t  (KE+1:KA  ,i,j) = ATMOS_PHY_CP_RHOQV_t  (KE,i,j)
           end do
           end do
+          !$acc end kernels
+          !$omp parallel do collapse(2)
+          !$acc kernels
           do iq = 1, N_HYD
-             !$omp parallel do
              do j  = 1, JA
              do i  = 1, IA
                 ATMOS_PHY_CP_RHOHYD_t(   1:KS-1,i,j,iq) = ATMOS_PHY_CP_RHOHYD_t(KS,i,j,iq)
@@ -471,6 +484,7 @@ contains
              enddo
              enddo
           enddo
+          !$acc end kernels
        else
           call ATMOS_PHY_CP_vars_fillhalo
        end if

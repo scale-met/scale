@@ -204,10 +204,13 @@ contains
     if ( update_flag ) then
 
 !OCL XFILL
+       !$acc kernels
        RHOQ_t_CH(:,:,:,:) = 0.0_RP
+       !$acc end kernels
 
        select case( ATMOS_PHY_CH_TYPE )
        case( 'RN222' )
+          !$acc update host(DENS,QTRC(:,:,:,QS_CH:QE_CH),RHOQ_t_CH(:,:,:,QS_CH:QE_CH))
           call ATMOS_PHY_CH_rn222_TENDENCY( KA, KS, KE,                   & ! [IN]
                                             IA, IS, IE,                   & ! [IN]
                                             JA, JS, JE,                   & ! [IN]
@@ -215,6 +218,7 @@ contains
                                             DENS     (:,:,:),             & ! [IN]
                                             QTRC     (:,:,:,QS_CH:QE_CH), & ! [IN]
                                             RHOQ_t_CH(:,:,:,QS_CH:QE_CH)  ) ! [INOUT]
+          !$acc update device(RHOQ_t_CH(:,:,:,QS_CH:QE_CH))
        end select
 
        do iq = QS_CH, QE_CH
@@ -224,8 +228,9 @@ contains
        enddo
     endif
 
+    !$omp parallel do private(i,j,k) collapse(3) OMP_SCHEDULE_
+    !$acc kernels
     do iq = QS_CH, QE_CH
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_
        do j  = JS, JE
        do i  = IS, IE
        do k  = KS, KE
@@ -234,6 +239,7 @@ contains
        enddo
        enddo
     enddo
+    !$acc end kernels
 
     if ( STATISTICS_checktotal ) then
        do iq = QS_CH, QE_CH
@@ -268,10 +274,12 @@ contains
 
     select case( ATMOS_PHY_CH_TYPE )
     case( 'RN222' )
+       !$acc update host(SFLX_QTRC(:,:,QS_CH:QE_CH))
        call ATMOS_SFC_CH_rn222_OCEAN_flux( OIA, OIS, OIE,             & ! [IN]
                                            OJA, OJS, OJE,             & ! [IN]
                                            QA_CH,                     & ! [IN]
                                            SFLX_QTRC(:,:,QS_CH:QE_CH) ) ! [INOUT]
+       !$acc update device(SFLX_QTRC(:,:,QS_CH:QE_CH))
     end select
 
     return
@@ -300,11 +308,13 @@ contains
 
     select case( ATMOS_PHY_CH_TYPE )
     case( 'RN222' )
+       !$acc update host(SFLX_QTRC(:,:,QS_CH:QE_CH))
        call ATMOS_SFC_CH_rn222_LAND_flux( LIA, LIS, LIE,             & ! [IN]
                                           LJA, LJS, LJE,             & ! [IN]
                                           QA_CH,                     & ! [IN]
                                           TIME_NOWDATE(:),           & ! [IN]
                                           SFLX_QTRC(:,:,QS_CH:QE_CH) ) ! [INOUT]
+       !$acc update device(SFLX_QTRC(:,:,QS_CH:QE_CH))
     end select
 
     return
@@ -333,11 +343,13 @@ contains
 
     select case( ATMOS_PHY_CH_TYPE )
     case( 'RN222' )
+       !$acc update host(SFLX_QTRC(:,:,QS_CH:QE_CH))
        call ATMOS_SFC_CH_rn222_LAND_flux( UIA, UIS, UIE,             & ! [IN]
                                           UJA, UJS, UJE,             & ! [IN]
                                           QA_CH,                     & ! [IN]
                                           TIME_NOWDATE(:),           & ! [IN]
                                           SFLX_QTRC(:,:,QS_CH:QE_CH) ) ! [INOUT]
+       !$acc update device(SFLX_QTRC(:,:,QS_CH:QE_CH))
     end select
 
     return

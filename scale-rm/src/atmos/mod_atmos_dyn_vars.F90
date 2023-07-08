@@ -278,11 +278,11 @@ contains
        do iv = 1, VA
           call FILE_CARTESC_read( restart_fid, VAR_NAME(iv), 'ZXY', & ! [IN]
                                   PROG(:,:,:,iv)                    ) ! [OUT]
-          !$acc update device(PROG(:,:,:,iv))
        enddo
 
        if ( FILE_get_AGGREGATE(restart_fid) ) then
           call FILE_CARTESC_flush( restart_fid )
+          !$acc update device(PROG)
           ! X/Y halos have been read from file
 
           ! fill K halos

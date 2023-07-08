@@ -244,6 +244,7 @@ contains
     ATMOS_PHY_SF_RHOV_t    (:,:)     = UNDEF
     ATMOS_PHY_SF_RHOH      (:,:)     = UNDEF
     ATMOS_PHY_SF_RHOQ_t    (:,:,:)   = UNDEF
+    !$acc enter data create(ATMOS_PHY_SF_DENS_t,ATMOS_PHY_SF_MOMZ_t,ATMOS_PHY_SF_RHOU_t,ATMOS_PHY_SF_RHOV_t,ATMOS_PHY_SF_RHOH,ATMOS_PHY_SF_RHOQ_t)
 
     allocate( ATMOS_PHY_SF_SFC_TEMP  (IA,JA)                     )
     allocate( ATMOS_PHY_SF_SFC_albedo(IA,JA,N_RAD_DIR,N_RAD_RGN) )
@@ -260,16 +261,19 @@ contains
     ATMOS_PHY_SF_SFC_Z0M (:,:) = ATMOS_PHY_SF_DEFAULT_SFC_Z0M
     ATMOS_PHY_SF_SFC_Z0H (:,:) = ATMOS_PHY_SF_DEFAULT_SFC_Z0H
     ATMOS_PHY_SF_SFC_Z0E (:,:) = ATMOS_PHY_SF_DEFAULT_SFC_Z0E
+    !$acc enter data copyin(ATMOS_PHY_SF_SFC_TEMP,ATMOS_PHY_SF_SFC_albedo,ATMOS_PHY_SF_SFC_Z0M,ATMOS_PHY_SF_SFC_Z0H,ATMOS_PHY_SF_SFC_Z0E)
 
     allocate( ATMOS_PHY_SF_SFC_DENS  (IA,JA) )
     allocate( ATMOS_PHY_SF_SFC_PRES  (IA,JA) )
     ATMOS_PHY_SF_SFC_DENS  (:,:)     = UNDEF
     ATMOS_PHY_SF_SFC_PRES  (:,:)     = UNDEF
+    !$acc enter data create(ATMOS_PHY_SF_SFC_DENS,ATMOS_PHY_SF_SFC_PRES)
 
     allocate( ATMOS_PHY_SF_PREC_MASS (IA,JA) )
     allocate( ATMOS_PHY_SF_PREC_ENGI (IA,JA) )
     ATMOS_PHY_SF_PREC_MASS(:,:)      = UNDEF
     ATMOS_PHY_SF_PREC_ENGI(:,:)      = UNDEF
+    !$acc enter data create(ATMOS_PHY_SF_PREC_MASS,ATMOS_PHY_SF_PREC_ENGI)
 
     allocate( ATMOS_PHY_SF_SFLX_MW   (IA,JA) )
     allocate( ATMOS_PHY_SF_SFLX_MU   (IA,JA) )
@@ -293,6 +297,7 @@ contains
     ATMOS_PHY_SF_SFLX_GH   (:,:)     = UNDEF
     ATMOS_PHY_SF_SFLX_QTRC (:,:,:)   = UNDEF
     ATMOS_PHY_SF_SFLX_ENGI (:,:)     = UNDEF
+    !$acc enter data create(ATMOS_PHY_SF_SFLX_MW,ATMOS_PHY_SF_SFLX_MU,ATMOS_PHY_SF_SFLX_MV,ATMOS_PHY_SF_SFLX_SH,ATMOS_PHY_SF_SFLX_LH,ATMOS_PHY_SF_SFLX_SHEX,ATMOS_PHY_SF_SFLX_LHEX,ATMOS_PHY_SF_SFLX_QVEX,ATMOS_PHY_SF_SFLX_GH,ATMOS_PHY_SF_SFLX_QTRC,ATMOS_PHY_SF_SFLX_ENGI)
 
     allocate( ATMOS_PHY_SF_Ustar     (IA,JA) )
     allocate( ATMOS_PHY_SF_Tstar     (IA,JA) )
@@ -301,6 +306,7 @@ contains
     ATMOS_PHY_SF_Ustar     (:,:)     = UNDEF
     ATMOS_PHY_SF_Tstar     (:,:)     = UNDEF
     ATMOS_PHY_SF_Wstar     (:,:)     = UNDEF
+    !$acc enter data create(ATMOS_PHY_SF_Ustar,ATMOS_PHY_SF_Tstar,ATMOS_PHY_SF_Qstar,ATMOS_PHY_SF_Wstar)
 
     allocate( ATMOS_PHY_SF_U10       (IA,JA) )
     allocate( ATMOS_PHY_SF_V10       (IA,JA) )
@@ -312,7 +318,7 @@ contains
     ATMOS_PHY_SF_T2        (:,:)     = UNDEF
     ATMOS_PHY_SF_Q2        (:,:)     = UNDEF
     ATMOS_PHY_SF_RLmo      (:,:)     = UNDEF
-
+    !$acc enter data create(ATMOS_PHY_SF_U10,ATMOS_PHY_SF_V10,ATMOS_PHY_SF_T2,ATMOS_PHY_SF_Q2,ATMOS_PHY_SF_RLmo)
 
     LOG_NEWLINE
     LOG_INFO("ATMOS_PHY_SF_vars_setup",*) '[ATMOS_PHY_SF] prognostic/diagnostic variables'
@@ -345,6 +351,7 @@ contains
     else
        allocate( ZERO(IA,JA) )
        ZERO(:,:) = 0.0_RP
+       !$acc enter data copyin(ZERO)
        ATMOS_PHY_SF_SFLX_QV => ZERO
     end if
 
@@ -360,6 +367,7 @@ contains
     LOG_NEWLINE
     LOG_INFO("ATMOS_PHY_SF_vars_finalize",*) 'Finalize'
 
+    !$acc exit data delete(ATMOS_PHY_SF_DENS_t,ATMOS_PHY_SF_MOMZ_t,ATMOS_PHY_SF_RHOU_t,ATMOS_PHY_SF_RHOV_t,ATMOS_PHY_SF_RHOH,ATMOS_PHY_SF_RHOQ_t)
     deallocate( ATMOS_PHY_SF_DENS_t        )
     deallocate( ATMOS_PHY_SF_MOMZ_t        )
     deallocate( ATMOS_PHY_SF_RHOU_t        )
@@ -367,19 +375,23 @@ contains
     deallocate( ATMOS_PHY_SF_RHOH          )
     deallocate( ATMOS_PHY_SF_RHOQ_t    )
 
+    !$acc exit data delete(ATMOS_PHY_SF_SFC_TEMP,ATMOS_PHY_SF_SFC_albedo,ATMOS_PHY_SF_SFC_Z0M,ATMOS_PHY_SF_SFC_Z0H,ATMOS_PHY_SF_SFC_Z0E)
     deallocate( ATMOS_PHY_SF_SFC_TEMP   )
     deallocate( ATMOS_PHY_SF_SFC_albedo )
     deallocate( ATMOS_PHY_SF_SFC_Z0M    )
     deallocate( ATMOS_PHY_SF_SFC_Z0H    )
     deallocate( ATMOS_PHY_SF_SFC_Z0E    )
 
+    !$acc exit data delete(ATMOS_PHY_SF_SFC_DENS,ATMOS_PHY_SF_SFC_PRES)
     deallocate( ATMOS_PHY_SF_SFC_DENS   )
     deallocate( ATMOS_PHY_SF_SFC_PRES   )
 
+    !$acc exit data delete(ATMOS_PHY_SF_PREC_MASS,ATMOS_PHY_SF_PREC_ENGI)
     deallocate( ATMOS_PHY_SF_PREC_MASS  )
     deallocate( ATMOS_PHY_SF_PREC_ENGI  )
 
 
+    !$acc exit data delete(ATMOS_PHY_SF_SFLX_MW,ATMOS_PHY_SF_SFLX_MU,ATMOS_PHY_SF_SFLX_MV,ATMOS_PHY_SF_SFLX_SH,ATMOS_PHY_SF_SFLX_LH,ATMOS_PHY_SF_SFLX_SHEX,ATMOS_PHY_SF_SFLX_LHEX,ATMOS_PHY_SF_SFLX_QVEX,ATMOS_PHY_SF_SFLX_GH,ATMOS_PHY_SF_SFLX_QTRC,ATMOS_PHY_SF_SFLX_ENGI)
     deallocate( ATMOS_PHY_SF_SFLX_MW    )
     deallocate( ATMOS_PHY_SF_SFLX_MU    )
     deallocate( ATMOS_PHY_SF_SFLX_MV    )
@@ -392,18 +404,23 @@ contains
     deallocate( ATMOS_PHY_SF_SFLX_QTRC  )
     deallocate( ATMOS_PHY_SF_SFLX_ENGI  )
 
+    !$acc exit data delete(ATMOS_PHY_SF_Ustar,ATMOS_PHY_SF_Tstar,ATMOS_PHY_SF_Qstar,ATMOS_PHY_SF_Wstar)
     deallocate( ATMOS_PHY_SF_Ustar      )
     deallocate( ATMOS_PHY_SF_Tstar      )
     deallocate( ATMOS_PHY_SF_Qstar      )
     deallocate( ATMOS_PHY_SF_Wstar      )
 
+    !$acc exit data delete(ATMOS_PHY_SF_U10,ATMOS_PHY_SF_V10,ATMOS_PHY_SF_T2,ATMOS_PHY_SF_Q2,ATMOS_PHY_SF_RLmo)
     deallocate( ATMOS_PHY_SF_U10        )
     deallocate( ATMOS_PHY_SF_V10        )
     deallocate( ATMOS_PHY_SF_T2         )
     deallocate( ATMOS_PHY_SF_Q2         )
     deallocate( ATMOS_PHY_SF_RLmo       )
 
-    if ( allocated( ZERO ) ) deallocate( ZERO )
+    if ( allocated( ZERO ) ) then
+       !$acc exit data delete(ZERO)
+       deallocate( ZERO )
+    end if
     return
   end subroutine ATMOS_PHY_SF_vars_finalize
 
@@ -521,6 +538,7 @@ contains
 
        if ( FILE_get_AGGREGATE(restart_fid) ) then
           call FILE_CARTESC_flush( restart_fid ) ! X/Y halos have been read from file
+          !$acc update device(ATMOS_PHY_SF_SFC_TEMP,ATMOS_PHY_SF_SFC_albedo,ATMOS_PHY_SF_SFC_Z0M,ATMOS_PHY_SF_SFC_Z0H,ATMOS_PHY_SF_SFC_Z0E)
        else
           call ATMOS_PHY_SF_vars_fillhalo
        end if

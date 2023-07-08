@@ -139,15 +139,19 @@ contains
 
     allocate( ATMOS_PHY_AE_RHOQ_t(KA,IA,JA,QS_AE:QE_AE) )
     ATMOS_PHY_AE_RHOQ_t(:,:,:, :) = UNDEF
+    !$acc enter data create(ATMOS_PHY_AE_RHOQ_t)
 
     allocate( ATMOS_PHY_AE_CCN(KA,IA,JA) )
     ATMOS_PHY_AE_CCN(:,:,:) = UNDEF
+    !$acc enter data create(ATMOS_PHY_AE_CCN)
 
     allocate( ATMOS_PHY_AE_CCN_t(KA,IA,JA) )
     ATMOS_PHY_AE_CCN_t(:,:,:) = UNDEF
+    !$acc enter data create(ATMOS_PHY_AE_CCN_t)
 
     allocate( ATMOS_PHY_AE_EMIT(KA,IA,JA,QS_AE:QE_AE) )
     ATMOS_PHY_AE_EMIT(:,:,:,:) = 0.0_RP
+    !$acc enter data copyin(ATMOS_PHY_AE_EMIT)
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -195,6 +199,7 @@ contains
     ATMOS_PHY_AE_Qe(:,:,:,:) = UNDEF
     DIAG_Re = .false.
     DIAG_Qe = .false.
+    !$acc enter data create(ATMOS_PHY_AE_Re,ATMOS_PHY_AE_Qe)
 
     ! history
     HIST_Re = .false.
@@ -223,12 +228,20 @@ contains
     LOG_NEWLINE
     LOG_INFO("ATMOS_PHY_AE_vars_finalize",*) 'Finalize'
 
+    !$acc exit data delete(ATMOS_PHY_AE_RHOQ_t)
     deallocate( ATMOS_PHY_AE_RHOQ_t )
+
+    !$acc exit data delete(ATMOS_PHY_AE_CCN)
     deallocate( ATMOS_PHY_AE_CCN )
+
+    !$acc exit data delete(ATMOS_PHY_AE_CCN_t)
     deallocate( ATMOS_PHY_AE_CCN_t )
+
+    !$acc exit data delete(ATMOS_PHY_AE_EMIT)
     deallocate( ATMOS_PHY_AE_EMIT )
 
     ! diagnostices
+    !$acc exit data delete(ATMOS_PHY_AE_Re,ATMOS_PHY_AE_Qe)
     deallocate( ATMOS_PHY_AE_Re )
     deallocate( ATMOS_PHY_AE_Qe )
 
@@ -251,12 +264,15 @@ contains
     integer :: i, j
     !---------------------------------------------------------------------------
 
+    !$omp parallel do
+    !$acc kernels
     do j  = JS, JE
     do i  = IS, IE
        ATMOS_PHY_AE_CCN(   1:KS-1,i,j) = ATMOS_PHY_AE_CCN(KS,i,j)
        ATMOS_PHY_AE_CCN(KE+1:KA,  i,j) = ATMOS_PHY_AE_CCN(KE,i,j)
     enddo
     enddo
+    !$acc end kernels
 
     call COMM_vars8( ATMOS_PHY_AE_CCN(:,:,:), 1 )
     call COMM_wait ( ATMOS_PHY_AE_CCN(:,:,:), 1 )
@@ -321,14 +337,18 @@ contains
 
        if ( FILE_get_AGGREGATE(restart_fid) ) then
           call FILE_CARTESC_flush( restart_fid ) ! X/Y halos have been read from file
+          !$acc update device(ATMOS_PHY_AE_CCN)
 
           ! fill K halos
+          !$omp parallel do
+          !$acc kernels
           do j  = 1, JA
           do i  = 1, IA
              ATMOS_PHY_AE_CCN(   1:KS-1,i,j) = ATMOS_PHY_AE_CCN(KS,i,j)
              ATMOS_PHY_AE_CCN(KE+1:KA,  i,j) = ATMOS_PHY_AE_CCN(KE,i,j)
           enddo
           enddo
+          !$acc end kernels
        else
           call ATMOS_PHY_AE_vars_fillhalo
        end if
@@ -510,30 +530,41 @@ contains
     real(RP), intent(out), optional :: Qe(KA,IA,JA,N_AE) !> mass ratio [kg/kg]
 
     if ( present(Re) ) then
+       !$acc data copyout(Re)
        if ( .not. DIAG_Re ) then
 
           select case ( ATMOS_PHY_AE_TYPE )
           case ( 'KAJINO13' )
+             !$acc update host(QTRC(:,:,:,QS_AE:QE_AE),RH)
              call ATMOS_PHY_AE_kajino13_effective_radius( &
                      KA, IA, JA, QA_AE, &
                      QTRC(:,:,:,QS_AE:QE_AE), RH(:,:,:), & ! [IN]
                      ATMOS_PHY_AE_Re(:,:,:,:)            ) ! [OUT]
+             !$acc update device(ATMOS_PHY_AE_Re)
           case ( 'OFFLINE' )
+             !$acc update host(RH)
              call ATMOS_PHY_AE_offline_effective_radius( &
                      KA, IA, JA,              &
                      RH(:,:,:),               & ! [IN]
                      ATMOS_PHY_AE_Re(:,:,:,:) ) ! [OUT]
+             !$acc update device(ATMOS_PHY_AE_Re)
           case default
+             !$acc kernels
              ATMOS_PHY_AE_Re(:,:,:,:) = 0.0_RP
+             !$acc end kernels
           end select
 
           DIAG_Re = .true.
        end if
 !OCL XFILL
+       !$acc kernels
        Re(:,:,:,:) = ATMOS_PHY_AE_Re(:,:,:,:)
+       !$acc end kernels
+       !$acc end data
     end if
 
     if ( present(Qe) ) then
+       !$acc data copyout(Qe)
        if ( .not. DIAG_Qe ) then
 
           select case ( ATMOS_PHY_AE_TYPE )
@@ -542,14 +573,20 @@ contains
                      KA, IA, JA,              &
                      TIME_NOWDAYSEC,          &
                      ATMOS_PHY_AE_Qe(:,:,:,:) ) ! [OUT]
+             !$acc update device(ATMOS_PHY_AE_Qe)
           case default
+             !$acc kernels
              ATMOS_PHY_AE_Qe(:,:,:,:) = 0.0_RP
+             !$acc end kernels
           end select
 
           DIAG_Qe = .true.
        end if
 !OCL XFILL
+       !$acc kernels
        Qe(:,:,:,:) = ATMOS_PHY_AE_Qe(:,:,:,:)
+       !$acc end kernels
+       !$acc end data
     end if
 
     return

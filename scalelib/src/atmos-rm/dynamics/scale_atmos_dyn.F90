@@ -408,20 +408,6 @@ contains
     integer  :: i, j, k, iq
     !---------------------------------------------------------------------------
 
-    !$acc data copy(DENS, MOMZ, MOMX, MOMY, RHOT, QTRC, PROG) &
-    !$acc      copyin(DENS_tp, MOMZ_tp, MOMX_tp, MOMY_tp, RHOT_tp, RHOQ_tp, &
-    !$acc             CORIOLIS, &
-    !$acc             CDZ, CDX, CDY, FDZ, FDX, FDY, RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY, &
-    !$acc             PHI, GSQRT, J13G, J23G, MAPF, &
-    !$acc             AQ_R, AQ_CV, AQ_CP, AQ_MASS, &
-    !$acc             REF_dens, REF_pott, REF_qv, REF_pres, &
-    !$acc             BND_IQ, DAMP_DENS, DAMP_VELZ, DAMP_VELX, DAMP_VELY, DAMP_POTT, DAMP_QTRC, &
-    !$acc             DAMP_alpha_DENS, DAMP_alpha_VELZ, DAMP_alpha_VELX, DAMP_alpha_VELY, DAMP_alpha_POTT, DAMP_alpha_QTRC, &
-    !$acc             MFLUX_OFFSET_X, MFLUX_OFFSET_Y)
-
-    !$acc data copy(DENS_av, MOMZ_av, MOMX_av, MOMY_av, RHOT_av, QTRC_av) if(USE_AVERAGE)
-
-
     LOG_PROGRESS(*) 'atmosphere / dynamics'
 
     dt = real(DTSEC, kind=RP)
@@ -545,6 +531,20 @@ contains
     endif ! if DYN_NONE == .true.
 
     call PROF_rapstart("DYN_Tinteg", 2)
+
+    !$acc data copy(DENS, MOMZ, MOMX, MOMY, RHOT, QTRC, PROG) &
+    !$acc      copyin(DENS_tp, MOMZ_tp, MOMX_tp, MOMY_tp, RHOT_tp, RHOQ_tp, &
+    !$acc             CORIOLIS, &
+    !$acc             CDZ, CDX, CDY, FDZ, FDX, FDY, RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY, &
+    !$acc             PHI, GSQRT, J13G, J23G, MAPF, &
+    !$acc             AQ_R, AQ_CV, AQ_CP, AQ_MASS, &
+    !$acc             REF_dens, REF_pott, REF_qv, REF_pres, &
+    !$acc             BND_IQ, DAMP_DENS, DAMP_VELZ, DAMP_VELX, DAMP_VELY, DAMP_POTT, DAMP_QTRC, &
+    !$acc             DAMP_alpha_DENS, DAMP_alpha_VELZ, DAMP_alpha_VELX, DAMP_alpha_VELY, DAMP_alpha_POTT, DAMP_alpha_QTRC, &
+    !$acc             MFLUX_OFFSET_X, MFLUX_OFFSET_Y)
+
+    !$acc data copy(DENS_av, MOMZ_av, MOMX_av, MOMY_av, RHOT_av, QTRC_av) if(USE_AVERAGE)
+
 
     call ATMOS_DYN_tinteg_large( DENS,    MOMZ,    MOMX,    MOMY,    RHOT,    QTRC,    & ! [INOUT]
                                  PROG,                                                 & ! [INOUT]

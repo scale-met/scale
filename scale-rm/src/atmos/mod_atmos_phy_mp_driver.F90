@@ -839,6 +839,8 @@ contains
 
        select case ( ATMOS_PHY_MP_TYPE )
        case ( 'KESSLER' )
+          !$omp workshare
+          !$acc kernels
 !OCL XFILL
           TEMP1(:,:,:) = TEMP(:,:,:)
 !OCL XFILL
@@ -847,13 +849,19 @@ contains
           CVtot1(:,:,:) = CVtot(:,:,:)
 !OCL XFILL
           CPtot1(:,:,:) = CPtot(:,:,:)
+          !$acc end kernels
+          !$omp end workshare
 
+          !$acc update host(DENS,PRES,TEMP1,QTRC1(:,:,:,QS_MP:QE_MP),CPtot1,CVtot1)
           call ATMOS_PHY_MP_kessler_adjustment( &
                KA, KS, KE, IA, IS, IE, JA, JS, JE, &
                DENS(:,:,:), PRES(:,:,:), dt_MP,                                      & ! [IN]
                TEMP1(:,:,:), QTRC1(:,:,:,QS_MP:QE_MP), CPtot1(:,:,:), CVtot1(:,:,:), & ! [INOUT]
                RHOE_t(:,:,:), EVAPORATE(:,:,:)                                       ) ! [OUT]
+          !acc update device(TEMP1,QTRC1(:,:,:,QS_MP:QE_MP),CPtot1,CVtot1,RHOE_t,EVAPORATE)
 
+          !$omp parallel do collapse(3)
+          !$acc kernels
           do iq = QS_MP, QE_MP
           do j = JS, JE
           do i = IS, IE
@@ -863,7 +871,10 @@ contains
           enddo
           enddo
           enddo
+          !$acc end kernels
 
+          !$omp parallel do collapse(2)
+          !$acc kernels
           do j = JS, JE
           do i = IS, IE
           do k = KS, KE
@@ -872,9 +883,11 @@ contains
           end do
           end do
           end do
+          !$acc end kernels
 
        case ( 'TOMITA08' )
 !OCL XFILL
+          !$omp parallel do collapse(2)
           !$acc parallel async
           !$acc loop collapse(2)
           do j = JS, JE
@@ -886,6 +899,7 @@ contains
           end do
           !$acc end parallel
 !OCL XFILL
+          !$omp parallel do collapse(3)
           !$acc parallel async
           !$acc loop collapse(3)
           do iq = QS_MP, QE_MP
@@ -899,6 +913,7 @@ contains
           end do
           !$acc end parallel
 !OCL XFILL
+          !$omp parallel do collapse(2)
           !$acc parallel async
           !$acc loop collapse(2)
           do j = JS, JE
@@ -925,6 +940,7 @@ contains
 
           if( flg_lt ) then
 !OCL XFILL
+             !$omp parallel do collapse(3)
              !$acc parallel
              !$acc loop collapse(3)
              do iq = QS_LT, QE_LT
@@ -961,6 +977,7 @@ contains
                   RHOE_t(:,:,:), EVAPORATE(:,:,:)                                       ) ! [OUT]
           endif
 
+          !$omp parallel do collapse(3)
           !$acc parallel async
           !$acc loop collapse(3)
           do iq = QS_MP, QE_MP
@@ -974,6 +991,7 @@ contains
           enddo
           !$acc end parallel
 
+          !$omp parallel do collapse(2)
           !$acc parallel async
           !$acc loop collapse(2)
           do j = JS, JE
@@ -987,6 +1005,7 @@ contains
           !$acc end parallel
 
           if( flg_lt ) then
+             !$omp parallel do collapse(3)
              !$acc parallel async
              !$acc loop collapse(3)
              do iq = QS_LT, QE_LT
@@ -1005,6 +1024,7 @@ contains
 
        case ( 'SN14' )
 
+          !$acc update host(DENS,W,QTRC(:,:,:,QS_MP:QE_MP),PRES,TEMP,Qdry,CPtot,CVtot,CCN)
           if( flg_lt ) then
              call ATMOS_PHY_LT_sato2019_select_dQCRG_from_LUT( &
                   KA, KS, KE, IA, IS, IE, JA, JS, JE, & ! [IN]
@@ -1012,6 +1032,7 @@ contains
                   TEMP(:,:,:), DENS(:,:,:),           & ! [IN]
                   QTRC(:,:,:,QLS:QLE),                & ! [IN]
                   dqcrg(:,:,:), beta_crg(:,:,:)       ) ! [OUT]
+             !$acc update host(dqcrg,beta_crg,QTRC(:,:,:,QS_LT:QE_LT))
              call ATMOS_PHY_MP_sn14_tendency( &
                   KA, KS, KE, IA, IS, IE, JA, JS, JE, &
                   DENS(:,:,:), W(:,:,:), QTRC(:,:,:,QS_MP:QE_MP), PRES(:,:,:), TEMP(:,:,:),                     & ! [IN]
@@ -1021,6 +1042,7 @@ contains
                   QTRC(:,:,:,QS_LT:QE_LT),                                                                      & ! [IN:optional]
                   QSPLT_in(:,:,:,:), Sarea(:,:,:,:),                                                            & ! [OUT:optional]
                   RHOC_t_MP(:,:,:,QS_LT:QE_LT)                                                                  ) ! [OUT:optional]
+             !$acc update device(QSPLT_in,Sarea,RHOC_t_MP(:,:,:,QS_LT:QE_LT))
           else
              call ATMOS_PHY_MP_sn14_tendency( &
                   KA, KS, KE, IA, IS, IE, JA, JS, JE, &
@@ -1028,9 +1050,11 @@ contains
                   Qdry(:,:,:), CPtot(:,:,:), CVtot(:,:,:), CCN(:,:,:), dt_MP, REAL_CZ(:,:,:), REAL_FZ(:,:,:),   & ! [IN]
                   RHOQ_t_MP(:,:,:,QS_MP:QE_MP), RHOE_t(:,:,:), CPtot_t(:,:,:), CVtot_t(:,:,:), EVAPORATE(:,:,:) ) ! [OUT]
           endif
+          !$acc update device(RHOQ_t_MP(:,:,:,QS_MP:QE_MP),RHOE_t,CPtot_t,CVtot_t,EVAPORATE)
 
        case ( 'SUZUKI10' )
 
+          !$acc update host(DENS,PRES,TEMP,QTRC(:,:,:,QS_MP:QE_MP),QDRY,CPtot,CVtot,CCN)
           if( flg_lt ) then
              call ATMOS_PHY_LT_sato2019_select_dQCRG_from_LUT( &
                   KA, KS, KE, IA, IS, IE, JA, JS, JE, & ! [IN]
@@ -1038,6 +1062,7 @@ contains
                   TEMP(:,:,:), DENS(:,:,:),           & ! [IN]
                   QTRC(:,:,:,QLS:QLE),                & ! [IN]
                   dqcrg(:,:,:), beta_crg(:,:,:)       ) ! [OUT]
+             !$acc update host(dqcrg,beta_crg,QTRC(:,:,:,QS_LT:QE_LT))
              call ATMOS_PHY_MP_suzuki10_tendency( KA, KS,  KE, IA, IS, IE, JA, JS, JE, KIJMAX, &
                                                   dt_MP,                                  & ! [IN]
                                                   DENS(:,:,:),  PRES(:,:,:), TEMP(:,:,:), & ! [IN]
@@ -1053,6 +1078,7 @@ contains
                                                   QTRC(:,:,:,QS_LT:QE_LT),                & ! [IN:optional]
                                                   QSPLT_in(:,:,:,:), Sarea(:,:,:,:),      & ! [OUT:optional]
                                                   RHOC_t_MP(:,:,:,QS_LT:QE_LT)            ) ! [OUT:optional]
+             !$acc update device(QSPLT_in,Sarea,RHOC_t_MP(:,:,:,QS_LT:QE_LT))
           else
              call ATMOS_PHY_MP_suzuki10_tendency( KA, KS,  KE, IA, IS, IE, JA, JS, JE, KIJMAX, &
                                                   dt_MP,                                  & ! [IN]
@@ -1065,10 +1091,12 @@ contains
                                                   CPtot_t(:,:,:), CVtot_t(:,:,:),         & ! [OUT]
                                                   EVAPORATE(:,:,:)                        ) ! [OUT]
           endif
+          !$acc update device(RHOQ_t_MP(:,:,:,QS_MP:QE_mp),RHOE_t,CPtot_t,CVtot_t,EVAPORATE)
 
           call ATMOS_PHY_MP_suzuki10_qtrc2qhyd( KA, KS, KE, IA, IS, IE, JA, JS, JE, &  ! [IN]
                                                 QTRC(:,:,:,QS_MP+1:QE_MP),          &  ! [IN]
                                                 Qe(:,:,:,:)                         )  ! [OUT]
+          !$acc update device(Qe)
 
           do iq = 1, N_HYD
              call FILE_HISTORY_query( HIST_hyd_id(iq), HIST_sw(iq) )
@@ -1084,6 +1112,7 @@ contains
              call ATMOS_PHY_MP_suzuki10_crg_qtrc2qhyd( KA, KS, KE, IA, IS, IE, JA, JS, JE, &  ! [IN]
                                                        QTRC(:,:,:,QS_LT:QE_LT),            &  ! [IN]
                                                        Qecrg(:,:,:,:)                      )  ! [OUT]
+             !$acc update device(Qecrg)
 
              do iq = 1, N_HYD
                 call FILE_HISTORY_query( HIST_crg_id(iq), HIST_crg_sw(iq) )
@@ -1099,6 +1128,7 @@ contains
        end select
 
 
+       !$omp parallel do collapse(2)
        !$acc parallel
        !$acc loop collapse(2)
        do j = JS, JE
@@ -1469,6 +1499,7 @@ contains
     !$acc end parallel
 
     if( flg_lt ) then
+       !$omp parallel do collapse(3)
        !$acc parallel
        !$acc loop collapse(3)
        do iq = QS_LT, QE_LT
@@ -1569,9 +1600,11 @@ contains
        end do
        end do
        end do
+       !$acc update host(QHYD)
        call ATMOS_PHY_MP_KESSLER_qhyd2qtrc( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
                                             QHYD(:,:,:,:),  & ! [IN]
                                             QTRC(:,:,:,2:)  ) ! [OUT]
+       !$acc update device(QTRC(:,:,:,2:))
     case ( "TOMITA08" )
        !$omp parallel do OMP_SCHEDULE_
        !$acc kernels
@@ -1595,10 +1628,13 @@ contains
        end do
        end do
        end do
+       !$acc update host(QHYD)
        call ATMOS_PHY_MP_SN14_qhyd2qtrc( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
                                          QHYD(:,:,:,:),  & ! [IN]
                                          QTRC(:,:,:,2:), & ! [OUT]
                                          QNUM=QNUM       ) ! [IN]
+       !$acc update device(QTRC(:,:,:,2:))
+       !$acc update device(QNUM) if(present(QNUM))
     case ( "SUZUKI10" )
        !$omp parallel do OMP_SCHEDULE_
        do j = JS, JE
@@ -1608,10 +1644,13 @@ contains
        end do
        end do
        end do
+       !$acc update host(QHYD)
        call ATMOS_PHY_MP_SUZUKI10_qhyd2qtrc( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
                                              QHYD(:,:,:,:),  & ! [IN]
                                              QTRC(:,:,:,2:), & ! [OUT]
                                              QNUM=QNUM       ) ! [IN]
+       !$acc update device(QTRC(:,:,:,2:))
+       !$acc update device(QNUM) if(present(QNUM))
     case default
        LOG_ERROR("ATMOS_PHY_MP_driver_qhyd2qtrc",*) 'ATMOS_PHY_MP_TYPE (', trim(ATMOS_PHY_MP_TYPE), ') is not supported'
        call PRC_abort

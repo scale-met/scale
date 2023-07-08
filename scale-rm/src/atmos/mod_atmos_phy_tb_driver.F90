@@ -336,6 +336,7 @@ contains
           MOMY_t_TB(:,:,:)   = 0.0_RP
           RHOT_t_TB(:,:,:)   = 0.0_RP
           !$acc end kernels
+          !$acc update host(MOMZ,MOMX,MOMY,RHOT,DENS,QTRC,N2,SFLX_MW,SFLX_MU,SFLX_MV,SFLX_SH,SFLX_Q)
           call ATMOS_PHY_TB_d1980( QFLX_MOMZ, QFLX_MOMX, QFLX_MOMY,        & ! [OUT]
                                    QFLX_RHOT, QFLX_RHOQ,                   & ! [OUT]
                                    RHOQ_t_TB,                              & ! [OUT]
@@ -345,6 +346,7 @@ contains
                                    SFLX_SH, SFLX_Q,                        & ! [IN]
                                    GSQRT, J13G, J23G, J33G, MAPF,          & ! [IN]
                                    dt_TB                                   ) ! [IN]
+          !$acc update device(QFLX_MOMZ,QFLX_MOMX,QFLX_MOMY,QFLX_RHOT,QFLX_RHOQ,RHOQ_t_TB,Nu,Ri,Pr)
        case( 'DNS' )
           !$acc kernels
           MOMZ_t_TB(:,:,:)   = 0.0_RP
@@ -352,6 +354,7 @@ contains
           MOMY_t_TB(:,:,:)   = 0.0_RP
           RHOT_t_TB(:,:,:)   = 0.0_RP
           !$acc end kernels
+          !$acc update host(MOMZ,MOMX,MOMY,RHOT,DENS,QTRC,N2,SFLX_MW,SFLX_MU,SFLX_MV,SFLX_SH,SFLX_Q)
           call ATMOS_PHY_TB_dns( QFLX_MOMZ, QFLX_MOMX, QFLX_MOMY,        & ! [OUT]
                                  QFLX_RHOT, QFLX_RHOQ,                   & ! [OUT]
                                  RHOQ_t_TB,                              & ! [OUT]
@@ -361,6 +364,7 @@ contains
                                  SFLX_SH, SFLX_Q,                        & ! [IN]
                                  GSQRT, J13G, J23G, J33G, MAPF,          & ! [IN]
                                  dt_TB                                   ) ! [IN]
+          !$acc update device(QFLX_MOMZ,QFLX_MOMX,QFLX_MOMY,QFLX_RHOT,QFLX_RHOQ,RHOQ_t_TB,Nu,Ri,Pr)
        end select
 
 
