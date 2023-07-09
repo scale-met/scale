@@ -400,7 +400,7 @@ contains
     allocate( URBAN_SFLX_LHEX (UIA,UJA)                     )
     allocate( URBAN_SFLX_QVEX (UIA,UJA)                     )
     allocate( URBAN_SFLX_GH   (UIA,UJA)                     )
-    allocate( URBAN_SFLX_QTRC (UIA,UJA,QA)                  )
+    allocate( URBAN_SFLX_QTRC (UIA,UJA,max(QA,1))           )
     URBAN_SFLX_MW   (:,:)     = UNDEF
     URBAN_SFLX_MU   (:,:)     = UNDEF
     URBAN_SFLX_MV   (:,:)     = UNDEF

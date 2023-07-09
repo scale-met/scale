@@ -332,7 +332,7 @@ contains
     allocate( ATMOS_BOUNDARY_VELX(KA,IA,JA) )
     allocate( ATMOS_BOUNDARY_VELY(KA,IA,JA) )
     allocate( ATMOS_BOUNDARY_POTT(KA,IA,JA) )
-    allocate( ATMOS_BOUNDARY_QTRC(KA,IA,JA,BND_QA) )
+    allocate( ATMOS_BOUNDARY_QTRC(KA,IA,JA,max(BND_QA,1)) )
     ATMOS_BOUNDARY_DENS(:,:,:)   = UNDEF
     ATMOS_BOUNDARY_VELZ(:,:,:)   = UNDEF
     ATMOS_BOUNDARY_VELX(:,:,:)   = UNDEF
@@ -346,7 +346,7 @@ contains
     allocate( ATMOS_BOUNDARY_alpha_VELX(KA,IA,JA) )
     allocate( ATMOS_BOUNDARY_alpha_VELY(KA,IA,JA) )
     allocate( ATMOS_BOUNDARY_alpha_POTT(KA,IA,JA) )
-    allocate( ATMOS_BOUNDARY_alpha_QTRC(KA,IA,JA,BND_QA) )
+    allocate( ATMOS_BOUNDARY_alpha_QTRC(KA,IA,JA,max(BND_QA,1)) )
     ATMOS_BOUNDARY_alpha_DENS(:,:,:)   = 0.0_RP
     ATMOS_BOUNDARY_alpha_VELZ(:,:,:)   = 0.0_RP
     ATMOS_BOUNDARY_alpha_VELX(:,:,:)   = 0.0_RP
@@ -373,7 +373,7 @@ contains
        allocate( VELX_ref(KA,IA,JA) )
        allocate( VELY_ref(KA,IA,JA) )
        allocate( POTT_ref(KA,IA,JA) )
-       allocate( QTRC_ref(KA,IA,JA,BND_QA) )
+       allocate( QTRC_ref(KA,IA,JA,max(BND_QA,1)) )
        DENS_ref(:,:,:) = 0.0_RP
        VELX_ref(:,:,:) = 0.0_RP
        VELY_ref(:,:,:) = 0.0_RP

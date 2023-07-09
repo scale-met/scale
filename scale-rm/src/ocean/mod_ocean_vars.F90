@@ -425,7 +425,7 @@ contains
     allocate( OCEAN_SFLX_MV  (OIA,OJA) )
     allocate( OCEAN_SFLX_SH  (OIA,OJA) )
     allocate( OCEAN_SFLX_LH  (OIA,OJA) )
-    allocate( OCEAN_SFLX_QTRC(OIA,OJA,QA) )
+    allocate( OCEAN_SFLX_QTRC(OIA,OJA,max(QA,1)) )
     allocate( OCEAN_U10      (OIA,OJA) )
     allocate( OCEAN_V10      (OIA,OJA) )
     allocate( OCEAN_T2       (OIA,OJA) )

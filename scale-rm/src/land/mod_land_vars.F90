@@ -379,7 +379,7 @@ contains
     allocate( LAND_SFLX_MV  (LIA,LJA) )
     allocate( LAND_SFLX_SH  (LIA,LJA) )
     allocate( LAND_SFLX_LH  (LIA,LJA) )
-    allocate( LAND_SFLX_QTRC(LIA,LJA,QA) )
+    allocate( LAND_SFLX_QTRC(LIA,LJA,max(QA,1)) )
     LAND_SFLX_MW  (:,:)   = UNDEF
     LAND_SFLX_MU  (:,:)   = UNDEF
     LAND_SFLX_MV  (:,:)   = UNDEF
