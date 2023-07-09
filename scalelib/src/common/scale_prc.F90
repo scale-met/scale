@@ -89,6 +89,7 @@ module scale_prc
   integer, public :: PRC_nprocs               = 1       !< myrank         in local communicator
   integer, public :: PRC_myrank               = 0       !< process num    in local communicator
   logical, public :: PRC_IsMaster             = .false. !< master process in local communicator?
+  !$acc declare create(PRC_myrank)
 
   ! inter-domain world
   integer, public :: PRC_INTERCOMM_parent     = MPI_COMM_NULL !< communicator between this rank and parent domain
@@ -237,6 +238,7 @@ contains
 
     call MPI_COMM_RANK(PRC_LOCAL_COMM_WORLD,PRC_myrank,ierr)
     call MPI_COMM_SIZE(PRC_LOCAL_COMM_WORLD,PRC_nprocs,ierr)
+    !$acc update device(PRC_myrank)
 
     if ( PRC_myrank == PRC_masterrank ) then
        PRC_IsMaster = .true.
@@ -290,6 +292,7 @@ contains
     PRC_nprocs               = nprocs
     PRC_myrank               = myrank
     PRC_IsMaster             = ismaster
+    !$acc update device(PRC_myrank)
 
 
 

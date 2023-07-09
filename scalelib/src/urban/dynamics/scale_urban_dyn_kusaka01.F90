@@ -1058,12 +1058,12 @@ contains
     ! The canopy model is modeled under an assumption that urban canopy lies
     ! below the lowest level of atmospheric model.
     if ( ZDC + Z0C + 2.0_RP >= ZA ) then
-#ifndef _OPENACC
        LOG_ERROR("URBAN_DYN_kusaka01_SLC_main",*) 'ZDC + Z0C + 2m must be less than the 1st level! STOP.'
-       call PRC_abort
-#else
-       write(*,*) "URBAN_DYN_kusaka01_SLC_main :",'ZDC + Z0C + 2m must be less than the 1st level! STOP.'
+#ifdef _OPENACC
        converged = .false.
+       return
+#else
+       call PRC_abort
 #endif
     endif
 
@@ -1221,40 +1221,43 @@ contains
 !            resi1, G0R
 !    end if
 
-#ifndef _OPENACC
      ! output for debug
      if ( iteration > 100 ) then
        LOG_WARN("URBAN_DYN_kusaka01_SLC_main",*) 'iteration for TR was not converged',PRC_myrank,i,j
-       LOG_INFO_CONT(*) '---------------------------------------------------------------------------------'
-       LOG_INFO_CONT(*) 'DEBUG Message --- Residual                                          [K] :', resi1
-       LOG_NEWLINE
-       LOG_INFO_CONT(*) 'DEBUG Message --- TRP : Initial TR                                  [K] :', TRP
-       LOG_INFO_CONT(*) 'DEBUG Message --- TRLP: Initial TRL                                 [K] :', TRLP
-       LOG_NEWLINE
-       LOG_INFO_CONT(*) 'DEBUG Message --- rflux_SW  : Shortwave radiation                      [W/m2] :', rflux_SW
-       LOG_INFO_CONT(*) 'DEBUG Message --- rflux_LW  : Longwave radiation                       [W/m2] :', rflux_LW
-       LOG_INFO_CONT(*) 'DEBUG Message --- PRSS: Surface pressure                           [Pa] :', PRSS
-       LOG_INFO_CONT(*) 'DEBUG Message --- PRSA: Pressure at 1st atmos layer                 [m] :', PRSA
-       LOG_INFO_CONT(*) 'DEBUG Message --- RHOO: Air density                             [kg/m3] :', RHOO
-       LOG_INFO_CONT(*) 'DEBUG Message --- ZA  : Height at 1st atmos layer                   [m] :', ZA
-       LOG_INFO_CONT(*) 'DEBUG Message --- TA  : Temperature at 1st atmos layer              [K] :', TA
-       LOG_INFO_CONT(*) 'DEBUG Message --- UA  : Wind speed at 1st atmos layer             [m/s] :', UA
-       LOG_INFO_CONT(*) 'DEBUG Message --- QA  : Specific humidity at 1st atmos layer    [kg/kg] :', QA
-       LOG_INFO_CONT(*) 'DEBUG Message --- DZR : Depth of surface layer                      [m] :', DZR
-       LOG_NEWLINE
-       LOG_INFO_CONT(*) 'DEBUG Message --- R, W, RW : Normalized height and road width       [-] :', R, W,RW
-       LOG_INFO_CONT(*) 'DEBUG Message --- SVF : Sky View Factors                            [-] :', SVF
-       LOG_INFO_CONT(*) 'DEBUG Message --- BETR: Evaporation efficiency                      [-] :', BETR
-       LOG_INFO_CONT(*) 'DEBUG Message --- EPSR: Surface emissivity of roof                  [-] :', EPSR
-       LOG_INFO_CONT(*) 'DEBUG Message --- CAPR: Heat capacity of roof                 [J m-3 K] :', CAPR
-       LOG_INFO_CONT(*) 'DEBUG Message --- AKSR: Thermal conductivity of roof          [W m-1 K] :', AKSR
-       LOG_INFO_CONT(*) 'DEBUG Message --- QS0R: Surface specific humidity               [kg/kg] :', QS0R
-       LOG_INFO_CONT(*) 'DEBUG Message --- ZDC : Desplacement height of canopy               [m] :', ZDC
-       LOG_INFO_CONT(*) 'DEBUG Message --- Z0R : Momentum roughness length of roof           [m] :', Z0R
-       LOG_INFO_CONT(*) 'DEBUG Message --- Z0HR: Thermal roughness length of roof            [m] :', Z0HR
-       LOG_INFO_CONT(*) '---------------------------------------------------------------------------------'
-     endif
+       LOG_WARN_CONT(*) '---------------------------------------------------------------------------------'
+       LOG_WARN_CONT(*) 'DEBUG Message --- Residual                                          [K] :', resi1
+       LOG_WARN_CONT(*) 'DEBUG Message --- TRP : Initial TR                                  [K] :', TRP
+#ifdef _OPENACC
+       LOG_WARN_CONT(*) 'DEBUG Message --- TRLP: Initial TRL                                 [K] :', TRLP(UKS)
+#else
+       LOG_WARN_CONT(*) 'DEBUG Message --- TRLP: Initial TRL                                 [K] :', TRLP(:)
 #endif
+       LOG_WARN_CONT(*) 'DEBUG Message --- rflux_SW  : Shortwave radiation                      [W/m2] :', rflux_SW
+       LOG_WARN_CONT(*) 'DEBUG Message --- rflux_LW  : Longwave radiation                       [W/m2] :', rflux_LW
+       LOG_WARN_CONT(*) 'DEBUG Message --- PRSS: Surface pressure                           [Pa] :', PRSS
+       LOG_WARN_CONT(*) 'DEBUG Message --- PRSA: Pressure at 1st atmos layer                 [m] :', PRSA
+       LOG_WARN_CONT(*) 'DEBUG Message --- RHOO: Air density                             [kg/m3] :', RHOO
+       LOG_WARN_CONT(*) 'DEBUG Message --- ZA  : Height at 1st atmos layer                   [m] :', ZA
+       LOG_WARN_CONT(*) 'DEBUG Message --- TA  : Temperature at 1st atmos layer              [K] :', TA
+       LOG_WARN_CONT(*) 'DEBUG Message --- UA  : Wind speed at 1st atmos layer             [m/s] :', UA
+       LOG_WARN_CONT(*) 'DEBUG Message --- QA  : Specific humidity at 1st atmos layer    [kg/kg] :', QA
+#ifdef _OPENACC
+       LOG_WARN_CONT(*) 'DEBUG Message --- DZR : Depth of surface layer                      [m] :', DZR(1)
+#else
+       LOG_WARN_CONT(*) 'DEBUG Message --- DZR : Depth of surface layer                      [m] :', DZR(:)
+#endif
+       LOG_WARN_CONT(*) 'DEBUG Message --- R, W, RW : Normalized height and road width       [-] :', R, W,RW
+       LOG_WARN_CONT(*) 'DEBUG Message --- SVF : Sky View Factors                            [-] :', SVF
+       LOG_WARN_CONT(*) 'DEBUG Message --- BETR: Evaporation efficiency                      [-] :', BETR
+       LOG_WARN_CONT(*) 'DEBUG Message --- EPSR: Surface emissivity of roof                  [-] :', EPSR
+       LOG_WARN_CONT(*) 'DEBUG Message --- CAPR: Heat capacity of roof                 [J m-3 K] :', CAPR
+       LOG_WARN_CONT(*) 'DEBUG Message --- AKSR: Thermal conductivity of roof          [W m-1 K] :', AKSR
+       LOG_WARN_CONT(*) 'DEBUG Message --- QS0R: Surface specific humidity               [kg/kg] :', QS0R
+       LOG_WARN_CONT(*) 'DEBUG Message --- ZDC : Desplacement height of canopy               [m] :', ZDC
+       LOG_WARN_CONT(*) 'DEBUG Message --- Z0R : Momentum roughness length of roof           [m] :', Z0R
+       LOG_WARN_CONT(*) 'DEBUG Message --- Z0HR: Thermal roughness length of roof            [m] :', Z0HR
+       LOG_WARN_CONT(*) '---------------------------------------------------------------------------------'
+     endif
 
     !--- update only fluxes ----
      THS   = TR / EXN
@@ -1289,23 +1292,18 @@ contains
      TR      = TRL(1)
 
      if ( abs(resi1) > DTS_MAX_onestep ) then
-#ifndef _OPENACC
        if ( abs(resi1) > DTS_MAX_onestep*10.0_RP ) then
          LOG_ERROR("URBAN_DYN_Kusaka01_main",*) 'tendency of TR exceeded a limit! STOP.'
          LOG_ERROR_CONT(*) 'previous TR and updated TR(TRL(1)) is ',TR-resi1, TR
+#ifdef _OPENACC
+         converged = .false.
+         return
+#else
          call PRC_abort
+#endif
        endif
        LOG_WARN("URBAN_DYN_Kusaka01_main",*) 'tendency of TR exceeded a limit'
-       LOG_INFO_CONT(*) 'previous TR and updated TR(TRL(1)) is ', TR-resi1, TR
-#else
-       if ( abs(resi1) > DTS_MAX_onestep*10.0_RP ) then
-          write(*,*) "ERROR: URBAN_DYN_Kusaka01_main :",'tendency of TR exceeded a limit! STOP.'
-          write(*,*) 'ERROR: previous TR and updated TR(TRL(1)) is ',TR-resi1, TR
-          converged = .false.
-       endif
-       write(*,*) "WARNING: URBAN_DYN_Kusaka01_main :",'tendency of TR exceeded a limit!'
-       write(*,*) 'WARNING: previous TR and updated TR(TRL(1)) is ',TR-resi1, TR
-#endif
+       LOG_WARN_CONT(*) 'previous TR and updated TR(TRL(1)) is ', TR-resi1, TR
      endif
 
     !--------------------------------------------------
@@ -1473,60 +1471,68 @@ contains
     enddo
 
 !    if( .NOT. (resi1 < sqrt(EPS) .AND. resi2 < sqrt(EPS) ) ) then
-!       LOG_INFO("SLC_main",*) 'Warning not converged for TG, TB in URBAN SLC', &
+!       LOG_WARN("SLC_main",*) 'not converged for TG, TB in URBAN SLC', &
 !            PRC_myrank, i,j, &
 !            resi1, resi2, TB, TG, TC, G0BP, G0GP, RB, HB, RG, HG, QC, &
 !            CHC, CDC, BHC, ALPHAC
-!       LOG_INFO_CONT(*) TBP, TGP, TCP, &
+!       LOG_WARN_CONT(*) TBP, TGP, TCP, &
 !                  PRSS, THA, UA, QA, RHOO, UC, QCP, &
 !                  ZA, ZDC, Z0C, Z0HC, &
 !                  CHG, CHB, &
 !                  W, RW, ALPHAG, ALPHAB, BETG, BETB, &
 !                  rflux_LW, VFGS, VFGW, VFWG, VFWW, VFWS, STB, &
 !                  SB, SG, LHV, TBLP, TGLP
-!       LOG_INFO_CONT(*) "6",VFGS, VFGW, VFWG, VFWW, VFWS
+!       LOG_WARN_CONT(*) "6",VFGS, VFGW, VFWG, VFWW, VFWS
 !    end if
 
      ! output for debug
-#ifndef _OPENACC
      if ( iteration > 200 ) then
        LOG_WARN("URBAN_DYN_Kusaka01_main",*) 'iteration for TB/TG was not converged',PRC_myrank,i,j
-       LOG_INFO_CONT(*) '---------------------------------------------------------------------------------'
-       LOG_INFO_CONT(*) 'DEBUG Message --- Residual                                       [K] :', resi1,resi2
-       LOG_NEWLINE
-       LOG_INFO_CONT(*) 'DEBUG Message --- TBP : Initial TB                               [K] :', TBP
-       LOG_INFO_CONT(*) 'DEBUG Message --- TBLP: Initial TBL                              [K] :', TBLP
-       LOG_INFO_CONT(*) 'DEBUG Message --- TGP : Initial TG                               [K] :', TGP
-       LOG_INFO_CONT(*) 'DEBUG Message --- TGLP: Initial TGL                              [K] :', TGLP
-       LOG_INFO_CONT(*) 'DEBUG Message --- TCP : Initial TC                               [K] :', TCP
-       LOG_INFO_CONT(*) 'DEBUG Message --- QCP : Initial QC                               [K] :', QCP
-       LOG_NEWLINE
-       LOG_INFO_CONT(*) 'DEBUG Message --- UC  : Canopy wind                            [m/s] :', UC
-       LOG_INFO_CONT(*) 'DEBUG Message --- rflux_SW  : Shortwave radiation                   [W/m2] :', rflux_SW
-       LOG_INFO_CONT(*) 'DEBUG Message --- rflux_LW  : Longwave radiation                    [W/m2] :', rflux_LW
-       LOG_INFO_CONT(*) 'DEBUG Message --- PRSS: Surface pressure                        [Pa] :', PRSS
-       LOG_INFO_CONT(*) 'DEBUG Message --- PRSA: Pressure at 1st atmos layer              [m] :', PRSA
-       LOG_INFO_CONT(*) 'DEBUG Message --- RHOO: Air density                          [kg/m3] :', RHOO
-       LOG_INFO_CONT(*) 'DEBUG Message --- ZA  : Height at 1st atmos layer                [m] :', ZA
-       LOG_INFO_CONT(*) 'DEBUG Message --- TA  : Temperature at 1st atmos layer           [K] :', TA
-       LOG_INFO_CONT(*) 'DEBUG Message --- UA  : Wind speed at 1st atmos layer          [m/s] :', UA
-       LOG_INFO_CONT(*) 'DEBUG Message --- QA  : Specific humidity at 1st atmos layer [kg/kg] :', QA
-       LOG_INFO_CONT(*) 'DEBUG Message --- DZB : Depth of surface layer                   [m] :', DZB
-       LOG_INFO_CONT(*) 'DEBUG Message --- DZG : Depth of surface layer                   [m] :', DZG
-       LOG_NEWLINE
-       LOG_INFO_CONT(*) 'DEBUG Message --- R, W, RW  : Normalized height and road width    [-] :', R, W,RW
-       LOG_INFO_CONT(*) 'DEBUG Message --- SVF       : Sky View Factors                    [-] :', SVF
-       LOG_INFO_CONT(*) 'DEBUG Message --- BETB,BETG : Evaporation efficiency              [-] :', BETB,BETG
-       LOG_INFO_CONT(*) 'DEBUG Message --- EPSB,EPSG : Surface emissivity                  [-] :', EPSB,EPSG
-       LOG_INFO_CONT(*) 'DEBUG Message --- CAPB,CAPG : Heat capacity                 [J m-3 K] :', CAPB,CAPG
-       LOG_INFO_CONT(*) 'DEBUG Message --- AKSB,AKSG : Thermal conductivity          [W m-1 K] :', AKSB,AKSB
-       LOG_INFO_CONT(*) 'DEBUG Message --- QS0B,QS0G : Surface specific humidity       [kg/kg] :', QS0B,QS0G
-       LOG_INFO_CONT(*) 'DEBUG Message --- ZDC       : Desplacement height of canopy       [m] :', ZDC
-       LOG_INFO_CONT(*) 'DEBUG Message --- Z0M       : Momentum roughness length of canopy [m] :', Z0C
-       LOG_INFO_CONT(*) 'DEBUG Message --- Z0H/Z0E   : Thermal roughness length of canopy  [m] :', Z0HC
-       LOG_INFO_CONT(*) '---------------------------------------------------------------------------------'
-     endif
+       LOG_WARN_CONT(*) '---------------------------------------------------------------------------------'
+       LOG_WARN_CONT(*) 'DEBUG Message --- Residual                                       [K] :', resi1,resi2
+       LOG_WARN_CONT(*) 'DEBUG Message --- TBP : Initial TB                               [K] :', TBP
+#ifdef _OPENACC
+       LOG_WARN_CONT(*) 'DEBUG Message --- TBLP: Initial TBL                              [K] :', TBLP(UKS)
+#else
+       LOG_WARN_CONT(*) 'DEBUG Message --- TBLP: Initial TBL                              [K] :', TBLP(:)
 #endif
+       LOG_WARN_CONT(*) 'DEBUG Message --- TGP : Initial TG                               [K] :', TGP
+#ifdef _OPENACC
+       LOG_WARN_CONT(*) 'DEBUG Message --- TGLP: Initial TGL                              [K] :', TGLP(UKS)
+#else
+       LOG_WARN_CONT(*) 'DEBUG Message --- TGLP: Initial TGL                              [K] :', TGLP(:)
+#endif
+       LOG_WARN_CONT(*) 'DEBUG Message --- TCP : Initial TC                               [K] :', TCP
+       LOG_WARN_CONT(*) 'DEBUG Message --- QCP : Initial QC                               [K] :', QCP
+       LOG_WARN_CONT(*) 'DEBUG Message --- UC  : Canopy wind                            [m/s] :', UC
+       LOG_WARN_CONT(*) 'DEBUG Message --- rflux_SW  : Shortwave radiation                   [W/m2] :', rflux_SW
+       LOG_WARN_CONT(*) 'DEBUG Message --- rflux_LW  : Longwave radiation                    [W/m2] :', rflux_LW
+       LOG_WARN_CONT(*) 'DEBUG Message --- PRSS: Surface pressure                        [Pa] :', PRSS
+       LOG_WARN_CONT(*) 'DEBUG Message --- PRSA: Pressure at 1st atmos layer              [m] :', PRSA
+       LOG_WARN_CONT(*) 'DEBUG Message --- RHOO: Air density                          [kg/m3] :', RHOO
+       LOG_WARN_CONT(*) 'DEBUG Message --- ZA  : Height at 1st atmos layer                [m] :', ZA
+       LOG_WARN_CONT(*) 'DEBUG Message --- TA  : Temperature at 1st atmos layer           [K] :', TA
+       LOG_WARN_CONT(*) 'DEBUG Message --- UA  : Wind speed at 1st atmos layer          [m/s] :', UA
+       LOG_WARN_CONT(*) 'DEBUG Message --- QA  : Specific humidity at 1st atmos layer [kg/kg] :', QA
+#ifdef _OPENACC
+       LOG_WARN_CONT(*) 'DEBUG Message --- DZB : Depth of surface layer                   [m] :', DZB(1)
+       LOG_WARN_CONT(*) 'DEBUG Message --- DZG : Depth of surface layer                   [m] :', DZG(1)
+#else
+       LOG_WARN_CONT(*) 'DEBUG Message --- DZB : Depth of surface layer                   [m] :', DZB(:)
+       LOG_WARN_CONT(*) 'DEBUG Message --- DZG : Depth of surface layer                   [m] :', DZG(:)
+#endif
+       LOG_WARN_CONT(*) 'DEBUG Message --- R, W, RW  : Normalized height and road width    [-] :', R, W,RW
+       LOG_WARN_CONT(*) 'DEBUG Message --- SVF       : Sky View Factors                    [-] :', SVF
+       LOG_WARN_CONT(*) 'DEBUG Message --- BETB,BETG : Evaporation efficiency              [-] :', BETB,BETG
+       LOG_WARN_CONT(*) 'DEBUG Message --- EPSB,EPSG : Surface emissivity                  [-] :', EPSB,EPSG
+       LOG_WARN_CONT(*) 'DEBUG Message --- CAPB,CAPG : Heat capacity                 [J m-3 K] :', CAPB,CAPG
+       LOG_WARN_CONT(*) 'DEBUG Message --- AKSB,AKSG : Thermal conductivity          [W m-1 K] :', AKSB,AKSB
+       LOG_WARN_CONT(*) 'DEBUG Message --- QS0B,QS0G : Surface specific humidity       [kg/kg] :', QS0B,QS0G
+       LOG_WARN_CONT(*) 'DEBUG Message --- ZDC       : Desplacement height of canopy       [m] :', ZDC
+       LOG_WARN_CONT(*) 'DEBUG Message --- Z0M       : Momentum roughness length of canopy [m] :', Z0C
+       LOG_WARN_CONT(*) 'DEBUG Message --- Z0H/Z0E   : Thermal roughness length of canopy  [m] :', Z0HC
+       LOG_WARN_CONT(*) '---------------------------------------------------------------------------------'
+     endif
 
      !--- update only fluxes ----
 
@@ -1600,47 +1606,35 @@ contains
      resi2  = TGL(1) - TG
      TG     = TGL(1)
 
-#ifndef _OPENACC
      if ( abs(resi1) > DTS_MAX_onestep ) then
         if ( abs(resi1) > DTS_MAX_onestep*10.0_RP ) then
            LOG_ERROR("URBAN_DYN_Kusaka01_main",*) 'tendency of TB exceeded a limit! STOP.'
            LOG_ERROR_CONT(*) 'previous TB and updated TB(TBL(1)) is ', TB-resi1,TB
+#ifdef _OPENACC
+           converged = .false.
+           return
+#else
            call PRC_abort
+#endif
         endif
         LOG_WARN("URBAN_DYN_Kusaka01_main",*) 'tendency of TB exceeded a limit'
-        LOG_INFO_CONT(*) 'previous TB and updated TB(TBL(1)) is ', TB-resi1, TB
+        LOG_WARN_CONT(*) 'previous TB and updated TB(TBL(1)) is ', TB-resi1, TB
      endif
 
      if ( abs(resi2) > DTS_MAX_onestep ) then
         if ( abs(resi2) > DTS_MAX_onestep*10.0_RP ) then
            LOG_ERROR("URBAN_DYN_Kusaka01_main",*) 'tendency of TG exceeded a limit! STOP.'
            LOG_ERROR_CONT(*) 'previous TG and updated TG(TGL(1)) is ', TG-resi2, TG, resi2
+#ifdef _OPENACC
+           converged = .false.
+           return
+#else
            call PRC_abort
+#endif
         endif
         LOG_WARN("URBAN_DYN_Kusaka01_main",*) 'tendency of TG exceeded a limit'
-        LOG_INFO_CONT(*) 'previous TG and updated TG(TGL(1)) is ', TG-resi2, TG
+        LOG_WARN_CONT(*) 'previous TG and updated TG(TGL(1)) is ', TG-resi2, TG
      endif
-#else
-     if ( abs(resi1) > DTS_MAX_onestep ) then
-       if ( abs(resi1) > DTS_MAX_onestep*10.0_RP ) then
-          write(*,*) "ERROR: URBAN_DYN_Kusaka01_main :",'tendency of TB exceeded a limit! STOP.'
-          write(*,*) 'ERROR: previous TB and updated TB(TBL(1)) is ', TB-resi1,TB
-          converged = .false.
-       endif
-       write(*,*) "WARNING: URBAN_DYN_Kusaka01_main :",'tendency of TB exceeded a limit!'
-       write(*,*) 'WARNING: previous TB and updated TB(TBL(1)) is ',TB-resi1, TB
-     endif
-
-     if ( abs(resi2) > DTS_MAX_onestep ) then
-       if ( abs(resi2) > DTS_MAX_onestep*10.0_RP ) then
-          write(*,*) "ERROR: URBAN_DYN_Kusaka01_main :",'tendency of TG exceeded a limit! STOP.'
-          write(*,*) 'ERROR: previous TG and updated TG(TGL(1)) is ', TG-resi2, TG
-          converged = .false.
-       endif
-       write(*,*) "WARNING: URBAN_DYN_Kusaka01_main :",'tendency of TG exceeded a limit!'
-       write(*,*) 'WARNING: previous TG and updated TG(TGL(1)) is ',TG-resi2, TG
-    endif
-#endif
 
     !-----------------------------------------------------------
     ! Total Fluxes from Urban Canopy
