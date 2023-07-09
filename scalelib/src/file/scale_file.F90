@@ -5233,7 +5233,7 @@ contains
           start_(:) = 1
        end if
 
-       !$acc update device(var) if(acc_is_present(var))
+       !$acc update host(var) if(acc_is_present(var))
 
 #ifdef NVIDIA
        block
@@ -5328,7 +5328,7 @@ contains
           start_(:) = 1
        end if
 
-       !$acc update device(var) if(acc_is_present(var))
+       !$acc update host(var) if(acc_is_present(var))
 
 #ifdef NVIDIA
        block
@@ -5398,7 +5398,7 @@ contains
           start_(:) = 1
        end if
 
-       !$acc update device(var) if(acc_is_present(var))
+       !$acc update host(var) if(acc_is_present(var))
 
 #ifdef NVIDIA
        block
@@ -5467,7 +5467,7 @@ contains
           start_(:) = 1
        end if
 
-       !$acc update device(var) if(acc_is_present(var))
+       !$acc update host(var) if(acc_is_present(var))
 
 #ifdef NVIDIA
        block
@@ -5536,7 +5536,7 @@ contains
           start_(:) = 1
        end if
 
-       !$acc update device(var) if(acc_is_present(var))
+       !$acc update host(var) if(acc_is_present(var))
 
 #ifdef NVIDIA
        block
@@ -5605,7 +5605,7 @@ contains
           start_(:) = 1
        end if
 
-       !$acc update device(var) if(acc_is_present(var))
+       !$acc update host(var) if(acc_is_present(var))
 
 #ifdef NVIDIA
        block
@@ -5674,7 +5674,7 @@ contains
           start_(:) = 1
        end if
 
-       !$acc update device(var) if(acc_is_present(var))
+       !$acc update host(var) if(acc_is_present(var))
 
 #ifdef NVIDIA
        block
@@ -5743,7 +5743,7 @@ contains
           start_(:) = 1
        end if
 
-       !$acc update device(var) if(acc_is_present(var))
+       !$acc update host(var) if(acc_is_present(var))
 
 #ifdef NVIDIA
        block

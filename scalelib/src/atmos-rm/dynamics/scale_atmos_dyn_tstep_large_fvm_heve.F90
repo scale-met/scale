@@ -810,6 +810,7 @@ contains
              if( iq == I_QV .and. SPNUDGE_qv ) then
 
                 !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+                !$acc kernels
 !OCL XFILL
                 do j = JS, JE
                 do i = IS, IE
@@ -818,12 +819,14 @@ contains
                 enddo
                 enddo
                 enddo
+                !$acc end kernels
 
                 call DFT_g2g(KA,KS,KE,IA,IS,IE,JA,JS,JE,SPNUDGE_qv_lm,SPNUDGE_qv_mm,diff2)
 
              else
 
                 !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+                !$acc kernels
 !OCL XFILL
                 do j = JS, JE
                 do i = IS, IE
@@ -832,6 +835,7 @@ contains
                 enddo
                 enddo
                 enddo
+                !$acc end kernels
 
              endif
 
@@ -1154,6 +1158,7 @@ contains
              if( SPNUDGE_uv_divfree ) then
 
                 !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+                !$acc kernels
 !OCL XFILL
                 do j = JS-1, JE+1
                 do i = IS-1, IE+1
@@ -1162,8 +1167,10 @@ contains
                 enddo
                 enddo
                 enddo
+                !$acc end kernels
 
                 !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+                !$acc kernels
 !OCL XFILL
                 do j = JS, JE
                 do i = IS, IE
@@ -1172,8 +1179,10 @@ contains
                 enddo
                 enddo
                 enddo
+                !$acc end kernels
 
                 !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+                !$acc kernels
 !OCL XFILL
                 do j = JS, JE
                 do i = IS, IE
@@ -1182,10 +1191,12 @@ contains
                 enddo
                 enddo
                 enddo
+                !$acc end kernels
 
                 call DFT_g2g_divfree(KA,KS,KE,IA,IS,IE,JA,JS,JE,SPNUDGE_uv_lm,SPNUDGE_uv_mm,diff2,diff3)
 
                 !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+                !$acc kernels
 !OCL XFILL
                 do j = JS, JE
                 do i = IS, IE
@@ -1194,10 +1205,12 @@ contains
                 enddo
                 enddo
                 enddo
+                !$acc end kernels
 
              else
 
                 !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+                !$acc kernels
 !OCL XFILL
                 do j = JS, JE
                 do i = IS, IE
@@ -1206,10 +1219,12 @@ contains
                 enddo
                 enddo
                 enddo
+                !$acc end kernels
 
                 call DFT_g2g(KA,KS,KE,IA,IS,IE,JA,JS,JE,SPNUDGE_uv_lm,SPNUDGE_uv_mm,diff2)
 
                 !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+                !$acc kernels
                 do j = JS, JE
                 do i = IS, IE
                 do k = KS, KE
@@ -1217,19 +1232,22 @@ contains
                 enddo
                 enddo
                 enddo
+                !$acc end kernels
 
              endif
           else
 
              !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+             !$acc kernels
 !OCL XFILL
              do j = JS, JE
              do i = IS, IE
              do k = KS, KE
-                diff2(k,i,j) = 0
+                diff2(k,i,j) = 0.0_RP
              enddo
              enddo
              enddo
+             !$acc end kernels
 
           endif
 
@@ -1302,6 +1320,7 @@ contains
              if( SPNUDGE_uv_divfree ) then
 
                 !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+                !$acc kernels
 !OCL XFILL
                 do j = JS, JE
                 do i = IS, IE
@@ -1310,9 +1329,11 @@ contains
                 enddo
                 enddo
                 enddo
+                !$acc end kernels
 
              else
                 !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+                !$acc kernels
 !OCL XFILL
                 do j = JS, JE
                 do i = IS, IE
@@ -1321,10 +1342,12 @@ contains
                 enddo
                 enddo
                 enddo
+                !$acc end kernels
 
                 call DFT_g2g(KA,KS,KE,IA,IS,IE,JA,JS,JE,SPNUDGE_uv_lm,SPNUDGE_uv_mm,diff2)
 
                 !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+                !$acc kernels
 !OCL XFILL
                 do j = JS, JE
                 do i = IS, IE
@@ -1333,6 +1356,7 @@ contains
                 enddo
                 enddo
                 enddo
+                !$acc end kernels
              endif
           endif
 
@@ -1404,6 +1428,7 @@ contains
           if( SPNUDGE_pt ) then
 
              !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+             !$acc kernels
 !OCL XFILL
              do j = JS, JE
              do i = IS, IE
@@ -1412,10 +1437,12 @@ contains
              enddo
              enddo
              enddo
+             !$acc end kernels
 
              call DFT_g2g(KA,KS,KE,IA,IS,IE,JA,JS,JE,SPNUDGE_pt_lm,SPNUDGE_pt_mm,diff2)
 
              !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+             !$acc kernels
 !OCL XFILL
              do j = JS, JE
              do i = IS, IE
@@ -1424,18 +1451,21 @@ contains
              enddo
              enddo
              enddo
+             !$acc end kernels
 
           else
 
              !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+             !$acc kernels
 !OCL XFILL
              do j = JS, JE
              do i = IS, IE
              do k = KS, KE
-                diff2(k,i,j) = 0
+                diff2(k,i,j) = 0.0_RP
              enddo
              enddo
              enddo
+             !$acc end kernels
 
           endif
 

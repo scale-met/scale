@@ -1443,6 +1443,7 @@ contains
           call PRC_abort
        end if
        call FILE_Read( fid, varname, var(dim1_S:dim1_E,dim2_S:dim2_E), step=step )
+       !$acc update device(var) if(acc_is_present(var))
     endif
 
     call PROF_rapend('FILE_I_NetCDF', 2, disable_barrier = FILE_single(fid) )
@@ -1621,7 +1622,7 @@ contains
        end if
        call FILE_Read( fid, varname, var(dim1_S:dim1_E,dim2_S:dim2_E,dim3_S:dim3_E), &
                        step=step, allow_missing=allow_missing                        )
-
+       !$acc update device(var) if(acc_is_present(var))
     endif
 
     call PROF_rapend('FILE_I_NetCDF', 2, disable_barrier = FILE_single(fid) )
@@ -1773,6 +1774,7 @@ contains
        dim4_E   = step
        call FILE_Read( fid, varname,                                     & ! (in)
             var(dim1_S:dim1_E,dim2_S:dim2_E,dim3_S:dim3_E,dim4_S:dim4_E) ) ! (out)
+       !$acc update device(var) if(acc_is_present(var))
     endif
 
     call PROF_rapend('FILE_I_NetCDF', 2, disable_barrier = FILE_single(fid) )
@@ -1860,6 +1862,7 @@ contains
 
     call FILE_read( fid, varname, var(:,:), step=step, start=start(:), count=count(:) )
     call FILE_CARTESC_flush( fid )
+    !$acc update device(var) if(acc_is_present(var))
 
     call PROF_rapend('FILE_I_NetCDF', 2, disable_barrier = FILE_single(fid) )
 
@@ -1953,6 +1956,7 @@ contains
        count(:) = (/nz,nx,ny/)
        call FILE_read( fid, varname, var(:,:,:), step=step, start=start(:), count=count(:) )
        call FILE_CARTESC_flush( fid )
+       !$acc update device(var) if(acc_is_present(var))
     else if ( dnames(1)(1:1)=="x" .and. dnames(2)(1:1)=="y" .and. ( dnames(3)(1:1)=="z" .or. dnames(3)(2:2)=="z" ) ) then
        allocate( buf(nx,ny,nz) )
        if ( nx==dims(1) .and. ny==dims(2) .and. nz==dims(3) ) then
@@ -3685,6 +3689,7 @@ contains
     endif
 
     if ( exec ) then
+       !$acc update device(var) if(acc_is_present(var))
        if ( fill_halo_ ) then ! fill halo cells with RMISS
           do j = JS, JE
           do i = IS, IE
@@ -3834,9 +3839,9 @@ contains
        dim3_E   = JEB
     endif
 
-    if ( fill_halo_ ) then
+    !$acc update host(var) if(acc_is_present(var))
 
-       !$acc update host(var) if(acc_is_present(var))
+    if ( fill_halo_ ) then
 
        !$omp parallel do
        do j = JS, JE
@@ -3986,9 +3991,9 @@ contains
     if ( present(timetarg) ) then
        nowtime = timeofs_ + (timetarg-1) * time_interval
 
-       if ( fill_halo_ ) then
+       !$acc update host(var) if(acc_is_present(var))
 
-          !$acc update host(var) if(acc_is_present(var))
+       if ( fill_halo_ ) then
 
           do j = JS, JE
           do i = IS, IE
@@ -4029,10 +4034,11 @@ contains
        endif
     else
        nowtime = timeofs_
+
+       !$acc update host(var) if(acc_is_present(var))
+
        do n = 1, step
           if ( fill_halo_ ) then
-
-             !$acc update host(var) if(acc_is_present(var))
 
              do j = JS, JE
              do i = IS, IE
@@ -4208,12 +4214,12 @@ contains
        call PRC_abort
     endif
 
+    !$acc update host(var) if(acc_is_present(var))
+
     if ( present(timetarg) ) then
        nowtime = timeofs_ + (timetarg-1) * time_interval
 
        if ( fill_halo_ ) then
-
-          !$acc update host(var) if(acc_is_present(var))
 
           do j = JS, JE
           do i = IS, IE
@@ -4266,8 +4272,6 @@ contains
        nowtime = timeofs_
        do n = 1, step
           if ( fill_halo_ ) then
-
-             !$acc update host(var) if(acc_is_present(var))
 
              do j = JS, JE
              do i = IS, IE
