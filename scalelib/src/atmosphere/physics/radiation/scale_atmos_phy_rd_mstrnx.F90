@@ -1348,52 +1348,98 @@ contains
     real(RP), intent(out) :: rflux_sfc_dn(IA,JA,N_RAD_DIR,N_RAD_RGN)        ! surface downward radiation flux (direct/diffuse,IR/NIR/VIS)
     real(RP), intent(out) :: tauCLD_067u (rd_kmax,IA,JA)                    ! 0.67 micron cloud optical depth
     real(RP), intent(out) :: emisCLD_105u(rd_kmax,IA,JA)                    ! 10.5 micron cloud emissivity
+    
+#ifdef _OPENACC
+
+! GPU
+#define OUTER_IS  1
+#define OUTER_IE  1
+#define OUTER_JS  1
+#define OUTER_JE  1
+#define INNER_IA IA
+#define INNER_IS IS
+#define INNER_IE IE
+#define INNER_JA JA
+#define INNER_JS JS
+#define INNER_JE JE
+#define inout_i   i
+#define inout_j   j
+#define inout_I1  1
+#define inout_IA IA
+#define inout_J1  1
+#define inout_JA JA
+
+#else
+
+! CPU
+#define OUTER_IS IS
+#define OUTER_IE IE
+#define OUTER_JS JS
+#define OUTER_JE JE
+#define INNER_IA  1
+#define INNER_IS  1
+#define INNER_IE  1
+#define INNER_JA  1
+#define INNER_JS  1
+#define INNER_JE  1
+#define inout_i  ii
+#define inout_j  jj
+#define inout_I1 ii
+#define inout_IA ii
+#define inout_J1 jj
+#define inout_JA jj
+
+#endif
+
+    real(RP) :: cosSZA_tmp         (INNER_IA,INNER_JA)
+    real(RP) :: albedo_sfc_tmp     (INNER_IA,INNER_JA, N_RAD_DIR)
+    real(RP) :: cldfrac_tmp(rd_kmax,INNER_IA,INNER_JA)
 
     ! for P-T fitting
-    real(RP) :: dz_std (rd_kmax,IA,JA)       ! layer thickness at 0C, 1atm [cm]
-    real(RP) :: logP                   ! log10(pres)
-    real(RP) :: logT                   ! log10(temp)
-    integer  :: indexP (rd_kmax,IA,JA)       ! index for interpolation in P-fitting
-    real(RP) :: factP  (rd_kmax,IA,JA)       ! interpolation factor    in P-fitting
-    real(RP) :: factT32(rd_kmax,IA,JA)       ! interpolation factor    in T-fitting
-    real(RP) :: factT21(rd_kmax,IA,JA)       ! interpolation factor    in T-fitting
-    integer  :: indexR (rd_kmax,IA,JA,naero) ! index for interpolation in R-fitting
-    real(RP) :: factR  (rd_kmax,IA,JA,naero) ! interpolation factor    in R-fitting
+    real(RP) :: dz_std (rd_kmax,INNER_IA,INNER_JA)       ! layer thickness at 0C, 1atm [cm]
+    real(RP) :: logP                                     ! log10(pres)
+    real(RP) :: logT                                     ! log10(temp)
+    integer  :: indexP (rd_kmax,INNER_IA,INNER_JA)       ! index for interpolation in P-fitting
+    real(RP) :: factP  (rd_kmax,INNER_IA,INNER_JA)       ! interpolation factor    in P-fitting
+    real(RP) :: factT32(rd_kmax,INNER_IA,INNER_JA)       ! interpolation factor    in T-fitting
+    real(RP) :: factT21(rd_kmax,INNER_IA,INNER_JA)       ! interpolation factor    in T-fitting
+    integer  :: indexR (rd_kmax,INNER_IA,INNER_JA,naero) ! index for interpolation in R-fitting
+    real(RP) :: factR  (rd_kmax,INNER_IA,INNER_JA,naero) ! interpolation factor    in R-fitting
 
     ! for optical thickness by gas
-    real(RP) :: tauGAS(rd_kmax,IA,JA,MSTRN_ch_limit) ! optical thickness by gas absorption (total)
+    real(RP) :: tauGAS(rd_kmax,INNER_IA,INNER_JA,MSTRN_ch_limit) ! optical thickness by gas absorption (total)
     real(RP) :: A1, A2, A3, factPT
     real(RP) :: qv, length
     integer  :: gasno
 
     ! for optical thickness by particles
-    real(RP) :: tauPR   (rd_kmax,IA,JA,MSTRN_ncloud)               ! optical thickness        by Rayleigh/cloud/aerosol
-    real(RP) :: omgPR   (rd_kmax,IA,JA,MSTRN_ncloud)               ! single scattering albedo by Rayleigh/cloud/aerosol
-    real(DP) :: optparam(rd_kmax,IA,JA,MSTRN_nmoment,MSTRN_ncloud) ! optical parameters
+    real(RP) :: tauPR   (rd_kmax,INNER_IA,INNER_JA,MSTRN_ncloud)               ! optical thickness        by Rayleigh/cloud/aerosol
+    real(RP) :: omgPR   (rd_kmax,INNER_IA,INNER_JA,MSTRN_ncloud)               ! single scattering albedo by Rayleigh/cloud/aerosol
+    real(DP) :: optparam(rd_kmax,INNER_IA,INNER_JA,MSTRN_nmoment,MSTRN_ncloud) ! optical parameters
     real(RP) :: q_fit, dp_P
 
     ! for planck functions
-    real(RP) :: bbar (rd_kmax  ,IA,JA) ! planck functions for thermal source at the interface
-    real(RP) :: bbarh(rd_kmax+1,IA,JA) ! planck functions for thermal source at the center
-    real(RP) :: b_sfc(          IA,JA) ! planck functions for thermal source at the surface
+    real(RP) :: bbar (rd_kmax  ,INNER_IA,INNER_JA) ! planck functions for thermal source at the interface
+    real(RP) :: bbarh(rd_kmax+1,INNER_IA,INNER_JA) ! planck functions for thermal source at the center
+    real(RP) :: b_sfc(          INNER_IA,INNER_JA) ! planck functions for thermal source at the surface
     real(RP) :: wl, beta
 
     ! for two-stream
-    real(RP) :: tau(rd_kmax,IA,JA,    MSTRN_ncloud,MSTRN_ch_limit) ! total optical thickness
-    real(RP) :: omg(rd_kmax,IA,JA,    MSTRN_ncloud,MSTRN_ch_limit) ! single scattering albedo
-    real(RP) :: g  (rd_kmax,IA,JA,0:2,MSTRN_ncloud               ) ! two-stream approximation factors
+    real(RP) :: tau(rd_kmax,INNER_IA,INNER_JA,    MSTRN_ncloud,MSTRN_ch_limit) ! total optical thickness
+    real(RP) :: omg(rd_kmax,INNER_IA,INNER_JA,    MSTRN_ncloud,MSTRN_ch_limit) ! single scattering albedo
+    real(RP) :: g  (rd_kmax,INNER_IA,INNER_JA,0:2,MSTRN_ncloud               ) ! two-stream approximation factors
                                                              ! 0: always 1
                                                              ! 1: asymmetry factor
                                                              ! 2: truncation factor
-    real(RP) :: b  (rd_kmax,IA,JA,0:2,MSTRN_ncloud,MSTRN_ch_limit) ! planck expansion coefficients (zero if SW)
-    real(RP) :: fsol_rgn (IA, JA)                                  ! solar insolation              (zero if LW)
+    real(RP) :: b  (rd_kmax,INNER_IA,INNER_JA,0:2,MSTRN_ncloud,MSTRN_ch_limit) ! planck expansion coefficients (zero if SW)
+    real(RP) :: fsol_rgn   (INNER_IA,INNER_JA)                                 ! solar insolation              (zero if LW)
 
-    real(RP) :: flux       (rd_kmax+1,IA,JA,2,MSTRN_ncloud,MSTRN_ch_limit) ! upward/downward flux
-    real(RP) :: flux_direct(rd_kmax+1,IA,JA,  MSTRN_ncloud,MSTRN_ch_limit) ! downward flux (direct solar)
+    real(RP) :: flux       (rd_kmax+1,INNER_IA,INNER_JA,2,MSTRN_ncloud,MSTRN_ch_limit) ! upward/downward flux
+    real(RP) :: flux_direct(rd_kmax+1,INNER_IA,INNER_JA,  MSTRN_ncloud,MSTRN_ch_limit) ! downward flux (direct solar)
 
     ! for satellite simulator
-    real(RP) :: tauCLD (rd_kmax,IA,JA)                ! cloud optical thickness
-    real(RP) :: emisCLD(rd_kmax,IA,JA) ! cloud emissivity
+    real(RP) :: tauCLD (rd_kmax,INNER_IA,INNER_JA)                ! cloud optical thickness
+    real(RP) :: emisCLD(rd_kmax,INNER_IA,INNER_JA,MSTRN_ch_limit) ! cloud emissivity
 
     real(RP) :: zerosw
     real(RP) :: valsum
@@ -1401,38 +1447,30 @@ contains
     integer  :: ip, ir, irgn, irgn_alb
     integer  :: igas, icfc, iaero, iptype, nradius
     integer  :: iw, ich, iplk, icloud, im
-    integer  :: k, i, j
+    integer  :: k, ii,jj, i, j
     !---------------------------------------------------------------------------
 
     !$acc data &
-    !$acc& pcreate(solins, cosSZA, rhodz, pres, temp, temph, temp_sfc, gas, cfc) &
-    !$acc& pcreate(aerosol_conc, aerosol_radi, aero2ptype, cldfrac, albedo_sfc) &
-    !$acc& pcreate(fact_ocean, fact_land, fact_urban) &
-    !$acc& pcreate(rflux, rflux_sfc_dn, tauCLD_067u, emisCLD_105u) &
+    !$acc& pcopyin(solins, cosSZA, rhodz, pres, temp, temph, temp_sfc, gas, cfc) &
+    !$acc& pcopyin(aerosol_conc, aerosol_radi, aero2ptype, cldfrac, albedo_sfc) &
+    !$acc& pcopyin(fact_ocean, fact_land, fact_urban) &
+    !$acc& pcopyout(rflux, rflux_sfc_dn, tauCLD_067u, emisCLD_105u) &
     !$acc& pcreate(dz_std, indexP, factP, factT32, factT21, indexR, factR, tauGAS) &
     !$acc& pcreate(tauPR, omgPR, optparam, bbar, bbarh, b_sfc) &
-    !$acc& pcreate(tau, omg, g, b, fsol_rgn, flux, flux_direct, tauCLD, emisCLD)
+    !$acc& pcreate(tau, omg, g, b, fsol_rgn, flux, flux_direct, tauCLD, emisCLD) &
+    !$acc& pcreate(cosSZA_tmp, albedo_sfc_tmp, cldfrac_tmp)
     
-    !$acc update device(solins, cosSZA, rhodz, pres, temp, temph, temp_sfc, gas, cfc, &
-    !$acc&              aerosol_conc, aerosol_radi, aero2ptype, cldfrac, albedo_sfc, &
-    !$acc&              fact_ocean, fact_land, fact_urban)
-    
-    !$acc kernels loop independent async(1)
-    do j = JS, JE
-    do i = IS, IE
-       do k = 1, rd_kmax
-          dz_std(k,i,j) = rhodz(k,i,j) / RHO_std * 100.0_RP ! [cm]
-       enddo
-    enddo
-    enddo
-    !$acc end kernels
+    do jj = OUTER_JS, OUTER_JE
+    do ii = OUTER_IS, OUTER_IE
 
-    !$acc kernels loop independent async(1)
-    do j = JS, JE
-    do i = IS, IE
+       !$acc kernels loop independent async(1)
+       do j = INNER_JS, INNER_JE
+       do i = INNER_IS, INNER_IE
        do k = 1, rd_kmax
-          logP = log10( pres(k,i,j) )
-          logT = log10( temp(k,i,j) )
+          dz_std(k,i,j) = rhodz(k,inout_i,inout_j) / RHO_std * 100.0_RP ! [cm]
+          
+          logP = log10( pres(k,inout_i,inout_j) )
+          logT = log10( temp(k,inout_i,inout_j) )
 
           indexP(k,i,j) = MSTRN_nfitP
           !$acc loop seq
@@ -1445,187 +1483,190 @@ contains
           factP(k,i,j) = ( logP - logfitP(ip-1) ) / ( logfitP(ip) - logfitP(ip-1) )
 
           factT32(k,i,j) = ( logT - logfitT(2)  ) / ( logfitT(3) - logfitT(2) ) &
-                     * ( temp(k,i,j) - fitT(1)     ) / ( fitT(3)    - fitT(1)    )
+                         * ( temp(k,inout_i,inout_j) - fitT(1)     ) / ( fitT(3)    - fitT(1)    )
           factT21(k,i,j) = ( logT - logfitT(2)  ) / ( logfitT(2) - logfitT(1) ) &
-                     * ( fitT(3)     - temp(k,i,j) ) / ( fitT(3)    - fitT(1)    )
+                         * ( fitT(3)     - temp(k,inout_i,inout_j) ) / ( fitT(3)    - fitT(1)    )
        enddo
-    enddo
-    enddo
-    !$acc end kernels
+       enddo
+       enddo
+       !$acc end kernels
 
-    !---< interpolation of mode radius & hygroscopic parameter (R-fitting) >---
-    do iaero = 1, naero
-       iptype  = aero2ptype(iaero)
-       nradius = ptype_nradius(iptype)
-    
+       !---< interpolation of mode radius & hygroscopic parameter (R-fitting) >---
        !$acc kernels loop independent async(1)
-       do j = JS, JE
-       do i = IS, IE
-          do k = 1, rd_kmax
-             ! [Note] Extrapolation sometimes makes unexpected value
-             if ( aerosol_radi(k,i,j,iaero) <= radmode(iptype,1) ) then
+       do iaero = 1, naero
+       do j = INNER_JS, INNER_JE
+       do i = INNER_IS, INNER_IE
+       do k = 1, rd_kmax
+          iptype  = aero2ptype(iaero)
+          nradius = ptype_nradius(iptype)
+       
+          ! [Note] Extrapolation sometimes makes unexpected value
+          if ( aerosol_radi(k,inout_i,inout_j,iaero) <= radmode(iptype,1) ) then
 
-                indexR(k,i,j,iaero) = 1
-                factR (k,i,j,iaero) = 0.0_RP
+             indexR(k,i,j,iaero) = 1
+             factR (k,i,j,iaero) = 0.0_RP
 
-             elseif( aerosol_radi(k,i,j,iaero) > radmode(iptype,nradius) ) then
+          elseif( aerosol_radi(k,inout_i,inout_j,iaero) > radmode(iptype,nradius) ) then
 
-                indexR(k,i,j,iaero) = nradius
-                factR (k,i,j,iaero) = 1.0_RP
+             indexR(k,i,j,iaero) = nradius
+             factR (k,i,j,iaero) = 1.0_RP
 
-             else
-                indexR(k,i,j,iaero) = -1
-                !$acc loop seq
-                do ir = 1, nradius-1
-                   if (       aerosol_radi(k,i,j,iaero) <= radmode(iptype,ir+1) &
-                        .AND. aerosol_radi(k,i,j,iaero) >  radmode(iptype,ir  ) ) then ! interpolation
-
-                      indexR(k,i,j,iaero) = ir
-                      factR (k,i,j,iaero) = ( aerosol_radi(k,i,j,iaero) - radmode(iptype,ir) ) &
-                                          / ( radmode(iptype,ir+1)      - radmode(iptype,ir) )
-
-                      exit
-                   endif
-                enddo
-             endif
-          enddo
-       enddo
-       enddo
-    enddo
-
-    ! initialize
-    !$acc kernels async(1)
-    rflux       (:,:,:,:,:,:) = 0.0_RP
-    rflux_sfc_dn(  :,:,:,:  ) = 0.0_RP
-    !$acc end kernels
-
-    do iw = 1, MSTRN_nband
-       if ( iflgb(I_SWLW,iw) == 0 ) then ! Long wave region
-
-          irgn     = I_LW
-          irgn_alb = I_R_IR ! IR
-
-       else ! Short wave region
-
-          irgn = I_SW
-          if ( waveh(iw) >= 10000.0_RP / 0.7_RP ) then
-             irgn_alb = I_R_VIS ! Visible
           else
-             irgn_alb = I_R_NIR ! Near-IR
+             indexR(k,i,j,iaero) = -1
+             !$acc loop seq
+             do ir = 1, nradius-1
+                if (       aerosol_radi(k,inout_i,inout_j,iaero) <= radmode(iptype,ir+1) &
+                     .AND. aerosol_radi(k,inout_i,inout_j,iaero) >  radmode(iptype,ir  ) ) then ! interpolation
+
+                   indexR(k,i,j,iaero) = ir
+                   factR (k,i,j,iaero) = ( aerosol_radi(k,inout_i,inout_j,iaero) - radmode(iptype,ir) ) &
+                                       / ( radmode(iptype,ir+1)                  - radmode(iptype,ir) )
+
+                   exit
+                endif
+             enddo
+          endif
+       enddo
+       enddo
+       enddo
+       enddo
+       !$acc end kernels
+
+       ! initialize
+       !$acc kernels async(1)
+       rflux       (:,:,:,:,:,:) = 0.0_RP
+       rflux_sfc_dn(  :,:,:,:  ) = 0.0_RP
+       emisCLD_105u(:,:,:)       = 0.0_RP
+       !$acc end kernels
+
+       do iw = 1, MSTRN_nband
+          if ( iflgb(I_SWLW,iw) == 0 ) then ! Long wave region
+
+             irgn     = I_LW
+             irgn_alb = I_R_IR ! IR
+
+          else ! Short wave region
+
+             irgn = I_SW
+             if ( waveh(iw) >= 10000.0_RP / 0.7_RP ) then
+                irgn_alb = I_R_VIS ! Visible
+             else
+                irgn_alb = I_R_NIR ! Near-IR
+             endif
+
           endif
 
-       endif
+          chmax = nch(iw)
 
-       chmax = nch(iw)
-
-       !---< interpolation of gas parameters (P-T fitting) >---
-       !$acc kernels loop independent async(1)
-       do ich = 1, chmax
-       do j = JS, JE
-       do i = IS, IE
+          !---< interpolation of gas parameters (P-T fitting) >---
+          !$acc kernels loop independent async(1)
+          do ich = 1, chmax
+          do j = INNER_JS, INNER_JE
+          do i = INNER_IS, INNER_IE
           do k = 1, rd_kmax
              tauGAS(k,i,j,ich) = 0.0_RP
           enddo
-       enddo
-       enddo
-       enddo
-       !$acc end kernels
+          enddo
+          enddo
+          enddo
+          !$acc end kernels
 
-       !$acc kernels loop independent async(1)
-       do j = JS, JE
-       do i = IS, IE
+          !$acc kernels loop independent async(1)
+          do j = INNER_JS, INNER_JE
+          do i = INNER_IS, INNER_IE
           do k = 1, rd_kmax
              tauCLD(k,i,j) = 0.0_RP
           enddo
-       enddo
-       enddo
-       !$acc end kernels
+          enddo
+          enddo
+          !$acc end kernels
 
-       !--- Gas line absorption
-       do igas = 1, ngasabs(iw)
-          gasno = igasabs(igas,iw)
+          !--- Gas line absorption
+          do igas = 1, ngasabs(iw)
+             gasno = igasabs(igas,iw)
           
-          !$acc kernels loop independent async(1)
-          do ich = 1, chmax
-          do j = JS, JE
-          do i = IS, IE
-          do k = 1, rd_kmax
-             ip = indexP(k,i,j)
-             A1 = AKD(ip-1,ich,1,gasno,iw) * ( 1.0_RP - factP(k,i,j) )&
-                + AKD(ip  ,ich,1,gasno,iw) * (          factP(k,i,j) )
-             A2 = AKD(ip-1,ich,2,gasno,iw) * ( 1.0_RP - factP(k,i,j) )&
-                + AKD(ip  ,ich,2,gasno,iw) * (          factP(k,i,j) )
-             A3 = AKD(ip-1,ich,3,gasno,iw) * ( 1.0_RP - factP(k,i,j) )&
-                + AKD(ip  ,ich,3,gasno,iw) * (          factP(k,i,j) )
-             factPT = factT32(k,i,j)*(A3-A2) + A2 + factT21(k,i,j)*(A2-A1)
-
-             length = gas(k,i,j,igasabs(igas,iw)) * PPM * dz_std(k,i,j)
-             tauGAS(k,i,j,ich) = tauGAS(k,i,j,ich) + 10.0_RP**factPT * length
-          enddo
-          enddo
-          enddo
-          enddo
-          !$acc end kernels
-
-       enddo ! gas loop
-
-       !--- Gas broad absorption
-       if ( iflgb(I_H2O_continuum,iw) == 1 ) then
-          !$acc kernels loop independent async(1)
-          do ich = 1, chmax
-          do j = JS, JE
-          do i = IS, IE
-          do k = 1, rd_kmax
-             ip = indexP(k,i,j)
-             A1 = SKD(ip-1,ich,1,iw) * ( 1.0_RP-factP(k,i,j) )&
-                + SKD(ip  ,ich,1,iw) * (        factP(k,i,j) )
-             A2 = SKD(ip-1,ich,2,iw) * ( 1.0_RP-factP(k,i,j) )&
-                + SKD(ip  ,ich,2,iw) * (        factP(k,i,j) )
-             A3 = SKD(ip-1,ich,3,iw) * ( 1.0_RP-factP(k,i,j) )&
-                + SKD(ip  ,ich,3,iw) * (        factP(k,i,j) )
-             factPT = factT32(k,i,j)*(A3-A2) + A2 + factT21(k,i,j)*(A2-A1)
-
-             qv = gas(k,i,j,1) * PPM * dz_std(k,i,j)
-             length = qv*qv / ( qv + dz_std(k,i,j) )
-             tauGAS(k,i,j,ich) = tauGAS(k,i,j,ich) + 10.0_RP**factPT * length
-          enddo
-          enddo
-          enddo
-          enddo
-          !$acc end kernels
-       endif
-
-       if ( iflgb(I_CFC_continuum,iw) == 1 ) then
-          !$acc kernels loop independent async(1)
-          do j = JS, JE
-          do i = IS, IE
-          do k = 1, rd_kmax
-             valsum = 0.0_RP
-             !$acc loop seq
-             do icfc = 1, ncfc
-                valsum = valsum + acfc_pow(icfc,iw) * cfc(k,i,j,icfc)
-             enddo
-             valsum = valsum * PPM * dz_std(k,i,j)
-
+             !$acc kernels loop independent async(1)
              do ich = 1, chmax
-                tauGAS(k,i,j,ich) = tauGAS(k,i,j,ich) + valsum
+             do j = INNER_JS, INNER_JE
+             do i = INNER_IS, INNER_IE
+             do k = 1, rd_kmax
+                ip = indexP(k,i,j)
+                A1 = AKD(ip-1,ich,1,gasno,iw) * ( 1.0_RP - factP(k,i,j) )&
+                   + AKD(ip  ,ich,1,gasno,iw) * (          factP(k,i,j) )
+                A2 = AKD(ip-1,ich,2,gasno,iw) * ( 1.0_RP - factP(k,i,j) )&
+                   + AKD(ip  ,ich,2,gasno,iw) * (          factP(k,i,j) )
+                A3 = AKD(ip-1,ich,3,gasno,iw) * ( 1.0_RP - factP(k,i,j) )&
+                   + AKD(ip  ,ich,3,gasno,iw) * (          factP(k,i,j) )
+                factPT = factT32(k,i,j)*(A3-A2) + A2 + factT21(k,i,j)*(A2-A1)
+
+                length = gas(k,inout_i,inout_j,igasabs(igas,iw)) * PPM * dz_std(k,i,j)
+                tauGAS(k,i,j,ich) = tauGAS(k,i,j,ich) + 10.0_RP**factPT * length
              enddo
-          enddo
-          enddo
-          enddo
-          !$acc end kernels
-       endif
+             enddo
+             enddo
+             enddo
+             !$acc end kernels
 
-       !---< particle (Rayleigh/Cloud/Aerosol) >---
+          enddo ! gas loop
 
-       ! optical thickness, phase function
-       ! im=1: extinction coefficient
-       ! im=2,3,4: moments of the volume scattering phase function
+          !--- Gas broad absorption
+          if ( iflgb(I_H2O_continuum,iw) == 1 ) then
+             !$acc kernels loop independent async(1)
+             do ich = 1, chmax
+             do j = INNER_JS, INNER_JE
+             do i = INNER_IS, INNER_IE
+             do k = 1, rd_kmax
+                ip = indexP(k,i,j)
+                A1 = SKD(ip-1,ich,1,iw) * ( 1.0_RP-factP(k,i,j) )&
+                   + SKD(ip  ,ich,1,iw) * (        factP(k,i,j) )
+                A2 = SKD(ip-1,ich,2,iw) * ( 1.0_RP-factP(k,i,j) )&
+                   + SKD(ip  ,ich,2,iw) * (        factP(k,i,j) )
+                A3 = SKD(ip-1,ich,3,iw) * ( 1.0_RP-factP(k,i,j) )&
+                   + SKD(ip  ,ich,3,iw) * (        factP(k,i,j) )
+                factPT = factT32(k,i,j)*(A3-A2) + A2 + factT21(k,i,j)*(A2-A1)
 
-       !--- Rayleigh scattering
-       !$acc kernels loop independent async(1)
-       do j = JS, JE
-       do i = IS, IE
+                qv = gas(k,inout_i,inout_j,1) * PPM * dz_std(k,i,j)
+                length = qv*qv / ( qv + dz_std(k,i,j) )
+                tauGAS(k,i,j,ich) = tauGAS(k,i,j,ich) + 10.0_RP**factPT * length
+             enddo
+             enddo
+             enddo
+             enddo
+             !$acc end kernels
+          endif
+
+          if ( iflgb(I_CFC_continuum,iw) == 1 ) then
+             !$acc kernels loop independent async(1)
+             do j = INNER_JS, INNER_JE
+             do i = INNER_IS, INNER_IE
+             do k = 1, rd_kmax
+                valsum = 0.0_RP
+                !$acc loop seq
+                do icfc = 1, ncfc
+                   valsum = valsum + acfc_pow(icfc,iw) * cfc(k,inout_i,inout_j,icfc)
+                enddo
+                valsum = valsum * PPM * dz_std(k,i,j)
+
+                !$acc loop independent
+                do ich = 1, chmax
+                   tauGAS(k,i,j,ich) = tauGAS(k,i,j,ich) + valsum
+                enddo
+             enddo
+             enddo
+             enddo
+             !$acc end kernels
+          endif
+
+          !---< particle (Rayleigh/Cloud/Aerosol) >---
+
+          ! optical thickness, phase function
+          ! im=1: extinction coefficient
+          ! im=2,3,4: moments of the volume scattering phase function
+
+          !--- Rayleigh scattering
+          !$acc kernels loop independent async(1)
+          do j = INNER_JS, INNER_JE
+          do i = INNER_IS, INNER_IE
           do k = 1, rd_kmax
              dp_P = rhodz(k,i,j) * GRAV / Pstd
              length = rayleigh(iw) * dp_P
@@ -1636,21 +1677,21 @@ contains
                 optparam(k,i,j,im,I_ClearSky) = qmol(im,iw) * length
              enddo
           enddo
-       enddo
-       enddo
-       !$acc end kernels
+          enddo
+          enddo
+          !$acc end kernels
 
-       !--- Cloud scattering
-       do iaero = hydro_str, hydro_end
-          iptype = aero2ptype(iaero)
+          !--- Cloud scattering
+          do iaero = hydro_str, hydro_end
+             iptype = aero2ptype(iaero)
 
-          !$acc kernels loop independent async(1)
-          do j = JS, JE
-          do i = IS, IE
+             !$acc kernels loop independent async(1)
+             do j = INNER_JS, INNER_JE
+             do i = INNER_IS, INNER_IE
              do k = 1, rd_kmax
                 ir = indexR(k,i,j,iaero)
 
-                length = aerosol_conc(k,i,j,iaero) * PPM * dz_std(k,i,j)
+                length = aerosol_conc(k,inout_i,inout_j,iaero) * PPM * dz_std(k,i,j)
 
                 !$acc loop independent
                 do im = 1, MSTRN_nstream*2+2
@@ -1667,22 +1708,22 @@ contains
 
                 tauCLD(k,i,j) = tauCLD(k,i,j) + q_fit * length
              enddo
+             enddo
+             enddo
+             !$acc end kernels
           enddo
-          enddo
-          !$acc end kernels
-       enddo
 
-       !--- Aerosol scattering
-       do iaero = aero_str, aero_end
-          iptype = aero2ptype(iaero)
+          !--- Aerosol scattering
+          do iaero = aero_str, aero_end
+             iptype = aero2ptype(iaero)
 
-          !$acc kernels loop independent async(1)
-          do j = JS, JE
-          do i = IS, IE
+             !$acc kernels loop independent async(1)
+             do j = INNER_JS, INNER_JE
+             do i = INNER_IS, INNER_IE
              do k = 1, rd_kmax
                 ir = indexR(k,i,j,iaero)
 
-                length = aerosol_conc(k,i,j,iaero) * PPM * dz_std(k,i,j)
+                length = aerosol_conc(k,inout_i,inout_j,iaero) * PPM * dz_std(k,i,j)
 
                 !$acc loop independent
                 do im = 1, MSTRN_nstream*2+2
@@ -1694,244 +1735,255 @@ contains
                    optparam(k,i,j,im,I_ClearSky) = optparam(k,i,j,im,I_ClearSky) + q_fit * length
                 enddo
              enddo
-          enddo
-          enddo
-          !$acc end kernels
-       enddo
-
-       !$acc kernels loop independent async(1)
-       do icloud = 1, MSTRN_ncloud
-          do j = JS, JE
-          do i = IS, IE
-             do k = 1, rd_kmax
-                tauPR(k,i,j,icloud) = optparam(k,i,j,1,icloud)
-                omgPR(k,i,j,icloud) = optparam(k,i,j,1,icloud) - optparam(k,i,j,2,icloud)
-
-                !--- g
-                zerosw = 0.5_RP - sign(0.5_RP,omgPR(k,i,j,icloud)-RD_EPS)
-
-                g(k,i,j,0,icloud) = 1.0_RP
-                g(k,i,j,1,icloud) = optparam(k,i,j,3,icloud) * ( 1.0_RP-zerosw ) / ( omgPR(k,i,j,icloud)+zerosw )
-                g(k,i,j,2,icloud) = optparam(k,i,j,4,icloud) * ( 1.0_RP-zerosw ) / ( omgPR(k,i,j,icloud)+zerosw )
-                !g(k,i,j,1,icloud) = max( optparam(k,i,j,3,icloud) * ( 1.0_RP-zerosw ) / ( omgPR(k,i,j,icloud)+zerosw ), 0.0_RP )
-                !g(k,i,j,2,icloud) = max( optparam(k,i,j,4,icloud) * ( 1.0_RP-zerosw ) / ( omgPR(k,i,j,icloud)+zerosw ), 0.0_RP )
              enddo
-          enddo
-          enddo
-       enddo
-       !$acc end kernels
-
-       if ( waveh(iw) <= 1.493E+4_RP .AND. 1.493E+4_RP < waveh(iw+1) ) then ! 0.67 micron
-          !$acc kernels loop independent async(1)
-          do j = JS, JE
-          do i = IS, IE
-             do k = 1, rd_kmax
-                tauCLD_067u(k,i,j) = tauCLD(k,i,j) ! 0.67 micron tau for resolved clouds
              enddo
+             !$acc end kernels
           enddo
-          enddo
-          !$acc end kernels
-       endif
 
-       if ( irgn == I_SW ) then ! solar
           !$acc kernels loop independent async(1)
-          do ich = 1, chmax
           do icloud = 1, MSTRN_ncloud
-          do j = JS, JE
-          do i = IS, IE
+          do j = INNER_JS, INNER_JE
+          do i = INNER_IS, INNER_IE
           do k = 1, rd_kmax
-              b(k,i,j,0,icloud,ich) = 0.0_RP
-              b(k,i,j,1,icloud,ich) = 0.0_RP
-              b(k,i,j,2,icloud,ich) = 0.0_RP
-          enddo
+             tauPR(k,i,j,icloud) = optparam(k,i,j,1,icloud)
+             omgPR(k,i,j,icloud) = optparam(k,i,j,1,icloud) - optparam(k,i,j,2,icloud)
+
+             !--- g
+             zerosw = 0.5_RP - sign(0.5_RP,omgPR(k,i,j,icloud)-RD_EPS)
+
+             g(k,i,j,0,icloud) = 1.0_RP
+             g(k,i,j,1,icloud) = optparam(k,i,j,3,icloud) * ( 1.0_RP-zerosw ) / ( omgPR(k,i,j,icloud)+zerosw )
+             g(k,i,j,2,icloud) = optparam(k,i,j,4,icloud) * ( 1.0_RP-zerosw ) / ( omgPR(k,i,j,icloud)+zerosw )
+             !g(k,i,j,1,icloud) = max( optparam(k,i,j,3,icloud) * ( 1.0_RP-zerosw ) / ( omgPR(k,i,j,icloud)+zerosw ), 0.0_RP )
+             !g(k,i,j,2,icloud) = max( optparam(k,i,j,4,icloud) * ( 1.0_RP-zerosw ) / ( omgPR(k,i,j,icloud)+zerosw ), 0.0_RP )
           enddo
           enddo
           enddo
           enddo
           !$acc end kernels
 
-          !$acc kernels loop independent async(1)
-          do j = JS, JE
-          do i = IS, IE
-             b_sfc(i,j) = 0.0_RP
-             fsol_rgn(i,j) = fsol(iw) / fsol_tot * solins(i,j)
-          enddo
-          enddo
-          !$acc end kernels
+          if ( waveh(iw) <= 1.493E+4_RP .AND. 1.493E+4_RP < waveh(iw+1) ) then ! 0.67 micron
+             !$acc kernels loop independent async(1)
+             do j = INNER_JS, INNER_JE
+             do i = INNER_IS, INNER_IE
+             do k = 1, rd_kmax
+                tauCLD_067u(k,inout_i,inout_j) = tauCLD(k,i,j) ! 0.67 micron tau for resolved clouds
+             enddo
+             enddo
+             enddo
+             !$acc end kernels
+          endif
 
-       elseif( irgn == I_LW ) then ! IR
-          !--- set planck functions
-          wl = 10000.0_RP / sqrt( waveh(iw) * waveh(iw+1) )
+          if ( irgn == I_SW ) then ! solar
+             !$acc kernels loop independent async(1)
+             do ich = 1, chmax
+             do icloud = 1, MSTRN_ncloud
+             do j = INNER_JS, INNER_JE
+             do i = INNER_IS, INNER_IE
+             do k = 1, rd_kmax
+                 b(k,i,j,0,icloud,ich) = 0.0_RP
+                 b(k,i,j,1,icloud,ich) = 0.0_RP
+                 b(k,i,j,2,icloud,ich) = 0.0_RP
+             enddo
+             enddo
+             enddo
+             enddo
+             enddo
+             !$acc end kernels
 
-          ! from temp at cell center
-          !$acc kernels loop independent async(1)
-          do j = JS, JE
-          do i = IS, IE
+             !$acc kernels loop independent async(1)
+             do j = INNER_JS, INNER_JE
+             do i = INNER_IS, INNER_IE
+                b_sfc(i,j) = 0.0_RP
+                fsol_rgn(i,j) = fsol(iw) / fsol_tot * solins(inout_i,inout_j)
+             enddo
+             enddo
+             !$acc end kernels
+
+          elseif( irgn == I_LW ) then ! IR
+             !--- set planck functions
+             wl = 10000.0_RP / sqrt( waveh(iw) * waveh(iw+1) )
+
+             ! from temp at cell center
+             !$acc kernels loop independent async(1)
+             do j = INNER_JS, INNER_JE
+             do i = INNER_IS, INNER_IE
              do k = 1, rd_kmax
                 beta = 0.0_RP
                 !$acc loop seq
                 do iplk = MSTRN_nfitPLK, 1, -1
-                   beta = beta / ( wl*temp(k,i,j) ) + fitPLK(iplk,iw)
+                   beta = beta / ( wl*temp(k,inout_i,inout_j) ) + fitPLK(iplk,iw)
                 enddo
-                bbar(k,i,j) = exp(-beta) * temp(k,i,j) / (wl*wl)
+                bbar(k,i,j) = exp(-beta) * temp(k,inout_i,inout_j) / (wl*wl)
              enddo
-          enddo
-          enddo
-          !$acc end kernels
+             enddo
+             enddo
+             !$acc end kernels
 
-          ! from temp at cell wall
-          !$acc kernels loop independent async(1)
-          do j = JS, JE
-          do i = IS, IE
+             ! from temp at cell wall
+             !$acc kernels loop independent async(1)
+             do j = INNER_JS, INNER_JE
+             do i = INNER_IS, INNER_IE
              do k = 1, rd_kmax+1
                 beta = 0.0_RP
                 !$acc loop seq
                 do iplk = MSTRN_nfitPLK, 1, -1
-                   beta = beta / ( wl*temph(k,i,j) ) + fitPLK(iplk,iw)
+                   beta = beta / ( wl*temph(k,inout_i,inout_j) ) + fitPLK(iplk,iw)
                 enddo
-                bbarh(k,i,j) = exp(-beta) * temph(k,i,j) / (wl*wl)
+                bbarh(k,i,j) = exp(-beta) * temph(k,inout_i,inout_j) / (wl*wl)
              enddo
-          enddo
-          enddo
-          !$acc end kernels
-
-          ! from temp_sfc
-          !$acc kernels loop independent async(1)
-          do j = JS, JE
-          do i = IS, IE
-             beta = 0.0_RP
-             !$acc loop seq
-             do iplk = MSTRN_nfitPLK, 1, -1
-                beta = beta / ( wl*temp_sfc(i,j) ) + fitPLK(iplk,iw)
              enddo
+             enddo
+             !$acc end kernels
 
-             b_sfc(i,j) = exp(-beta) * temp_sfc(i,j) / (wl*wl)
+             ! from temp_sfc
+             !$acc kernels loop independent async(1)
+             do j = INNER_JS, INNER_JE
+             do i = INNER_IS, INNER_IE
+                beta = 0.0_RP
+                !$acc loop seq
+                do iplk = MSTRN_nfitPLK, 1, -1
+                   beta = beta / ( wl*temp_sfc(inout_i,inout_j) ) + fitPLK(iplk,iw)
+                enddo
 
-             fsol_rgn(i,j) = 0.0_RP
-          enddo
-          enddo
-          !$acc end kernels
+                b_sfc(i,j) = exp(-beta) * temp_sfc(inout_i,inout_j) / (wl*wl)
+
+                fsol_rgn(i,j) = 0.0_RP
+             enddo
+             enddo
+             !$acc end kernels
           
-       endif
+          endif
 
-       !--- total tau & omega
-       !$acc kernels loop independent async(1)
-       do ich = 1, chmax
-       do icloud = 1, MSTRN_ncloud
-          do j = JS, JE
-          do i = IS, IE
-             do k = 1, rd_kmax
-                tau(k,i,j,icloud,ich) = tauGAS(k,i,j,ich) + tauPR(k,i,j,icloud)
-                !tau(k,i,j,icloud,ich) = max( tauGAS(k,i,j,ich) + tauPR(k,i,j,icloud), 0.0_RP )
-
-                zerosw = 0.5_RP - sign( 0.5_RP, tau(k,i,j,icloud,ich)-RD_EPS ) ! if tau < EPS, zerosw = 1
-
-                omg(k,i,j,icloud,ich) = ( 1.0_RP-zerosw ) * omgPR(k,i,j,icloud) / ( tau(k,i,j,icloud,ich)-zerosw ) &
-                                      + (        zerosw ) * 1.0_RP
-
-                !omg(k,i,j,icloud,ich) = min( max( omg(k,i,j,icloud,ich), 0.0_RP ), 1.0_RP )
-             enddo
-          enddo
-          enddo
-       enddo
-       enddo
-       !$acc end kernels
-
-       
-       if( irgn == I_LW ) then ! IR
+          !--- total tau & omega
           !$acc kernels loop independent async(1)
           do ich = 1, chmax
           do icloud = 1, MSTRN_ncloud
-             do j = JS, JE
-             do i = IS, IE
-                do k = 1, rd_kmax
-                   zerosw = 0.5_RP - sign( 0.5_RP, tau(k,i,j,icloud,ich)-RD_EPS ) ! if tau < EPS, zerosw = 1
+          do j = INNER_JS, INNER_JE
+          do i = INNER_IS, INNER_IE
+          do k = 1, rd_kmax
+             tau(k,i,j,icloud,ich) = tauGAS(k,i,j,ich) + tauPR(k,i,j,icloud)
+             !tau(k,i,j,icloud,ich) = max( tauGAS(k,i,j,ich) + tauPR(k,i,j,icloud), 0.0_RP )
+   
+             zerosw = 0.5_RP - sign( 0.5_RP, tau(k,i,j,icloud,ich)-RD_EPS ) ! if tau < EPS, zerosw = 1
+   
+             omg(k,i,j,icloud,ich) = ( 1.0_RP-zerosw ) * omgPR(k,i,j,icloud) / ( tau(k,i,j,icloud,ich)-zerosw ) &
+                                   + (        zerosw ) * 1.0_RP
 
-                   b(k,i,j,0,icloud,ich) = bbarh(k,i,j)
-                   b(k,i,j,1,icloud,ich) = ( 1.0_RP-zerosw )           &
-                                     * ( -          bbarh(k+1,i,j) &
-                                         + 4.0_RP * bbar (k  ,i,j) &
-                                         - 3.0_RP * bbarh(k  ,i,j) &
-                                       ) / ( tau(k,i,j,icloud,ich)-zerosw )
-                   b(k,i,j,2,icloud,ich) = ( 1.0_RP-zerosw )           &
-                                     * ( +          bbarh(k+1,i,j) &
-                                         - 2.0_RP * bbar (k  ,i,j) &
-                                         +          bbarh(k  ,i,j) &
-                                       ) / ( tau(k,i,j,icloud,ich)**2-zerosw ) * 2.0_RP
-                enddo
-             enddo
-             enddo
+             !omg(k,i,j,icloud,ich) = min( max( omg(k,i,j,icloud,ich), 0.0_RP ), 1.0_RP )
+          enddo
+          enddo
+          enddo
           enddo
           enddo
           !$acc end kernels
 
-       endif ! solar/IR switch
-
-       ! two-stream transfer
-       !call PROF_rapstart('RD_MSTRN_twst', 3)
-       call RD_MSTRN_two_stream( iw,IA, JA, IS, IE, JS, JE,      & ! [IN]
-                                 RD_KMAX,                     & ! [IN]
-                                 chmax,                       & ! [IN]
-                                 cosSZA     (:,:),            & ! [IN]
-                                 fsol_rgn   (:,:),            & ! [IN]
-                                 irgn,                        & ! [IN]
-                                 tau        (:,:,:,:,:),      & ! [IN]
-                                 omg        (:,:,:,:,:),      & ! [IN]
-                                 g          (:,:,:,:,:),      & ! [IN]
-                                 b          (:,:,:,:,:,:),    & ! [IN]
-                                 b_sfc,                       & ! [IN]
-                                 albedo_sfc (:,:,:,irgn_alb), & ! [IN]
-                                 cldfrac    (:,:,:),          & ! [IN]
-                                 flux       (:,:,:,:,:,:),    & ! [OUT]
-                                 flux_direct(:,:,:,:,:),      & ! [OUT]
-                                 emisCLD    (:,:,:)           ) ! [OUT]
-       !call PROF_rapend  ('RD_MSTRN_twst', 3)
        
-
-       do ich = 1, chmax
-          !$acc kernels loop independent async(1)
-          do icloud = 1, MSTRN_ncloud
-             do j = JS, JE
-             do i = IS, IE
-                do k = 1, rd_kmax+1
-                   rflux(k,i,j,irgn,I_up,icloud) = rflux(k,i,j,irgn,I_up,icloud) + flux(k,i,j,I_up,icloud,ich) * wgtch(ich,iw)
-                   rflux(k,i,j,irgn,I_dn,icloud) = rflux(k,i,j,irgn,I_dn,icloud) + flux(k,i,j,I_dn,icloud,ich) * wgtch(ich,iw)
-                enddo
-             enddo
-             enddo
-          enddo
-          !$acc end kernels
-
-          !$acc kernels loop independent async(1)
-          do j = JS, JE
-          do i = IS, IE
-             rflux_sfc_dn(i,j,I_R_direct ,irgn_alb) = rflux_sfc_dn(i,j,I_R_direct ,irgn_alb) &
-                                                    + (                                        flux_direct(rd_kmax+1,i,j,I_Cloud,ich) ) * wgtch(ich,iw)
-             rflux_sfc_dn(i,j,I_R_diffuse,irgn_alb) = rflux_sfc_dn(i,j,I_R_diffuse,irgn_alb) &
-                                                    + ( flux(rd_kmax+1,i,j,I_dn,I_Cloud,ich) - flux_direct(rd_kmax+1,i,j,I_Cloud,ich) ) * wgtch(ich,iw)
-          enddo
-          enddo
-          !$acc end kernels
-       
-       enddo ! ICH loop
-
-       if ( waveh(iw) <= 952.0_RP .AND. 952.0_RP < waveh(iw+1) ) then ! 10.5 micron
-          !$acc kernels loop independent async(1)
-          do j = JS, JE
-          do i = IS, IE
+          if( irgn == I_LW ) then ! IR
+             !$acc kernels loop independent async(1)
+             do ich = 1, chmax
+             do icloud = 1, MSTRN_ncloud
+             do j = INNER_JS, INNER_JE
+             do i = INNER_IS, INNER_IE
              do k = 1, rd_kmax
-                emisCLD_105u(k,i,j) = emisCLD(k,i,j) ! 10.5 micron emissivity for resolved clouds
-             enddo
-          enddo
-          enddo
-          !$acc end kernels
-       endif
+                zerosw = 0.5_RP - sign( 0.5_RP, tau(k,i,j,icloud,ich)-RD_EPS ) ! if tau < EPS, zerosw = 1
 
-    enddo ! IW loop
+                b(k,i,j,0,icloud,ich) = bbarh(k,i,j)
+                b(k,i,j,1,icloud,ich) = ( 1.0_RP-zerosw )       &
+                                  * ( -          bbarh(k+1,i,j) &
+                                      + 4.0_RP * bbar (k  ,i,j) &
+                                      - 3.0_RP * bbarh(k  ,i,j) &
+                                    ) / ( tau(k,i,j,icloud,ich)-zerosw )
+                b(k,i,j,2,icloud,ich) = ( 1.0_RP-zerosw )       &
+                                  * ( +          bbarh(k+1,i,j) &
+                                      - 2.0_RP * bbar (k  ,i,j) &
+                                      +          bbarh(k  ,i,j) &
+                                    ) / ( tau(k,i,j,icloud,ich)**2-zerosw ) * 2.0_RP
+             enddo
+             enddo
+             enddo
+             enddo
+             enddo
+             !$acc end kernels
+
+          endif ! solar/IR switch
+          
+          
+          !$acc kernels async(1)
+          cosSZA_tmp(:,:)       = cosSZA    (inout_I1:inout_IA, inout_J1:inout_JA)
+          albedo_sfc_tmp(:,:,:) = albedo_sfc(inout_I1:inout_IA, inout_J1:inout_JA,:,irgn_alb)
+          cldfrac_tmp(:,:,:)    = cldfrac (:,inout_I1:inout_IA, inout_J1:inout_JA)
+          !$acc end kernels
+
+          ! two-stream transfer
+          !call PROF_rapstart('RD_MSTRN_twst', 3)
+          call RD_MSTRN_two_stream( INNER_IA, INNER_IS, INNER_IE, & ! [IN]
+                                    INNER_JA, INNER_JS, INNER_JE, & ! [IN]
+                                    RD_KMAX,                      & ! [IN]
+                                    chmax,                        & ! [IN]
+                                    cosSZA_tmp (:,:),             & ! [IN]
+                                    fsol_rgn   (:,:),             & ! [IN]
+                                    irgn,                         & ! [IN]
+                                    tau        (:,:,:,:,:),       & ! [IN]
+                                    omg        (:,:,:,:,:),       & ! [IN]
+                                    g          (:,:,:,:,:),       & ! [IN]
+                                    b          (:,:,:,:,:,:),     & ! [IN]
+                                    b_sfc      (:,:),             & ! [IN]
+                                    albedo_sfc_tmp(:,:,:),        & ! [IN]
+                                    cldfrac_tmp(:,:,:),           & ! [IN]
+                                    flux       (:,:,:,:,:,:),     & ! [OUT]
+                                    flux_direct(:,:,:,:,:),       & ! [OUT]
+                                    emisCLD    (:,:,:,:)          ) ! [OUT]
+          !call PROF_rapend  ('RD_MSTRN_twst', 3)
+       
+
+          do ich = 1, chmax
+             !$acc kernels loop independent async(1)
+             do icloud = 1, MSTRN_ncloud
+             do j = INNER_JS, INNER_JE
+             do i = INNER_IS, INNER_IE
+             do k = 1, rd_kmax+1
+                rflux(k,inout_i,inout_j,irgn,I_up,icloud) = rflux(k,inout_i,inout_j,irgn,I_up,icloud) + flux(k,i,j,I_up,icloud,ich) * wgtch(ich,iw)
+                rflux(k,inout_i,inout_j,irgn,I_dn,icloud) = rflux(k,inout_i,inout_j,irgn,I_dn,icloud) + flux(k,i,j,I_dn,icloud,ich) * wgtch(ich,iw)
+             enddo
+             enddo
+             enddo
+             enddo
+             !$acc end kernels
+
+             !$acc kernels loop independent async(1)
+             do j = INNER_JS, INNER_JE
+             do i = INNER_IS, INNER_IE
+                rflux_sfc_dn(inout_i,inout_j,I_R_direct ,irgn_alb) = rflux_sfc_dn(inout_i,inout_j,I_R_direct ,irgn_alb) &
+                                                       + (                                        flux_direct(rd_kmax+1,i,j,I_Cloud,ich) ) * wgtch(ich,iw)
+                rflux_sfc_dn(inout_i,inout_j,I_R_diffuse,irgn_alb) = rflux_sfc_dn(inout_i,inout_j,I_R_diffuse,irgn_alb) &
+                                                       + ( flux(rd_kmax+1,i,j,I_dn,I_Cloud,ich) - flux_direct(rd_kmax+1,i,j,I_Cloud,ich) ) * wgtch(ich,iw)
+             enddo
+             enddo
+             !$acc end kernels
+
+             if ( waveh(iw) <= 952.0_RP .AND. 952.0_RP < waveh(iw+1) ) then ! 10.5 micron
+                ! 10.5 micron emissivity for resolved clouds
+                !$acc kernels loop independent async(1)
+                do j = INNER_JS, INNER_JE
+                do i = INNER_IS, INNER_IE
+                do k = 1, rd_kmax
+                   ! TODO 従来の実装では重み付け平均ではなく単純上書きになっていた。重み付け平均とどちらがよいか？
+                   emisCLD_105u(k,inout_i,inout_j) = emisCLD_105u(k,inout_i,inout_j) + emisCLD(k,i,j,ich) * wgtch(ich,iw)
+                enddo
+                enddo
+                enddo
+                !$acc end kernels
+             endif
+       
+          enddo ! ICH loop
+
+       enddo ! IW loop
+    
+    enddo ! ii loop
+    enddo ! jj loop
     
     !$acc wait
-
-    !$acc update host(rflux, rflux_sfc_dn, tauCLD_067u, emisCLD_105u)
 
     !$acc end data
 
@@ -1942,8 +1994,8 @@ contains
   !> Two stream calculation CORE
 !OCL SERIAL
   subroutine RD_MSTRN_two_stream( &
-       iw,IA, JA, IS,  &
-       IE, JS, JE,  &
+       IA, IS, IE,  &
+       JA, JS, JE,  &
        RD_KMAX,     &
        chmax,       &
        cosSZA0,     &
@@ -1965,7 +2017,7 @@ contains
        EPS1 => CONST_EPS1
     implicit none
 
-    integer,  intent(in)  :: iw,IA, JA, IS, IE, JS, JE
+    integer,  intent(in)  :: IA, IS, IE, JA, JS, JE
     integer,  intent(in)  :: RD_KMAX
     integer,  intent(in)  :: chmax
     real(RP), intent(in)  :: cosSZA0    (IA,JA)                                ! cos(SZA) = mu0
@@ -1980,7 +2032,7 @@ contains
     real(RP), intent(in)  :: cldfrac    (rd_kmax,  IA,JA)                        ! cloud fraction
     real(RP), intent(out) :: flux       (rd_kmax+1,IA,JA,2,MSTRN_ncloud,chmax) ! upward(sfc->TOA)/downward(TOA->sfc) flux (clear-sky/cloud)
     real(RP), intent(out) :: flux_direct(rd_kmax+1,IA,JA,  MSTRN_ncloud,chmax) ! downward(TOA->sfc) flux, solar direct    (clear-sky/cloud)
-    real(RP), intent(out) :: emisCLD    (rd_kmax,  IA,JA)                      ! cloud emissivity factor (cloud)
+    real(RP), intent(out) :: emisCLD    (rd_kmax,  IA,JA,               chmax) ! cloud emissivity factor (cloud)
 
     ! parameters with two-stream truncation
     real(RP) :: tau_new    ! optical thickness        : two-stream truncation
@@ -2069,109 +2121,109 @@ contains
     !$acc kernels loop independent async(1)
     do ich = 1, chmax
     do icloud = 1, MSTRN_ncloud
-       do j = JS, JE
-       do i = IS, IE
+    do j = JS, JE
+    do i = IS, IE
 !OCL LOOP_FISSION_TARGET(LS)
-          do k = 1, rd_kmax
+    do k = 1, rd_kmax
 
-             !---< two-stream truncation >---
-             tau_new = ( 1.0_RP - omg(k,i,j,icloud,ich)*g(k,i,j,2,icloud) ) * tau(k,i,j,icloud,ich)
+       !---< two-stream truncation >---
+       tau_new = ( 1.0_RP - omg(k,i,j,icloud,ich)*g(k,i,j,2,icloud) ) * tau(k,i,j,icloud,ich)
 
-             omg_new = ( 1.0_RP - g(k,i,j,2,icloud) ) / ( 1.0_RP - omg(k,i,j,icloud,ich)*g(k,i,j,2,icloud) ) * omg(k,i,j,icloud,ich)
-             omg_new = min( omg_new, EPS1 )
+       omg_new = ( 1.0_RP - g(k,i,j,2,icloud) ) / ( 1.0_RP - omg(k,i,j,icloud,ich)*g(k,i,j,2,icloud) ) * omg(k,i,j,icloud,ich)
+       omg_new = min( omg_new, EPS1 )
 
-             g_new   = ( g(k,i,j,1,icloud) - g(k,i,j,2,icloud) ) / ( 1.0_RP - g(k,i,j,2,icloud) )
+       g_new   = ( g(k,i,j,1,icloud) - g(k,i,j,2,icloud) ) / ( 1.0_RP - g(k,i,j,2,icloud) )
 
 #if defined(NVIDIA) || defined(SX)
-             Tdir0(k,i,j,icloud,ich) = exp( -min( tau_new/cosSZA(i,j), 1.E+3_RP ) ) ! apply exp limiter
+       Tdir0(k,i,j,icloud,ich) = exp( -min( tau_new/cosSZA(i,j), 1.E+3_RP ) ) ! apply exp limiter
 #else
-             Tdir0(k,i,j,icloud,ich) = exp(-tau_new/cosSZA(i,j))
+       Tdir0(k,i,j,icloud,ich) = exp(-tau_new/cosSZA(i,j))
 #endif
 
-             factor   = ( 1.0_RP - omg(k,i,j,icloud,ich)*g(k,i,j,2,icloud) )
-             b_new0 = b(k,i,j,0,icloud,ich)
-             b_new1 = b(k,i,j,1,icloud,ich) / factor
-             b_new2 = b(k,i,j,2,icloud,ich) / (factor*factor)
-             c0     = Wmns_irgn * 2.0_RP * PI * ( 1.0_RP - omg_new ) * b_new0
-             c1     = Wmns_irgn * 2.0_RP * PI * ( 1.0_RP - omg_new ) * b_new1
-             c2     = Wmns_irgn * 2.0_RP * PI * ( 1.0_RP - omg_new ) * b_new2
+       factor   = ( 1.0_RP - omg(k,i,j,icloud,ich)*g(k,i,j,2,icloud) )
+       b_new0 = b(k,i,j,0,icloud,ich)
+       b_new1 = b(k,i,j,1,icloud,ich) / factor
+       b_new2 = b(k,i,j,2,icloud,ich) / (factor*factor)
+       c0     = Wmns_irgn * 2.0_RP * PI * ( 1.0_RP - omg_new ) * b_new0
+       c1     = Wmns_irgn * 2.0_RP * PI * ( 1.0_RP - omg_new ) * b_new1
+       c2     = Wmns_irgn * 2.0_RP * PI * ( 1.0_RP - omg_new ) * b_new2
 
-             !--- P+, P-
-             Pmns = omg_new * 0.5_RP * ( 1.0_RP - 3.0_RP * g_new * M_irgn*M_irgn )
-             Ppls = omg_new * 0.5_RP * ( 1.0_RP + 3.0_RP * g_new * M_irgn*M_irgn )
+       !--- P+, P-
+       Pmns = omg_new * 0.5_RP * ( 1.0_RP - 3.0_RP * g_new * M_irgn*M_irgn )
+       Ppls = omg_new * 0.5_RP * ( 1.0_RP + 3.0_RP * g_new * M_irgn*M_irgn )
 
-             !--- S+, S-
-             Smns = omg_new * 0.5_RP * ( 1.0_RP - 3.0_RP * g_new * M_irgn*cosSZA(i,j) )
-             Spls = omg_new * 0.5_RP * ( 1.0_RP + 3.0_RP * g_new * M_irgn*cosSZA(i,j) )
+       !--- S+, S-
+       Smns = omg_new * 0.5_RP * ( 1.0_RP - 3.0_RP * g_new * M_irgn*cosSZA(i,j) )
+       Spls = omg_new * 0.5_RP * ( 1.0_RP + 3.0_RP * g_new * M_irgn*cosSZA(i,j) )
 
-             !---< calculate R, T, e+, e- >---
-             sw = 0.5_RP + sign(0.5_RP,tau_new-RD_EPS)
+       !---< calculate R, T, e+, e- >---
+       sw = 0.5_RP + sign(0.5_RP,tau_new-RD_EPS)
 
-             !--- X, Y
-             X     =  ( 1.0_RP - W_irgn * ( Ppls - Pmns ) ) / M_irgn
-             Y     =  ( 1.0_RP - W_irgn * ( Ppls + Pmns ) ) / M_irgn
-             !X     =  max( ( 1.0_RP - W_irgn * ( Ppls - Pmns ) ) / M_irgn, 1.E-30 )
-             !Y     =  max( ( 1.0_RP - W_irgn * ( Ppls + Pmns ) ) / M_irgn, 1.E-30 )
-             lamda = sqrt(X*Y)
+       !--- X, Y
+       X     =  ( 1.0_RP - W_irgn * ( Ppls - Pmns ) ) / M_irgn
+       Y     =  ( 1.0_RP - W_irgn * ( Ppls + Pmns ) ) / M_irgn
+       !X     =  max( ( 1.0_RP - W_irgn * ( Ppls - Pmns ) ) / M_irgn, 1.E-30 )
+       !Y     =  max( ( 1.0_RP - W_irgn * ( Ppls + Pmns ) ) / M_irgn, 1.E-30 )
+       lamda = sqrt(X*Y)
 #if defined(NVIDIA) || defined(SX)
-             E     = exp( -min( lamda*tau_new, 1.E+3_RP ) ) ! apply exp limiter
+       E     = exp( -min( lamda*tau_new, 1.E+3_RP ) ) ! apply exp limiter
 #else
-             E     = exp(-lamda*tau_new)
+       E     = exp(-lamda*tau_new)
 #endif
 
-             !--- A+/A-, B+/B-
-             Apls_mns = ( X * ( 1.0_DP+E ) - lamda * ( 1.0_DP-E ) ) &
-                      / ( X * ( 1.0_DP+E ) + lamda * ( 1.0_DP-E ) )
-             Bpls_mns = ( X * ( 1.0_DP-E ) - lamda * ( 1.0_DP+E ) ) &
-                      / ( X * ( 1.0_DP-E ) + lamda * ( 1.0_DP+E ) )
+       !--- A+/A-, B+/B-
+       Apls_mns = ( X * ( 1.0_DP+E ) - lamda * ( 1.0_DP-E ) ) &
+                / ( X * ( 1.0_DP+E ) + lamda * ( 1.0_DP-E ) )
+       Bpls_mns = ( X * ( 1.0_DP-E ) - lamda * ( 1.0_DP+E ) ) &
+                / ( X * ( 1.0_DP-E ) + lamda * ( 1.0_DP+E ) )
 
-             !--- R, T
-             R0(k,i,j,icloud,ich) = (        sw ) * 0.5_RP * ( Apls_mns + Bpls_mns ) &
-                                  + ( 1.0_RP-sw ) * (          tau_new * (          Pmns ) / M_irgn )
-             T0(k,i,j,icloud,ich) = (        sw ) * 0.5_RP * ( Apls_mns - Bpls_mns ) &
-                                  + ( 1.0_RP-sw ) * ( 1.0_RP - tau_new * ( 1.0_RP - Ppls ) / M_irgn )
+       !--- R, T
+       R0(k,i,j,icloud,ich) = (        sw ) * 0.5_RP * ( Apls_mns + Bpls_mns ) &
+                            + ( 1.0_RP-sw ) * (          tau_new * (          Pmns ) / M_irgn )
+       T0(k,i,j,icloud,ich) = (        sw ) * 0.5_RP * ( Apls_mns - Bpls_mns ) &
+                            + ( 1.0_RP-sw ) * ( 1.0_RP - tau_new * ( 1.0_RP - Ppls ) / M_irgn )
 
-             !--- thermal source
-             Dmns0 = c0 / Y + 2.0_RP * c2 / (X*Y*Y) + c1 / (X*Y)
-             Dpls0 = c0 / Y + 2.0_RP * c2 / (X*Y*Y) - c1 / (X*Y)
-             Dmns1 = c1 / Y + 2.0_RP * c2 / (X*Y)
-             Dpls1 = c1 / Y - 2.0_RP * c2 / (X*Y)
-             Dmns2 = c2 / Y
-             Dpls2 = c2 / Y
+       !--- thermal source
+       Dmns0 = c0 / Y + 2.0_RP * c2 / (X*Y*Y) + c1 / (X*Y)
+       Dpls0 = c0 / Y + 2.0_RP * c2 / (X*Y*Y) - c1 / (X*Y)
+       Dmns1 = c1 / Y + 2.0_RP * c2 / (X*Y)
+       Dpls1 = c1 / Y - 2.0_RP * c2 / (X*Y)
+       Dmns2 = c2 / Y
+       Dpls2 = c2 / Y
 
-             V0mns = Dmns0
-             V0pls = Dpls0
-             V1mns = Dmns0 + Dmns1*tau_new + Dmns2*tau_new*tau_new
-             V1pls = Dpls0 + Dpls1*tau_new + Dpls2*tau_new*tau_new
+       V0mns = Dmns0
+       V0pls = Dpls0
+       V1mns = Dmns0 + Dmns1*tau_new + Dmns2*tau_new*tau_new
+       V1pls = Dpls0 + Dpls1*tau_new + Dpls2*tau_new*tau_new
              
-             Em_LW(k,i,j,icloud,ich) = (        sw ) * ( V0mns - R0(k,i,j,icloud,ich) * V0pls - T0(k,i,j,icloud,ich) * V1mns ) &
-                                     + ( 1.0_RP-sw ) * 0.5_RP * tau_new * ( 2.0_RP*c0 + c1*tau_new + c2*tau_new*tau_new )
-             Ep_LW(k,i,j,icloud,ich) = (        sw ) * ( V1pls - T0(k,i,j,icloud,ich) * V0pls - R0(k,i,j,icloud,ich) * V1mns ) &
-                                     + ( 1.0_RP-sw ) * 0.5_RP * tau_new * ( 2.0_RP*c0 + c1*tau_new + c2*tau_new*tau_new )
+       Em_LW(k,i,j,icloud,ich) = (        sw ) * ( V0mns - R0(k,i,j,icloud,ich) * V0pls - T0(k,i,j,icloud,ich) * V1mns ) &
+                               + ( 1.0_RP-sw ) * 0.5_RP * tau_new * ( 2.0_RP*c0 + c1*tau_new + c2*tau_new*tau_new )
+       Ep_LW(k,i,j,icloud,ich) = (        sw ) * ( V1pls - T0(k,i,j,icloud,ich) * V0pls - R0(k,i,j,icloud,ich) * V1mns ) &
+                               + ( 1.0_RP-sw ) * 0.5_RP * tau_new * ( 2.0_RP*c0 + c1*tau_new + c2*tau_new*tau_new )
 
-             !--- solar source
-             SIGmns = Wmns_irgn * ( Spls - Smns )
-             SIGpls = Wmns_irgn * ( Spls + Smns )
+       !--- solar source
+       SIGmns = Wmns_irgn * ( Spls - Smns )
+       SIGpls = Wmns_irgn * ( Spls + Smns )
 
-             tmp    = X*Y*cosSZA(i,j)-1.0/cosSZA(i,j)
-             zerosw = 1.0_RP - sign(1.0_RP,abs(tmp)-EPS) ! if abs(tmp)<EPS then 2, otherwise 0
-             Qgamma = ( SIGpls*X*cosSZA(i,j) + SIGmns ) / ( tmp + zerosw*EPS )
+       tmp    = X*Y*cosSZA(i,j) - 1.0/cosSZA(i,j)
+       zerosw = 1.0_RP - sign(1.0_RP,abs(tmp)-EPS) ! if abs(tmp)<EPS then 2, otherwise 0
+       Qgamma = ( SIGpls*X*cosSZA(i,j) + SIGmns ) / ( tmp + zerosw*EPS )
 
-             V0pls = 0.5_RP * ( ( 1.0_RP + 1.0_RP/(X*cosSZA(i,j)) ) * Qgamma + SIGmns / X )
-             V0mns = 0.5_RP * ( ( 1.0_RP - 1.0_RP/(X*cosSZA(i,j)) ) * Qgamma - SIGmns / X )
+       V0pls = 0.5_RP * ( ( 1.0_RP + 1.0_RP/(X*cosSZA(i,j)) ) * Qgamma + SIGmns / X )
+       V0mns = 0.5_RP * ( ( 1.0_RP - 1.0_RP/(X*cosSZA(i,j)) ) * Qgamma - SIGmns / X )
 
-             V1pls = V0pls * Tdir0(k,i,j,icloud,ich)
-             V1mns = V0mns * Tdir0(k,i,j,icloud,ich)
+       V1pls = V0pls * Tdir0(k,i,j,icloud,ich)
+       V1mns = V0mns * Tdir0(k,i,j,icloud,ich)
 
-             Em_SW(k,i,j,icloud,ich) = (        sw ) * ( V0mns - R0(k,i,j,icloud,ich) * V0pls - T0(k,i,j,icloud,ich) * V1mns ) &
-                                     + ( 1.0_RP-sw ) * Wmns_irgn * Smns * tau_new * sqrt( Tdir0(k,i,j,icloud,ich) )
-             Ep_SW(k,i,j,icloud,ich) = (        sw ) * ( V1pls - T0(k,i,j,icloud,ich) * V0pls - R0(k,i,j,icloud,ich) * V1mns ) &
-                                     + ( 1.0_RP-sw ) * Wmns_irgn * Spls * tau_new * sqrt( Tdir0(k,i,j,icloud,ich) )
-          enddo
-       enddo
-       enddo
-    enddo ! cloud loop
-    enddo ! channel loop
+       Em_SW(k,i,j,icloud,ich) = (        sw ) * ( V0mns - R0(k,i,j,icloud,ich) * V0pls - T0(k,i,j,icloud,ich) * V1mns ) &
+                               + ( 1.0_RP-sw ) * Wmns_irgn * Smns * tau_new * sqrt( Tdir0(k,i,j,icloud,ich) )
+       Ep_SW(k,i,j,icloud,ich) = (        sw ) * ( V1pls - T0(k,i,j,icloud,ich) * V0pls - R0(k,i,j,icloud,ich) * V1mns ) &
+                               + ( 1.0_RP-sw ) * Wmns_irgn * Spls * tau_new * sqrt( Tdir0(k,i,j,icloud,ich) )
+    enddo
+    enddo
+    enddo
+    enddo
+    enddo
     !$acc end kernels
     
 
@@ -2183,10 +2235,10 @@ contains
           do ich = 1, chmax
           do j = JS, JE
           do i = IS, IE
-             do k = 1, rd_kmax
-                ic = icloud + ( ich - 1 ) * MSTRN_ncloud
-                cf(k,i,j,ic) = 0.0_RP
-             enddo
+          do k = 1, rd_kmax
+             ic = icloud + ( ich - 1 ) * MSTRN_ncloud
+             cf(k,i,j,ic) = 0.0_RP
+          enddo
           enddo
           enddo
           enddo
@@ -2196,10 +2248,10 @@ contains
           do ich = 1, chmax
           do j = JS, JE
           do i = IS, IE
-             do k = 1, rd_kmax
-                ic = icloud + ( ich - 1 ) * MSTRN_ncloud
-                cf(k,i,j,ic) = cldfrac(k,i,j)
-             enddo
+          do k = 1, rd_kmax
+             ic = icloud + ( ich - 1 ) * MSTRN_ncloud
+             cf(k,i,j,ic) = cldfrac(k,i,j)
+          enddo
           enddo
           enddo
           enddo
@@ -2211,18 +2263,18 @@ contains
     !$acc parallel loop collapse(4) async(1)
     do ich = 1, chmax
     do icloud = 1, MSTRN_ncloud
-       do j = JS, JE
-       do i = IS, IE
-          ic = icloud + ( ich - 1 ) * MSTRN_ncloud
-          tau_bar_sol(1,i,j,ic) = fsol(i,j)
-          !$acc loop seq
-          do k = 2, rd_kmax+1 ! k-recurrence
-             Tdir = (        cf(k-1,i,j,ic) ) * Tdir0(k-1,i,j,I_Cloud   ,ich) &
-                  + ( 1.0_RP-cf(k-1,i,j,ic) ) * Tdir0(k-1,i,j,I_ClearSky,ich)
-             tau_bar_sol(k,i,j,ic) = tau_bar_sol(k-1,i,j,ic) * Tdir
-          enddo
+    do j = JS, JE
+    do i = IS, IE
+       ic = icloud + ( ich - 1 ) * MSTRN_ncloud
+       tau_bar_sol(1,i,j,ic) = fsol(i,j)
+       !$acc loop seq
+       do k = 2, rd_kmax+1 ! k-recurrence
+          Tdir = (        cf(k-1,i,j,ic) ) * Tdir0(k-1,i,j,I_Cloud   ,ich) &
+               + ( 1.0_RP-cf(k-1,i,j,ic) ) * Tdir0(k-1,i,j,I_ClearSky,ich)
+          tau_bar_sol(k,i,j,ic) = tau_bar_sol(k-1,i,j,ic) * Tdir
        enddo
-       enddo
+    enddo
+    enddo
     enddo
     enddo
     !$acc end parallel
@@ -2230,14 +2282,14 @@ contains
     !$acc kernels loop independent async(1)
     do ich = 1, chmax
     do icloud = 1, MSTRN_ncloud
-       do j = JS, JE
-       do i = IS, IE
-          do k = 1, rd_kmax+1
-             ic = icloud + ( ich - 1 ) * MSTRN_ncloud
-             flux_direct(k,i,j,icloud,ich) = cosSZA(i,j) * tau_bar_sol(k,i,j,ic)
-          enddo
-       enddo
-       enddo
+    do j = JS, JE
+    do i = IS, IE
+    do k = 1, rd_kmax+1
+       ic = icloud + ( ich - 1 ) * MSTRN_ncloud
+       flux_direct(k,i,j,icloud,ich) = cosSZA(i,j) * tau_bar_sol(k,i,j,ic)
+    enddo
+    enddo
+    enddo
     enddo
     enddo
     !$acc end kernels
@@ -2245,85 +2297,76 @@ contains
     !$acc parallel loop collapse(5) async(1)
     do ich = 1, chmax
     do icloud = 1, MSTRN_ncloud
-       do j = JS, JE
-       do i = IS, IE
-          do k = 1, rd_kmax
-             ic = icloud + ( ich - 1 ) * MSTRN_ncloud
-             Em(k,i,j,ic) = (        cf(k,i,j,ic) ) * ( Em_LW(k,i,j,I_Cloud,   ich) &
-                                                      + Em_SW(k,i,j,I_Cloud,   ich) * tau_bar_sol(k,i,j,ic) ) &
-                          + ( 1.0_RP-cf(k,i,j,ic) ) * ( Em_LW(k,i,j,I_ClearSky,ich) &
-                                                      + Em_SW(k,i,j,I_ClearSky,ich) * tau_bar_sol(k,i,j,ic) )
+    do j = JS, JE
+    do i = IS, IE
+    do k = 1, rd_kmax
+       ic = icloud + ( ich - 1 ) * MSTRN_ncloud
+       Em(k,i,j,ic) = (        cf(k,i,j,ic) ) * ( Em_LW(k,i,j,I_Cloud,   ich) &
+                                                + Em_SW(k,i,j,I_Cloud,   ich) * tau_bar_sol(k,i,j,ic) ) &
+                    + ( 1.0_RP-cf(k,i,j,ic) ) * ( Em_LW(k,i,j,I_ClearSky,ich) &
+                                                + Em_SW(k,i,j,I_ClearSky,ich) * tau_bar_sol(k,i,j,ic) )
 
-             Ep(k,i,j,ic) = (        cf(k,i,j,ic) ) * ( Ep_LW(k,i,j,I_Cloud,   ich) &
-                                                      + Ep_SW(k,i,j,I_Cloud,   ich) * tau_bar_sol(k,i,j,ic) ) &
-                          + ( 1.0_RP-cf(k,i,j,ic) ) * ( Ep_LW(k,i,j,I_ClearSky,ich) &
-                                                      + Ep_SW(k,i,j,I_ClearSky,ich) * tau_bar_sol(k,i,j,ic) )
-          enddo
-       enddo
-       enddo
+       Ep(k,i,j,ic) = (        cf(k,i,j,ic) ) * ( Ep_LW(k,i,j,I_Cloud,   ich) &
+                                                + Ep_SW(k,i,j,I_Cloud,   ich) * tau_bar_sol(k,i,j,ic) ) &
+                    + ( 1.0_RP-cf(k,i,j,ic) ) * ( Ep_LW(k,i,j,I_ClearSky,ich) &
+                                                + Ep_SW(k,i,j,I_ClearSky,ich) * tau_bar_sol(k,i,j,ic) )
+
+       R(k,i,j,ic) = (        cf(k,i,j,ic) ) * R0(k,i,j,I_Cloud   ,ich) &
+                   + ( 1.0_RP-cf(k,i,j,ic) ) * R0(k,i,j,I_ClearSky,ich)
+       T(k,i,j,ic) = (        cf(k,i,j,ic) ) * T0(k,i,j,I_Cloud   ,ich) &
+                   + ( 1.0_RP-cf(k,i,j,ic) ) * T0(k,i,j,I_ClearSky,ich)
+    enddo
+    enddo
+    enddo
     enddo
     enddo
     !$acc end parallel
 
     !---< Adding-Doubling method >---
     ! [note] TOA->Surface is positive direction. "pls" means upper to lower altitude.
-    !$acc parallel loop collapse(5) async(1)
-    do ich = 1, chmax
-    do icloud = 1, MSTRN_ncloud
-       do j = JS, JE
-       do i = IS, IE
-          do k = 1, rd_kmax
-             ic = icloud + ( ich - 1 ) * MSTRN_ncloud
-             R(k,i,j,ic) = (        cf(k,i,j,ic) ) * R0(k,i,j,I_Cloud   ,ich) &
-                         + ( 1.0_RP-cf(k,i,j,ic) ) * R0(k,i,j,I_ClearSky,ich)
-             T(k,i,j,ic) = (        cf(k,i,j,ic) ) * T0(k,i,j,I_Cloud   ,ich) &
-                         + ( 1.0_RP-cf(k,i,j,ic) ) * T0(k,i,j,I_ClearSky,ich)
-          enddo
-       enddo
-       enddo
-    enddo
-    enddo
-    !$acc end parallel
-
     !$acc parallel loop collapse(4) async(1)
     do ich = 1, chmax
     do icloud = 1, MSTRN_ncloud
-       do j = JS, JE
-       do i = IS, IE
-          ! at lambert surface
-          ic = icloud + ( ich - 1 ) * MSTRN_ncloud
-          R(rd_kmax+1,i,j,ic) = (        cf(rd_kmax,i,j,ic) ) * albedo_sfc(i,j,I_R_diffuse) &
-                              + ( 1.0_RP-cf(rd_kmax,i,j,ic) ) * albedo_sfc(i,j,I_R_diffuse)
-          T(rd_kmax+1,i,j,ic) = 0.0_RP
+    do j = JS, JE
+    do i = IS, IE
+       ! at lambert surface
+       ic = icloud + ( ich - 1 ) * MSTRN_ncloud
+       R(rd_kmax+1,i,j,ic) = (        cf(rd_kmax,i,j,ic) ) * albedo_sfc(i,j,I_R_diffuse) &
+                           + ( 1.0_RP-cf(rd_kmax,i,j,ic) ) * albedo_sfc(i,j,I_R_diffuse)
+       T(rd_kmax+1,i,j,ic) = 0.0_RP
 
-          Em0(I_Cloud   ) = Wpls_irgn * ( flux_direct(rd_kmax+1,i,j,icloud,ich) * albedo_sfc(i,j,I_R_direct) / (W_irgn*M_irgn) &
-                              + 2.0_RP * PI * ( 1.0_RP-albedo_sfc(i,j,I_R_diffuse) ) * b_sfc(i,j) )
-          Em0(I_ClearSky) = Wpls_irgn * ( flux_direct(rd_kmax+1,i,j,icloud,ich) * albedo_sfc(i,j,I_R_direct) / (W_irgn*M_irgn) &
-                              + 2.0_RP * PI * ( 1.0_RP-albedo_sfc(i,j,I_R_diffuse) ) * b_sfc(i,j) )
+       ! TODO Em0(I_Cloud)とEm0(I_ClearSky)とで全く同じ式だが間違いはないか？
+       Em0(I_Cloud   ) = Wpls_irgn * ( flux_direct(rd_kmax+1,i,j,icloud,ich) * albedo_sfc(i,j,I_R_direct) / (W_irgn*M_irgn) &
+                           + 2.0_RP * PI * ( 1.0_RP-albedo_sfc(i,j,I_R_diffuse) ) * b_sfc(i,j) )
+       Em0(I_ClearSky) = Wpls_irgn * ( flux_direct(rd_kmax+1,i,j,icloud,ich) * albedo_sfc(i,j,I_R_direct) / (W_irgn*M_irgn) &
+                           + 2.0_RP * PI * ( 1.0_RP-albedo_sfc(i,j,I_R_diffuse) ) * b_sfc(i,j) )
 
-          Em(rd_kmax+1,i,j,ic) = (        cf(rd_kmax,i,j,ic) ) * Em0(I_Cloud   ) &
-                               + ( 1.0_RP-cf(rd_kmax,i,j,ic) ) * Em0(I_ClearSky)
-          Ep(rd_kmax+1,i,j,ic) = 0.0_RP
+       Em(rd_kmax+1,i,j,ic) = (        cf(rd_kmax,i,j,ic) ) * Em0(I_Cloud   ) &
+                            + ( 1.0_RP-cf(rd_kmax,i,j,ic) ) * Em0(I_ClearSky)
+       Ep(rd_kmax+1,i,j,ic) = 0.0_RP
           
           
-          R12pls(ic,i,j,rd_kmax+1) = R (rd_kmax+1,i,j,ic)
-          E12mns(ic,i,j,rd_kmax+1) = Em(rd_kmax+1,i,j,ic)
-          R12mns(ic,i,j,1) = R (1,i,j,ic)
-          E12pls(ic,i,j,1) = Ep(1,i,j,ic)
-       enddo
-       enddo
+       R12pls(ic,i,j,rd_kmax+1) = R (rd_kmax+1,i,j,ic)
+       E12mns(ic,i,j,rd_kmax+1) = Em(rd_kmax+1,i,j,ic)
+       R12mns(ic,i,j,1) = R (1,i,j,ic)
+       E12pls(ic,i,j,1) = Ep(1,i,j,ic)
+    enddo
+    enddo
     enddo
     enddo
     !$acc end parallel
     
+    ! cloud emissivity
     ich = chmax / 2 + 1
     icloud = 2
-    ic = icloud + ( ich - 1 ) * MSTRN_ncloud ! cloud emissivity
     !$acc kernels loop independent async(1)
+    do ich = 1, chmax
     do j = JS, JE
     do i = IS, IE
     do k = 1, rd_kmax
-       emisCLD(k,i,j) = 1.0_RP - R(k,i,j,ic) - T(k,i,j,ic)
+       ic = icloud + ( ich - 1 ) * MSTRN_ncloud
+       emisCLD(k,i,j,ich) = 1.0_RP - R(k,i,j,ic) - T(k,i,j,ic)
+    enddo
     enddo
     enddo
     enddo
@@ -2358,16 +2401,16 @@ contains
     !$acc kernels loop independent async(1)
     do ich = 1, chmax
     do icloud = 1, MSTRN_ncloud
-       do j = JS, JE
-       do i = IS, IE
-          ic = icloud + ( ich - 1 ) * MSTRN_ncloud
-          ! TOA boundary
-          Upls = 0.0_RP
-          Umns = E12mns(ic,i,j,1) + R12pls(ic,i,j,1) * Upls
-          flux(1,i,j,I_up,icloud,ich) = Wscale_irgn * Umns
-          flux(1,i,j,I_dn,icloud,ich) = Wscale_irgn * Upls + flux_direct(1,i,j,icloud,ich)
-       enddo
-       enddo
+    do j = JS, JE
+    do i = IS, IE
+       ic = icloud + ( ich - 1 ) * MSTRN_ncloud
+       ! TOA boundary
+       Upls = 0.0_RP
+       Umns = E12mns(ic,i,j,1) + R12pls(ic,i,j,1) * Upls
+       flux(1,i,j,I_up,icloud,ich) = Wscale_irgn * Umns
+       flux(1,i,j,I_dn,icloud,ich) = Wscale_irgn * Upls + flux_direct(1,i,j,icloud,ich)
+    enddo
+    enddo
     enddo
     enddo
     !$acc end kernels
@@ -2375,17 +2418,17 @@ contains
     !$acc kernels loop independent async(1)
     do ich = 1, chmax
     do icloud = 1, MSTRN_ncloud
-       do j = JS, JE
-       do i = IS, IE
-       do k = 2, rd_kmax+1
-          ic = icloud + ( ich - 1 ) * MSTRN_ncloud
-          Upls = ( E12pls(ic,i,j,k-1) + R12mns(ic,i,j,k-1)*E12mns(ic,i,j,k) ) / ( 1.0_RP - R12mns(ic,i,j,k-1)*R12pls(ic,i,j,k) )
-          Umns = E12mns(ic,i,j,k) + R12pls(ic,i,j,k) * Upls
-          flux(k,i,j,I_up,icloud,ich) = Wscale_irgn * Umns
-          flux(k,i,j,I_dn,icloud,ich) = Wscale_irgn * Upls + flux_direct(k,i,j,icloud,ich)
-       enddo
-       enddo
-       enddo
+    do j = JS, JE
+    do i = IS, IE
+    do k = 2, rd_kmax+1
+       ic = icloud + ( ich - 1 ) * MSTRN_ncloud
+       Upls = ( E12pls(ic,i,j,k-1) + R12mns(ic,i,j,k-1)*E12mns(ic,i,j,k) ) / ( 1.0_RP - R12mns(ic,i,j,k-1)*R12pls(ic,i,j,k) )
+       Umns = E12mns(ic,i,j,k) + R12pls(ic,i,j,k) * Upls
+       flux(k,i,j,I_up,icloud,ich) = Wscale_irgn * Umns
+       flux(k,i,j,I_dn,icloud,ich) = Wscale_irgn * Upls + flux_direct(k,i,j,icloud,ich)
+    enddo
+    enddo
+    enddo
     enddo
     enddo
     !$acc end kernels
