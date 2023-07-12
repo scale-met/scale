@@ -2028,11 +2028,8 @@ contains
        !$omp shared(BND_QA,BND_IQ) &
        !$omp private(i,j,k,iq,iqb)
        !$acc kernels
-       !$acc loop independent
        do j = 1, JA
-       !$acc loop independent
        do i = 1, IS-1
-       !$acc loop independent
        do k = KS, KE
           DENS(k,i,j) = ATMOS_BOUNDARY_DENS(k,i,j)
           MOMX(k,i,j) = ATMOS_BOUNDARY_VELX(k,i,j) &

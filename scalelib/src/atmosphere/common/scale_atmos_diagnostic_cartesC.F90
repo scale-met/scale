@@ -204,21 +204,25 @@ contains
     enddo
     !$acc end kernels
 
-    !!$omp parallel do private(i,j) OMP_SCHEDULE_ collapse(2)
-    !!$acc kernels
-    !!$acc loop independent
-    !do j  = JS, JE
-    !!$acc loop independent
-    !do i  = IS, IE
-    !   W(   1:KS-1,i,j) = W(KS,i,j)
-    !   U(   1:KS-1,i,j) = U(KS,i,j)
-    !   V(   1:KS-1,i,j) = V(KS,i,j)
-    !   W(KE+1:KA,  i,j) = W(KE,i,j)
-    !   U(KE+1:KA,  i,j) = U(KE,i,j)
-    !   V(KE+1:KA,  i,j) = V(KE,i,j)
-    !enddo
-    !enddo
-    !!$acc end kernels
+    !$omp parallel do private(i,j) OMP_SCHEDULE_ collapse(2)
+    !$acc kernels
+    do j  = JS, JE
+    do i  = IS, IE
+       !$acc loop seq
+       do k = 1, KS-1
+          W(k,i,j) = W(KS,i,j)
+          U(k,i,j) = U(KS,i,j)
+          V(k,i,j) = V(KS,i,j)
+       end do
+       !$acc loop seq
+       do k = KE+1, KA
+          W(k,i,j) = W(KE,i,j)
+          U(k,i,j) = U(KE,i,j)
+          V(k,i,j) = V(KE,i,j)
+       end do
+    enddo
+    enddo
+    !$acc end kernels
 
     call COMM_vars8( W(:,:,:), 1 )
     call COMM_vars8( U(:,:,:), 2 )

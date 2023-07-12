@@ -379,9 +379,8 @@ contains
     !$omp parallel do schedule(dynamic) collapse(2) &
     !$omp private(f1,f2,workh,worki,workj)
     !$acc kernels
-    !$acc loop independent
     do j = 1, JA
-    !$acc loop independent private(workh, worki, workj)
+    !$acc loop private(workh, worki, workj)
     do i = 1, IA
 
        ! longitude
@@ -541,9 +540,9 @@ contains
     !$omp private(inc_i,inc_j,ii,jj,i1,i2,i3,i4,j1,j2,j3,j4,u,v,err,workh,worki,workj) &
     !$omp firstprivate(ii0,jj0)
     !$acc kernels
-    !$acc loop independent reduction(.or.:error)
+    !$acc loop reduction(.or.:error)
     do j = 1, JA
-    !$acc loop independent private(inc_i,inc_j,ii,jj,i1,i2,i3,i4,j1,j2,j3,j4,u,v,err,workh,worki,workj) reduction(.or.:error)
+    !$acc loop private(inc_i,inc_j,ii,jj,i1,i2,i3,i4,j1,j2,j3,j4,u,v,err,workh,worki,workj) reduction(.or.:error)
     do i = 1, IA
 
 #ifndef _OPENACC
@@ -771,6 +770,9 @@ contains
     integer, allocatable :: idx_blk(:,:,:), nidx(:,:)
     integer  :: idx_ref(npoints)
 
+    integer  :: idx_it(npoints)
+    integer  :: idx_jt(npoints)
+    real(RP) :: hfactt(npoints)
 
     integer  :: i, j, ii, jj, n
     !---------------------------------------------------------------------------
@@ -837,7 +839,7 @@ contains
        !$acc kernels copyin(lon_1d, lat_1d, i0, i1, j0, j1, lon, lat) copyout(idx_i, idx_j, hfact)
        !$acc loop independent
        do j = 1, JA
-       !$acc loop independent
+       !$acc loop private(idx_it,idx_jt,hfactt) independent
        do i = 1, IA
           ! main search
           call INTERP_search_horiz_struct( npoints,                     & ! [IN]
@@ -848,10 +850,15 @@ contains
                                            dlon, dlat,                  & ! [IN]
                                            i0(:), i1(:), j0(:), j1(:),  & ! [IN]
                                            lon(i,j), lat(i,j),          & ! [IN]
-                                           idx_i(i,j,:), idx_j(i,j,:),  & ! [OUT]
-                                           hfact(i,j,:),                & ! [OUT]
+                                           idx_it(:), idx_jt(:),        & ! [OUT]
+                                           hfactt(:),                   & ! [OUT]
                                            search_limit = search_limit, & ! [IN]
                                            weight_order = weight_order  ) ! [IN]
+          do n = 1, npoints
+             idx_i(i,j,n) = idx_it(n)
+             idx_j(i,j,n) = idx_jt(n)
+             hfact(i,j,n) = hfactt(n)
+          end do
        enddo
        enddo
        !$acc end kernels
@@ -884,9 +891,9 @@ contains
        !$omp parallel do OMP_SCHEDULE_ collapse(2) &
        !$omp private(idx_ref)
        !$acc kernels
-       !$acc loop independent private(idx_ref)
+       !$acc loop independent
        do j = 1, JA
-       !$acc loop independent private(idx_ref)
+       !$acc loop private(idx_ref,hfactt) independent
        do i = 1, IA
           ! main search
           call INTERP_search_horiz( npoints,                     & ! [IN]
@@ -899,12 +906,13 @@ contains
                                     idx_blk(:,:,:), nidx(:,:),   & ! [IN]
                                     lon(i,j), lat(i,j),          & ! [IN]
                                     idx_ref(:),                  & ! [OUT]
-                                    hfact(i,j,:),                & ! [OUT]
+                                    hfactt(:),                   & ! [OUT]
                                     search_limit = search_limit, & ! [IN]
                                     weight_order = weight_order  ) ! [IN]
           do n = 1, npoints
              idx_i(i,j,n) = mod(idx_ref(n) - 1, IA_ref) + 1
              idx_j(i,j,n) = ( idx_ref(n) - 1 ) / IA_ref + 1
+             hfact(i,j,n) = hfactt(n)
           end do
        enddo
        enddo
@@ -1141,6 +1149,7 @@ contains
     real(RP) :: lat_min, lat_max
     real(RP) :: dlon, dlat
     integer  :: idx_ref(npoints)
+    real(RP) :: hfactt(npoints)
 
     integer  :: i, j, ii, jj, n
     !---------------------------------------------------------------------------
@@ -1173,9 +1182,9 @@ contains
     !$omp parallel do OMP_SCHEDULE_ collapse(2) &
     !$omp private(ii,jj,idx_ref)
     !$acc kernels
-    !$acc loop independent private(idx_ref)
+    !$acc loop independent
     do j = 1, JA
-    !$acc loop independent private(idx_ref)
+    !$acc loop private(idx_ref,hfactt) independent
     do i = 1, IA
 
        ! main search
@@ -1188,7 +1197,7 @@ contains
                                  dlon, dlat,                  & ! [IN]
                                  idx_blk(:,:,:), nidx(:,:),   & ! [IN]
                                  lon(i,j), lat(i,j),          & ! [IN]
-                                 idx_ref(:), hfact(i,j,:)     ) ! [OUT]
+                                 idx_ref(:), hfactt(:)        ) ! [OUT]
 
        !$acc loop seq
        do n = 1, npoints
@@ -1196,6 +1205,7 @@ contains
           jj = ( idx_ref(n) - 1 ) / IA_ref + 1
           idx_i(i,j,n) = ii
           idx_j(i,j,n) = jj
+          hfact(i,j,n) = hfactt(n)
           call INTERP_factor1d( KA_ref, KS_ref, KE_ref,   & ! [IN]
                                 KA,     KS,     KE,       & ! [IN]
                                 hgt_ref(:,ii,jj),         & ! [IN]
@@ -1401,13 +1411,11 @@ contains
     !$omp private(fact,valn,f,w,sw)
     !$acc kernels
 !OCL PREFETCH
-    !$acc loop independent
     do j = 1, JA
-    !$acc loop independent
     do i = 1, IA
        fact = 0.0_RP
        valn = 0.0_RP
-       !$acc loop reduction(+:fact,valn)
+       !$acc loop seq
        do n = 1, npoints
           f = hfact(i,j,n)
           w = val_ref(idx_i(i,j,n),idx_j(i,j,n))
@@ -1611,7 +1619,7 @@ contains
     !$omp parallel do OMP_SCHEDULE_ collapse(2) &
     !$omp private(valn,fact,w,f,ii,jj,sw)
     !$acc kernels
-    !$acc loop independent private(w)
+    !$acc loop independent
     do j = 1, JA
     !$acc loop independent private(w)
     do i = 1, IA
@@ -2183,9 +2191,9 @@ contains
        error                           )
     !$acc routine seq
     implicit none
-    real(RP), intent(in) :: x_ref0, x_ref1, x_ref2, x_ref3
-    real(RP), intent(in) :: y_ref0, y_ref1, y_ref2, y_ref3
-    real(RP), intent(in) :: x, y
+    real(RP), intent(in), value :: x_ref0, x_ref1, x_ref2, x_ref3
+    real(RP), intent(in), value :: y_ref0, y_ref1, y_ref2, y_ref3
+    real(RP), intent(in), value :: x, y
 
     real(RP), intent(out) :: u, v
     logical,  intent(out) :: error
@@ -2272,9 +2280,9 @@ contains
     use scale_const, only: &
        EPS => CONST_EPS
     implicit none
-    real(RP), intent(in) :: x_ref0, x_ref1, x_ref2, x_ref3
-    real(RP), intent(in) :: y_ref0, y_ref1, y_ref2, y_ref3
-    real(RP), intent(in) :: x, y
+    real(RP), intent(in), value :: x_ref0, x_ref1, x_ref2, x_ref3
+    real(RP), intent(in), value :: y_ref0, y_ref1, y_ref2, y_ref3
+    real(RP), intent(in), value :: x, y
 
     integer,  intent(out) :: inc_i, inc_j
     logical,  intent(out) :: error

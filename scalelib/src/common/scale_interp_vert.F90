@@ -326,35 +326,51 @@ contains
     real(RP), intent(in)  :: var  (KA,IA,JA)
     real(RP), intent(out) :: var_Z(KA,IA,JA)
 
+    real(RP) :: Zht(KA)
+    real(RP) :: Xiht(KA)
 #ifdef _OPENACC
     real(RP) :: workr(KA,7)
     integer  :: worki(KA,2)
 #endif
 
-    integer  :: i, j
+    integer  :: i, j, k
     !---------------------------------------------------------------------------
+
+    !$acc data copyin(Zh, var) copyout(var_Z) create(Xiht)
+
+    !$kernels
+    do k = KS-1, KE
+       Xiht(k) = Xih(k)
+    end do
+    !$end kernels
 
     !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
     !$omp shared(KA,KS,KE,IS,IE,JS,JE) &
-    !$omp shared(Xih,Zh,var,var_Z) &
-    !$omp shared(INTERP_xih2zh_idx,INTERP_xih2zh_coef)
-    !$acc kernels copyin(Xih, Zh, var) copyout(var_Z)
+    !$omp shared(Xih,Xiht,Zh,var,var_Z) &
+    !$omp shared(INTERP_xih2zh_idx,INTERP_xih2zh_coef) &
+    !$omp private(Zht)
+    !$acc kernels
     !$acc loop independent
     do j = JS, JE
-    !$acc loop independent private(workr,worki)
+    !$acc loop independent private(workr,worki,Zht)
     do i = IS, IE
+       do k = KS-1, KE
+          Zht(k) = Zh(k,i,j)
+       end do
        call INTERP_interp1d( KA, KS-1, KE, KA, KS-1, KE, &
 #ifdef _OPENACC
                              workr(:,:), worki(:,:), &
 #endif
                              INTERP_xih2zh_idx (:,:,i,j), & ! (in)
                              INTERP_xih2zh_coef(:,  i,j), & ! (in)
-                             Zh(1:,i,j), Xih(1:),         & ! (in)
+                             Zht(:), Xiht(:),             & ! (in)
                              var(:,i,j),                  & ! (in)
                              var_Z(:,i,j)                 ) ! (out)
     enddo
     enddo
     !$acc end kernels
+
+    !$acc end data
 
     return
   end subroutine INTERP_VERT_xih2zh
@@ -379,35 +395,51 @@ contains
     real(RP), intent(in)  :: var   (KA,IA,JA)
     real(RP), intent(out) :: var_Xi(KA,IA,JA)
 
+    real(RP) :: Zht(KA)
+    real(RP) :: Xiht(KA)
 #ifdef _OPENACC
     real(RP) :: workr(KA,7)
     integer  :: worki(KA,2)
 #endif
 
-    integer  :: i, j
+    integer  :: k, i, j
     !---------------------------------------------------------------------------
+
+    !$acc data copyin(Zh, Xih, var) copyout(var_Xi) create(Xih)
+
+    !$kernels
+    do k = KS-1, KE
+       Xiht(k) = Xih(k)
+    end do
+    !$end kernels
 
     !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
     !$omp shared(KA,KS,KE,IS,IE,JS,JE) &
-    !$omp shared(Zh,Xih,var,var_Xi) &
-    !$omp shared(INTERP_zh2xih_idx,INTERP_zh2xih_coef)
-    !$acc kernels copyin(Zh, Xih, var) copyout(var_Xi)
+    !$omp shared(Zh,Xih,Xiht,var,var_Xi) &
+    !$omp shared(INTERP_zh2xih_idx,INTERP_zh2xih_coef) &
+    !$omp private(Zht)
+    !$acc kernels
     !$acc loop independent
     do j = JS, JE
-    !$acc loop independent private(workr,worki)
+    !$acc loop independent private(workr,worki,Zht)
     do i = IS, IE
+       do k = KS-1, KE
+          Zht(k) = Zh(k,i,j)
+       end do
        call INTERP_interp1d( KA, KS-1, KE, KA, KS-1, KE, &
 #ifdef _OPENACC
                              workr(:,:), worki(:,:), &
 #endif
                              INTERP_zh2xih_idx (:,:,i,j), & ! (in)
                              INTERP_zh2xih_coef(:,  i,j), & ! (in)
-                             Xih(1:), Zh(1:,i,j),         & ! (in)
+                             Xiht(:), Zht(:),             & ! (in)
                              var(:,i,j),                  & ! (in)
                              var_Xi(:,i,j)                ) ! (out)
     enddo
     enddo
     !$acc end kernels
+
+    !$acc end data
 
     return
   end subroutine INTERP_VERT_zh2xih

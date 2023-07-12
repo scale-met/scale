@@ -189,11 +189,8 @@ contains
     else
        !$omp parallel do collapse(2)
        !$acc kernels
-       !$acc loop independent
        do j = JS-1, JE+1
-       !$acc loop independent
        do i = IS-1, IE+1
-       !$acc loop independent
        do k = KS, KE
           lambda0(k,i,j) = Cs * mixlen( FZ(k,i,j) - FZ(k-1,i,j),     &
                                         CDX(i) / MAPF(i,j,1),        &
@@ -1606,10 +1603,10 @@ contains
   function mixlen(dz, dx, dy, filter_fact)
     !$acc routine seq
     implicit none
-    real(RP), intent(in) :: dz
-    real(RP), intent(in) :: dx
-    real(RP), intent(in) :: dy
-    real(RP), intent(in) :: filter_fact
+    real(RP), intent(in), value :: dz
+    real(RP), intent(in), value :: dx
+    real(RP), intent(in), value :: dy
+    real(RP), intent(in), value :: filter_fact
     real(RP) :: mixlen ! (out)
 
     mixlen = fact(dz, dx, dy) * filter_fact * ( dz * dx * dy )**OneOverThree ! Scotti et al. (1993)

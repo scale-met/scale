@@ -513,6 +513,8 @@ contains
     real(RP) :: DZB(UKA)     ! thickness of each building layer [m]
     real(RP) :: DZG(UKA)     ! thickness of each road layer [m]
 
+    real(RP) :: SWDt(2)
+    real(RP) :: LWDt(2)
 
     real(RP) :: Uabs  ! modified absolute velocity [m/s]
     real(RP) :: Ra    ! Aerodynamic resistance (=1/Ce) [1/s]
@@ -554,9 +556,10 @@ contains
     converged = .true.
 
     !$omp parallel do schedule(dynamic) collapse(2) &
-    !$omp private(w,Uabs,TR,TB,TG,TC,QC,UC,TRL,TBL,TGL,RAINR,RAINB,RAING,ALBD_LW,ALBD_SW,QVsat,Ra,FracU10,FracT2,FracQ2,MFLUX)
+    !$omp private(w,Uabs,TR,TB,TG,TC,QC,UC,TRL,TBL,TGL,RAINR,RAINB,RAING,ALBD_LW,ALBD_SW,QVsat,Ra,FracU10,FracT2,FracQ2,MFLUX,SWDt,LWDt)
     !$acc kernels
-    !$acc loop collapse(2) private(TRL,TBL,TGL) reduction(.and.: converged) independent
+    !$acc loop collapse(2) reduction(.and.: converged) independent &
+    !$acc private(w,Uabs,TR,TB,TG,TC,QC,UC,TRL,TBL,TGL,RAINR,RAINB,RAING,ALBD_LW,ALBD_SW,QVsat,Ra,FracU10,FracT2,FracQ2,MFLUX,SWDt,LWDt)
     do j = UJS, UJE
     do i = UIS, UIE
 
@@ -585,6 +588,9 @@ contains
        RAINR = RAINR_URB(i,j)
        RAINB = RAINB_URB(i,j)
        RAING = RAING_URB(i,j)
+
+       SWDt(:) = SWD(i,j,:)
+       LWDt(:) = LWD(i,j,:)
 
        call SLC_main( UKA, UKS, UKE, UIA, UIS, UIE, UJA, UJS, UJE, &
                       TRL     (:),        & ! [INOUT]
@@ -634,8 +640,8 @@ contains
                       V1      (i,j),      & ! [IN]
                       LHV     (i,j),      & ! [IN]
                       Z1      (i,j),      & ! [IN]
-                      SWD     (i,j,:),    & ! [IN]
-                      LWD     (i,j,:),    & ! [IN]
+                      SWDt    (:),        & ! [IN]
+                      LWDt    (:),        & ! [IN]
                       RAIN    (i,j),      & ! [IN]
                       EFLX    (i,j),      & ! [IN]
                       DENS    (i,j),      & ! [IN]

@@ -2037,11 +2037,8 @@ contains
           !$omp shared(POTL,TEML,EXNER) &
           !$omp shared(KS,KE,IA,JA)
           !$acc kernels
-          !$acc loop independent
           do j = 1, JA
-          !$acc loop independent
           do i = 1, IA
-          !$acc loop independent
           do k = KS, KE
              POTL(k,i,j) = TEML(k,i,j) / EXNER(k,i,j)
           enddo
@@ -2081,11 +2078,8 @@ contains
              !$omp shared(QTOT,QV,QHYD) &
              !$omp shared(KS,KE,IA,JA)
              !$acc kernels
-             !$acc loop independent
              do j = 1, JA
-             !$acc loop independent
              do i = 1, IA
-             !$acc loop independent
              do k = KS, KE
                 QTOT(k,i,j) = QV(k,i,j) + QHYD(k,i,j)
              enddo
@@ -2128,11 +2122,8 @@ contains
              !$omp shared(QHYD,QLIQ,QICE) &
              !$omp shared(KS,KE,IA,JA)
              !$acc kernels
-             !$acc loop independent
              do j = 1, JA
-             !$acc loop independent
              do i = 1, IA
-             !$acc loop independent
              do k = KS, KE
                 QHYD(k,i,j) = QLIQ(k,i,j) + QICE(k,i,j)
              enddo
@@ -2172,11 +2163,8 @@ contains
           !$omp shared(QLIQ,QC,QR) &
           !$omp shared(KS,KE,IA,JA)
           !$acc kernels
-          !$acc loop independent
           do j = 1, JA
-          !$acc loop independent
           do i = 1, IA
-          !$acc loop independent
           do k = KS, KE
              QLIQ(k,i,j) = QC(k,i,j) + QR(k,i,j)
           enddo
@@ -2200,11 +2188,8 @@ contains
           !$omp shared(QICE,QI,QS,QG,QH) &
           !$omp shared(KS,KE,IA,JA)
           !$acc kernels
-          !$acc loop independent
           do j = 1, JA
-          !$acc loop independent
           do i = 1, IA
-          !$acc loop independent
           do k = KS, KE
              QICE(k,i,j) = QI(k,i,j) + QS(k,i,j) + QG(k,i,j) + QH(k,i,j)
           enddo
@@ -2248,11 +2233,8 @@ contains
              !$omp shared(RHA,DENS_av,QV,WORK,TEMP) &
              !$omp shared(KS,KE,IA,JA)
              !$acc kernels
-             !$acc loop independent
              do j = 1, JA
-             !$acc loop independent
              do i = 1, IA
-             !$acc loop independent
              do k = KS, KE
                 RHA(k,i,j) = DENS_av(k,i,j) * QV(k,i,j) &
                            / WORK(k,i,j) * Rvap * TEMP(k,i,j) &
@@ -2299,11 +2281,8 @@ contains
              !$omp shared(RHL,DENS_av,QV,WORK,TEMP) &
              !$omp shared(KS,KE,IA,JA)
              !$acc kernels
-             !$acc loop independent
              do j = 1, JA
-             !$acc loop independent
              do i = 1, IA
-             !$acc loop independent
              do k = KS, KE
                 RHL(k,i,j) = DENS_av(k,i,j) * QV(k,i,j) &
                            / WORK(k,i,j) * Rvap * TEMP(k,i,j) &
@@ -2350,11 +2329,8 @@ contains
              !$omp shared(RHI,DENS_av,QV,WORK,TEMP) &
              !$omp shared(KS,KE,IA,JA)
              !$acc kernels
-             !$acc loop independent
              do j = 1, JA
-             !$acc loop independent
              do i = 1, IA
-             !$acc loop independent
              do k = KS, KE
                 RHI(k,i,j) = DENS_av(k,i,j) * QV(k,i,j) &
                            / WORK(k,i,j) * Rvap * TEMP(k,i,j) &
@@ -2496,11 +2472,8 @@ contains
           !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
           !$acc kernels
 !OCL XFILL
-          !$acc loop independent
           do j = 1, JA
-          !$acc loop independent
           do i = 1, IA
-          !$acc loop independent
           do k = KS, KE
              DIV(k,i,j) = ( MOMZ_av(k,i,j) - MOMZ_av(k-1,i  ,j  ) ) / ( REAL_FZ(k,i,j)-REAL_FZ(k-1,i,j) ) &
                         + HDIV(k,i,j)
@@ -2524,9 +2497,7 @@ contains
              !$omp parallel do private(j,k) OMP_SCHEDULE_
              !$acc kernels
 !OCL XFILL
-             !$acc loop independent
              do j = 2, JA
-             !$acc loop independent
              do k = KS, KE
                 HDIV(k,IS,j) = ( MOMY_av(k,IS,j) - MOMY_av(k  ,IS,j-1) ) * RCDY(j)
              enddo
@@ -2542,11 +2513,8 @@ contains
              !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
              !$acc kernels
 !OCL XFILL
-             !$acc loop independent
              do j = 2, JA
-                !$acc loop independent
              do i = 2, IA
-                !$acc loop independent
              do k = KS, KE
                 HDIV(k,i,j) = ( MOMX_av(k,i,j) - MOMX_av(k  ,i-1,j  ) ) * RCDX(i) &
                             + ( MOMY_av(k,i,j) - MOMY_av(k  ,i  ,j-1) ) * RCDY(j)
@@ -2587,11 +2555,8 @@ contains
 !OCL XFILL
           !$omp parallel do private(k,i,j) OMP_SCHEDULE_ collapse(2)
           !$acc kernels
-          !$acc loop independent
           do j = 1, JA
-          !$acc loop independent
           do i = 1, IA
-          !$acc loop independent
           do k = KS, KE
              Uabs(k,i,j) = sqrt( W(k,i,j)**2 + U(k,i,j)**2 + V(k,i,j)**2 )
           enddo
@@ -2630,11 +2595,8 @@ contains
 !OCL XFILL
           !$omp parallel do private(k,i,j) OMP_SCHEDULE_ collapse(2)
           !$acc kernels
-          !$acc loop independent
           do j = 1, JA
-          !$acc loop independent
           do i = 1, IA
-          !$acc loop independent
           do k = KS, KE
              MSE(k,i,j) = CPTOT(k,i,j) * TEMP(k,i,j)                    &
                         + GRAV * ( REAL_CZ(k,i,j) - REAL_FZ(KS-1,i,j) ) &
@@ -2670,11 +2632,8 @@ contains
           call allocate_3D( ENGP )
           !$omp parallel do private(k,i,j) OMP_SCHEDULE_ collapse(2)
           !$acc kernels
-          !$acc loop independent
           do j = 1, JA
-          !$acc loop independent
           do i = 1, IA
-          !$acc loop independent
           do k = KS, KE
              ENGP(k,i,j) = DENS_av(k,i,j) * GRAV * REAL_CZ(k,i,j)
           end do
@@ -2694,11 +2653,8 @@ contains
           call allocate_3D( ENGK )
           !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
           !$acc kernels
-          !$acc loop independent
           do j = 1, JA
-          !$acc loop independent
           do i = 1, IA
-          !$acc loop independent
           do k = KS, KE
              ENGK(k,i,j) = 0.5_RP * DENS_av(k,i,j) &
                          * ( W(k,i,j)**2 + U(k,i,j)**2 + V(k,i,j)**2 )
@@ -2719,11 +2675,8 @@ contains
           call allocate_3D( ENGI )
           !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
           !$acc kernels
-          !$acc loop independent
           do j = 1, JA
-          !$acc loop independent
           do i = 1, IA
-          !$acc loop independent
           do k = KS, KE
              ENGI(k,i,j) = DENS_av(k,i,j) * QDRY(k,i,j) * TEMP(k,i,j) * CVdry
              do iq = 1, QA
@@ -2750,11 +2703,8 @@ contains
           call ATMOS_vars_get_diagnostic( 'ENGI', WORK3D(:,:,:) )
           !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
           !$acc kernels
-          !$acc loop independent
           do j = 1, JA
-          !$acc loop independent
           do i = 1, IA
-          !$acc loop independent
           do k = KS, KE
              ENGT(k,i,j) = ENGP(k,i,j) + ENGK(k,i,j) + ENGI(k,i,j)
           enddo
@@ -2776,11 +2726,8 @@ contains
 !OCL XFILL
           !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
           !$acc kernels
-          !$acc loop independent
           do j = 1, JA
-          !$acc loop independent
           do i = 1, IA
-          !$acc loop independent
           do k = KS, KE
              DENS_PRIM(k,i,j) = DENS_av(k,i,j) - DENS_MEAN(k)
           enddo
@@ -2802,11 +2749,8 @@ contains
 !OCL XFILL
           !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
           !$acc kernels
-          !$acc loop independent
           do j = 1, JA
-          !$acc loop independent
           do i = 1, IA
-          !$acc loop independent
           do k = KS, KE
              W_PRIM(k,i,j) = W(k,i,j) - W_MEAN(k)
           enddo
@@ -2828,11 +2772,8 @@ contains
 !OCL XFILL
           !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
           !$acc kernels
-          !$acc loop independent
           do j = 1, JA
-          !$acc loop independent
           do i = 1, IA
-          !$acc loop independent
           do k = KS, KE
              U_PRIM(k,i,j) = U(k,i,j) - U_MEAN(k)
           enddo
@@ -2854,11 +2795,8 @@ contains
 !OCL XFILL
           !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
           !$acc kernels
-          !$acc loop independent
           do j = 1, JA
-          !$acc loop independent
           do i = 1, IA
-          !$acc loop independent
           do k = KS, KE
              V_PRIM(k,i,j) = V(k,i,j) - V_MEAN(k)
           enddo
@@ -2880,11 +2818,8 @@ contains
 !OCL XFILL
           !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
           !$acc kernels
-          !$acc loop independent
           do j = 1, JA
-          !$acc loop independent
           do i = 1, IA
-          !$acc loop independent
           do k = KS, KE
              PT_PRIM(k,i,j) = POTT(k,i,j) - PT_MEAN(k)
           enddo
@@ -2906,11 +2841,8 @@ contains
 !OCL XFILL
           !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
           !$acc kernels
-          !$acc loop independent
           do j = 1, JA
-          !$acc loop independent
           do i = 1, IA
-          !$acc loop independent
           do k = KS, KE
              W_PRIM2(k,i,j) = W_PRIM(k,i,j)**2
           enddo
@@ -2932,11 +2864,8 @@ contains
           call ATMOS_vars_get_diagnostic( 'PT_PRIM', WORK3D(:,:,:) )
           !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
           !$acc kernels
-          !$acc loop independent
           do j = 1, JA
-          !$acc loop independent
           do i = 1, IA
-          !$acc loop independent
           do k = KS, KE
              PT_W_PRIM(k,i,j) = W_PRIM(k,i,j) * PT_PRIM(k,i,j) * DENS_av(k,i,j) * CPdry
           enddo
@@ -2958,11 +2887,8 @@ contains
 !OCL XFILL
           !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
           !$acc kernels
-          !$acc loop independent
           do j = 1, JA
-          !$acc loop independent
           do i = 1, IA
-          !$acc loop independent
           do k = KS, KE
              W_PRIM3(k,i,j) = W_PRIM(k,i,j)**3
           enddo
@@ -2986,11 +2912,8 @@ contains
 !OCL XFILL
           !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
           !$acc kernels
-          !$acc loop independent
           do j = 1, JA
-          !$acc loop independent
           do i = 1, IA
-          !$acc loop independent
           do k = KS, KE
              TKE_RS(k,i,j) = 0.5_RP * ( W_PRIM(k,i,j)**2 + U_PRIM(k,i,j)**2 + V_PRIM(k,i,j)**2 )
           enddo
@@ -3011,12 +2934,9 @@ contains
 !OCL XFILL
           !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
           !$acc kernels
-          !$acc loop independent
           do j = 1, JA
-          !$acc loop independent
           do i = 1, IA
              VELZ(KS-1,i,j) = 0.0_RP
-             !$acc loop independent
              do k = KS, KE-1
                 VELZ(k,i,j) = MOMZ(k,i,j) * 2.0_RP / ( DENS(k,i,j) + DENS(k+1,i,j) )
              end do
@@ -3039,9 +2959,7 @@ contains
 !OCL XFILL
              !$omp parallel do private(j,k) OMP_SCHEDULE_
              !$acc kernels
-             !$acc loop independent
              do j = 1, JA
-             !$acc loop independent
              do k = KS, KE
                 VELX(k,IS,j) = MOMX(k,IS,j) / DENS(k,IS,j)
              enddo
@@ -3051,11 +2969,8 @@ contains
              !OCL XFILL
              !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
              !$acc kernels
-             !$acc loop independent
              do j = 1, JA
-             !$acc loop independent
              do i = 1, IA-1
-             !$acc loop independent
              do k = KS, KE
                 VELX(k,i,j) = MOMX(k,i,j) * 2.0_RP / ( DENS(k,i,j) + DENS(k,i+1,j) )
              enddo
@@ -3065,9 +2980,7 @@ contains
 !OCL XFILL
              !$omp parallel do private(j,k) OMP_SCHEDULE_
              !$acc kernels
-             !$acc loop independent
              do j = 1, JA
-             !$acc loop independent
              do k = KS, KE
                 VELX(k,IA,j) = MOMX(k,IA,j) / DENS(k,IA,j)
              enddo
@@ -3090,11 +3003,8 @@ contains
 !OCL XFILL
           !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
           !$acc kernels
-          !$acc loop independent
           do j = 1, JA-1
-          !$acc loop independent
           do i = 1, IA
-          !$acc loop independent
           do k = KS, KE
              VELY(k,i,j) = MOMY(k,i,j) * 2.0_RP / ( DENS(k,i,j) + DENS(k,i,j+1) )
           enddo
@@ -3104,9 +3014,7 @@ contains
 !OCL XFILL
           !$omp parallel do private(i,k) OMP_SCHEDULE_
           !$acc kernels
-          !$acc loop independent
           do i = 1, IA
-          !$acc loop independent
           do k = KS, KE
              VELY(k,i,JA) = MOMY(k,i,JA) / DENS(k,i,JA)
           enddo
@@ -3128,11 +3036,8 @@ contains
 !OCL XFILL
           !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
           !$acc kernels
-          !$acc loop independent
           do j = 1, JA
-          !$acc loop independent
           do i = 1, IA
-          !$acc loop independent
           do k = KS, KE
              Umet(k,i,j) = U(k,i,j) * ROTC(i,j,1) - V(k,i,j) * ROTC(i,j,2)
           end do
@@ -3153,11 +3058,8 @@ contains
 !OCL XFILL
           !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
           !$acc kernels
-          !$acc loop independent
           do j = 1, JA
-          !$acc loop independent
           do i = 1, IA
-          !$acc loop independent
           do k = KS, KE
              Vmet(k,i,j) = U(k,i,j) * ROTC(i,j,2) + V(k,i,j) * ROTC(i,j,1)
           end do
@@ -3415,9 +3317,7 @@ contains
           call allocate_2D( SNOW )
           !$omp parallel do private(i,j) OMP_SCHEDULE_
           !$acc kernels
-          !$acc loop independent
           do j = JS, JE
-          !$acc loop independent
           do i = IS, IE
              RAIN(i,j) = SFLX_rain_MP(i,j) + SFLX_rain_CP(i,j)
              SNOW(i,j) = SFLX_snow_MP(i,j) + SFLX_snow_CP(i,j)
@@ -3511,7 +3411,6 @@ contains
           call STATISTICS_horizontal_mean( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
                                            WORK(:,:,:), AREA(:,:), W_MEAN(:) )
           !$acc kernels
-          !$acc loop independent
           do k = KS, KE
              W_MEAN(k) = W_MEAN(k) / DENS_MEAN(k)
           enddo
@@ -3540,7 +3439,6 @@ contains
           call STATISTICS_horizontal_mean( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
                                            WORK(:,:,:), AREA(:,:), U_MEAN(:) )
           !$acc kernels
-          !$acc loop independent
           do k = KS, KE
              U_MEAN(k) = U_MEAN(k) / DENS_MEAN(k)
           enddo
@@ -3569,7 +3467,6 @@ contains
           call STATISTICS_horizontal_mean( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
                                            WORK(:,:,:), AREA(:,:), V_MEAN(:) )
           !$acc kernels
-          !$acc loop independent
           do k = KS, KE
              V_MEAN(k) = V_MEAN(k) / DENS_MEAN(k)
           enddo
@@ -3587,7 +3484,6 @@ contains
           call STATISTICS_horizontal_mean( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
                                            RHOT(:,:,:), AREA(:,:), PT_MEAN(:) )
           !$acc kernels
-          !$acc loop independent
           do k = KS, KE
              PT_MEAN(k) = PT_MEAN(k) / DENS_MEAN(k)
           enddo
@@ -3616,7 +3512,6 @@ contains
           call STATISTICS_horizontal_mean( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
                                            WORK(:,:,:), AREA(:,:), T_MEAN(:) )
           !$acc kernels
-          !$acc loop independent
           do k = KS, KE
              T_MEAN(k) = T_MEAN(k) / DENS_MEAN(k)
           enddo
@@ -3646,7 +3541,6 @@ contains
              call STATISTICS_horizontal_mean( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
                                               WORK(:,:,:), AREA(:,:), QV_MEAN(:) )
              !$acc kernels
-             !$acc loop independent
              do k = KS, KE
                 QV_MEAN(k) = QV_MEAN(k) / DENS_MEAN(k)
              enddo
@@ -3684,7 +3578,6 @@ contains
           call STATISTICS_horizontal_mean( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
                                            WORK(:,:,:), AREA(:,:), QHYD_MEAN(:) )
           !$acc kernels
-          !$acc loop independent
           do k = KS, KE
              QHYD_MEAN(k) = QHYD_MEAN(k) / DENS_MEAN(k)
           enddo
@@ -3714,7 +3607,6 @@ contains
           call STATISTICS_horizontal_mean( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
                                            WORK(:,:,:), AREA(:,:), QLIQ_MEAN(:) )
           !$acc kernels
-          !$acc loop independent
           do k = KS, KE
              QLIQ_MEAN(k) = QLIQ_MEAN(k) / DENS_MEAN(k)
           enddo
@@ -3744,7 +3636,6 @@ contains
           call STATISTICS_horizontal_mean( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
                                            WORK(:,:,:), AREA(:,:), QICE_MEAN(:) )
           !$acc kernels
-          !$acc loop independent
           do k = KS, KE
              QICE_MEAN(k) = QICE_MEAN(k) / DENS_MEAN(k)
           enddo

@@ -5699,19 +5699,19 @@ contains
 
   real(DP) :: qknt( ndat+kdeg ), elm( ndat,ndat ), coef( ndat )
 
-  call getknot                        &
-         ( ndat, kdeg, xmss( myu,: ), & !--- in
-           qknt                       ) !--- out
+  call getknot                         &
+         ( ndat, kdeg, myu, xmss(:,:), & !--- in
+           qknt                        ) !--- out
 
-  call getmatrx                             &
-         ( ndat, kdeg, qknt, xmss( myu,: ), & !--- in
-           elm                              ) !--- out
+  call getmatrx                              &
+         ( ndat, kdeg, qknt, myu, xmss(:,:), & !--- in
+           elm                               ) !--- out
 
-  call getcoef                             &
-         ( ndat, kdeg, elm, zcap( myu,: ), & !--- in
-           coef                            ) !--- out
+  call getcoef                              &
+         ( ndat, kdeg, elm, myu, zcap(:,:), & !--- in
+           coef                             ) !--- out
 
-  fcpc = fspline ( ndat, kdeg, coef, qknt, xmss( myu,: ), x )
+  fcpc = fspline( ndat, kdeg, coef, qknt, myu, xmss(:,:), x )
 
   end function fcpc
   !---------------------------------------------------------------------------------------
@@ -5758,23 +5758,24 @@ contains
 
   if( kphase == 0 ) then
    call getknot                        &
-         ( ndat, kdeg, xmss( myu,: ), & !--- in
+         ( ndat, kdeg, myu, xmss(:,:), & !--- in
            qknt                       ) !--- out
 
    rknt( : ) = qknt( : )
 
-   call getcoef2                          &
-         ( ndat, ndat, kdeg, kdeg,       & !--- in
-           xmss( myu,: ), xmss( nyu,: ), & !--- in
-           qknt, rknt,                   & !--- in
-           ykrn( myu,nyu,:,: ),          & !--- in
-           coef                          ) !--- out
+   call getcoef2                   &
+         ( ndat, ndat, kdeg, kdeg, &
+           myu, myu,               & !--- in
+           xmss(:,:), xmss(:,:),   & !--- in
+           qknt, rknt,             & !--- in
+           ykrn(:,:,:,:),          & !--- in
+           coef                    ) !--- out
 
-   fckrn = fspline2                          &
-            ( ndat, ndat, kdeg, kdeg,       & !--- in
-              coef, qknt, rknt,             & !--- in
-              xmss( myu,: ), xmss( nyu,: ), & !--- in
-              x, y                          ) !--- in
+   fckrn = fspline2                   &
+            ( ndat, ndat, kdeg, kdeg, & !--- in
+              coef, qknt, rknt, myu,  & !--- in
+              xmss(:,:), xmss(:,:),   & !--- in
+              x, y                    ) !--- in
   else if( kphase == 1 ) then
    xlrg = max( x, y )
    xsml = min( x, y )
@@ -5817,19 +5818,19 @@ contains
 
   real(DP) :: qknt( ndat+kdeg ), elm( ndat,ndat ), coef( ndat )
 
-  call getknot                        &
-         ( ndat, kdeg, xmss( myu,: ), & !--- in
-           qknt                       ) !--- out
+  call getknot                         &
+         ( ndat, kdeg, myu, xmss(:,:), & !--- in
+           qknt                        ) !--- out
 
-  call getmatrx                             &
-         ( ndat, kdeg, qknt, xmss( myu,: ), & !--- in
-           elm                              ) !--- out
+  call getmatrx                              &
+         ( ndat, kdeg, qknt, myu, xmss(:,:), & !--- in
+           elm                               ) !--- out
 
-  call getcoef                             &
-         ( ndat, kdeg, elm, vtrm( myu,: ), & !--- in
-           coef                            ) !--- out
+  call getcoef                              &
+         ( ndat, kdeg, elm, myu, vtrm(:,:), & !--- in
+           coef                             ) !--- out
 
-  fvterm = fspline ( ndat, kdeg, coef, qknt, xmss( myu,: ), x )
+  fvterm = fspline ( ndat, kdeg, coef, qknt, myu, xmss(:,:), x )
 
   end function fvterm
   !---------------------------------------------------------------------------------------
@@ -5853,19 +5854,19 @@ contains
 
   real(DP) :: qknt( ndat+kdeg ), elm( ndat,ndat ), coef( ndat )
 
-  call getknot                        &
-         ( ndat, kdeg, xmss( myu,: ), & !--- in
-           qknt                       ) !--- out
+  call getknot                         &
+         ( ndat, kdeg, myu, xmss(:,:), & !--- in
+           qknt                        ) !--- out
 
-  call getmatrx                             &
-         ( ndat, kdeg, qknt, xmss( myu,: ), & !--- in
-           elm                              ) !--- out
+  call getmatrx                              &
+         ( ndat, kdeg, qknt, myu, xmss(:,:), & !--- in
+           elm                               ) !--- out
 
-  call getcoef                             &
-         ( ndat, kdeg, elm, blkr( myu,: ), & !--- in
-           coef                            ) !--- out
+  call getcoef                              &
+         ( ndat, kdeg, elm, myu, blkr(:,:), & !--- in
+           coef                             ) !--- out
 
-  fbulkrad = fspline ( ndat, kdeg, coef, qknt, xmss( myu,: ), x )
+  fbulkrad = fspline( ndat, kdeg, coef, qknt, myu, xmss(:,:), x )
 
   end function fbulkrad
   !---------------------------------------------------------------------------------------
@@ -6066,13 +6067,14 @@ contains
 
   end subroutine  TINVSS
   !---------------------------------------------------------------
-  subroutine getknot      &
-      ( ndat, kdeg, xdat, & !--- in
-        qknt              ) !--- out
+  subroutine getknot           &
+      ( ndat, kdeg, myu, xdat, & !--- in
+        qknt                  ) !--- out
 
   integer, intent(in) :: ndat  !  number of data
   integer, intent(in) :: kdeg  !  degree of Spline + 1
-  real(DP), intent(in) :: xdat( ndat ) ! data of independent var.
+  integer, intent(in) :: myu
+  real(DP), intent(in) :: xdat(nspc_mk,ndat) ! data of independent var.
 
   real(DP), intent(out) :: qknt( ndat+kdeg ) ! knots for B-Spline
 
@@ -6080,22 +6082,22 @@ contains
   integer :: i
 
   do i = 1, kdeg
-    qknt( i ) = xdat( 1 )
+    qknt( i ) = xdat(myu,1)
   end do
 
   do i = 1, ndat-kdeg
-    qknt( i+kdeg ) = ( xdat( i )+xdat( i+kdeg ) )*0.50_DP
+    qknt( i+kdeg ) = ( xdat(myu,i)+xdat(myu,i+kdeg) )*0.50_DP
   end do
 
   do i = 1, kdeg
-    qknt( ndat+i ) = xdat( ndat )
+    qknt( ndat+i ) = xdat(myu,ndat)
   end do
 
   return
 
   end subroutine getknot
   !---------------------------------------------------------------
-  recursive function fbspl ( ndat, inum, kdeg, qknt, xdat, x ) &
+  recursive function fbspl ( ndat, inum, kdeg, qknt, myu, xdat, x ) &
   result (bspl)
 
   real(DP) :: bspl
@@ -6103,15 +6105,16 @@ contains
   integer, intent(in) :: ndat  !  number of data
   integer, intent(in) :: inum  !  index of B-Spline
   integer, intent(in) :: kdeg  !  degree of B-Spline + 1
-  real(DP), intent(in) :: qknt( ndat+kdeg )  !  knot of B-Spline
-  real(DP), intent(in) :: xdat( ndat ) ! data of independent variable
+  real(DP), intent(in) :: qknt(ndat+kdeg)  !  knot of B-Spline
+  integer, intent(in) :: myu
+  real(DP), intent(in) :: xdat(nspc_mk,ndat) ! data of independent variable
   real(DP), intent(in) :: x     !  interpolation point
 
   !--- local
   real(DP) :: bsp1, bsp2
 
-  if ( ( inum == 1 .AND. x == xdat( 1 ) ) .OR. &
-       ( inum == ndat .AND. x == xdat( ndat ) ) ) then
+  if ( ( inum == 1 .AND. x == xdat(myu,1) ) .OR. &
+       ( inum == ndat .AND. x == xdat(myu,ndat) ) ) then
     bspl = 1.
     return
   end if
@@ -6126,14 +6129,14 @@ contains
     if ( qknt( inum+kdeg-1 ) /= qknt( inum ) ) then
       bsp1 = ( x-qknt( inum ) ) &
             /( qknt( inum+kdeg-1 )-qknt( inum ) ) &
-           * fbspl( ndat, inum, kdeg-1, qknt, xdat, x )
+           * fbspl( ndat, inum, kdeg-1, qknt, myu, xdat, x )
     else
       bsp1 = 0.0_DP
     end if
     if ( qknt( inum+kdeg ) /= qknt( inum+1 ) ) then
       bsp2 = ( qknt( inum+kdeg )-x ) &
             /( qknt( inum+kdeg )-qknt( inum+1 ) ) &
-           * fbspl( ndat, inum+1, kdeg-1, qknt, xdat, x )
+           * fbspl( ndat, inum+1, kdeg-1, qknt, myu, xdat, x )
     else
       bsp2 =  0.0_DP
     end if
@@ -6142,11 +6145,12 @@ contains
 
   end function fbspl
   !---------------------------------------------------------------
-  function fpb( ndat, i, kdeg, qknt, xdat, elm, x )
+  function fpb( ndat, i, kdeg, qknt, myu, xdat, elm, x )
 
   real :: fpb
   integer :: ndat, i, kdeg
-  real(DP) :: qknt( ndat+kdeg ), xdat( ndat ), elm( ndat,ndat )
+  integer :: myu
+  real(DP) :: qknt(ndat+kdeg), xdat(nspc_mk,ndat), elm(ndat,ndat)
   real(DP) :: x
 
   integer :: l
@@ -6154,25 +6158,26 @@ contains
 
   sum = 0.0_DP
   do l = 1, ndat
-    sum = sum + elm( l,i )*fbspl( ndat, l, kdeg, qknt, xdat, x )
+    sum = sum + elm( l,i )*fbspl( ndat, l, kdeg, qknt, myu, xdat, x )
   end do
 
   fpb = sum
 
   end function fpb
   !---------------------------------------------------------------
-  subroutine getmatrx           &
-      ( ndat, kdeg, qknt, xdat, & !--- in
-        elm                     ) !--- out
+  subroutine getmatrx                &
+      ( ndat, kdeg, qknt, myu, xdat, & !--- in
+        elm                          ) !--- out
 
 !  use scale_tinvss, only: TINVSS
 
   integer, intent(in) :: ndat
   integer, intent(in) :: kdeg
-  real(DP), intent(in) :: qknt( ndat+kdeg )
-  real(DP), intent(in) :: xdat( ndat )
+  real(DP), intent(in) :: qknt(ndat+kdeg)
+  integer,  intent(in) :: myu
+  real(DP), intent(in) :: xdat(nspc_mk,ndat)
 
-  real(DP), intent(out) :: elm( ndat,ndat )
+  real(DP), intent(out) :: elm(ndat,ndat)
 
   !--- local
   real(DP) :: dt
@@ -6181,7 +6186,7 @@ contains
 
   do i = 1, ndat
   do j = 1, ndat
-    elm( i,j ) = fbspl( ndat, j, kdeg, qknt, xdat, xdat( i ) )
+    elm( i,j ) = fbspl( ndat, j, kdeg, qknt, myu, xdat, xdat(myu,i) )
   end do
   end do
 
@@ -6191,16 +6196,17 @@ contains
 
   end subroutine getmatrx
   !---------------------------------------------------------------
-  subroutine getcoef           &
-      ( ndat, kdeg, elm, ydat, & !--- in
-        coef                   ) !--- out
+  subroutine getcoef                &
+      ( ndat, kdeg, elm, myu, ydat, & !--- in
+        coef                        ) !--- out
 
   integer, intent(in) :: ndat  !  number of data
   integer, intent(in) :: kdeg  !  degree of Spline + 1
-  real(DP), intent(in) :: elm( ndat,ndat ) ! matrix ( inverse )
-  real(DP), intent(in) :: ydat( ndat )  ! data of dependent var.
+  real(DP), intent(in) :: elm(ndat,ndat) ! matrix ( inverse )
+  integer,  intent(in) :: myu
+  real(DP), intent(in) :: ydat(nspc_mk,ndat)  ! data of dependent var.
 
-  real(DP), intent(out) :: coef( ndat ) ! expansion coefficient
+  real(DP), intent(out) :: coef(ndat) ! expansion coefficient
 
   !--- local
   integer :: i, j
@@ -6209,7 +6215,7 @@ contains
   do i = 1, ndat
     sum = 0.0_DP
     do j = 1, ndat
-      sum = sum + elm( i,j )*ydat( j )
+      sum = sum + elm( i,j )*ydat(myu,j)
     end do
     coef( i ) = sum
   end do
@@ -6218,12 +6224,13 @@ contains
 
   end subroutine getcoef
   !---------------------------------------------------------------
-  function fspline ( ndat, kdeg, coef, qknt, xdat, x )
+  function fspline ( ndat, kdeg, coef, qknt, myu, xdat, x )
 
   integer, intent(in) :: ndat
   integer, intent(in) :: kdeg
   real(DP), intent(in) :: coef( ndat )
   real(DP), intent(in) :: qknt( ndat+kdeg )
+  integer,  intent(in) :: myu
   real(DP), intent(in) :: xdat( ndat )
   real(DP), intent(in) :: x
 
@@ -6235,7 +6242,7 @@ contains
 
   sum = 0.0_DP
   do i = 1, ndat
-    sum = sum + coef( i )*fbspl( ndat, i, kdeg, qknt, xdat, x )
+    sum = sum + coef( i )*fbspl( ndat, i, kdeg, qknt, myu, xdat, x )
   end do
 
   fspline = sum
@@ -6244,10 +6251,10 @@ contains
 
   end function fspline
   !---------------------------------------------------------------
-  subroutine getcoef2                 &
-      ( mdat, ndat, kdeg, ldeg,       & !--- in
-        xdat, ydat, qknt, rknt, zdat, & !--- in
-        coef                          ) !--- out
+  subroutine getcoef2                     &
+      ( mdat, ndat, kdeg, ldeg, myu, nyu, & !--- in
+        xdat, ydat, qknt, rknt, zdat,     & !--- in
+        coef                              ) !--- out
 
 !  use scale_tinvss, only: TINVSS
 
@@ -6255,11 +6262,13 @@ contains
   integer, intent(in) :: ndat  !  number of data (y-direction)
   integer, intent(in) :: kdeg  !  degree of Spline + 1 (x)
   integer, intent(in) :: ldeg  !  degree of Spline + 1 (y)
-  real(DP), intent(in) :: xdat( mdat )  ! data of independent var. (x)
-  real(DP), intent(in) :: ydat( ndat )  ! data of independent var. (y)
-  real(DP), intent(in) :: qknt( mdat+kdeg ) ! knots of B-Spline (x)
-  real(DP), intent(in) :: rknt( ndat+ldeg ) ! knots of B-Spline (y)
-  real(DP), intent(in) :: zdat( mdat,ndat ) ! data of dependent var.
+  integer, intent(in) :: myu
+  integer, intent(in) :: nyu
+  real(DP), intent(in) :: xdat(nspc_mk,mdat)  ! data of independent var. (x)
+  real(DP), intent(in) :: ydat(nspc_mk,ndat)  ! data of independent var. (y)
+  real(DP), intent(in) :: qknt(mdat+kdeg) ! knots of B-Spline (x)
+  real(DP), intent(in) :: rknt(ndat+ldeg) ! knots of B-Spline (y)
+  real(DP), intent(in) :: zdat(nspc_mk,nspc_mk,mdat,ndat) ! data of dependent var.
 
   real(DP), intent(out) :: coef( mdat,ndat ) ! expansion coefficient
 
@@ -6272,7 +6281,7 @@ contains
 
   do i = 1, mdat
   do j = 1, mdat
-    elmx( i,j ) = fbspl( mdat, j, kdeg, qknt, xdat, xdat( i ) )
+    elmx( i,j ) = fbspl( mdat, j, kdeg, qknt, myu, xdat, xdat(myu,i) )
   end do
   end do
   call TINVSS( mdat, elmx, dt, eps, mdat, iw1, inder )
@@ -6281,7 +6290,7 @@ contains
   do i = 1, mdat
     sum = 0.0_DP
     do j = 1, mdat
-      sum = sum + elmx( i,j )*zdat( j,l )
+      sum = sum + elmx( i,j )*zdat(myu,nyu,j,l)
     end do
     beta( i,l ) = sum
   end do
@@ -6289,7 +6298,7 @@ contains
 
   do i = 1, ndat
   do j = 1, ndat
-    elmy( i,j ) = fbspl( ndat, j, ldeg, rknt, ydat, ydat( i ) )
+    elmy( i,j ) = fbspl( ndat, j, ldeg, rknt, myu, ydat, ydat(myu,i) )
   end do
   end do
   call TINVSS( ndat, elmy, dt, eps, ndat, iw2, inder )
@@ -6308,10 +6317,11 @@ contains
 
   end subroutine getcoef2
   !---------------------------------------------------------------
-  function fspline2                          &
-             ( mdat, ndat, kdeg, ldeg,       & !--- in
-               coef, qknt, rknt, xdat, ydat, & !--- in
-               x, y                          ) !--- in
+  function fspline2                    &
+             ( mdat, ndat, kdeg, ldeg, & !--- in
+               coef, qknt, rknt, myu,  &
+               xdat, ydat,             & !--- in
+               x, y                    ) !--- in
 
   integer, intent(in) :: mdat
   integer, intent(in) :: ndat
@@ -6320,7 +6330,8 @@ contains
   real(DP), intent(in) :: coef( mdat,ndat )
   real(DP), intent(in) :: qknt( mdat+kdeg )
   real(DP), intent(in) :: rknt( ndat+ldeg )
-  real(DP), intent(in) :: xdat( mdat ), ydat( ndat )
+  integer,  intent(in) :: myu
+  real(DP), intent(in) :: xdat(nspc_mk,mdat), ydat(nspc_mk,ndat)
   real(DP), intent(in) :: x, y
 
   real(DP) :: fspline2
@@ -6332,8 +6343,8 @@ contains
   sum = 0.0_DP
   do i = 1, mdat
   do j = 1, ndat
-    add = coef( i,j )*fbspl( mdat, i, kdeg, qknt, xdat, x ) &
-                     *fbspl( ndat, j, ldeg, rknt, ydat, y )
+    add = coef( i,j )*fbspl( mdat, i, kdeg, qknt, myu, xdat, x ) &
+                     *fbspl( ndat, j, ldeg, rknt, myu, ydat, y )
     sum = sum + add
   end do
   end do

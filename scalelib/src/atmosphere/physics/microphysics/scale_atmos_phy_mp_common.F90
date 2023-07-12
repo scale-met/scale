@@ -390,11 +390,11 @@ contains
        !$omp private(i,j,k, &
        !$omp         QV1,QC1,QI1,Emoist,converged)
        !$acc kernels copyin(DENS) copyout(RHOE_d) copy(TEMP, QV, QC, QI, CPtot, CVtot)
-       !$acc loop reduction(.or.:error) independent
+       !$acc loop reduction(.or.:error)
        do j = JS, JE
-       !$acc loop reduction(.or.:error) independent
+       !$acc loop reduction(.or.:error)
        do i = IS, IE
-       !$acc loop reduction(.or.:error) private(qv1, qc1, qi1, emoist, converged) independent
+       !$acc loop reduction(.or.:error) private(qv1, qc1, qi1, emoist, converged)
        do k = KS, KE
           QV1 = QV(k,i,j)
           QC1 = QC(k,i,j)

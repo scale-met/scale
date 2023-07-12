@@ -225,7 +225,7 @@ contains
     st = 1
     do l = 1, lmax
        !$omp parallel do private(k1,k2,f1,f2)
-       !$acc loop independent
+       !$acc loop private(k1,k2,f1,f2)
        do k = st*2, kmax, st*2
           k1 = k - st
           k2 = k + st
@@ -338,7 +338,7 @@ contains
     iw2 = 2
     do l = 1, lmax
        !$omp parallel do private(k1,k2,f1,f2)
-       !$acc loop independent
+       !$acc loop private(k1,k2,f1,f2)
        do k = 1, kmax
           k1 = k - st
           k2 = k + st

@@ -287,7 +287,7 @@ contains
     !$omp         QVsat,dQVsat,dUstar,dTstar,dQstar,dWstar,dFracU10,dFracT2,dFracQ2, &
     !$omp         Uabs,dUabs,dRLmo,Ra,dRa,MFLUX)
     !$acc parallel
-    !$acc loop collapse(2) reduction(.or.:err_flag) independent &
+    !$acc loop collapse(2) reduction(.or.:err_flag) &
     !$acc private(qdry,Rtot,flx_qv,redf,res,dts,olddts,emis,LWD,LWU,SWD,SWU,dres,oldres,dQVS, &
     !$acc         QVsat,dQVsat,dUstar,dTstar,dQstar,dWstar,dFracU10,dFracT2,dFracQ2, &
     !$acc         Uabs,dUabs,dRLmo,Ra,dRa,MFLUX)

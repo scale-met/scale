@@ -874,10 +874,9 @@ contains
        !$omp private(A,B,Ci,Co,F1,F2,F3,PT,pg,advcv)
 #endif
        !$acc kernels
-       !$acc loop independent
        do j = JJS, JJE
 #if LSIZE == 1
-       !$acc loop independent private(F1,F2,F3,PT,Ci,Co,A,work)
+       !$acc loop private(F1,F2,F3,PT,Ci,Co,A,work)
        do i = IIS, IIE
 #else
        do ii = IIS, IIE, LSIZE
@@ -901,14 +900,12 @@ contains
                   MOMZ(:,i,j), POTT(:,i,j), GSQRT(:,i,j,I_XYZ), & ! (in)
                   CDZ )
 
-             !$acc loop independent
              do k = KS, KE
                 A(k) = dtrk**2 * J33G * RCDZ(k) * RT2P(k,i,j) * J33G / GSQRT(k,i,j,I_XYZ)
              enddo
              B = GRAV * dtrk**2 * J33G / ( CDZ(KS+1) + CDZ(KS) )
              F1(KS,l) =        - ( PT(KS+1,l) * RFDZ(KS) *   A(KS+1)         + B ) / GSQRT(KS,i,j,I_XYW)
              F2(KS,l) = 1.0_RP + ( PT(KS  ,l) * RFDZ(KS) * ( A(KS+1)+A(KS) )     ) / GSQRT(KS,i,j,I_XYW)
-             !$acc loop independent
              do k = KS+1, KE-2
                 B = GRAV * dtrk**2 * J33G / ( CDZ(k+1) + CDZ(k) )
                 F1(k,l) =        - ( PT(k+1,l) * RFDZ(k) *   A(k+1)        + B ) / GSQRT(k,i,j,I_XYW)
@@ -919,7 +916,6 @@ contains
              B = GRAV * dtrk**2 * J33G / ( CDZ(KE) + CDZ(KE-1) )
              F2(KE-1,l) = 1.0_RP + ( PT(KE-1,l) * RFDZ(KE-1) * ( A(KE)+A(KE-1) )    ) / GSQRT(KE-1,i,j,I_XYW)
              F3(KE-1,l) =        - ( PT(KE-2,l) * RFDZ(KE-1) *         A(KE-1)  - B ) / GSQRT(KE-1,i,j,I_XYW)
-             !$acc loop independent
              do k = KS, KE-1
                 ! use not density at the half level but mean density between CZ(k) and CZ(k+1)
                 pg = - ( DPRES(k+1,i,j) + RT2P(k+1,i,j)*dtrk*St(k+1,i,j) &
@@ -955,7 +951,6 @@ contains
              if ( i > IIE ) exit
 #endif
 
-             !$acc loop independent
              do k = KS, KE-1
 #ifdef DEBUG_HEVI2HEVE
                 ! for debug (change to explicit integration)
@@ -995,7 +990,6 @@ contains
 #ifdef HIST_TEND
              if ( lhist ) advcv_t(KS,i,j,I_RHOT) = advcv
 #endif
-             !$acc loop independent
              do k = KS+1, KE-1
                 advcv = - ( Co(k,l)         - Co(k-1,l) ) &
                       * J33G * RCDZ(k) / GSQRT(k,i,j,I_XYZ)

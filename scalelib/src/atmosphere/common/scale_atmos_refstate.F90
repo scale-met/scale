@@ -981,36 +981,66 @@ contains
     real(RP), intent(in) :: REAL_PHI(KA,IA,JA)
 
     real(RP) :: RovCP
-    integer :: i, j
+    integer :: k, i, j
 
     RovCP = Rdry / CPdry
 
     !$acc kernels
-    !$acc loop collapse(2) independent
+    !$acc loop collapse(2)
     do j = JS, JE
     do i = IS, IE
-       ATMOS_REFSTATE_temp(1:KS-1, i,j) = ATMOS_REFSTATE_temp(KS,i,j)
-       ATMOS_REFSTATE_temp(KE+1:KA,i,j) = ATMOS_REFSTATE_temp(KE,i,j)
+       !$acc loop seq
+       do k = 1, KS-1
+          ATMOS_REFSTATE_temp(k, i,j) = ATMOS_REFSTATE_temp(KS,i,j)
+       end do
+       !$acc loop seq
+       do k = KE+1, KA
+          ATMOS_REFSTATE_temp(k,i,j) = ATMOS_REFSTATE_temp(KE,i,j)
+       end do
 
-       ATMOS_REFSTATE_qv  (1:KS-1, i,j) = ATMOS_REFSTATE_qv  (KS,i,j)
-       ATMOS_REFSTATE_qv  (KE+1:KA,i,j) = ATMOS_REFSTATE_qv  (KE,i,j)
+       !$acc loop seq
+       do k = 1, KS-1
+          ATMOS_REFSTATE_qv  (k, i,j) = ATMOS_REFSTATE_qv  (KS,i,j)
+       end do
+       !$acc loop seq
+       do k = KE+1, KA
+          ATMOS_REFSTATE_qv  (k,i,j) = ATMOS_REFSTATE_qv  (KE,i,j)
+       end do
 
-       ATMOS_REFSTATE_pres(1:KS-2, i,j) = UNDEF
+       !$acc loop seq
+       do k = 1, KS-2
+          ATMOS_REFSTATE_pres(k, i,j) = UNDEF
+       end do
        ATMOS_REFSTATE_pres(KS-1,   i,j) = ATMOS_REFSTATE_pres(KS+1,i,j) &
                                         - ATMOS_REFSTATE_dens(KS  ,i,j) * ( REAL_PHI(KS-1,i,j) - REAL_PHI(KS+1,i,j) )
        ATMOS_REFSTATE_pres(KE+1,   i,j) = ATMOS_REFSTATE_pres(KE-1,i,j) &
                                         - ATMOS_REFSTATE_dens(KE  ,i,j) * ( REAL_PHI(KE+1,i,j) - REAL_PHI(KE-1,i,j) )
-       ATMOS_REFSTATE_pres(KE+2:KA,i,j) = UNDEF
+       !$acc loop seq
+       do k = KE+2, KA
+          ATMOS_REFSTATE_pres(k,i,j) = UNDEF
+       end do
 
-       ATMOS_REFSTATE_dens(1:KS-2, i,j) = UNDEF
+       !$acc loop seq
+       do k = 1, KS-2
+          ATMOS_REFSTATE_dens(k, i,j) = UNDEF
+       end do
        ATMOS_REFSTATE_dens(KS-1,   i,j) = ATMOS_REFSTATE_pres(KS-1,i,j) / ( ATMOS_REFSTATE_temp(KS-1,i,j) * Rdry )
        ATMOS_REFSTATE_dens(KE+1,   i,j) = ATMOS_REFSTATE_pres(KE+1,i,j) / ( ATMOS_REFSTATE_temp(KE+1,i,j) * Rdry )
-       ATMOS_REFSTATE_dens(KE+2:KA,i,j) = UNDEF
+       !$acc loop seq
+       do k = KE+2, KA
+          ATMOS_REFSTATE_dens(k,i,j) = UNDEF
+       end do
 
-       ATMOS_REFSTATE_pott(1:KS-2, i,j) = UNDEF
+       !$acc loop seq
+       do k = 1, KS-2
+          ATMOS_REFSTATE_pott(k, i,j) = UNDEF
+       end do
        ATMOS_REFSTATE_pott(KS-1,   i,j) = ATMOS_REFSTATE_temp(KS-1,i,j) * ( P00 / ATMOS_REFSTATE_pres(KS-1,i,j) )**RovCP
        ATMOS_REFSTATE_pott(KE+1,   i,j) = ATMOS_REFSTATE_temp(KE+1,i,j) * ( P00 / ATMOS_REFSTATE_pres(KE+1,i,j) )**RovCP
-       ATMOS_REFSTATE_pott(KE+2:KA,i,j) = UNDEF
+       !$acc loop seq
+       do k = KE+2, KA
+          ATMOS_REFSTATE_pott(k,i,j) = UNDEF
+       end do
     enddo
     enddo
     !$acc end kernels

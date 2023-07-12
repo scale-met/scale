@@ -273,6 +273,8 @@ contains
     real(RP) :: flux(LKS-1:LKE,LSIZE)
 
     real(RP) :: ro, rw, ri
+    real(RP) :: ro_sum, roe_sum
+
     real(RP) :: sw
 
     integer :: k, i, j
@@ -325,11 +327,8 @@ contains
 
           !$omp parallel do
           !$acc kernels
-          !$acc loop independent
           do j = LJS,LJE
-          !$acc loop independent
           do i = LIS,LIE
-          !$acc loop independent
           do k = LKS,LKE
              if ( TEMP1(k,i,j) == UNDEF ) then
                 NDG_TEMP (k,i,j) = 0.0_RP
@@ -343,11 +342,8 @@ contains
 
           !$omp parallel do
           !$acc kernels
-          !$acc loop independent
           do j = LJS,LJE
-          !$acc loop independent
           do i = LIS,LIE
-          !$acc loop independent
           do k = LKS,LKE
              if ( WATER1(k,i,j) == UNDEF ) then
                 NDG_WATER(k,i,j) = 0.0_RP
@@ -364,9 +360,7 @@ contains
        if ( .not. LAND_DYN_BUCKET_UPDATE_BOTTOM_WATER ) then
           !$omp parallel do
           !$acc kernels
-          !$acc loop independent
           do j = LJS, LJE
-          !$acc loop independent
           do i = LIS, LIE
              NDG_WATER(LKE,i,j) = 0.0_RP
           end do
@@ -377,9 +371,7 @@ contains
        if ( .not. LAND_DYN_BUCKET_UPDATE_BOTTOM_TEMP ) then
           !$omp parallel do
           !$acc kernels
-          !$acc loop independent
           do j = LJS, LJE
-          !$acc loop independent
           do i = LIS, LIE
              NDG_TEMP(LKE,i,j) = 0.0_RP
           end do
@@ -392,11 +384,8 @@ contains
       
        !$omp parallel do
        !$acc kernels
-       !$acc loop independent
        do j = LJS,LJE
-       !$acc loop independent
        do i = LIS,LIE
-       !$acc loop independent
        do k = LKS,LKE
           NDG_TEMP (k,i,j) = 0.0_RP
           NDG_WATER(k,i,j) = 0.0_RP
@@ -430,10 +419,9 @@ contains
        !$omp F1, F2, F3, V, flux, kappa,               &
        !$omp CS, CL, ro, rw, ri, sw )
        !$acc kernels
-       !$acc loop independent
        do j = LJS, LJE
 #if LSIZE == 1
-       !$acc loop independent private( &
+       !$acc loop private( &
        !$acc MASS_total, MASS_water, MASS_ice, &
        !$acc TEMP2, WATER2, ICE2, ENGI,        &
        !$acc F1, F2, F3, V, work, flux, kappa )
@@ -445,21 +433,18 @@ contains
           do l = 1, len
              i = land_iindx_list(ii+l-1,j)
 #endif
-             !$acc loop independent
              do k = LKS, LKE
                 MASS_total(k) = DWATR * WATER(k,i,j) + DICE * ICE(k,i,j)
              end do
              MASS_total(LKS) = MASS_total(LKS) + dt * SFLX_water(i,j) / CDZ(LKS)
 
              CS = ( 1.0_RP - WaterLimit(i,j) ) * HeatCapacity(i,j)
-             !$acc loop independent
              do k = LKS, LKE
                 ENGI(k,l) = ( CS + WATER_DENSCS * WATER(k,i,j) + ICE_DENSCS * ICE(k,i,j) ) * TEMP(k,i,j) - LHF * DICE * ICE(k,i,j)
              end do
              ENGI(LKS,l) = ENGI(LKS,l) + dt * ( SFLX_GH(i,j) + SFLX_RHOE(i,j) ) / CDZ(LKS)
 
              ! phase change
-             !$acc loop independent
              do k = LKS, LKE
                 MASS_ice(k) = min( MASS_total(k), max( 0.0_RP, &
                    ( ENGI(k,l) - ( CS + CV_WATER * MASS_total(k) ) * LAND_DYN_BUCKET_T_frz ) &
@@ -487,7 +472,6 @@ contains
              F1(LKE,l) = 0.0_RP
              F2(LKE,l) = 1.0_RP - F3(LKE,l) - F1(LKE,l)
 
-             !$acc loop independent
              do k = LKS+1, LKE-1
                 F3(k,l) = -2.0_RP * WaterDiff(i,j) / ( CDZ(k) * ( CDZ(k) + CDZ(k-1) ) ) * dt
                 F1(k,l) = -2.0_RP * WaterDiff(i,j) / ( CDZ(k) * ( CDZ(k) + CDZ(k+1) ) ) * dt
@@ -518,12 +502,10 @@ contains
              flux(LKE,l)   = 0.0_RP
 
              CS = ( 1.0_RP - WaterLimit(i,j) ) * HeatCapacity(i,j)
-             !$acc loop independent
              do k = LKS, LKE
                kappa(k,l) = ThermalCond(i,j) + 0.5_RP * WATER2(k,l)**(1.0_RP/3.0_RP)
              end do
 
-             !$acc loop independent
              do k = LKS, LKE-1
                 flux(k,l) = - 2.0_RP *  DWATR * WaterDiff(i,j) * ( WATER2(k+1,l) - WATER2(k,l) ) / ( CDZ(k+1) + CDZ(k) )
                 sw = 0.5_RP - sign( 0.5_RP, flux(k,l) )
@@ -533,7 +515,6 @@ contains
                 flux(LKE,l) = flux(LKE-1,l)
              end if
 
-             !$acc loop independent
              do k = LKS, LKE
                 V(k,l) = ENGI(k,l) + LHF * DICE * ICE2(k,l) &
                           - dt * ( flux(k,l) - flux(k-1,l) ) / CDZ(k)
@@ -553,7 +534,6 @@ contains
              F1(LKE,l) = 0.0_RP
              F2(LKE,l) = CL - F3(LKE,l) - F1(LKE,l)
 
-             !$acc loop independent
              do k = LKS+1, LKE-1
                 CL = CS + WATER_DENSCS * WATER2(k,l) + ICE_DENSCS * ICE2(k,l)
                 F3(k,l) = - ( kappa(k,l) + kappa(k-1,l) ) / ( CDZ(k) * ( CDZ(k) + CDZ(k-1) ) ) * dt
@@ -580,7 +560,6 @@ contains
              i = land_iindx_list(ii+l-1,j)
 #endif
 
-             !$acc loop independent
              do k = LKS, LKE
                 TEMP2(k,l) = TEMP2(k,l) + NDG_TEMP(k,i,j)
 
@@ -592,10 +571,9 @@ contains
              end do
 
              ! runoff of soil moisture (vertical sum)
-             RUNOFF(i,j)      = 0.0_RP
-             RUNOFF_ENGI(i,j) = 0.0_RP
-
-             !$acc loop independent
+             ro_sum  = 0.0_RP
+             roe_sum = 0.0_RP
+             !$acc loop private(ro,rw,ri) reduction(+:ro_sum,roe_sum)
              do k = LKS, LKE
                 ro = max( WATER2(k,l) + ICE2(k,l) - WaterLimit(i,j), 0.0_RP )
                 rw = min( ro, WATER2(k,l) )
@@ -604,10 +582,13 @@ contains
                 ICE2(k,l) = ICE2(k,l) - ri
                 rw = rw * DWATR / dt
                 ri = ri * DICE / dt
-                RUNOFF(i,j) = RUNOFF(i,j) + ( rw + ri ) * CDZ(k)
-                RUNOFF_ENGI(i,j) = RUNOFF_ENGI(i,j) &
+                ro_sum = ro_sum + ( rw + ri ) * CDZ(k)
+                roe_sum = roe_sum &
                    + ( ( rw * CV_WATER + ri * CV_ICE ) * TEMP2(k,l) - ri * LHF ) * CDZ(k)
              end do
+             RUNOFF(i,j)      = ro_sum
+             RUNOFF_ENGI(i,j) = roe_sum
+
 
              if ( .not. LAND_DYN_BUCKET_UPDATE_BOTTOM_WATER ) then
                 WATER2(LKE,l) = WATER(LKE,i,j)
@@ -617,7 +598,6 @@ contains
                 TEMP2(LKE,l) = TEMP(LKE,i,j)      
              end if
 
-             !$acc loop independent
              do k = LKS, LKE
                 TEMP (k,i,j) = TEMP2 (k,l)
                 WATER(k,i,j) = WATER2(k,l)
@@ -637,11 +617,8 @@ contains
        ! if replace
 
        !$acc kernels
-       !$acc loop independent
        do j = LJS, LJE
-       !$acc loop independent
        do i = LIS, LIE
-       !$acc loop independent
        do k = LKS, LKE
           TEMP (k,i,j) = TEMP1 (k,i,j)
           WATER(k,i,j) = WATER1(k,i,j)

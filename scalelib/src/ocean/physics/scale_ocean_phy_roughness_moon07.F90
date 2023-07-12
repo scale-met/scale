@@ -122,9 +122,8 @@ contains
     !$omp        Z0M,Z0H,Z0E,Uabs,Z1,mask) &
     !$omp private(i,j,ite,U10M,Ustar)
     !$acc kernels
-    !$acc loop independent
     do j = OJS, OJE
-    !$acc loop independent
+    !$acc loop private(ite,U10M,Ustar)
     do i = OIS, OIE
        if ( mask(i,j) ) then
 

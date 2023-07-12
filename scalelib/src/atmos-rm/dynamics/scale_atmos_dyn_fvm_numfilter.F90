@@ -1722,11 +1722,11 @@ contains
          REF_dens, REF_pott,                               &
          ND_COEF, ND_LAPLACIAN_NUM, ND_SFC_FACT, ND_USE_RS )
       
-      call fvm_add_FluxDiv_xyz( DENS, num_diff(:,:,:,I_DENS,:), RCDZ, RCDX, RCDY, GSQRT, MAPF, TwoD, dt )
-      call fvm_add_FluxDiv_xyw( MOMZ, num_diff(:,:,:,I_MOMZ,:), RFDZ, RCDX, RCDY, GSQRT, MAPF, TwoD, dt )
-      call fvm_add_FluxDiv_uyz( MOMX, num_diff(:,:,:,I_MOMX,:), RCDZ, RFDX, RCDY, GSQRT, MAPF, TwoD, dt )
-      call fvm_add_FluxDiv_xvz( MOMY, num_diff(:,:,:,I_MOMY,:), RCDZ, RCDX, RFDY, GSQRT, MAPF, TwoD, dt )
-      call fvm_add_FluxDiv_xyz( RHOT, num_diff(:,:,:,I_RHOT,:), RCDZ, RCDX, RCDY, GSQRT, MAPF, TwoD, dt )
+      call fvm_add_FluxDiv_xyz( DENS, num_diff, I_DENS, RCDZ, RCDX, RCDY, GSQRT, MAPF, TwoD, dt )
+      call fvm_add_FluxDiv_xyw( MOMZ, num_diff, I_MOMZ, RFDZ, RCDX, RCDY, GSQRT, MAPF, TwoD, dt )
+      call fvm_add_FluxDiv_uyz( MOMX, num_diff, I_MOMX, RCDZ, RFDX, RCDY, GSQRT, MAPF, TwoD, dt )
+      call fvm_add_FluxDiv_xvz( MOMY, num_diff, I_MOMY, RCDZ, RCDX, RFDY, GSQRT, MAPF, TwoD, dt )
+      call fvm_add_FluxDiv_xyz( RHOT, num_diff, I_RHOT, RCDZ, RCDX, RCDY, GSQRT, MAPF, TwoD, dt )
       
       !$acc end data
 
@@ -2387,11 +2387,12 @@ contains
   !-----------------------------------------------------------------------------
 
   subroutine fvm_add_FluxDiv_xyz( &
-    var, flux, RCDZ, RCDX, RCDY, GSQRT, MAPF, TwoD, dt )
+    var, flux, i_var, RCDZ, RCDX, RCDY, GSQRT, MAPF, TwoD, dt )
    
     implicit none
     real(RP), intent(inout) :: var(KA,IA,JA)
-    real(RP), intent(in) :: flux(KA,IA,JA,3)
+    real(RP), intent(in) :: flux(KA,IA,JA,5,3)
+    integer,  intent(in) :: i_var
     real(RP), intent(in) :: RCDZ(KA)
     real(RP), intent(in) :: RCDX(IA)
     real(RP), intent(in) :: RCDY(JA)
@@ -2414,7 +2415,7 @@ contains
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE-1
-      flux_tmp(k,i,j,ZDIR) = GSQRT(k,i,j,I_XYW) * flux(k,i,j,ZDIR) / ( MAPF(i,j,1,I_XY)*MAPF(i,j,2,I_XY) )
+      flux_tmp(k,i,j,ZDIR) = GSQRT(k,i,j,I_XYW) * flux(k,i,j,i_var,ZDIR) / ( MAPF(i,j,1,I_XY)*MAPF(i,j,2,I_XY) )
     enddo
     enddo
     enddo
@@ -2433,7 +2434,7 @@ contains
     do j = JS, JE
     do i = IS-1, IE
     do k = KS, KE
-      flux_tmp(k,i,j,XDIR) = GSQRT(k,i,j,I_UYZ) / MAPF(i,j,2,I_UY) * flux(k,i,j,XDIR)
+      flux_tmp(k,i,j,XDIR) = GSQRT(k,i,j,I_UYZ) / MAPF(i,j,2,I_UY) * flux(k,i,j,i_var,XDIR)
     enddo
     enddo
     enddo
@@ -2443,7 +2444,7 @@ contains
     do j = JS-1, JE
     do i = IS, IE
     do k = KS, KE
-      flux_tmp(k,i,j,YDIR) = GSQRT(k,i,j,I_XVZ) / MAPF(i,j,1,I_XV) * flux(k,i,j,YDIR)
+      flux_tmp(k,i,j,YDIR) = GSQRT(k,i,j,I_XVZ) / MAPF(i,j,1,I_XV) * flux(k,i,j,i_var,YDIR)
     enddo
     enddo
     enddo
@@ -2470,10 +2471,11 @@ contains
     return
   end subroutine fvm_add_FluxDiv_xyz
 
-  subroutine fvm_add_FluxDiv_xyw( var, flux, RFDZ, RCDX, RCDY, GSQRT, MAPF, TwoD, dt )
+  subroutine fvm_add_FluxDiv_xyw( var, flux, i_var, RFDZ, RCDX, RCDY, GSQRT, MAPF, TwoD, dt )
     implicit none
     real(RP), intent(inout) :: var(KA,IA,JA)
-    real(RP), intent(in) :: flux(KA,IA,JA,3)
+    real(RP), intent(in) :: flux(KA,IA,JA,5,3)
+    integer,  intent(in) :: i_var
     real(RP), intent(in) :: RFDZ(KA-1)
     real(RP), intent(in) :: RCDX(IA)
     real(RP), intent(in) :: RCDY(JA)
@@ -2496,7 +2498,7 @@ contains
     do j = JS, JE
     do i = IS, IE
     do k = KS+1, KE-1
-      flux_tmp(k-1,i,j,ZDIR) = GSQRT(k,i,j,I_XYZ) * flux(k,i,j,ZDIR) / ( MAPF(i,j,1,I_XY)*MAPF(i,j,2,I_XY) )
+      flux_tmp(k-1,i,j,ZDIR) = GSQRT(k,i,j,I_XYZ) * flux(k,i,j,i_var,ZDIR) / ( MAPF(i,j,1,I_XY)*MAPF(i,j,2,I_XY) )
     enddo
     enddo
     enddo
@@ -2515,7 +2517,7 @@ contains
     do j = JS, JE
     do i = IS-1, IE
     do k = KS, KE-1
-      flux_tmp(k,i,j,XDIR) = GSQRT(k,i,j,I_UYW) / MAPF(i,j,2,I_UY) * flux(k,i,j,XDIR)
+      flux_tmp(k,i,j,XDIR) = GSQRT(k,i,j,I_UYW) / MAPF(i,j,2,I_UY) * flux(k,i,j,i_var,XDIR)
     enddo
     enddo
     enddo
@@ -2525,7 +2527,7 @@ contains
     do j = JS-1, JE
     do i = IS, IE
     do k = KS, KE-1
-      flux_tmp(k,i,j,YDIR) = GSQRT(k,i,j,I_XVW) / MAPF(i,j,1,I_XV) * flux(k,i,j,YDIR)
+      flux_tmp(k,i,j,YDIR) = GSQRT(k,i,j,I_XVW) / MAPF(i,j,1,I_XV) * flux(k,i,j,i_var,YDIR)
     enddo
     enddo
     enddo
@@ -2552,10 +2554,11 @@ contains
   end subroutine fvm_add_FluxDiv_xyw
 
 
-  subroutine fvm_add_FluxDiv_uyz( var, flux, RCDZ, RFDX, RCDY, GSQRT, MAPF, TwoD, dt )
+  subroutine fvm_add_FluxDiv_uyz( var, flux, i_var, RCDZ, RFDX, RCDY, GSQRT, MAPF, TwoD, dt )
     implicit none
     real(RP), intent(inout) :: var(KA,IA,JA)
-    real(RP), intent(in) :: flux(KA,IA,JA,3)
+    real(RP), intent(in) :: flux(KA,IA,JA,5,3)
+    integer,  intent(in) :: i_var
     real(RP), intent(in) :: RCDZ(KA)
     real(RP), intent(in) :: RFDX(IA-1)
     real(RP), intent(in) :: RCDY(JA)
@@ -2578,7 +2581,7 @@ contains
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE-1
-      flux_tmp(k,i,j,ZDIR) = GSQRT(k,i,j,I_UYW) * flux(k,i,j,ZDIR) / ( MAPF(i,j,1,I_UY)*MAPF(i,j,2,I_UY) )
+      flux_tmp(k,i,j,ZDIR) = GSQRT(k,i,j,I_UYW) * flux(k,i,j,i_var,ZDIR) / ( MAPF(i,j,1,I_UY)*MAPF(i,j,2,I_UY) )
     enddo
     enddo
     enddo
@@ -2597,7 +2600,7 @@ contains
     do j = JS, JE
     do i = IS, IE+1
     do k = KS, KE
-      flux_tmp(k,i-1,j,XDIR) = GSQRT(k,i,j,I_XYZ) / MAPF(i,j,2,I_XY) * flux(k,i,j,XDIR)
+      flux_tmp(k,i-1,j,XDIR) = GSQRT(k,i,j,I_XYZ) / MAPF(i,j,2,I_XY) * flux(k,i,j,i_var,XDIR)
     enddo
     enddo
     enddo
@@ -2607,7 +2610,7 @@ contains
     do j = JS-1, JE
     do i = IS, IE
     do k = KS, KE
-      flux_tmp(k,i,j,YDIR) = GSQRT(k,i,j,I_UVZ) / MAPF(i,j,1,I_UV) * flux(k,i,j,YDIR)
+      flux_tmp(k,i,j,YDIR) = GSQRT(k,i,j,I_UVZ) / MAPF(i,j,1,I_UV) * flux(k,i,j,i_var,YDIR)
     enddo
     enddo
     enddo
@@ -2634,10 +2637,11 @@ contains
     return
   end subroutine fvm_add_FluxDiv_uyz
 
-  subroutine fvm_add_FluxDiv_xvz( var, flux, RCDZ, RCDX, RFDY, GSQRT, MAPF, TwoD, dt )
+  subroutine fvm_add_FluxDiv_xvz( var, flux, i_var, RCDZ, RCDX, RFDY, GSQRT, MAPF, TwoD, dt )
     implicit none
     real(RP), intent(inout) :: var(KA,IA,JA)
-    real(RP), intent(in) :: flux(KA,IA,JA,3)
+    real(RP), intent(in) :: flux(KA,IA,JA,5,3)
+    integer,  intent(in) :: i_var
     real(RP), intent(in) :: RCDZ(KA)
     real(RP), intent(in) :: RCDX(IA)
     real(RP), intent(in) :: RFDY(JA-1)
@@ -2660,7 +2664,7 @@ contains
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE-1
-      flux_tmp(k,i,j,ZDIR) = GSQRT(k,i,j,I_XVW) * flux(k,i,j,ZDIR) / ( MAPF(i,j,1,I_XV)*MAPF(i,j,2,I_XV) )
+      flux_tmp(k,i,j,ZDIR) = GSQRT(k,i,j,I_XVW) * flux(k,i,j,i_var,ZDIR) / ( MAPF(i,j,1,I_XV)*MAPF(i,j,2,I_XV) )
     enddo
     enddo
     enddo
@@ -2679,7 +2683,7 @@ contains
     do j = JS, JE
     do i = IS-1, IE
     do k = KS, KE
-      flux_tmp(k,i,j,XDIR) = GSQRT(k,i,j,I_UVZ) / MAPF(i,j,2,I_UV) * flux(k,i,j,XDIR)
+      flux_tmp(k,i,j,XDIR) = GSQRT(k,i,j,I_UVZ) / MAPF(i,j,2,I_UV) * flux(k,i,j,i_var,XDIR)
     enddo
     enddo
     enddo
@@ -2689,7 +2693,7 @@ contains
     do j = JS, JE+1
     do i = IS, IE
     do k = KS, KE
-      flux_tmp(k,i,j-1,YDIR) = GSQRT(k,i,j,I_XYZ) / MAPF(i,j,1,I_XY) * flux(k,i,j,YDIR)
+      flux_tmp(k,i,j-1,YDIR) = GSQRT(k,i,j,I_XYZ) / MAPF(i,j,1,I_XY) * flux(k,i,j,i_var,YDIR)
     enddo
     enddo
     enddo

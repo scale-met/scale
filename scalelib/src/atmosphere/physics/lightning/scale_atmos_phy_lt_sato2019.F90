@@ -594,12 +594,11 @@ contains
 
     !$omp parallel do
     !$acc kernels
-    !$acc loop independent collapse(2)
+    !$acc loop collapse(2)
     do j = JS, JE
     do i = IS, IE
 
        ! calc total charge density
-       !$acc loop independent
        do k = KS, KE
           tmp_qcrg = 0.0_RP
           !$acc loop seq
@@ -609,7 +608,6 @@ contains
           QCRG(k,i,j) = tmp_qcrg * DENS(k,i,j) * 1.E-6_RP ![fC/kg] -> [nc/m3]
        enddo
 
-       !$acc loop independent
        do k = KS, KE
           QHYD_mass(k,i,j) = QHYD(k,i,j) * DENS(k,i,j) ![kg/kg] -> [kg/m3]
        enddo
@@ -621,7 +619,7 @@ contains
     iprod = 0.0_RP
     !$omp parallel do reduction(+:iprod) private(i,j,k)
     !$acc kernels
-    !$acc loop independent collapse(3) reduction(+:iprod)
+    !$acc loop collapse(3) reduction(+:iprod)
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -637,7 +635,7 @@ contains
 
        !$omp parallel do
        !$acc kernels
-       !$acc loop independent collapse(3)
+       !$acc loop collapse(3)
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
@@ -666,7 +664,7 @@ contains
 
     !$omp parallel do
     !$acc kernels
-    !$acc loop independent collapse(3)
+    !$acc loop collapse(3)
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -771,7 +769,7 @@ contains
             !$omp parallel do &
             !$omp private(Total_Sarea1,Total_Sarea2,r_totalSarea1,r_totalSarea2,zerosw)
             !$acc kernels
-            !$acc loop independent collapse(3)
+            !$acc loop collapse(3)
             do j = JS, JE
             do i = IS, IE
             do k = KS, KE
@@ -803,7 +801,7 @@ contains
             !$omp         diff_qcrg,crg_rate,sum_crg,qcrg_before, &
             !$omp         positive,negative,zerosw,sw,int_sw)
             !$acc parallel
-            !$acc loop independent collapse(2) gang
+            !$acc loop collapse(2) gang
             do j = JS, JE
             do i = IS, IE
             !$acc loop vector private(lack,flg_chrged,diff_qcrg,crg_rate,sum_crg)
@@ -925,7 +923,7 @@ contains
          end select
 
          !$acc kernels
-         !$acc loop independent collapse(3)
+         !$acc loop collapse(3)
          do j = JS, JE
          do i = IS, IE
 
@@ -949,7 +947,7 @@ contains
          iprod = 0.0_RP
          !$omp parallel do reduction(+:iprod) private(i,j,k)
          !$acc kernels
-         !$acc loop independent collapse(3) reduction(+:iprod)
+         !$acc loop collapse(3) reduction(+:iprod)
          do j = JS, JE
          do i = IS, IE
          do k = KS, KE
@@ -965,7 +963,7 @@ contains
 
             !$omp parallel do
             !$acc kernels
-            !$acc loop independent collapse(3)
+            !$acc loop collapse(3)
             do j = JS, JE
             do i = IS, IE
             do k = KS, KE
@@ -995,7 +993,7 @@ contains
          !--- Add Total number of path
          !$omp parallel do
          !$acc kernels
-         !$acc loop independent collapse(3)
+         !$acc loop collapse(3)
          do j = JS, JE
          do i = IS, IE
          do k = KS, KE
@@ -1120,7 +1118,7 @@ contains
             endif
             !---- Back to Charge density as previous step
             !$acc kernels
-            !$acc loop independent collapse(3)
+            !$acc loop collapse(3)
             do j = JS, JE
             do i = IS, IE
             do k = KS, KE
@@ -1155,7 +1153,7 @@ contains
 
        !$omp parallel do private(i,j,k)
        !$acc kernels
-       !$acc loop independent collapse(3)
+       !$acc loop collapse(3)
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
@@ -1175,7 +1173,7 @@ contains
     if ( HIST_sw(I_Ex  ) ) then
        !$omp parallel do private(i,j,k)
        !$acc kernels
-       !$acc loop independent collapse(3)
+       !$acc loop collapse(3)
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
@@ -1189,7 +1187,7 @@ contains
     if ( HIST_sw(I_Ey  ) ) then
        !$omp parallel do private(i,j,k)
        !$acc kernels
-       !$acc loop independent collapse(3)
+       !$acc loop collapse(3)
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
@@ -1203,7 +1201,7 @@ contains
     if ( HIST_sw(I_Ez  ) ) then
        !$omp parallel do private(i,j,k)
        !$acc kernels
-       !$acc loop independent collapse(3)
+       !$acc loop collapse(3)
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
@@ -1217,7 +1215,7 @@ contains
     if ( HIST_sw(I_Eabs) ) then
        !$omp parallel do private(i,j,k)
        !$acc kernels
-       !$acc loop independent collapse(3)
+       !$acc loop collapse(3)
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
@@ -1234,7 +1232,6 @@ contains
     if ( HIST_sw(I_Qneut) ) then
        !$omp parallel do private(i,j,k)
        !$acc kernels
-       !$acc loop independent collapse(3)
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
@@ -1248,7 +1245,6 @@ contains
     if ( HIST_sw(I_LTpath)  ) then
        !$omp parallel do private(i,j,k)
        !$acc kernels
-       !$acc loop independent collapse(3)
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
@@ -1262,7 +1258,6 @@ contains
     if ( HIST_sw(I_PosFLASH) ) then
        !$omp parallel do private(i,j,k)
        !$acc kernels
-       !$acc loop independent collapse(3)
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
@@ -1276,7 +1271,6 @@ contains
     if ( HIST_sw(I_NegFLASH) ) then
        !$omp parallel do private(i,j,k)
        !$acc kernels
-       !$acc loop independent collapse(3)
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
@@ -1290,7 +1284,6 @@ contains
     if ( HIST_sw(I_FlashPoint) ) then
        !$omp parallel do private(i,j,k)
        !$acc kernels
-       !$acc loop independent collapse(3)
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
@@ -1304,7 +1297,6 @@ contains
     if ( HIST_sw(I_FOD) ) then
        !$omp parallel do private(i,j)
        !$acc kernels
-       !$acc loop independent collapse(2)
        do j = JS, JE
        do i = IS, IE
           w3d(1,i,j) = B_F2013_TOT(i,j)/dt_LT ![num/grid/s]
@@ -1404,7 +1396,6 @@ contains
 
     !$omp parallel do private(i,j,k)
     !$acc kernels
-    !$acc loop independent collapse(3)
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -1419,7 +1410,6 @@ contains
 
     !$omp parallel do private(i,j,k)
     !$acc kernels
-    !$acc loop independent collapse(3)
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -1579,7 +1569,7 @@ contains
     norm = 0.0_RP
     !$omp parallel do reduction(+:norm) private(i, j, k)
     !$acc kernels
-    !$acc loop independent collapse(3) reduction(+:norm)
+    !$acc loop collapse(3) reduction(+:norm)
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -1592,7 +1582,6 @@ contains
     ! r = b - M x0
     !$omp parallel do private(i, j, k)
     !$acc kernels
-    !$acc loop independent collapse(3)
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -1604,7 +1593,6 @@ contains
 
     !$omp parallel do private(i, j, k)
     !$acc kernels
-    !$acc loop independent collapse(3)
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -1618,7 +1606,7 @@ contains
     r0r  = 0.0_RP
     !$omp parallel do reduction(+:r0r) private(i, j, k)
     !$acc kernels
-    !$acc loop independent collapse(3) reduction(+:r0r)
+    !$acc loop collapse(3) reduction(+:r0r)
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -1630,7 +1618,6 @@ contains
 
     !$omp parallel do private(i, j, k)
     !$acc kernels
-    !$acc loop independent collapse(3)
     do j = JS-1, JE+1
     do i = IS-1, IE+1
     do k = KS, KE
@@ -1654,7 +1641,7 @@ contains
        error = 0.0_RP
        !$omp parallel do reduction(+:error) private(i, j, k)
        !$acc kernels
-       !$acc loop independent collapse(3) reduction(+:error)
+       !$acc loop collapse(3) reduction(+:error)
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
@@ -1684,7 +1671,7 @@ contains
           iprod1 = 0.0_RP
           !$omp parallel do reduction(+:iprod1) private(i, j, k)
           !$acc kernels
-          !$acc loop independent collapse(3) reduction(+:iprod1)
+          !$acc loop collapse(3) reduction(+:iprod1)
           do j = JS, JE
           do i = IS, IE
           do k = KS, KE
@@ -1738,7 +1725,7 @@ contains
           iprod1 = 0.0_RP
           !$omp parallel do reduction(+:iprod1)  private(i, j, k)
           !$acc kernels
-          !$acc loop independent collapse(3) reduction(+:iprod1)
+          !$acc loop collapse(3) reduction(+:iprod1)
           do j = JS, JE
           do i = IS, IE
           do k = KS, KE
@@ -1761,7 +1748,6 @@ contains
        if( FLAG_preprocessing == 0 ) then  !-- No preprocessing
           !$omp parallel do
           !$acc kernels
-          !$acc loop independent collapse(3)
           do j = JS, JE
           do i = IS, IE
           do k = KS, KE
@@ -1773,7 +1759,6 @@ contains
        else  ! Preprocessing
           !$omp parallel do private(i, j, k)
           !$acc kernels
-          !$acc loop independent collapse(3)
           do j = JS, JE
           do i = IS, IE
           do k = KS, KE
@@ -1797,7 +1782,7 @@ contains
           iprod2 = 0.0_RP
           !$omp parallel do reduction(+:iprod1,iprod2)
           !$acc kernels
-          !$acc loop independent collapse(3) reduction(+:iprod1,iprod2)
+          !$acc loop collapse(3) reduction(+:iprod1,iprod2)
           do j = JS, JE
           do i = IS, IE
           do k = KS, KE
@@ -1845,7 +1830,7 @@ contains
           iprod2 = 0.0_RP
           !$omp parallel do reduction(+:iprod1,iprod2) private(i, j, k)
           !$acc kernels
-          !$acc loop independent collapse(3) reduction(+:iprod1,iprod2)
+          !$acc loop collapse(3) reduction(+:iprod1,iprod2)
           do j = JS, JE
           do i = IS, IE
           do k = KS, KE
@@ -1872,7 +1857,6 @@ contains
 
           !$omp parallel do private(i, j, k)
           !$acc kernels
-          !$acc loop independent collapse(3)
           do j = JS, JE
           do i = IS, IE
           do k = KS, KE
@@ -1884,7 +1868,6 @@ contains
 
           !$omp parallel do private(i, j, k)
           !$acc kernels
-          !$acc loop independent collapse(3)
           do j = JS, JE
           do i = IS, IE
           do k = KS, KE
@@ -1898,7 +1881,6 @@ contains
 
           !$omp parallel do private(i, j, k)
           !$acc kernels
-          !$acc loop independent collapse(3)
           do j = JS, JE
           do i = IS, IE
           do k = KS, KE
@@ -1910,7 +1892,6 @@ contains
 
           !$omp parallel do private(i, j, k)
           !$acc kernels
-          !$acc loop independent collapse(3)
           do j = JS, JE
           do i = IS, IE
           do k = KS, KE
@@ -1925,7 +1906,7 @@ contains
        iprod1 = 0.0_RP
        !$omp parallel do reduction(+:iprod1) private(i, j, k)
        !$acc kernels
-       !$acc loop independent collapse(3) reduction(+:iprod1)
+       !$acc loop collapse(3) reduction(+:iprod1)
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
@@ -1944,7 +1925,6 @@ contains
        if( FLAG_preprocessing == 0 ) then !--- No preprocessing
           !$omp parallel do private(i, j, k)
           !$acc kernels
-          !$acc loop independent collapse(3)
           do j = JS, JE
           do i = IS, IE
           do k = KS, KE
@@ -1956,7 +1936,6 @@ contains
        else
           !$omp parallel do private(i, j, k)
           !$acc kernels
-          !$acc loop independent collapse(3)
           do j = JS, JE
           do i = IS, IE
           do k = KS, KE
@@ -2320,7 +2299,7 @@ z(:,:,:)=1d30
    !$omp parallel do collapse(2)
 !   !$acc parallel vector_length(32)
    !$acc parallel vector_length(1)
-   !$acc loop independent collapse(2)
+   !$acc loop collapse(2)
    do j = JE, JS, -1
    do i = IE, IS, -1
       if ( mod((IE-i)+(JE-j),2)==0 ) then
@@ -2337,8 +2316,8 @@ z(:,:,:)=1d30
 #elif COLORING == 1
    !$omp parallel do
    !$acc parallel vector_length(1)
-   !$acc loop independent
    do j = JE, JS, -2
+   !$acc loop seq
    do i = IE, IS, -1
 
       Z(KE,i,j) = ( V(KE,i,j) &
@@ -2351,8 +2330,10 @@ z(:,:,:)=1d30
           + M(k,13,i,j)* Z(k+1,i+1,j  ) ) )/M(k,1,i,j)
       enddo
 #else
-   !$acc parallel num_gang(1) vector_length(1)
+   !$acc parallel
+   !$acc loop seq
    do j = JE, JS, -1
+   !$acc loop seq
    do i = IE, IS, -1
 
       Z(KE,i,j) = ( V(KE,i,j) &
@@ -2377,7 +2358,7 @@ z(:,:,:)=1d30
    !$omp parallel do collapse(2)
 !   !$acc parallel vector_length(32)
    !$acc parallel vector_length(1)
-   !$acc loop independent collapse(2)
+   !$acc loop collapse(2)
    do j = JE, JS, -1
    do i = IE, IS, -1
       if ( mod((IE-i)+(JE-j),2)==1 ) then
@@ -2424,8 +2405,8 @@ z(:,:,:)=1d30
 #elif COLORING == 1
    !$omp parallel do
    !$acc parallel vector_length(1)
-   !$acc loop independent
    do j = JE-1, JS, -2
+   !$acc loop seq
    do i = IE, IS, -1
       Z(KE,i,j) = ( V(KE,i,j) &
       -( M(KE,5,i,j) * Z(KE  ,i+1,j  ) &
@@ -2511,7 +2492,7 @@ z(:,:,:)=1d30
    !$omp parallel do collapse(2)
 !   !$acc parallel vector_length(32)
    !$acc parallel vector_length(1)
-   !$acc loop independent collapse(2)
+   !$acc loop collapse(2)
    do j = JS, JE
    do i = IS, IE
       if ( mod((i-IS)+(j-JS),2)==0 ) then
@@ -2528,8 +2509,8 @@ z(:,:,:)=1d30
 #elif COLORING == 1
    !$omp parallel do
    !$acc parallel vector_length(1)
-   !$acc loop independent
    do j = JS, JE, 2
+   !$acc loop seq
    do i = IS, IE
 
       Z(KS,i,j) = (V(KS,i,j) &
@@ -2542,8 +2523,10 @@ z(:,:,:)=1d30
           + M(k,8,i,j) * Z(k-1,i-1,j  ) ) )/M(k,1,i,j)
       enddo
 #else
-   !$acc parallel num_gang(1) vector_length(1)
+   !$acc parallel
+   !$acc loop seq
    do j = JS, JE
+   !$acc loop seq
    do i = IS, IE
 
       Z(KS,i,j) = (V(KS,i,j) &
@@ -2568,7 +2551,7 @@ z(:,:,:)=1d30
    !$omp parallel do collapse(2)
 !   !$acc parallel vector_length(32)
    !$acc parallel vector_length(1)
-   !$acc loop independent collapse(2)
+   !$acc loop collapse(2)
    do j = JS, JE
    do i = IS, IE
       if ( mod((i-IS)+(j-JS),2)==1 ) then
@@ -2615,8 +2598,8 @@ z(:,:,:)=1d30
 #elif COLORING == 1
    !$omp parallel do
    !$acc parallel vector_length(1)
-   !$acc loop independent
    do j = JS+1, JE, 2
+   !$acc loop seq
    do i = IS, IE
       Z(KS,i,j) = (V(KS,i,j) &
       -( M(KS,4,i,j) * Z(KS  ,i-1,j  )  &
@@ -2675,9 +2658,7 @@ z(:,:,:)=1d30
 
     !$omp parallel do private(i,j,k)
     !$acc kernels copyin(M,C) copyout(V)
-    !$acc loop independent
     do j = JS, JE
-    !$acc loop independent
     do i = IS, IE
        V(KS,i,j) = M(KS,1,i,j) * C(KS  ,i  ,j  ) &
                  + M(KS,3,i,j) * C(KS+1,i  ,j  ) &
@@ -2689,7 +2670,6 @@ z(:,:,:)=1d30
                  + M(KS,13,i,j)* C(KS+1,i+1,j  ) &
                  + M(KS,14,i,j)* C(KS+1,i  ,j-1) &
                  + M(KS,15,i,j)* C(KS+1,i  ,j+1)
-       !$acc loop independent
        do k = KS+1, KE-1
           V(k,i,j) = M(k,1,i,j) * C(k  ,i  ,j  ) &
                    + M(k,2,i,j) * C(k-1,i  ,j  ) &
@@ -3555,7 +3535,6 @@ z(:,:,:)=1d30
 
     !$omp parallel do
     !$acc kernels
-    !$acc loop independent collapse(4)
     do j = JS, JE
     do i = IS, IE
     do k = KS, IE
@@ -3570,11 +3549,11 @@ z(:,:,:)=1d30
     !--- search grid whose Efield is over threshold of flash inititation
     num_own = 0
     !$acc kernels
-    !$acc loop independent collapse(2)
+    !$acc loop collapse(2) independent
     do j = JS, JE
     do i = IS, IE
        Edif_max = -1.0_RP
-       !$acc loop independent reduction(max:Edif_max)
+       !$acc loop reduction(max:Edif_max)
        do k = KS, KE
           Edif(k) = Efield(k,i,j,I_lt_abs) - ( Eint-delEint )
           Edif_max = max( Edif_max, Edif(k) )
@@ -3585,12 +3564,10 @@ z(:,:,:)=1d30
           !$acc end atomic
           exce_grid(1,num_own) = CX(i)
           exce_grid(2,num_own) = CY(j)
-          !$acc loop independent
           do k = KS, KE
              fls_int_p(k,i,j) = 0.5_RP + sign( 0.5_RP, Edif(k)-EPS )
           enddo
        else
-          !$acc loop independent
           do k = KS, KE
              fls_int_p(k,i,j) = 0.0_RP
           enddo
@@ -3658,7 +3635,7 @@ z(:,:,:)=1d30
     !$omp parallel do reduction(+:Spls,Smns) &
     !$omp private(abs_qcrg_max,sw)
     !$acc kernels
-    !$acc loop independent collapse(2) reduction(+:Spls,Smns)
+    !$acc loop collapse(2) reduction(+:Spls,Smns)
     do j = JS, JE
     do i = IS, IE
 
@@ -3714,7 +3691,6 @@ z(:,:,:)=1d30
     !---- select initial point of flash by random select
     !$omp parallel do
     !$acc kernels
-    !$acc loop independent collapse(3)
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -3733,7 +3709,6 @@ z(:,:,:)=1d30
     !$acc end kernels
 
     !$acc kernels
-    !$acc loop independent collapse(2)
     do j = JS, JE
     do i = IS, IE
        B_OUT(i,j) = B(i,j)
@@ -3794,7 +3769,7 @@ z(:,:,:)=1d30
        !$omp reduction(+:own_prc_total) &
        !$omp private(E_det)
        !$acc kernels
-       !$acc loop independent collapse(3) reduction(+:own_prc_total)
+       !$acc loop collapse(3) reduction(+:own_prc_total)
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
@@ -3815,7 +3790,7 @@ z(:,:,:)=1d30
        !$omp reduction(+:own_prc_total) &
        !$omp private(E_det)
        !$acc kernels
-       !$acc loop independent collapse(3) reduction(+:own_prc_total)
+       !$acc loop collapse(3) reduction(+:own_prc_total)
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
@@ -3834,7 +3809,7 @@ z(:,:,:)=1d30
     call MPI_AllReduce(iprod1, buf, 1, MPI_integer, MPI_SUM, COMM_world, ierr)
     rprod1 = 0.0_RP
     !$acc kernels
-    !$acc loop independent collapse(3) reduction(max:rprod1)
+    !$acc loop collapse(3) reduction(max:rprod1)
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -3895,10 +3870,8 @@ z(:,:,:)=1d30
     !$omp parallel do &
     !$omp private(cwc,diffx,diffy,tmp,grid1,grid2)
     !$acc kernels
-    !$acc loop independent collapse(2)
     do j = JS, JE
     do i = IS, IE
-    !$acc loop vector
     do k = KS, KE
        if( TEMP(k,i,j) <= T00 .and. TEMP(k,i,j) >= tcrglimit ) then
           cwc = 0.0_RP

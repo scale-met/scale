@@ -379,6 +379,13 @@ contains
     real(RP) :: dens_toa(IA,JA)
     real(RP) :: temp_toa(IA,JA)
     real(RP) :: pres_toa(IA,JA)
+    ! k = KE
+    real(RP) :: pott_ke(IA,JA)
+    real(RP) :: qv_ke  (IA,JA)
+    real(RP) :: qc_ke  (IA,JA)
+    real(RP) :: dens_ke(IA,JA)
+    real(RP) :: temp_ke(IA,JA)
+    real(RP) :: pres_ke(IA,JA)
 
     real(RP) :: dens_mean
 
@@ -394,7 +401,7 @@ contains
 
     !$acc data copyin(pott, qv, qc, pres_sfc, pott_sfc, qv_sfc, qc_sfc, cz, fz, area) &
     !$acc      copyout(dens, temp, pres, temp_sfc) &
-    !$acc      create(dz, dz_top, pott_toa, qv_toa, qc_toa, dens_toa, temp_toa, pres_toa)
+    !$acc      create(dz, dz_top, pott_toa, qv_toa, qc_toa, dens_toa, temp_toa, pres_toa, pott_ke, qv_ke, qc_ke, dens_ke, temp_ke, pres_ke)
 
 
     converged = .true.
@@ -402,9 +409,8 @@ contains
     !--- from surface to lowermost atmosphere
     !$omp parallel do OMP_SCHEDULE_ collapse(2) reduction(.and.:converged)
     !$acc kernels
-    !$acc loop reduction(.and.: converged)
+    !$acc loop collapse(2) reduction(.and.: converged)
     do j = JS, JE
-    !$acc loop reduction(.and.: converged)
     do i = IS, IE
        call ATMOS_HYDROSTATIC_buildrho_1D( KA, KS, KE, &
                                            pott(:,i,j), qv(:,i,j), qc(:,i,j),                      & ! [IN]
@@ -438,13 +444,18 @@ contains
        pott_toa(i,j) = pott(KE,i,j)
        qv_toa  (i,j) = qv  (KE,i,j)
        qc_toa  (i,j) = qc  (KE,i,j)
+       ! value at k=KE
+       dens_ke(i,j) = DENS(KE,i,j)
+       pott_ke(i,j) = pott(KE,i,j)
+       qv_ke  (i,j) = qv  (KE,i,j)
+       qc_ke  (i,j) = qc  (KE,i,j)
     end do
     end do
     !$acc end kernels
 
     call ATMOS_HYDROSTATIC_buildrho_atmos_2D( IA, IS, IE, JA, JS, JE, &
                                               pott_toa(:,:), qv_toa(:,:), qc_toa(:,:),            & ! [IN]
-                                              dens(KE,:,:), pott(KE,:,:), qv(KE,:,:), qc(KE,:,:), & ! [IN]
+                                              dens_ke(:,:), pott_ke(:,:), qv_ke(:,:), qc_ke(:,:), & ! [IN]
                                               dz_top(:,:), KE+1,                                  & ! [IN]
                                               dens_toa(:,:), temp_toa(:,:), pres_toa(:,:)         ) ! [OUT]
 
@@ -462,10 +473,19 @@ contains
     !$acc end kernels
 
     call ATMOS_HYDROSTATIC_buildrho_atmos_rev_2D( IA, IS, IE, JA, JS, JE, &
-                                                  pott(KE,:,:), qv(KE,:,:), qc(KE,:,:),                   & ! [IN]
+                                                  pott_ke(:,:), qv_ke(:,:), qc_ke(:,:),                   & ! [IN]
                                                   dens_toa(:,:), pott_toa(:,:), qv_toa(:,:), qc_toa(:,:), & ! [IN]
                                                   dz_top(:,:), KE+1,                                      & ! [IN]
-                                                  dens(KE,:,:), temp(KE,:,:), pres(KE,:,:)                ) ! [OUT]
+                                                  dens_ke(:,:), temp_ke(:,:), pres_ke(:,:)                ) ! [OUT]
+
+    !$omp parallel do OMP_SCHEDULE_
+    !$acc kernels
+    do j = JS, JE
+    do i = IS, IE
+       DENS(KE,i,j) = dens_ke(i,j)
+    end do
+    end do
+    !$acc end kernels
 
     !--- from top of atmosphere to lowermost atmosphere
     call ATMOS_HYDROSTATIC_buildrho_atmos_rev_3D( KA, KS, KE, IA, IS, IE, JA, JS, JE, &

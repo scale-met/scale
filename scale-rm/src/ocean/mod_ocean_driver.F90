@@ -1037,6 +1037,8 @@ contains
 
     real(RP) :: sflx_GH(OIA,OJA)
 
+    real(RP) :: OCEAN_TEMP_KS(OIA,OJA)
+
     integer :: i, j
     !---------------------------------------------------------------------------
 
@@ -1126,17 +1128,35 @@ contains
        !$acc end kernels
 
        ! ice adjustment
-       call OCEAN_PHY_ICE_adjustment( OIA, OIS, OIE,           & ! [IN]
-                                      OJA, OJS, OJE,           & ! [IN]
-                                      exists_ocean  (:,:),     & ! [IN]
-                                      CDZ(OKS),                & ! [IN]
-                                      OCEAN_TEMP    (OKS,:,:), & ! [INOUT]
-                                      OCEAN_ICE_TEMP(:,:),     & ! [INOUT]
-                                      OCEAN_ICE_MASS(:,:),     & ! [INOUT]
-                                      MASS_FLUX     (:,:),     & ! [OUT]
-                                      ENGI_FLUX     (:,:),     & ! [OUT]
-                                      MASS_SUPL     (:,:),     & ! [OUT]
-                                      ENGI_SUPL     (:,:)      ) ! [OUT]
+       !$acc data create(OCEAN_TEMP_KS)
+       !$omp parallel do
+       !$acc kernels
+       do j = OJS, OJE
+       do i = OIS, OIE
+          OCEAN_TEMP_KS(i,j) = OCEAN_TEMP(OKS,i,j)
+       end do
+       end do
+       !$acc end kernels
+       call OCEAN_PHY_ICE_adjustment( OIA, OIS, OIE,       & ! [IN]
+                                      OJA, OJS, OJE,       & ! [IN]
+                                      exists_ocean  (:,:), & ! [IN]
+                                      CDZ(OKS),            & ! [IN]
+                                      OCEAN_TEMP_KS(:,:),  & ! [INOUT]
+                                      OCEAN_ICE_TEMP(:,:), & ! [INOUT]
+                                      OCEAN_ICE_MASS(:,:), & ! [INOUT]
+                                      MASS_FLUX     (:,:), & ! [OUT]
+                                      ENGI_FLUX     (:,:), & ! [OUT]
+                                      MASS_SUPL     (:,:), & ! [OUT]
+                                      ENGI_SUPL     (:,:)  ) ! [OUT]
+       !$omp parallel do
+       !$acc kernels
+       do j = OJS, OJE
+       do i = OIS, OIE
+          OCEAN_TEMP(OKS,i,j) = OCEAN_TEMP_KS(i,j)
+       end do
+       end do
+       !$acc end kernels
+       !$acc end data
 
        !$omp parallel do
        !$acc kernels

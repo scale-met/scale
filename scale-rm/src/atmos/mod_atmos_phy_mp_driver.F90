@@ -563,11 +563,8 @@ contains
 
        !$omp do
        !$acc kernels async
-       !$acc loop independent
        do j = JS, JE
-       !$acc loop independent
        do i = IS, IE
-       !$acc loop independent
        do k = KS, KE
           Rtot = CPtot(k,i,j) - CVtot(k,i,j)
           RHOT(k,i,j) = PRE00 / Rtot * ( DENS(k,i,j) * TEMP(k,i,j) * Rtot / PRE00 )**( CVtot(k,i,j) / CPtot(k,i,j) )
@@ -1190,7 +1187,7 @@ contains
           !$omp         RHOQ2_crg,mflux_crg,sflux_crg,eflux_crg, &
           !$omp         vterm,mflux,sflux,eflux,FLX_hydro,CP_t,CV_t)
           !$acc parallel
-          !$acc loop independent collapse(2) gang &
+          !$acc loop collapse(2) gang &
           !$acc private(vterm,FLX_hydro,DENS2,TEMP2,PRES2,CPtot2,CVtot2,RHOE,RHOE2,RHOQ,RHOQ2,mflux,sflux,eflux,FZ,FDZ,RFDZ,RCDZ, &
           !$acc         RHOQ2_crg,mflux_crg,sflux_crg,eflux_crg)
           do j = JS, JE
@@ -1237,6 +1234,7 @@ contains
              SFLX_ENGI(i,j) = 0.0_RP
              FLX_hydro(:) = 0.0_RP
 
+             !$acc loop seq
              do step = 1, MP_NSTEP_SEDIMENTATION
 
                 select case ( ATMOS_PHY_MP_TYPE )
@@ -1261,6 +1259,7 @@ contains
                         KA,        & ! [IN]
                         vterm(:,:) ) ! [OUT]
                 case default
+                   !$acc loop seq
                    do iq = QS_MP+1, QE_MP
                       do k = KS, KE
                          vterm(k,iq) = 0.0_RP ! tentative
@@ -1272,6 +1271,7 @@ contains
                 !$acc loop seq
                 do iq = QS_MP+1, QE_MP
                    if ( hist_vterm_idx(iq) > 0 ) then
+                      !$acc loop independent
                       do k = KS, KE
                          vterm_hist(k,i,j,hist_vterm_idx(iq)) = vterm_hist(k,i,j,hist_vterm_idx(iq)) &
                                                               + vterm(k,iq) * MP_RNSTEP_SEDIMENTATION
