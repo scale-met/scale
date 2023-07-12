@@ -931,6 +931,7 @@ contains
        zlcl, zmix,             &
        umfnewdold              )
     use scale_const,only :&
+         EPS     => CONST_EPS,    &
          TEM00   => CONST_TEM00,  &
          GRAV    => CONST_GRAV,   &
          EPSvap  => CONST_EPSvap, &
@@ -1209,7 +1210,7 @@ contains
        end if
 
        ! check...
-       if (temp_lcl + dtvv + dtrh < temp_env) then ! kf triggerfucn dtrh is used @ NHM trigger func
+       if (temp_lcl + dtvv + dtrh <= temp_env + EPS*1e3_RP ) then ! kf triggerfunc dtrh is used @ NHM trigger func
           ! parcel is not bouyant
           ! cycle and check one more up layer(15 hPa )
           cycle
