@@ -331,7 +331,6 @@ contains
        select case ( ATMOS_PHY_RD_TYPE )
        case ( "MSTRNX" )
 
-!          !$acc update host(DENS,TEMP,PRES,QV,SFC_TEMP,SFC_albedo,solins,cosSZA,CLDFRAC,MP_Re,MP_Qe,AE_Re,AE_Qe)
           call ATMOS_PHY_RD_MSTRNX_flux( &
                KA, KS, KE, IA, IS, IE, JA, JS, JE, &
                DENS(:,:,:), TEMP(:,:,:), PRES(:,:,:), QV(:,:,:), & ! [IN]
@@ -344,7 +343,6 @@ contains
                flux_rad(:,:,:,:,:,:),                            & ! [OUT]
                flux_rad_top(:,:,:,:,:), SFLX_rad_dn(:,:,:,:),    & ! [OUT]
                dtau_s = dtau_s(:,:,:), dem_s = dem_s(:,:,:)      ) ! [OUT]
-!          !$acc update device(flux_rad,flux_rad_top,SFLX_rad_dn,dtau_s,dem_s)
 
        case ( "OFFLINE" )
 
@@ -353,7 +351,6 @@ contains
                TIME_NOWDAYSEC,        & ! [IN]
                flux_rad(:,:,:,:,:,2), & ! [OUT]
                SFLX_rad_dn(:,:,:,:)   ) ! [OUT]
-          !$acc update device(flux_rad,SFLX_rad_dn)
           !$acc kernels
           flux_rad(:,:,:,:,:,1)   = 0.0_RP ! clear sky
           flux_rad_top(:,:,:,:,:) = 0.0_RP
@@ -452,7 +449,6 @@ contains
        !$acc end kernels
 
        ! apply radiative flux convergence -> heating rate
-       !$acc update host(CVtot)
        call ATMOS_PHY_RD_calc_heating( &
             KA, KS, KE, IA, IS, IE, JA, JS, JE, &
             flux_rad(:,:,:,:,:,2),     & ! [IN]
@@ -461,7 +457,6 @@ contains
             REAL_FZ(:,:,:),            & ! [IN]
             RHOH_RD(:,:,:),            & ! [OUT]
             temp_t = TEMP_t(:,:,:,:)   ) ! [OUT]
-       !$acc update device(RHOH_RD,TEMP_t)
 
 
 

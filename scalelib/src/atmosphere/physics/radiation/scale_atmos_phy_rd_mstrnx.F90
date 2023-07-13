@@ -428,12 +428,23 @@ contains
                           RD_aerosol_radi(:,:),   & ! [OUT]
                           RD_cldfrac     (:)      ) ! [OUT]
 
+    !$acc enter data copyin(RD_rhodz,RD_pres,RD_presh,RD_temp,RD_temph,RD_gas,RD_cfc,RD_aerosol_conc,RD_aerosol_radi,RD_cldfrac)
+
     return
   end subroutine ATMOS_PHY_RD_mstrnx_setup
 
   !-----------------------------------------------------------------------------
   !> finalize
   subroutine ATMOS_PHY_RD_mstrnx_finalize
+
+    !$acc exit data &
+    !$acc delete(waveh, &
+    !$acc        wgtch, fitPLK, logfitP, logfitT, fitT, &
+    !$acc        radmode, ngasabs, igasabs, ptype_nradius, &
+    !$acc        fsol, q, qmol, rayleigh, acfc_pow, nch, AKD, SKD, &
+    !$acc        Wmns, Wpls, Wscale, W, M)
+
+    !$acc exit data delete(RD_rhodz,RD_pres,RD_presh,RD_temp,RD_temph,RD_gas,RD_cfc,RD_aerosol_conc,RD_aerosol_radi,RD_cldfrac)
 
     deallocate( ptype_nradius )
     deallocate( RD_zh    )
@@ -498,6 +509,9 @@ contains
        flux_rad_sfc_dn,       &
        dtau_s, dem_s          )
        !Jval                   )
+#ifdef _OPENACC
+    use openacc
+#endif
     use scale_const, only: &
        EPS  => CONST_EPS, &
        Mdry => CONST_Mdry, &
@@ -527,7 +541,7 @@ contains
     real(RP), intent(in)  :: TEMP           (KA,IA,JA)
     real(RP), intent(in)  :: PRES           (KA,IA,JA)
     real(RP), intent(in)  :: QV             (KA,IA,JA)
-    real(RP), intent(in)  :: CZ             (  KA,IA,JA)    ! UNUSED
+    real(RP), intent(in)  :: CZ             (  KA,IA,JA)
     real(RP), intent(in)  :: FZ             (0:KA,IA,JA)
     real(RP), intent(in)  :: fact_ocean     (IA,JA)
     real(RP), intent(in)  :: fact_land      (IA,JA)
@@ -580,12 +594,20 @@ contains
 
     call PROF_rapstart('RD_Profile', 3)
 
+    !$acc data copyin(DENS,TEMP,PRES,QV,CZ,FZ,fact_ocean,fact_land,fact_urban,temp_sfc,albedo_sfc,solins,cosSZA,cldfrac,MP_Re,AE_Re,AE_Qe) &
+    !$acc      copyout(flux_rad,flux_rad_top,flux_rad_sfc_dn) &
+    !$acc      create(tropopause,rhodz_merge,pres_merge,temp_merge,temph_merge,gas_merge,cfc_merge,aerosol_conc_merge,aerosol_radi_merge,cldfrac_merge,flux_rad_merge,tauCLD_067u,emisCLD_105u)
+
+    !$acc data copyout(dtau_s) if(acc_is_present(dtau_s))
+    !$acc data copyout(dem_s) if(acc_is_present(dem_s))
+
     if ( ATMOS_PHY_RD_MSTRN_ONLY_TROPOCLOUD ) then
        !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
        !$omp private(k,i,j, &
        !$omp         gamma) &
        !$omp shared (tropopause,pres,temp,CZ, &
        !$omp         KS,KE,IS,IE,JS,JE)
+       !$acc kernels
        do j  = JS, JE
        do i  = IS, IE
           tropopause(i,j) = KE+1
@@ -601,17 +623,20 @@ contains
           enddo
        enddo
        enddo
+       !$acc end kernels
     else
        !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
        !$omp private(i,j) &
        !$omp shared (tropopause, &
        !$omp         KE,IS,IE,JS,JE)
 !OCL XFILL
+       !$acc kernels
        do j  = JS, JE
        do i  = IS, IE
           tropopause(i,j) = KE+1
        end do
        end do
+       !$acc end kernels
     endif
 
     ! marge basic profile and value in model domain
@@ -641,6 +666,7 @@ contains
     !$omp parallel do default(none)                                           &
     !$omp shared(JS,JE,IS,IE,RD_KADD,temph_merge,RD_temph,KE,RD_KMAX,KS,temp,CZ,FZ) &
     !$omp private(i,j,k,RD_k) OMP_SCHEDULE_ collapse(2)
+    !$acc kernels
     do j = JS, JE
     do i = IS, IE
        do RD_k = 1, RD_KADD
@@ -657,6 +683,7 @@ contains
        temph_merge(RD_KMAX+1,i,j) = temp(KS,i,j)
     enddo
     enddo
+    !$acc end kernels
 
 !OCL XFILL
     !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
@@ -664,6 +691,7 @@ contains
     !$omp shared (RD_temp,dens,FZ,pres,temp, &
     !$omp         rhodz_merge,RD_rhodz,pres_merge,RD_pres,temp_merge, &
     !$omp         KS,JS,JE,IS,IE,RD_KMAX,RD_KADD)
+    !$acc kernels
     do j = JS, JE
     do i = IS, IE
        do RD_k = 1, RD_KADD
@@ -681,12 +709,14 @@ contains
        enddo
     enddo
     enddo
+    !$acc end kernels
 
 !OCL XFILL
     !$omp parallel default(none) &
     !$omp private(v,i,j,RD_k) &
     !$omp shared (gas_merge,RD_gas, &
     !$omp         IS,IE,JS,JE,RD_KMAX)
+    !$acc kernels
     do v = 1,  MSTRN_ngas
        !$omp do OMP_SCHEDULE_ collapse(2)
        do j = JS, JE
@@ -698,6 +728,7 @@ contains
        enddo
        !$omp end do nowait
     enddo
+    !$acc end kernels
     !$omp end parallel
 
     !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
@@ -705,6 +736,7 @@ contains
     !$omp         zerosw ) &
     !$omp shared (gas_merge,QV,EPS,Mvap,Mdry, &
     !$omp         KS,IS,IE,JS,JE,RD_KADD,RD_KMAX)
+    !$acc kernels
     do j = JS, JE
     do i = IS, IE
     do RD_k = RD_KADD+1, RD_KMAX
@@ -714,12 +746,14 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
 
 !OCL XFILL
     !$omp parallel default(none) &
     !$omp private(v,i,j,RD_k) &
     !$omp shared (cfc_merge,RD_cfc, &
     !$omp         IS,IE,JS,JE,RD_KMAX)
+    !$acc kernels
     do v = 1,  MSTRN_ncfc
        !$omp do OMP_SCHEDULE_ collapse(2)
        do j = JS, JE
@@ -731,12 +765,14 @@ contains
        enddo
        !$omp end do nowait
     enddo
+    !$acc end kernels
     !$omp end parallel
 
     !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
     !$omp private(k,i,j,RD_k) &
     !$omp shared (cldfrac_merge,RD_cldfrac,cldfrac, &
     !$omp         KS,IS,IE,JS,JE,RD_KMAX,RD_KADD)
+    !$acc kernels
     do j = JS, JE
     do i = IS, IE
        do RD_k = 1, RD_KADD
@@ -751,12 +787,14 @@ contains
        enddo
     enddo
     enddo
+    !$acc end kernels
 
 !OCL XFILL
     !$omp parallel default(none) &
     !$omp private(v,i,j,RD_k) &
     !$omp shared (aerosol_conc_merge,RD_aerosol_conc,aerosol_radi_merge,RD_aerosol_radi, &
     !$omp         IS,IE,JS,JE,RD_KADD)
+    !$acc kernels
     do v = 1,  RD_naero
        !$omp do OMP_SCHEDULE_ collapse(2)
        do j = JS, JE
@@ -769,6 +807,7 @@ contains
        enddo
        !$omp end do nowait
     enddo
+    !$acc end kernels
     !$omp end parallel
 
     !$omp parallel default(none) &
@@ -781,16 +820,19 @@ contains
             ( ihydro /= I_HC .and. ihydro /= I_HI ) ) then
 !OCL XFILL
           !$omp do OMP_SCHEDULE_ collapse(2)
+          !$acc kernels
           do j = JS, JE
           do i = IS, IE
           do RD_k = RD_KADD+1, RD_KMAX
-             aerosol_conc_merge(:,:,:,ihydro) = 0.0_RP
+             aerosol_conc_merge(RD_k,i,j,ihydro) = 0.0_RP
           end do
           end do
           end do
+          !$acc end kernels
           !$omp end do nowait
        else
           !$omp do OMP_SCHEDULE_ collapse(2)
+          !$acc kernels
           do j = JS, JE
           do i = IS, IE
              do RD_k = RD_KADD+1, RD_KADD+1 + KE - tropopause(i,j)
@@ -803,6 +845,7 @@ contains
              enddo
           enddo
           enddo
+          !$acc end kernels
           !$omp end do nowait
        end if
     enddo
@@ -812,6 +855,7 @@ contains
     !$omp private(ihydro,k,i,j,RD_k) &
     !$omp shared (aerosol_radi_merge,MP_Re, &
     !$omp         KS,IS,IE,JS,JE,RD_KMAX,RD_KADD)
+    !$acc kernels
     do ihydro = 1, N_HYD
     do j = JS, JE
     do i = IS, IE
@@ -822,6 +866,7 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
 
     !$omp parallel default(none) &
     !$omp private(iaero,k,i,j,RD_k) &
@@ -833,6 +878,7 @@ contains
 
        if ( ATMOS_PHY_RD_MSTRN_USE_AERO ) then
           !$omp do OMP_SCHEDULE_ collapse(2)
+          !$acc kernels
           do j = JS, JE
           do i = IS, IE
           do RD_k = RD_KADD+1, RD_KMAX
@@ -843,9 +889,11 @@ contains
           enddo
           enddo
           enddo
+          !$acc end kernels
           !$omp end do nowait
        else
           !$omp do OMP_SCHEDULE_ collapse(2)
+          !$acc kernels
           do j = JS, JE
           do i = IS, IE
           do RD_k = RD_KADD+1, RD_KMAX
@@ -854,6 +902,7 @@ contains
           enddo
           enddo
           enddo
+          !$acc end kernels
           !$omp end do nowait
        endif
 
@@ -902,6 +951,7 @@ contains
     !$omp private(ic,k,i,j,RD_k) &
     !$omp shared (flux_rad,flux_rad_merge, &
     !$omp         KS,IS,IE,JS,JE,RD_KMAX,RD_KADD)
+    !$acc kernels
     do ic = 1, 2
        !$omp do OMP_SCHEDULE_ collapse(2)
        do j  = JS, JE
@@ -918,6 +968,7 @@ contains
        enddo
        !$omp end do nowait
     enddo
+    !$acc end kernels
     !$omp end parallel
 
 !OCL XFILL
@@ -925,6 +976,7 @@ contains
     !$omp private(ic,i,j) &
     !$omp shared (flux_rad_top,flux_rad_merge, &
     !$omp         IS,IE,JS,JE)
+    !$acc kernels
     do ic = 1, 2
        !$omp do OMP_SCHEDULE_
        do j  = JS, JE
@@ -937,6 +989,7 @@ contains
        enddo
        !$omp end do nowait
     enddo
+    !$acc end kernels
     !$omp end parallel
 
     if ( present( dtau_s ) ) then
@@ -944,6 +997,7 @@ contains
        !$omp private(k,i,j,RD_k) &
        !$omp shared (dtau_s,tauCLD_067u, &
        !$omp         KS,IS,IE,JS,JE,RD_KMAX,RD_KADD)
+       !$acc kernels
        do j = JS, JE
        do i = IS, IE
        do RD_k = RD_KADD+1, RD_KMAX
@@ -952,6 +1006,7 @@ contains
        enddo
        enddo
        enddo
+       !$acc end kernels
     end if
 
     if ( present( dem_s ) ) then
@@ -959,6 +1014,7 @@ contains
        !$omp private(k,i,j,RD_k) &
        !$omp shared (dem_s,emisCLD_105u, &
        !$omp         KS,IS,IE,JS,JE,RD_KMAX,RD_KADD)
+       !$acc kernels
        do j = JS, JE
        do i = IS, IE
        do RD_k = RD_KADD+1, RD_KMAX
@@ -967,7 +1023,12 @@ contains
        enddo
        enddo
        enddo
+       !$acc end kernels
     end if
+
+    !$acc end data
+    !$acc end data
+    !$acc end data
 
     return
   end subroutine ATMOS_PHY_RD_mstrnx_flux
@@ -1285,10 +1346,11 @@ contains
     end do
 
     !$acc enter data &
-    !$acc& copyin(wgtch, fitPLK, logfitP, logfitT, fitT) &
-    !$acc& copyin(radmode, ngasabs, igasabs, radmode, ptype_nradius) &
-    !$acc& copyin(fsol, q, qmol, rayleigh, acfc_pow, nch, AKD, SKD) &
-    !$acc& copyin(Wmns, Wpls, Wscale, W, M)
+    !$acc copyin(waveh, &
+    !$acc        wgtch, fitPLK, logfitP, logfitT, fitT, &
+    !$acc        radmode, ngasabs, igasabs, ptype_nradius, &
+    !$acc        fsol, q, qmol, rayleigh, acfc_pow, nch, AKD, SKD, &
+    !$acc        Wmns, Wpls, Wscale, W, M)
 
     return
   end subroutine RD_MSTRN_setup
