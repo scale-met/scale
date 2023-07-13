@@ -331,7 +331,7 @@ contains
        select case ( ATMOS_PHY_RD_TYPE )
        case ( "MSTRNX" )
 
-          !$acc update host(DENS,TEMP,PRES,QV,SFC_TEMP,SFC_albedo,solins,cosSZA,CLDFRAC,MP_Re,MP_Qe,AE_Re,AE_Qe)
+!          !$acc update host(DENS,TEMP,PRES,QV,SFC_TEMP,SFC_albedo,solins,cosSZA,CLDFRAC,MP_Re,MP_Qe,AE_Re,AE_Qe)
           call ATMOS_PHY_RD_MSTRNX_flux( &
                KA, KS, KE, IA, IS, IE, JA, JS, JE, &
                DENS(:,:,:), TEMP(:,:,:), PRES(:,:,:), QV(:,:,:), & ! [IN]
@@ -344,7 +344,7 @@ contains
                flux_rad(:,:,:,:,:,:),                            & ! [OUT]
                flux_rad_top(:,:,:,:,:), SFLX_rad_dn(:,:,:,:),    & ! [OUT]
                dtau_s = dtau_s(:,:,:), dem_s = dem_s(:,:,:)      ) ! [OUT]
-          !$acc update device(flux_rad,flux_rad_top,SFLX_rad_dn,dtau_s,dem_s)
+!          !$acc update device(flux_rad,flux_rad_top,SFLX_rad_dn,dtau_s,dem_s)
 
        case ( "OFFLINE" )
 
