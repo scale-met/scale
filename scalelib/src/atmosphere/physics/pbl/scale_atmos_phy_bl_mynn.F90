@@ -88,6 +88,7 @@ module scale_atmos_phy_bl_mynn
   real(RP), private            :: Rfc
   real(RP), private            :: AF12 !> A1 F1 / A2 F2
   real(RP), private, parameter :: PrN = 0.74_RP
+  !$acc declare create(A1, A2, C1, G2, Rf1, Rf2, Rfc, AF12)
 
   real(RP), private, parameter :: zeta_min = -5.0_RP
   real(RP), private, parameter :: zeta_max =  2.0_RP
@@ -95,6 +96,7 @@ module scale_atmos_phy_bl_mynn
   real(RP), private            :: SQRT_2PI
   real(RP), private            :: RSQRT_2PI
   real(RP), private            :: RSQRT_2
+  !$acc declare create(SQRT_2PI, RSQRT_2PI, RSQRT_2)
 
   logical,  private            :: initialize
 
@@ -122,6 +124,7 @@ module scale_atmos_phy_bl_mynn
   real(RP), private            :: ATMOS_PHY_BL_MYNN_Sq_fact    = 3.0_RP
   logical,  private            :: ATMOS_PHY_BL_MYNN_init_TKE   = .false.
   logical,  private            :: ATMOS_PHY_BL_MYNN_similarity = .true.
+  !$acc declare create(ATMOS_PHY_BL_MYNN_Lt_MAX)
 
   character(len=H_SHORT), private  :: ATMOS_PHY_BL_MYNN_LEVEL = "2.5" ! "2.5" or "3"
 
@@ -240,6 +243,7 @@ contains
        call PRC_abort
     endif
     LOG_NML(PARAM_ATMOS_PHY_BL_MYNN)
+    !$acc update device(ATMOS_PHY_BL_MYNN_Lt_MAX)
 
     A1        = B1 * (1.0_RP - 3.0_RP * G1) / 6.0_RP
     A2        = 1.0_RP / (3.0_RP * G1 * B1**(1.0_RP/3.0_RP) * PrN )
@@ -253,10 +257,12 @@ contains
     Rfc       = G1 / (G1 + G2)
 
     AF12      = A1 * F1 / ( A2 * F2 )
+    !$acc update device(A1, A2, C1, G2, Rf1, Rf2, Rfc, AF12)
 
     SQRT_2PI  = sqrt( 2.0_RP * PI )
     RSQRT_2PI = 1.0_RP / SQRT_2PI
     RSQRT_2   = 1.0_RP / sqrt( 2.0_RP )
+    !$acc update device(SQRT_2PI, RSQRT_2PI, RSQRT_2)
 
     initialize = ATMOS_PHY_BL_MYNN_init_TKE
 
@@ -375,6 +381,12 @@ contains
     real(RP), intent(out) :: Zi        (IA,JA) !> depth of the boundary layer (not exact)
     real(RP), intent(out) :: SFLX_BUOY (IA,JA) !> surface flux of buoyancy: g / \Theta_0 <w \theta_v> @ surface
 
+    ! bulkflux
+    integer, parameter :: I_B71    = 1
+    integer, parameter :: I_B91    = 2
+    integer, parameter :: I_B91W01 = 3
+    integer :: I_B_TYPE
+
     real(RP) :: Ri   (KA,IA,JA) !> Richardson number
     real(RP) :: Pr   (KA,IA,JA) !> Plandtle number
     real(RP) :: prod (KA,IA,JA) !> TKE production term
@@ -483,6 +495,23 @@ contains
 
     mynn_level3 = ( ATMOS_PHY_BL_MYNN_LEVEL == "3" )
 
+    select case ( BULKFLUX_type )
+    case ( 'B71' )
+       I_B_TYPE = I_B71
+    case ( 'B91' )
+       I_B_TYPE = I_B91
+    case ( 'B91W01' )
+       I_B_TYPE = I_B91W01
+    case default
+       LOG_ERROR("ATMOS_PHY_BL_MYNN_tendency",*) "BULKFLUX_type is invalid: ", trim(BULKFLUX_type)
+       call PRC_abort
+    end select
+
+    !$acc data copyin(DENS,U,V,POTT,PROG,PRES,EXNER,N2,QDRY,QV,Qw,POTL,POTV,SFC_DENS,SFLX_MU,SFLX_MV,SFLX_SH,SFLX_QV,us,ts,qs,RLmo,CZ,FZ,F2H) &
+    !$acc      copyout(RHOU_t,RHOV_t,RHOT_t,RHOQV_t,RPROG_t,Nu,Kh,Qlp,cldfrac,Zi,SFLX_BUOY), &
+    !$acc      create(Ri,Pr,prod,diss,dudz2,l,flxU,flxV,flxT,flxQ)
+
+
 
 !OCL INDEPENDENT
     !$omp parallel do default(none) &
@@ -499,7 +528,7 @@ contains
     !$omp        SFC_DENS,SFLX_MU,SFLX_MV,SFLX_SH,SFLX_QV,us,ts,qs,RLmo, &
     !$omp        mynn_level3,initialize, &
     !$omp        CZ,FZ,F2H,dt, &
-    !$omp        BULKFLUX_type, &
+    !$omp        I_B_TYPE, &
     !$omp        Ri,Pr,prod,diss,dudz2,l,flxU,flxV,flxT,flxQ) &
     !$omp private(N2_new,lq,sm25,sh25,rlqsm_h,Nu_f,Kh_f,q,q2_2,ac, &
     !$omp         SFLX_PT,CPtot,RHO,RHONu,RHOKh, &
@@ -512,10 +541,25 @@ contains
     !$omp         fmin,kmin, &
     !$omp         sw,tmp, &
     !$omp         KE_PBL,k,i,j,it,nit)
+    !$acc kernels
     do j = JS, JE
+    !$acc loop &
+    !$acc private(N2_new,lq,sm25,sh25,rlqsm_h,Nu_f,Kh_f,q,q2_2,ac, &
+    !$acc         SFLX_PT,CPtot,RHO,RHONu,RHOKh, &
+    !$acc         smp,f_smp,shpgh,f_shpgh,tltv,qwtv,tvsq,tltv25,qwtv25,tvsq25,tvsq_up,tvsq_lo,wtl,wqw, &
+    !$acc         dtldz,dqwdz,betat,betaq,gammat,gammaq,f_gamma, &
+    !$acc         flx,a,b,c,d,ap,rho_h,phi_n,tke_P,sf_t,zeta,phi_m,phi_h,us3,CDZ,FDZ,z1, &
+    !$acc         dummy, &
+    !$acc         tsq,qsq,cov,dtsq,dqsq,dcov, &
+    !$acc         prod_t,prod_q,prod_c,diss_p, &
+    !$acc         fmin,kmin, &
+    !$acc         sw,tmp, &
+    !$acc         KE_PBL,it,nit, &
+    !$acc         work)
     do i = IS, IE
 
        KE_PBL = KS+1
+       !$acc loop seq
        do k = KS+2, KE-1
           if ( ATMOS_PHY_BL_MYNN_PBL_MAX >= CZ(k,i,j) - FZ(KS-1,i,j) ) then
              KE_PBL = k
@@ -530,24 +574,24 @@ contains
 
           zeta = min( max( z1 * RLmo(i,j), zeta_min ), zeta_max )
 
-          select case ( BULKFLUX_type )
-!!$          case ( 'B71' )
-!!$             ! Businger et al. (1971)
-!!$             if ( zeta >= 0 ) then
-!!$                phi_m = 4.7_RP * zeta + 1.0_RP
-!!$                phi_h = 4.7_RP * zeta + 0.74_RP
-!!$             else
-!!$                phi_m = 1.0_RP / sqrt(sqrt( 1.0_RP - 15.0_RP * zeta ))
-!!$                phi_h = 0.47_RP / sqrt( 1.0_RP - 9.0_RP * zeta )
-!!$             end if
-          case ( 'B91', 'B91W01' )
+          select case ( I_B_TYPE )
+          case ( I_B71 )
+             ! Businger et al. (1971)
+             if ( zeta >= 0 ) then
+                phi_m = 4.7_RP * zeta + 1.0_RP
+                phi_h = 4.7_RP * zeta + 0.74_RP
+             else
+                phi_m = 1.0_RP / sqrt(sqrt( 1.0_RP - 15.0_RP * zeta ))
+                phi_h = 0.47_RP / sqrt( 1.0_RP - 9.0_RP * zeta )
+             end if
+          case ( I_B91, I_B91W01 )
              ! Beljaars and Holtslag (1991)
              if ( zeta >= 0 ) then
                 tmp = - 2.0_RP / 3.0_RP * ( 0.35_RP * zeta - 6.0_RP ) * exp(-0.35_RP*zeta) * zeta
                 phi_m = tmp + zeta + 1.0_RP
                 phi_h = tmp + zeta * sqrt( 1.0_RP + 2.0_RP * zeta / 3.0_RP ) + 1.0_RP
              else
-                if ( BULKFLUX_type == 'B91W01' ) then
+                if ( I_B_TYPE == I_B91W01 ) then
                    ! Wilson (2001)
                    !tmp = (-zeta)**(2.0_RP/3.0_RP)
                    tmp = abs(zeta)**(2.0_RP/3.0_RP)
@@ -576,6 +620,9 @@ contains
                                      U(:,i,j), V(:,i,j), POTL(:,i,j), & ! (in)
                                      Qw(:,i,j), QDRY(:,i,j),          & ! (in)
                                      CDZ(:), FDZ(:), F2H(:,:,i,j),    & ! (in)
+#ifdef _OPENACC
+                                     work(:,:),                       & ! (work)
+#endif
                                      dudz2(:,i,j), dtldz(:), dqwdz(:) ) ! (out)
 
        us3 = us(i,j)**3
@@ -665,6 +712,7 @@ contains
           nit = 1
        end if
 
+       !$acc loop seq
        do it = 1, nit
 
           call partial_condensation( KA, KS, KE_PBL, &
@@ -672,6 +720,9 @@ contains
                                      POTL(:,i,j), Qw(:,i,j),    & ! (in)
                                      QDRY(:,i,j), EXNER(:,i,j), & ! (in)
                                      tsq(:), qsq(:), cov(:),    & ! (in)
+#ifdef _OPENACC
+                                     work(:,:),                 & ! (work)
+#endif
                                      betat(:), betaq(:),        & ! (out)
                                      Qlp(:,i,j), cldfrac(:,i,j) ) ! (out)
 
@@ -877,7 +928,15 @@ contains
              do k = KS, KE_PBL-1
                 ap = - dt * RHONu(k) / FDZ(k)
                 a(k) = ap / ( RHO(k) * CDZ(k) )
+#ifdef _OPENACC
+                if ( k==KS ) then
+                   b(k) = - a(k) + 1.0_RP
+                else
+                   b(k) = - a(k) + dt * RHONu(k-1) / ( FDZ(k-1) * RHO(k) * CDZ(k) ) + 1.0_RP
+                end if
+#else
                 b(k) = - a(k) - c(k) + 1.0_RP
+#endif
                 c(k+1) = ap / ( RHO(k+1) * CDZ(k+1) )
              end do
              a(KE_PBL) = 0.0_RP
@@ -968,7 +1027,15 @@ contains
              do k = KS, KE_PBL-1
                 ap = - dt * RHOKh(k) / FDZ(k)
                 a(k) = ap / ( RHO(k) * CDZ(k) )
+#ifdef _OPENACC
+                if ( k==KS ) then
+                   b(k) = - a(k) + 1.0_RP
+                else
+                   b(k) = - a(k) + dt * RHOKh(k-1) / ( FDZ(k-1) * RHO(k) * CDZ(k) ) + 1.0_RP
+                end if
+#else
                 b(k) = - a(k) - c(k) + 1.0_RP
+#endif
                 c(k+1) = ap / ( RHO(k+1) * CDZ(k+1) )
              end do
              a(KE_PBL) = 0.0_RP
@@ -1001,6 +1068,7 @@ contains
              kmin = KS-1
              if ( flxT(KS,i,j) > 1E-4_RP ) then
                 fmin = flxT(KS,i,j) / rho_h(KS)
+                !$acc loop seq
                 do k = KS+1, KE_PBL-2
                    tmp = ( flxT(k-1,i,j) + flxT(k,i,j) + flxT(k+1,i,j) ) &
                         / ( rho_h(k-1) + rho_h(k) + rho_h(k+1) ) ! running mean
@@ -1085,7 +1153,15 @@ contains
           do k = KS, KE_PBL-1
              ap = - dt * ATMOS_PHY_BL_MYNN_Sq_fact * RHONu(k) / FDZ(k)
              a(k) = ap / ( RHO(k) * CDZ(k) )
+#ifdef _OPENACC
+             if ( k==KS ) then
+                b(k) = - a(k) + 1.0_RP - diss(k,i,j) * dt
+             else
+                b(k) = - a(k) + dt * ATMOS_PHY_BL_MYNN_Sq_fact * RHONu(k-1) / ( FDZ(k-1) * RHO(k) * CDZ(k) ) + 1.0_RP - diss(k,i,j) * dt
+             end if
+#else
              b(k) = - a(k) - c(k) + 1.0_RP - diss(k,i,j) * dt
+#endif
              c(k+1) = ap / ( RHO(k+1) * CDZ(k+1) )
           end do
           a(KE_PBL) = 0.0_RP
@@ -1135,7 +1211,15 @@ contains
           do k = KS, KE_PBL-1
              ap = - dt * RHONu(k) / FDZ(k)
              a(k) = ap / ( RHO(k) * CDZ(k) )
+#ifdef _OPENACC
+             if ( k==KS ) then
+                b(k) = - a(k) + 1.0_RP + diss_p(k)
+             else
+                b(k) = - a(k) + dt * RHONu(k-1) / ( FDZ(k-1) * RHO(k) * CDZ(k) ) + 1.0_RP + diss_p(k)
+             end if
+#else
              b(k) = - a(k) - c(k) + 1.0_RP + diss_p(k)
+#endif
              c(k+1) = ap / ( RHO(k+1) * CDZ(k+1) )
           end do
           a(KE_PBL) = 0.0_RP
@@ -1234,6 +1318,7 @@ contains
           Kh   (k,i,j) = 0.0_RP
           Pr   (k,i,j) = 1.0_RP
        end do
+       !$acc loop independent
        do k = KE_PBL+1, KE
           Ri     (k,i,j) = UNDEF
           prod   (k,i,j) = UNDEF
@@ -1246,6 +1331,7 @@ contains
 
     end do
     end do
+    !$acc end kernels
 
 
     call FILE_HISTORY_query(HIST_Ri,     do_put)
@@ -1270,6 +1356,8 @@ contains
     call FILE_HISTORY_query(HIST_flxQ, do_put)
     if ( do_put ) call FILE_HISTORY_put(HIST_flxQ, flxQ(1:,:,:))
 
+    !$acc end data
+
     initialize = .false.
 
     return
@@ -1287,13 +1375,14 @@ contains
        SFLX_BUOY, RLmo, &
        CZ, FZ,          &
        l                )
+    !$acc routine vector
     use scale_const, only: &
        GRAV   => CONST_GRAV, &
        KARMAN => CONST_KARMAN, &
        EPS    => CONST_EPS
     implicit none
-    integer,  intent(in) :: KA, KS, KE_PBL
-    integer,  intent(in) :: i, j ! for debug
+    integer,  intent(in), value :: KA, KS, KE_PBL
+    integer,  intent(in), value :: i, j ! for debug
 
     real(RP), intent(in) :: q(KA)
     real(RP), intent(in) :: n2(KA)
@@ -1325,6 +1414,7 @@ contains
 
     int_qz = 0.0_RP
     int_q = 0.0_RP
+    !$acc loop reduction(+:int_qz,int_q)
     do k = KS, KE_PBL
        qdz = q(k) * ( FZ(k) - FZ(k-1) )
        z = CZ(k) - FZ(KS-1)
@@ -1367,8 +1457,9 @@ contains
        KA, KS, KE_PBL, &
        dudz2, Ri, l, &
        q2_2          )
+    !$acc routine vector
     implicit none
-    integer,  intent(in)  :: KA, KS, KE_PBL
+    integer,  intent(in), value  :: KA, KS, KE_PBL
 
     real(RP), intent(in)  :: dudz2(KA)
     real(RP), intent(in)  :: Ri(KA)
@@ -1413,13 +1504,14 @@ contains
        tltv25, qwtv25,  &
        tvsq25,          &
        tvsq_up, tvsq_lo )
+    !$acc routine vector
     use scale_const, only: &
        EPS  => CONST_EPS, &
        HUGE => CONST_HUGE, &
        GRAV => CONST_GRAV
     implicit none
-    integer,  intent(in)  :: KA, KS, KE_PBL
-    integer,  intent(in)  :: i, j ! for debug
+    integer,  intent(in), value  :: KA, KS, KE_PBL
+    integer,  intent(in), value  :: i, j ! for debug
 
     real(RP), intent(in)  :: q(KA)
     real(RP), intent(in)  :: ac(KA)
@@ -1431,8 +1523,8 @@ contains
     real(RP), intent(in)  :: dqwdz(KA)
     real(RP), intent(in)  :: betat(KA)
     real(RP), intent(in)  :: betaq(KA)
-    logical,  intent(in)  :: mynn_level3
-    logical,  intent(in)  :: initialize
+    logical,  intent(in), value :: mynn_level3
+    logical,  intent(in), value :: initialize
 
     real(RP), intent(inout)  :: tsq(KA)
     real(RP), intent(inout)  :: qsq(KA)
@@ -1596,11 +1688,12 @@ contains
        f_gamma, l, q,          &
        dt,                     &
        dtsq, dqsq, dcov        )
+    !$acc routine vector
     use scale_const, only: &
        GRAV => CONST_GRAV
     implicit none
-    integer, intent(in) :: KA, KS, KE
-    integer, intent(in) :: i, j ! for debug
+    integer, intent(in), value :: KA, KS, KE
+    integer, intent(in), value :: i, j ! for debug
 
     real(RP), intent(in) :: tsq    (KA)
     real(RP), intent(in) :: qsq    (KA)
@@ -1616,7 +1709,7 @@ contains
     real(RP), intent(in) :: f_gamma(KA)
     real(RP), intent(in) :: l      (KA)
     real(RP), intent(in) :: q      (KA)
-    real(RP), intent(in) :: dt
+    real(RP), intent(in), value :: dt
 
     real(RP), intent(out) :: dtsq(KA)
     real(RP), intent(out) :: dqsq(KA)
@@ -1690,11 +1783,15 @@ contains
        i, j,       &
        U, V, POTL, Qw, QDRY, &
        CDZ, FDZ, F2H,        &
+#ifdef _OPENACC
+       work,                 &
+#endif
        dudz2, dtldz, dqwdz   )
+    !$acc routine vector
     use scale_const, only: &
        EPS => CONST_EPS
-    integer,  intent(in)  :: KA, KS, KE
-    integer,  intent(in)  :: i, j  ! for debug
+    integer,  intent(in), value  :: KA, KS, KE
+    integer,  intent(in), value  :: i, j  ! for debug
 
     real(RP), intent(in) :: U   (KA)
     real(RP), intent(in) :: V   (KA)
@@ -1709,9 +1806,17 @@ contains
     real(RP), intent(out) :: dtldz(KA)
     real(RP), intent(out) :: dqwdz(KA)
 
+#ifdef _OPENACC
+    real(RP), intent(out) :: work(KA,4)
+#define Uh(k)  work(k,1)
+#define Vh(k)  work(k,2)
+#define qw2(k) work(k,3)
+#define qh(k)  work(k,4)
+#else
     real(RP) :: Uh(KA), Vh(KA)
     real(RP) :: qw2(KA)
     real(RP) :: qh(KA)
+#endif
 
     integer :: k
 
@@ -1768,12 +1873,16 @@ contains
        KA, KS, KE, &
        PRES, POTT, POTL, Qw, Qdry, EXNER, &
        tsq, qsq, cov,                     &
+#ifdef _OPENACC
+       work,                              &
+#endif
        betat, betaq, Qlp, cldfrac         )
     use scale_const, only: &
        CPdry   => CONST_CPdry,  &
        Rvap    => CONST_Rvap,   &
        EPSvap  => CONST_EPSvap, &
        EPSTvap => CONST_EPSTvap
+    !$acc routine vector
     use scale_atmos_saturation, only: &
        ATMOS_SATURATION_psat => ATMOS_SATURATION_psat_liq
 !       ATMOS_SATURATION_pres2qsat => ATMOS_SATURATION_pres2qsat_liq
@@ -1782,7 +1891,7 @@ contains
        LHV,      &
        CP_VAPOR, &
        CP_WATER
-    integer,  intent(in)  :: KA, KS, KE
+    integer,  intent(in), value  :: KA, KS, KE
     real(RP), intent(in)  :: PRES (KA)
     real(RP), intent(in)  :: POTT (KA)
     real(RP), intent(in)  :: POTL (KA)
@@ -1798,9 +1907,17 @@ contains
     real(RP), intent(out) :: Qlp    (KA)
     real(RP), intent(out) :: cldfrac(KA)
 
+#ifdef _OPENACC
+    real(RP), intent(out) :: work(KA,3)
+#define TEML(k) work(k,1)
+#define LHVL(k) work(k,2)
+#define psat(k) work(k,3)
+#else
     real(RP) :: TEML(KA)
     real(RP) :: LHVL(KA)
     real(RP) :: psat(KA)
+#endif
+
     real(RP) :: Qsl
     real(RP) :: dQsl
     real(RP) :: CPtot

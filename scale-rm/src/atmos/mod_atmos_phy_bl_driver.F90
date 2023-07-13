@@ -298,7 +298,6 @@ contains
              allocate( RHOQV_t(KA,IA,JA) )
              !$acc enter data create(RHOQV_t)
           end if
-          !$acc update host(DENS,U,V,POTT,QTRC(:,:,:,QS:QE),PRES,EXNER,N2,QDRY,QV,QW,POTL,POTV,SFC_DENS,SFLX_MU,SFLX_MV,SFLX_SH,SFLX_QV,Ustar,Tstar,Qstar,RLmo)
           call ATMOS_PHY_BL_MYNN_tendency( &
                KA, KS, KE, IA, IS, IE, JA, JS, JE, &
                DENS(:,:,:), U(:,:,:), V(:,:,:),                        & ! (in)
@@ -315,7 +314,6 @@ contains
                RHOQV_t(:,:,:), RHOQ_t_BL(:,:,:,QS:QE),                 & ! (out)
                Nu(:,:,:), Kh(:,:,:),                                   & ! (out)
                QL(:,:,:), cldfrac(:,:,:), Zi(:,:), SFLX_BUOY(:,:)      ) ! (out)
-          !$acc update device(RHOU_t_BL,RHOV_t_BL,RHOT_t_BL,RHOQV_t,RHOQ_t_BL(:,:,:,QS:QE),Nu,Kh,QL,cldfrac,Zi,SFLX_BUOY)
           if ( I_QV <= 0 ) then
              !$acc exit data delete(RHOQV_t)
              deallocate( RHOQV_t )
@@ -352,7 +350,6 @@ contains
        if ( ATMOS_PHY_BL_MIX_TRACERS ) then
           do iq = 1, QA
              if ( ( .not. TRACER_ADVC(iq) ) .or. iq==I_QV .or. (iq>=QS .and. iq<=QE) ) cycle
-             !$acc update host(QTRC(:,:,:,iq),SFLX_Q(:,:,iq))
              call ATMOS_PHY_BL_tendency_tracer( &
                   KA, KS, KE, IA, IS, IE, JA, JS, JE, &
                   DENS(:,:,:), QTRC(:,:,:,iq),        & ! (in)
@@ -362,7 +359,6 @@ contains
                   CZ(:,:,:), FZ(:,:,:), F2H(:,:,:,:), & ! (in)
                   dt_BL, TRACER_NAME(iq),             & ! (in)
                   RHOQ_t_BL(:,:,:,iq)                 ) ! (out)
-             !$acc update device(RHOQ_t_BL(:,:,:,iq))
           end do
        end if
 

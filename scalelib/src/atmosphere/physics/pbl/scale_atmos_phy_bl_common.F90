@@ -112,10 +112,16 @@ contains
     !$omp shared(RHOQ_t,DENS,QTRC,SFLX_Q,Kh,MASS,CZ,FZ,F2H,DT,flx) &
     !$omp private(QTRC_n,RHO,RHOKh,rho_h,a,b,c,d,ap,sf_t,CDZ,FDZ) &
     !$omp private(KE_PBL,k,i,j)
+    !$acc kernels
     do j = JS, JE
+    !$acc loop &
+    !$acc private(QTRC_n,RHO,RHOKh,rho_h,a,b,c,d,ap,sf_t,CDZ,FDZ, &
+    !$acc         KE_PBL, &
+    !$acc         work)
     do i = IS, IE
 
        KE_PBL = KE-1
+       !$acc loop seq
        do k = KE-2, KS+1, -1
           if ( Kh(k,i,j) > 0.0_RP ) then
              KE_PBL = k + 1
@@ -151,7 +157,15 @@ contains
        do k = KS, KE_PBL-1
           ap = - dt * RHOKh(k) / FDZ(k)
           a(k) = ap / ( RHO(k) * CDZ(k) )
+#ifdef _OPENACC
+          if ( k==KS ) then
+             b(k) = - a(k) + 1.0_RP
+          else
+             b(k) = - a(k) + dt * RHOKh(k-1) / ( FDZ(k-1) * RHO(k) * CDZ(k) ) + 1.0_RP
+          end if
+#else
           b(k) = - a(k) - c(k) + 1.0_RP
+#endif
           c(k+1) = ap / ( RHO(k+1) * CDZ(k+1) )
        end do
        a(KE_PBL) = 0.0_RP
@@ -179,6 +193,7 @@ contains
 
     end do
     end do
+    !$acc end kernels
 
     call FILE_HISTORY_in(flx(:,:,:), 'ZFLX_'//trim(TRACER_NAME)//'_BL', 'Z FLUX of DENS * '//trim(TRACER_NAME)//' (PBL)', 'kg/m2/s', fill_halo=.true.)
 
