@@ -695,14 +695,14 @@ contains
 
     if ( CPL_sw ) then
 
+       !$acc data create(SFC_DENS,SFC_PRES,TEMP1,PRES1,W1,U1,V1,DENS1,QV1)
+
        ! planetary boundary layer
        call BOTTOM_estimate( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
                              DENS(:,:,:), PRES(:,:,:), QV(:,:,:), & ! [IN]
                              SFC_TEMP(:,:),                       & ! [IN]
                              REAL_FZ(:,:,:),                      & ! [IN]
                              SFC_DENS(:,:), SFC_PRES(:,:)         ) ! [OUT]
-
-       !$acc data create(TEMP1,PRES1,W1,U1,V1,DENS1,QV1)
 
        !$omp parallel do
        !$acc kernels

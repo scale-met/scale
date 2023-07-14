@@ -105,6 +105,7 @@ contains
     TOPOGRAPHY_Zsfc(:,:) = 0.0_RP
     TOPOGRAPHY_TanSL_X(:,:) = 0.0_RP
     TOPOGRAPHY_TanSL_Y(:,:) = 0.0_RP
+    !$acc enter data copyin(TOPOGRAPHY_Zsfc, TOPOGRAPHY_TanSL_X, TOPOGRAPHY_TanSL_Y)
 
     ! read from file
     call TOPOGRAPHY_read
@@ -146,6 +147,7 @@ contains
     implicit none
     !---------------------------------------------------------------------------
 
+    !$acc exit data delete(TOPOGRAPHY_Zsfc, TOPOGRAPHY_TanSL_X, TOPOGRAPHY_TanSL_Y)
     deallocate( TOPOGRAPHY_Zsfc    )
     deallocate( TOPOGRAPHY_TanSL_X )
     deallocate( TOPOGRAPHY_TanSL_Y )
@@ -178,6 +180,7 @@ contains
        call FILE_CARTESC_read( fid, TOPOGRAPHY_IN_VARNAME, 'XY', TOPOGRAPHY_Zsfc(:,:) )
 
        call FILE_CARTESC_flush( fid )
+       !$acc update device( TOPOGRAPHY_Zsfc )
 
        if ( TOPOGRAPHY_IN_CHECK_COORDINATES ) then
           call FILE_CARTESC_check_coordinates( fid )
@@ -186,6 +189,7 @@ contains
        call FILE_CARTESC_close( fid )
 
        call TOPOGRAPHY_fillhalo( FILL_BND=.false. )
+       !$acc update host( TOPOGRAPHY_Zsfc )
 
        TOPOGRAPHY_exist = .true.
 
@@ -245,43 +249,50 @@ contains
     use scale_prc_cartesC, only: &
        PRC_TwoD
     implicit none
-       integer,  intent(in) :: IA, IS, IE
-       integer,  intent(in) :: JA, JS, JE
-       real(RP), intent(in) :: RCDX(IA), RCDY(JA)
-       real(RP), intent(in) :: MAPF(IA,JA,2)
+    integer,  intent(in) :: IA, IS, IE
+    integer,  intent(in) :: JA, JS, JE
+    real(RP), intent(in) :: RCDX(IA), RCDY(JA)
+    real(RP), intent(in) :: MAPF(IA,JA,2)
 
-       integer :: i, j
+    integer :: i, j
 
-       if ( PRC_TwoD ) then
-          !$omp parallel do
-          do j = JS, JE
-          do i = IS, IE
-             TOPOGRAPHY_TanSL_X(i,j) = 0.0_RP
-          end do
-          end do
-       else
-          !$omp parallel do
-          do j = JS, JE
-          do i = IS, IE
-             TOPOGRAPHY_TanSL_X(i,j) = ( ( TOPOGRAPHY_Zsfc(i+1,j) + TOPOGRAPHY_Zsfc(i  ,j) ) * 0.5_RP &
-                                       - ( TOPOGRAPHY_Zsfc(i  ,j) + TOPOGRAPHY_Zsfc(i-1,j) ) * 0.5_RP ) &
-                                       * RCDX(i) * MAPF(i,j,1)
-          end do
-          end do
-       end if
+    if ( PRC_TwoD ) then
        !$omp parallel do
+       !$acc kernels
        do j = JS, JE
        do i = IS, IE
-          TOPOGRAPHY_TanSL_Y(i,j) = ( ( TOPOGRAPHY_Zsfc(i,j+1) + TOPOGRAPHY_Zsfc(i,j  ) ) * 0.5_RP &
-                                    - ( TOPOGRAPHY_Zsfc(i,j  ) + TOPOGRAPHY_Zsfc(i,j-1) ) * 0.5_RP ) &
-                                  * RCDY(j) * MAPF(i,j,2)
+          TOPOGRAPHY_TanSL_X(i,j) = 0.0_RP
        end do
        end do
+       !$acc end kernels
+    else
+       !$omp parallel do
+       !$acc kernels
+       do j = JS, JE
+       do i = IS, IE
+          TOPOGRAPHY_TanSL_X(i,j) = ( ( TOPOGRAPHY_Zsfc(i+1,j) + TOPOGRAPHY_Zsfc(i  ,j) ) * 0.5_RP &
+                                    - ( TOPOGRAPHY_Zsfc(i  ,j) + TOPOGRAPHY_Zsfc(i-1,j) ) * 0.5_RP ) &
+                                    * RCDX(i) * MAPF(i,j,1)
+       end do
+       end do
+       !$acc end kernels
+    end if
+    !$omp parallel do
+    !$acc kernels
+    do j = JS, JE
+    do i = IS, IE
+       TOPOGRAPHY_TanSL_Y(i,j) = ( ( TOPOGRAPHY_Zsfc(i,j+1) + TOPOGRAPHY_Zsfc(i,j  ) ) * 0.5_RP &
+                                 - ( TOPOGRAPHY_Zsfc(i,j  ) + TOPOGRAPHY_Zsfc(i,j-1) ) * 0.5_RP ) &
+                               * RCDY(j) * MAPF(i,j,2)
+    end do
+    end do
+    !$acc end kernels
 
-       call TOPOGRAPHY_fillhalo( TOPOGRAPHY_TanSL_X(:,:), .true. )
-       call TOPOGRAPHY_fillhalo( TOPOGRAPHY_TanSL_Y(:,:), .true. )
+    call TOPOGRAPHY_fillhalo( TOPOGRAPHY_TanSL_X(:,:), .true. )
+    call TOPOGRAPHY_fillhalo( TOPOGRAPHY_TanSL_Y(:,:), .true. )
+    !$acc update host(TOPOGRAPHY_TanSL_X, TOPOGRAPHY_TanSL_Y)
 
-       return
-     end subroutine TOPOGRAPHY_calc_tan_slope
+    return
+  end subroutine TOPOGRAPHY_calc_tan_slope
 
 end module scale_topography

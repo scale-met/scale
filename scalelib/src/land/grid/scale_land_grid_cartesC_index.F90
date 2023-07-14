@@ -32,18 +32,20 @@ module scale_land_grid_cartesC_index
   integer, public :: LKMAX = -1 ! # of computational cells: z for land
   integer, public :: LIMAX = -1 ! # of computational cells: x for land
   integer, public :: LJMAX = -1 ! # of computational cells: y for land
+  !$acc declare create(LKMAX, LIMAX, LJMAX)
 
   integer, public :: LKA   = -1 ! # of total grids: z for land, local
-  integer, public :: LIA        ! # of total grids: x for land, local
-  integer, public :: LJA        ! # of total grids: y for land, local
-
   integer, public :: LKS        ! start point of inner domain: z for land, local
   integer, public :: LKE        ! end   point of inner domain: z for land, local
-  integer, public :: LIS        ! start point of inner domain: x for land, local
 
+  integer, public :: LIA        ! # of total grids: x for land, local
+  integer, public :: LIS        ! start point of inner domain: x for land, local
   integer, public :: LIE        ! end   point of inner domain: x for land, local
+
+  integer, public :: LJA        ! # of total grids: y for land, local
   integer, public :: LJS        ! start point of inner domain: y for land, local
   integer, public :: LJE        ! end   point of inner domain: y for land, local
+  !$acc declare create(LKA, LIA, LJA, LKS, LKE, LIS, LIE, LJS, LJE)
 
   !-----------------------------------------------------------------------------
   !
@@ -110,6 +112,9 @@ contains
     LJA = JA
     LJS = JS
     LJE = JE
+
+    !$acc update device(LKMAX, LIMAX, LJMAX)
+    !$acc update device(LKA, LIA, LJA, LKS, LKE, LIS, LIE, LJS, LJE)
 
     return
   end subroutine LAND_GRID_CARTESC_INDEX_setup

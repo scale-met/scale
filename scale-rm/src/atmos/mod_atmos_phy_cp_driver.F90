@@ -237,6 +237,9 @@ contains
 
 
     if ( update_flag ) then ! update
+
+       !$acc data create(SFLX_prec)
+
        select case ( ATMOS_PHY_CP_TYPE )
        case ( 'KF' )
           !$acc update host(DENS,U,V,RHOT,TEMP,PRES,QDRY,QV,DENS_t_CP,RHOT_t_CP,RHOQV_t_CP,RHOHYD_t_CP,kf_nca,SFLX_rain,SFLX_snow,SFLX_ENGI,cloudtop,cloudbase,cldfrac_dp,cldfrac_sh)
@@ -268,6 +271,15 @@ contains
           !$acc end kernels
 
        case ( 'KF-JMAPPLIB' )
+
+          !$omp parallel do
+          !$acc kernels
+          do j = JS, JE
+          do i = IS, IE
+             SFLX_prec(i,j) = SFLX_rain(i,j) + SFLX_snow(i,j)
+          end do
+          end do
+          !$acc end kernels
 
           !$acc update host(DENS,U,V,W,TEMP,POTT,PRES,EXNER,QDRY,QV,QC,QI,us,PBLH,SFLX_BUOY,RHOT_t_CP,RHOQV_t_CP,RHOHYD_t_CP,w0mean,kf_nca,SFLX_rain,SFLX_snow,SFLX_prec,cloudtop,cloudbase)
           call ATMOS_PHY_CP_KF_JMAPPLIB_tendency( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
@@ -331,6 +343,8 @@ contains
           call FILE_HISTORY_in( RHOHYD_t_CP(:,:,:,iq), trim(HYD_NAME(iq))//'_t_CP', &
                                 'tendency rho*'//trim(HYD_NAME(iq))//' in CP', 'kg/m3/s', fill_halo=.true. )
        enddo
+
+       !$acc end data
 
     endif ! update
 

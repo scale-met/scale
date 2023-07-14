@@ -288,7 +288,7 @@ contains
 
     if ( update_flag ) then
 
-       !$acc data create(TEMP_t,flux_rad,flux_rad_top,dtau_s,dem_s,flux_up,flux_dn,flux_net,flux_net_sfc,flux_net_toa,flux_net_tom,TOAFLX_LW_up,TOAFLX_LW_dn,TOAFLX_SW_up,TOAFLX_SW_dn,SFCFLX_LW_up_c,SFCFLX_LW_dn_c,SFCFLX_SW_up_c,SFCFLX_SW_dn_c,TOAFLX_LW_up_c,TOAFLX_LW_dn_c,TOAFLX_SW_up_c,TOAFLX_SW_dn_c,TOMFLX_LW_up_c,TOMFLX_LW_dn_c,TOMFLX_SW_up_c,TOMFLX_SW_dn_c,CLDFRAC,MP_Re,MP_Qe,AE_Re,AE_Qe)
+       !$acc data create(TEMP_t,flux_rad,flux_rad_top,dtau_s,dem_s,flux_up,flux_dn,flux_net,flux_net_sfc,flux_net_toa,flux_net_tom,TOAFLX_LW_up,TOAFLX_LW_dn,TOAFLX_SW_up,TOAFLX_SW_dn,SFCFLX_LW_up_c,SFCFLX_LW_dn_c,SFCFLX_SW_up_c,SFCFLX_SW_dn_c,TOAFLX_LW_up_c,TOAFLX_LW_dn_c,TOAFLX_SW_up_c,TOAFLX_SW_dn_c,TOMFLX_LW_up_c,TOMFLX_LW_dn_c,TOMFLX_SW_up_c,TOMFLX_SW_dn_c,CLDFRAC,MP_Re,MP_Qe,AE_Re,AE_Qe,RH)
 
        call SOLARINS_insolation( IA, IS, IE, JA, JS, JE, &
                                  REAL_LON(:,:), REAL_LAT(:,:),      & ! [IN]

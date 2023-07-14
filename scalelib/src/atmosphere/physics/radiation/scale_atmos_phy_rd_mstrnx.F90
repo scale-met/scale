@@ -373,6 +373,7 @@ contains
        ptype_nradius(12) =  ATMOS_PHY_RD_MSTRN_nradius_aero
 
     endif
+    !$acc enter data copyin(I_MPAE2RD, ptype_nradius)
 
     !--- setup MSTRN parameter
     call RD_MSTRN_setup( ngas, & ! [OUT]
@@ -437,10 +438,12 @@ contains
   !> finalize
   subroutine ATMOS_PHY_RD_mstrnx_finalize
 
+    !$acc exit data delete(I_MPAE2RD, ptype_nradius)
+
     !$acc exit data &
     !$acc delete(waveh, &
     !$acc        wgtch, fitPLK, logfitP, logfitT, fitT, &
-    !$acc        radmode, ngasabs, igasabs, ptype_nradius, &
+    !$acc        radmode, ngasabs, igasabs, &
     !$acc        fsol, q, qmol, rayleigh, acfc_pow, nch, AKD, SKD, &
     !$acc        Wmns, Wpls, Wscale, W, M)
 

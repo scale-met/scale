@@ -541,8 +541,11 @@ contains
     integer :: i, j, iq
     !---------------------------------------------------------------------------
 
+    !$acc data create(MSLP, Uabs10, U10m, V10m)
+
 !OCL XFILL
     !$omp parallel do
+    !$acc kernels
     do j = JS, JE
     do i = IS, IE
        Uabs10(i,j) = sqrt( U10(i,j)**2 + V10(i,j)**2 )
@@ -550,6 +553,7 @@ contains
        V10m  (i,j) = U10(i,j) * ROTC(i,j,2) + V10(i,j) * ROTC(i,j,1)
     enddo
     enddo
+    !$acc end kernels
 
 
     call barometric_law_mslp( KA, KS, KE, IA, IS, IE, JA, JS, JE,  & ! [IN]
@@ -595,6 +599,8 @@ contains
     call FILE_HISTORY_in( T2    (:,:), 'T2 ',    '2m air temperature',        'K'    , fill_halo=.true. )
     call FILE_HISTORY_in( Q2    (:,:), 'Q2 ',    '2m specific humidity',      'kg/kg', fill_halo=.true. )
     call FILE_HISTORY_in( MSLP  (:,:), 'MSLP',   'mean sea-level pressure',   'Pa'   , fill_halo=.true., standard_name='air_pressure_at_mean_sea_level' )
+
+    !$acc end data
 
     return
   end subroutine history_output

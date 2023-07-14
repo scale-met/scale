@@ -549,9 +549,17 @@ contains
 
     LOG_PROGRESS(*) 'urban / dynamics / Kusaka01'
 
+    !$acc data copyin(TMPA,PRSA,U1,V1,DENS,QA,LHV,Z1,PBL,RHOS,PRSS,LWD,SWD,RAIN,EFLX,Z0M,Z0H,Z0E,ZD,CDZ,TanSL_X,TanSL_Y,fact_urban) &
+    !$acc      copy(TR_URB,TB_URB,TG_URB,TC_URB,QC_URB,UC_URB,TRL_URB,TBL_URB,TGL_URB,RAINR_URB,RAINB_URB,RAING_URB) &
+    !$acc      copyout(ROFF_URB,SFC_TEMP,ALBEDO,MWFLX,MUFLX,MVFLX,SHFLX,LHFLX,GHFLX,Ustar,Tstar,Qstar,Wstar,RLmo,U10,V10,T2,Q2) &
+    !$acc      create(SHR,SHB,SHG,LHR,LHB,LHG,GHR,GHB,GHG,RNR,RNB,RNG,RNgrd,DZR,DZB,DZG,TRLP,TBLP,TGLP,A,B,C,D,P,Q)
+
+
+    !$acc kernels
     DZR(:) = CDZ(:)
     DZB(:) = CDZ(:)
     DZG(:) = CDZ(:)
+    !$acc end kernels
 
     converged = .true.
 
@@ -761,6 +769,8 @@ contains
                       GHR(:,:), GHB(:,:), GHG(:,:), &
                       RNR(:,:), RNB(:,:), RNG(:,:), &
                       RNgrd(:,:)                    )
+
+    !$acc end data
 
     return
   end subroutine URBAN_DYN_kusaka01

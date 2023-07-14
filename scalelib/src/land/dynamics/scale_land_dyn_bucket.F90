@@ -291,6 +291,12 @@ contains
 
     LOG_PROGRESS(*) 'land / dynamics / bucket'
 
+    !$acc data copy(TEMP, WATER, ICE) &
+    !$acc      copyin(TEMP_t, WATER_t, ICE_t, WaterLimit, ThermalCond, HeatCapacity,  &
+    !$acc             WaterDiff, SFLX_GH, SFLX_water, SFLX_RHOE, exists_land, CDZ) &
+    !$acc      copyout(RUNOFF, RUNOFF_ENGI) &
+    !$acc      create(NDG_TEMP, NDG_WATER, TEMP1, WATER1)
+
     if ( LAND_DYN_BUCKET_nudging ) then
 
        call FILE_EXTERNAL_INPUT_update( &
@@ -314,13 +320,6 @@ contains
        end if
     end if
 
-    !$acc data copy(TEMP, WATER, ICE) &
-    !$acc      copyin(TEMP_t, WATER_t, ICE_t, WaterLimit, ThermalCond, HeatCapacity,  &
-    !$acc             WaterDiff, SFLX_GH, SFLX_water, SFLX_RHOE, exists_land, CDZ,    &
-    !$acc             TEMP1, WATER1                                                 ) &
-    !$acc      copyout(RUNOFF, RUNOFF_ENGI                                          ) &
-    !$acc      create(NDG_TEMP, NDG_WATER)
-    
     if ( LAND_DYN_BUCKET_nudging ) then
        if ( .not. replace ) then
           ! nudging is used

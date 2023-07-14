@@ -32,6 +32,7 @@ module scale_urban_grid_cartesC_index
   integer, public :: UKMAX = -1 ! # of computational cells: z for urban
   integer, public :: UIMAX = -1 ! # of computational cells: x for urban
   integer, public :: UJMAX = -1 ! # of computational cells: y for urban
+  !$acc declare create(UKMAX, UIMAX, UJMAX)
 
   integer, public :: UKA   = -1 ! # of total grids: z for urban, local
   integer, public :: UKS        ! start point of inner domain: z for urban, local
@@ -44,6 +45,7 @@ module scale_urban_grid_cartesC_index
   integer, public :: UJA        ! # of total grids: Y for urban, local
   integer, public :: UJS        ! start point of inner domain: y for urban, local
   integer, public :: UJE        ! end   point of inner domain: y for urban, local
+  !$acc declare create(UKA, UKS, UKE, UIA, UIS, UIE, UJA, UJS, UJE)
 
   !-----------------------------------------------------------------------------
   !
@@ -110,6 +112,10 @@ contains
     UJA = JA
     UJS = JS
     UJE = JE
+
+    !$acc update device(UKMAX, UIMAX, UJMAX)
+
+    !$acc update device(UKA, UKS, UKE, UIA, UIS, UIE, UJA, UJS, UJE)
 
     return
   end subroutine URBAN_GRID_CARTESC_INDEX_setup

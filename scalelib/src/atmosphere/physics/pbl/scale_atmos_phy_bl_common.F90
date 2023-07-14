@@ -106,6 +106,8 @@ contains
 #endif
     dt = real( DDT, kind=RP )
 
+    !$acc data create(flx)
+
 !OCL INDEPENDENT
     !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
     !$omp shared(KA,KS,KE,IS,IE,JS,JE) &
@@ -196,6 +198,8 @@ contains
     !$acc end kernels
 
     call FILE_HISTORY_in(flx(:,:,:), 'ZFLX_'//trim(TRACER_NAME)//'_BL', 'Z FLUX of DENS * '//trim(TRACER_NAME)//' (PBL)', 'kg/m2/s', fill_halo=.true.)
+
+    !$acc end data
 
     return
   end subroutine ATMOS_PHY_BL_tendency_tracer

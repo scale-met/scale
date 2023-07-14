@@ -1005,6 +1005,14 @@ contains
        KA, KS, KE, IA, IS, IE, JA, JS, JE, &
        DENS, TEMP, QTRC, &
        Re                )
+    else
+
+       ! dummy
+       !$acc enter data create(dqcrg, beta_crg, &
+       !$acc                   QTRC_crg0) &
+       !$acc            create(QSPLT_in, Sarea, &
+       !$acc                   Re)
+
     endif
 
     hist_flag = .false.
@@ -2166,6 +2174,9 @@ contains
 
     if( flg_lt_l ) then
        !$acc exit data copyout(QSPLT_in, Sarea, QTRC_crg0) &
+       !$acc           delete(Re, dqcrg, beta_crg)
+    else
+       !$acc exit data delete(QSPLT_in, Sarea, QTRC_crg0) &
        !$acc           delete(Re, dqcrg, beta_crg)
     end if
 
