@@ -325,7 +325,8 @@ contains
     !---------------------------------------------------------------------------
 
     !$omp parallel do
-    !$acc kernels
+    !$acc parallel vector_length(32)
+    !$acc loop collapse(2) independent
     do j = JS, JE
     do i = IS, IE
        ATMOS_PHY_CP_w0mean (   1:KS-1,i,j) = ATMOS_PHY_CP_w0mean (KS,i,j)
@@ -338,9 +339,10 @@ contains
        ATMOS_PHY_CP_RHOQV_t(KE+1:KA  ,i,j) = ATMOS_PHY_CP_RHOQV_t(KE,i,j)
     end do
     end do
-    !$acc end kernels
+    !$acc end parallel
     !$omp parallel do collapse(2)
-    !$acc kernels
+    !$acc parallel vector_length(32)
+    !$acc loop collapse(3) independent
     do iq = 1, N_HYD
        do j = JS, JE
        do i = IS, IE
@@ -349,7 +351,7 @@ contains
        enddo
        enddo
     end do
-    !$acc end kernels
+    !$acc end parallel
 
     call COMM_vars8( ATMOS_PHY_CP_w0mean(:,:,:), 1 )
     call COMM_vars8( ATMOS_PHY_CP_kf_nca(:,:),   2 )
@@ -460,7 +462,8 @@ contains
 
           ! fill K halos
           !$omp parallel do
-          !$acc kernels
+          !$acc parallel vector_length(32)
+          !$acc loop collapse(2) independent
           do j  = 1, JA
           do i  = 1, IA
              ATMOS_PHY_CP_w0mean   (   1:KS-1,i,j) = ATMOS_PHY_CP_w0mean   (KS,i,j)
@@ -473,9 +476,10 @@ contains
              ATMOS_PHY_CP_RHOQV_t  (KE+1:KA  ,i,j) = ATMOS_PHY_CP_RHOQV_t  (KE,i,j)
           end do
           end do
-          !$acc end kernels
+          !$acc end parallel
           !$omp parallel do collapse(2)
-          !$acc kernels
+          !$acc parallel vector_length(32)
+          !$acc loop collapse(3) independent
           do iq = 1, N_HYD
              do j  = 1, JA
              do i  = 1, IA
@@ -484,7 +488,7 @@ contains
              enddo
              enddo
           enddo
-          !$acc end kernels
+          !$acc end parallel
        else
           call ATMOS_PHY_CP_vars_fillhalo
        end if

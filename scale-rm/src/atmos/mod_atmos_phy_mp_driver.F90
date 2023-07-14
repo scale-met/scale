@@ -563,6 +563,7 @@ contains
 
        !$omp do
        !$acc kernels async
+       !$acc loop collapse(3) independent
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
@@ -1345,10 +1346,12 @@ contains
 
                 endif
 
+                !$acc loop independent
                 do k = KS, KE
                    TEMP2(k) = RHOE2(k) / ( DENS2(k) * CVtot2(k) )
                 end do
 
+                !$acc loop independent
                 do k = KS-1, KE-1
                    FLX_hydro(k) = FLX_hydro(k) + mflux(k) * MP_RNSTEP_SEDIMENTATION
                 enddo

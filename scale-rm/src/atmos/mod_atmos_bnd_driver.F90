@@ -2028,6 +2028,7 @@ contains
        !$omp shared(BND_QA,BND_IQ) &
        !$omp private(i,j,k,iq,iqb)
        !$acc kernels
+       !$acc loop collapse(3) independent
        do j = 1, JA
        do i = 1, IS-1
        do k = KS, KE
@@ -2104,11 +2105,9 @@ contains
        !$omp shared(BND_QA,BND_IQ) &
        !$omp private(i,j,k,iq,iqb)
        !$acc kernels
-       !$acc loop independent
+       !$acc loop collapse(3) independent
        do j = 1, JA
-       !$acc loop independent
        do i = IE+1, IA
-       !$acc loop independent
        do k = KS, KE
           DENS(k,i,j) = ATMOS_BOUNDARY_DENS(k,i,j)
           RHOT(k,i,j) = ATMOS_BOUNDARY_POTT(k,i,j) * ATMOS_BOUNDARY_DENS(k,i,j)
@@ -2192,11 +2191,9 @@ contains
     ! fill HALO in southern region
     if ( .NOT. PRC_HAS_S ) then
        !$acc kernels
-       !$acc loop independent
+       !$acc loop collapse(3) independent
        do j = 1, JS-1
-       !$acc loop independent
        do i = 1, IA
-       !$acc loop independent
        do k = KS, KE
           DENS(k,i,j) = ATMOS_BOUNDARY_DENS(k,i,j)
           MOMY(k,i,j) = ATMOS_BOUNDARY_VELY(k,i,j) &
@@ -2261,11 +2258,9 @@ contains
     ! fill HALO in northern region
     if ( .NOT. PRC_HAS_N ) then
        !$acc kernels
-       !$acc loop independent
+       !$acc loop collapse(3) independent
        do j = JE+1, JA
-       !$acc loop independent
        do i = 1, IA
-       !$acc loop independent
        do k = KS, KE
           DENS(k,i,j) = ATMOS_BOUNDARY_DENS(k,i,j)
           RHOT(k,i,j) = ATMOS_BOUNDARY_POTT(k,i,j) * ATMOS_BOUNDARY_DENS(k,i,j)
