@@ -88,6 +88,7 @@ module scale_atmos_phy_cp_kf
   private :: CP_kf_envirtht
   private :: CP_kf_lutab
 
+#ifndef _OPENACC
   abstract interface
      subroutine kf_precipitation( &
           G, DZ, BOTERM, ENTERM,                          &
@@ -97,6 +98,9 @@ module scale_atmos_phy_cp_kf
        real(RP), INTENT(INOUT)   :: WTW, QLIQ, QICE, QNEWLQ, QNEWIC, QLQOUT, QICOUT
      end subroutine kf_precipitation
   end interface
+
+  procedure(kf_precipitation), pointer,private :: CP_kf_precipitation => NULL()
+#endif
 
   !-----------------------------------------------------------------------------
   !
@@ -135,8 +139,6 @@ module scale_atmos_phy_cp_kf
   integer , private              :: prec_type       !< precipitation select 1. Ogura and Cho (1973), 2. Kessler
   logical,  private              :: DO_prec         !< enable precipitation
 
-  procedure(kf_precipitation), pointer,private :: CP_kf_precipitation => NULL()
-
   real(RP), private, allocatable :: lifetime  (:,:) !< convectime lifetime [s]
   integer , private, allocatable :: I_convflag(:,:) !< convection type (0:deep 1:shallow 2: no convection)
 
@@ -166,6 +168,12 @@ module scale_atmos_phy_cp_kf
   integer,  parameter            :: I_HIST_S = 1 ! shallow convection
 
   real(RP), private, allocatable :: hist_work(:,:,:,:,:)
+
+  !$acc declare create( TTAB, QSTAB, THE0K, ALU, RDPR, RDTHK, PLUTOP, PBOT, GdCP,      &
+  !$acc                 RATE, TRIGGER_type, DELCAPE, DEEPLIFETIME, SHALLOWLIFETIME,    &
+  !$acc                 DEPTH_USL, WARMRAIN, KF_LOG, kf_threshold, prec_type, DO_prec, &
+  !$acc                 lifetime, I_convflag, deltaz, Z, deltax,                       &
+  !$acc                 hist_flag, hist_work )
 
   !------------------------------------------------------------------------------
 contains
@@ -411,6 +419,11 @@ contains
        end if
     end do
 
+    !$acc update device( TTAB, QSTAB, THE0K, ALU, RDPR, RDTHK, PLUTOP, PBOT, GdCP,      &
+    !$acc                RATE, TRIGGER_type, DELCAPE, DEEPLIFETIME, SHALLOWLIFETIME,    &
+    !$acc                DEPTH_USL, WARMRAIN, KF_LOG, kf_threshold, prec_type, DO_prec, &
+    !$acc                lifetime, I_convflag, deltaz, Z, deltax                        )
+
     return
   end subroutine ATMOS_PHY_CP_kf_setup
 
@@ -474,6 +487,7 @@ contains
        call PRC_abort
     end if
 
+#ifndef _OPENACC
     select case ( prec_type )
     case (1)
        CP_kf_precipitation => CP_kf_precipitation_OC1973 ! Ogura and Cho (1973)
@@ -484,6 +498,7 @@ contains
        LOG_ERROR_CONT(*) 'prec_type must be 1 or 2 : ', prec_type
        call PRC_abort
     end select
+#endif
 
     return
   end subroutine CP_kf_param
@@ -656,6 +671,7 @@ contains
        call FILE_HISTORY_query( hist_id(n,1), hist_flag )
        if ( hist_flag ) exit
     end do
+    !$acc update device( hist_flag )
 
     !$omp parallel do default(none) schedule(dynamic) collapse(2) &
     !$omp private(RHOD,tempv,qv_d,qc,qi,PSAT,QSAT,QV,rh, &
@@ -674,6 +690,8 @@ contains
     !$omp        nca,cloudtop,cloudbase,SFLX_rain,SFLX_snow,SFLX_engi, &
     !$omp        lifetime,deltaz,deltax,I_convflag, &
     !$omp        cldfrac_sh,cldfrac_dp,hist_flag,hist_work)
+!    !$acc parallel
+!    !$acc loop collapse(2) gang
     do j = JS, JE
     do i = IS, IE
 
@@ -682,12 +700,14 @@ contains
        ! check convection
        if ( nca(i,j) .ge. 0.5_RP * KF_DTSEC ) cycle
 
+!$acc kernels
+       !$acc loop
        do k = KS, KE
           ! preparing a NON Hydriometeor condition to fit assumption in KF scheme
           RHOD(k) = DENS(k,i,j) * QDRY(k,i,j)
        enddo
 
-
+       !$acc loop
        do k = KS, KE
           ! temporary: WRF TYPE equations are used to maintain consistency with kf_main
           !call SATURATION_psat_liq( PSAT, TEMP(k,i,j) )
@@ -702,10 +722,17 @@ contains
 
        ! calculate delta P by hydrostatic balance
        ! deltap is the pressure interval between half levels(face levels) @ SCALE
+       !$acc loop
        do k = KS, KE
           deltap(k) = RHOD(k) * GRAV * ( FZ(k,i,j) - FZ(k-1,i,j) ) ! rho*g*dz
        enddo
+!$acc end kernels
 
+!!$acc parallel &
+!!$acc copy( KA, KS, KE, deltaz, Z, qv, QSAT, pres, deltap, deltax, temp, w0avg, &
+!!$acc       I_convflag, cloudtop, temp_u, tempv, qv_u, qc, qi, qvdet, qcdet, qidet, flux_qr, flux_qs, &
+!!$acc       theta_eu, theta_ee, cape, umf, umflcl, upent, updet, k_lcl, k_lc, k_pbl, k_top, k_let, k_ml, &
+!!$acc       presmix, dpthmx, cloudbase, zmix, umfnewdold )
        call CP_kf_trigger ( &
             KA, KS, KE,                   & ! [IN]
             deltaz(:,i,j), Z(:,i,j),      & ! [IN]
@@ -730,18 +757,26 @@ contains
             dpthmx,                       & ! [OUT]
             cloudbase(i,j), zmix,         & ! [OUT]
             umfnewdold(:)                 ) ! [OUT]
+!!$acc end parallel
 
        if (I_convflag(i,j) /= 2) then ! convection allowed I_convflag=0 or 1
 
+!$acc kernels copy( umfnewdold ) copyin( deltap ) copyout( ems, emsd )
           ! calc ems(box weight[kg])
           ems (k_top+1:KE) = 0._RP
           emsd(k_top+1:KE) = 0._RP
+          !$acc loop
           do k = KS, k_top
              ems(k) = deltap(k) * deltax(i,j)**2 / GRAV
              emsd(k) = 1._RP/ems(k)
              umfnewdold(k) = 1._RP/umfnewdold(k)
           end do
+!$acc end kernels
 
+!!$acc parallel &
+!!$acc copy( I_convflag, k_lcl, k_ml, k_top, k_pbl, k_let, k_lc, Z, cloudbase, u, v, rh, qv, pres, &
+!!$acc       deltap, deltax, ems, theta_ee, umf, temp_u, flux_qr, flux_qs, tempv, &
+!!$acc       wspd, dmf, downent, downdet, theta_d, qv_d, rain_flux, snow_flux, prec_engi, k_lfs )
           call CP_kf_downdraft ( &
                KA, KS, KE,                                    & ! [IN]
                I_convflag(i,j),                               & ! [IN]
@@ -757,7 +792,15 @@ contains
                theta_d(:), qv_d(:),                           & ! [OUT]
                rain_flux, snow_flux, prec_engi,               & ! [OUT]
                k_lfs                                          ) ! [OUT]
+!!$acc end parallel
 
+!!$acc parallel &
+!!$acc copy( k_top, k_lc, k_pbl, k_ml, k_lfs, deltaz, Z, pres, deltap, deltax, temp, qv, ems, emsd, &
+!!$acc       presmix, zmix, dpthmx, cape, temp_u, qvdet, umflcl, qc, qi, flux_qr, flux_qs, umfnewdold, &
+!!$acc       wspd, qv_d, theta_d, prec_engi, KF_DTSEC, RHOD, i, j, &
+!!$acc       I_convflag, k_lcl, umf, upent, updet, qcdet, qidet, dmf, downent, downdet, rain_flux, snow_flux, &
+!!$acc       nic, theta_nw, qv_nw, qc_nw, qi_nw, qr_nw, qs_nw, SFLX_rain, SFLX_snow, SFLX_engi, cldfrac_KF, &
+!!$acc       lifetime, time_advec )
           call CP_kf_compensational ( &
                KA, KS, KE,                                                   & ! [IN]
                k_top, k_lc, k_pbl, k_ml, k_lfs,                              & ! [IN]
@@ -782,6 +825,7 @@ contains
                qv_nw(:), qc_nw(:), qi_nw(:), qr_nw(:), qs_nw(:),             & ! [OUT]
                SFLX_rain(i,j), SFLX_snow(i,j), SFLX_engi(i,j),               & ! [OUT]
                cldfrac_KF, lifetime(i,j), time_advec                         ) ! [OUT]
+!!$acc end parallel
 
        end if
 
@@ -809,6 +853,7 @@ contains
                 hist_work(:,i,j,n,m) = 0.0_RP
              end do
              end do
+             !$acc update device( hist_work )
           end if
 
        else
@@ -828,6 +873,10 @@ contains
              nca     (i,j) = KF_DTSEC ! convection feed back act this time span
           end if
 
+!$acc update device( lifetime )
+!$acc kernels copy( RHOQ_T, DENS_t, RHOT_T, RHOQV_t ) &
+!$acc         copyin( dens_nw, theta_nw, qv_nw, qc_nw, qr_nw, qi_nw, qs_nw, DENS, RHOT, RHOD, QV )
+          !$acc loop
           do k = KS, k_top
              ! vapor
              dQV = RHOD(k) * ( qv_nw(k) - QV(k) )
@@ -854,17 +903,21 @@ contains
              dens_nw(k) = dens(k,i,j) + dQV + dQC + dQR + dQI + dQS
 
           end do
-          do iq = I_HS+1, N_HYD
+
+          !$acc loop
           do k = KS, k_top
+          do iq = I_HS+1, N_HYD
              RHOQ_t(k,i,j,iq) = 0.0_RP
           end do
           end do
 
           ! internal energy
+          !$acc loop
           do k = KS, k_top
              RHOT_t(k,i,j) = ( dens_nw(k) * theta_nw(k) - RHOT(k,i,j) ) / lifetime(i,j)
           end do
 
+          !$acc loop
           do k=k_top+1, KE
              DENS_t (k,i,j) = 0.0_RP
              RHOT_t (k,i,j) = 0.0_RP
@@ -873,6 +926,7 @@ contains
                 RHOQ_t(k,i,j,iq) = 0.0_RP
              end do
           end do
+!$acc end kernels
 
           ! to keep conservation
           ! if noconvection then nca is same value before call. nca only modifyed convectioned
@@ -882,6 +936,7 @@ contains
        cldfrac_dp(KS:KE,i,j) = cldfrac_KF(KS:KE,2)
     end do
     end do
+!    !$acc end parallel
 
     call PROF_rapend('CP_kf', 3)
 
@@ -939,6 +994,7 @@ contains
     use scale_prc, only: &
          PRC_abort
     implicit none
+!    !$acc routine worker
     integer,  intent(in) :: KA, KS, KE          !< index
     real(RP), intent(in) :: dz_kf(KA),z_kf(KA)  !< delta z and height [m]
     real(RP), intent(in) :: qv(KA)              !< water vapor
@@ -1036,21 +1092,26 @@ contains
     real(RP) :: qs_lcl        !< trigger variables
     !real(RP) :: tempvq_u(KA)
     ! -----
+!$acc kernels copy( pres, pres300, kk, temp, qv, tempv, k_llfc, n_check, k_check, pres15 )
     pres300 = pres(KS) - DEPTH_USL*100._RP ! pressure @ surface - 300 mb. maybe 700mb or so default depth_usl is 300hPa
+    !$acc loop
     do kk = KS, KE
        tempv(kk)   = temp(kk) * ( 1.0_RP + EPSTvap * qv(kk) ) ! vertual temperature
     end do
 
     ! search above 300 hPa index  to "k_llfc"
+    !$acc loop seq
     do kk = KS, KE
        if (pres(kk) >= pres300)  k_llfc = kk
     end do
+!$acc end kernels
     ! usl(updraft sourcer layer) has interval for 15mb
     n_check     = KS ! first layer
     k_check(KS) = KS ! first layer
     pres15      = pres(KS) - 15.e2_RP !< pressure above 15mb
 !    k_check     = KS
     ! calc 15 hpa interval Num of layer(n_check) and index of layer(k_check)
+!    !$acc loop seq
     do kk = KS+1, k_llfc
        if(pres(kk) < pres15 ) then
           n_check = n_check + 1
@@ -1097,16 +1158,20 @@ contains
        ! calculate above k_lc layers depth of pressure
        ! usl layer depth is nessesary 50mb or more
        if ( nk + 1 < KS ) then !< check k_lc -1 is not surface or bottom of ground
+#ifndef _OPENACC
           if(KF_LOG) then
              LOG_INFO("CP_kf_trigger",*) 'would go off bottom: cu_kf',pres(KS),k_lc,nk+1,n_uslcheck !,nk i,j
           end if
+#endif
        else
           do ! serach USL layer index. USL layer is nessesally more 50hPa
              nk = nk +1
              if ( nk > KE ) then !< check k_lc is not index of top layer
+#ifndef _OPENACC
                 if(KF_LOG) then
                    LOG_INFO("CP_kf_trigger",*) 'would go off top: cu_kf'!,nk i,j
                 end if
+#endif
                 exit
              end if
              dpthmx   = dpthmx + deltap(nk) ! depth of pressure
@@ -1311,10 +1376,12 @@ contains
           end if ! convection type
        end if ! triggeer
     end do ! usl
+#ifndef _OPENACC
     if ( itr .ge. itr_max ) then
        LOG_ERROR("CP_kf_trigger",*) 'iteration max count was reached in the USL loop in the KF scheme'
        call PRC_abort
     end if
+#endif
 
 
     if (I_convflag == 1) then ! shallow convection
@@ -1369,10 +1436,13 @@ contains
 
     !< initialize some arrays below cloud base and above cloud top
     !< below cloud base melt layer setting
+!$acc kernels copyout( k_ml )
+    !$acc loop seq
     do kk = KS,k_top
        if(temp(kk) > TEM00) k_ml = kk !! melt layer
     end do
     !
+    !$acc loop
     do kk = KS,k_lclm1
        !!
        if(kk >= k_lc) then
@@ -1415,6 +1485,7 @@ contains
     end do
 
     ! define variables above cloud top
+    !$acc loop
     do kk = k_top+1,KE
        umf(kk)     = 0._RP
        upent(kk)   = 0._RP
@@ -1429,10 +1500,12 @@ contains
        qcdet(kk)   = 0._RP
        qidet(kk)   = 0._RP
     end do
+    !$acc loop
     do kk = k_top+2,KE
        temp_u(kk) = 0._RP
        qv_u(kk)   = 0._RP
     end do
+!$acc end kernels
 
     return
   end subroutine CP_kf_trigger
@@ -1464,6 +1537,7 @@ contains
          GRAV    => CONST_GRAV,  &
          Rdry    => CONST_Rdry,  &
          EPSTvap => CONST_EPSTvap
+!    !$acc routine worker
     implicit none
     integer,  intent(in) :: KA, KS, KE          !< index
     integer,  intent(in) :: k_lcl               !< index of LCL layer
@@ -1828,6 +1902,7 @@ contains
     use scale_prc, only: &
          PRC_abort
     implicit none
+!    !$acc routine worker
     integer,  intent(in) :: KA, KS, KE          !< index
     integer,  intent(in) :: I_convflag          !< index of convection
     integer,  intent(in) :: k_lcl               !< index of lcl layer
@@ -2265,6 +2340,7 @@ contains
     use scale_prc, only: &
          PRC_abort
     implicit none
+!    !$acc routine worker
     integer,  intent(in)    :: KA, KS, KE         !< index
     integer,  intent(in)    :: k_top              !< index at cloud top
     integer,  intent(in)    :: k_lc               !< index at lc
@@ -2614,10 +2690,12 @@ contains
              qv_g(kk)   = KF_EPS
           end if
        end do
+#ifndef _OPENACC
        if( qv_g(KS) < KF_EPS ) then
           LOG_ERROR("CP_kf_compensational",*) "error qv<0 @ Kain-Fritsch cumulus parameterization"
           call PRC_abort
        end if
+#endif
        if ( hist_flag ) then
           do kk = KS, k_top
              hist_work(kk,i,j,I_HIST_QV_NF,I_convflag) = ( qv_g(kk) - qv_nw(kk) ) * RHOD(kk) / timecp
@@ -2625,11 +2703,13 @@ contains
        end if
        ! calculate top layer omega and conpare determ omg
        topomg = (updet(k_top) - upent(k_top))*deltap(k_top)*emsd(k_top)
+#ifndef _OPENACC
        if( abs(topomg - omg(k_top-1)) > 1.e-3_RP) then ! not same omega velocity error
           LOG_ERROR("CP_kf_compensational",*) "KF omega is not consistent",ncount
           LOG_ERROR_CONT(*) "omega error",abs(topomg - omg(k_top-1)),k_top,topomg,omg(k_top-1)
           call PRC_abort
        end if
+#endif
        ! convert theta to T
        do kk = KS,k_top
           call CP_kf_calciexn( pres(kk), qv_g(kk), & ! [IN]
@@ -2909,6 +2989,7 @@ contains
     qpfnl = (rain_flux+snow_flux)*timecp*(1._RP - fbfrc)
     qfinl = qvfnl + qhydr + qpfnl
     err   = ( qfinl - qinit )*100._RP/qinit
+#ifndef _OPENACC
     if ( abs(err) > 0.05_RP ) then
        ! write error message
        ! moisture budget error
@@ -2922,6 +3003,7 @@ contains
        LOG_ERROR_CONT(*) "--------------------------------------"
        call PRC_abort
     end if
+#endif
 
     !> feed back to resolvable scale tendencies
     !! if the advective time period(time_advec) is less than specified minimum
@@ -2980,6 +3062,28 @@ contains
 
     return
   end subroutine CP_kf_compensational
+
+#ifdef _OPENACC
+  subroutine CP_kf_precipitation( &
+       G, DZ, BOTERM, ENTERM,                          &
+       WTW, QLIQ, QICE, QNEWLQ, QNEWIC, QLQOUT, QICOUT )
+    use scale_precision
+!    !$acc routine worker
+    real(RP), INTENT(IN   )   :: G, DZ,BOTERM,ENTERM
+    real(RP), INTENT(INOUT)   :: WTW, QLIQ, QICE, QNEWLQ, QNEWIC, QLQOUT, QICOUT
+
+    select case ( prec_type )
+    case (1)
+       call CP_kf_precipitation_OC1973( G, DZ, BOTERM, ENTERM,                          &
+                                        WTW, QLIQ, QICE, QNEWLQ, QNEWIC, QLQOUT, QICOUT ) ! Ogura and Cho (1973)
+    case (2)
+       call CP_kf_precipitation_Kessler( G, DZ, BOTERM, ENTERM,                          &
+                                         WTW, QLIQ, QICE, QNEWLQ, QNEWIC, QLQOUT, QICOUT ) ! Kessler type
+    end select
+
+    return
+  end subroutine CP_kf_precipitation
+#endif
 
   !------------------------------------------------------------------------------
   !> CP_kf_calciexn
@@ -3365,6 +3469,7 @@ contains
          CPvap  => CONST_CPvap, &
          EPSvap => CONST_EPSvap
     implicit none
+    !$acc routine seq
     real(RP), intent(in)  :: P1, T1, Q1
     real(RP), intent(out) :: THT1
 
