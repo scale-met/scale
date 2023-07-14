@@ -3689,7 +3689,7 @@ contains
     endif
 
     if ( exec ) then
-       !$acc update device(var) if(acc_is_present(var))
+       !$acc update host(var) if(acc_is_present(var))
        if ( fill_halo_ ) then ! fill halo cells with RMISS
           do j = JS, JE
           do i = IS, IE
