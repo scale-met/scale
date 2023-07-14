@@ -227,12 +227,12 @@ contains
     if ( ATMOS_PHY_CP_TYPE /= "KF-JMAPPLIB" ) then
 
        ! temporal running mean of vertical velocity
-       !$acc update host(W,w0mean)
+!       !$acc update host(W,w0mean)
        call ATMOS_PHY_CP_common_wmean( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
                                        W(:,:,:),                            & ! [IN]
                                        TIME_DTSEC, TIME_DTSEC_ATMOS_PHY_CP, & ! [IN]
                                        w0mean(:,:,:)                        ) ! [INOUT]
-       !$acc update device(w0mean)
+!       !$acc update device(w0mean)
     end if
 
 
@@ -242,7 +242,7 @@ contains
 
        select case ( ATMOS_PHY_CP_TYPE )
        case ( 'KF' )
-          !$acc update host(DENS,U,V,RHOT,TEMP,PRES,QDRY,QV,DENS_t_CP,RHOT_t_CP,RHOQV_t_CP,RHOHYD_t_CP,kf_nca,SFLX_rain,SFLX_snow,SFLX_ENGI,cloudtop,cloudbase,cldfrac_dp,cldfrac_sh)
+!          !$acc update host(DENS,U,V,RHOT,TEMP,PRES,QDRY,QV,DENS_t_CP,RHOT_t_CP,RHOQV_t_CP,RHOHYD_t_CP,kf_nca,SFLX_rain,SFLX_snow,SFLX_ENGI,cloudtop,cloudbase,cldfrac_dp,cldfrac_sh)
           call ATMOS_PHY_CP_kf_tendency( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
                                          DENS(:,:,:),                              & ! [IN]
                                          U(:,:,:), V(:,:,:),                       & ! [IN]
@@ -259,7 +259,7 @@ contains
                                          SFLX_ENGI(:,:),                           & ! [INOUT]
                                          cloudtop(:,:), cloudbase(:,:),            & ! [INOUT]
                                          cldfrac_dp(:,:,:), cldfrac_sh(:,:,:)      ) ! [INOUT]
-          !$acc update device(DENS_t_CP,RHOT_t_CP,RHOQV_t_CP,RHOHYD_t_CP,kf_nca,SFLX_rain,SFLX_snow,SFLX_ENGI,cloudtop,cloudbase,cldfrac_dp,cldfrac_sh)
+!          !$acc update device(DENS_t_CP,RHOT_t_CP,RHOQV_t_CP,RHOHYD_t_CP,kf_nca,SFLX_rain,SFLX_snow,SFLX_ENGI,cloudtop,cloudbase,cldfrac_dp,cldfrac_sh)
 
           !$omp parallel do
           !$acc kernels
