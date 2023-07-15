@@ -170,11 +170,13 @@ contains
     endif
     LOG_NML(PARAM_MKTOPO_FLAT)
 
+    !$acc kernels
     do j = 1, JA
     do i = 1, IA
        TOPOGRAPHY_Zsfc(i,j) = FLAT_HEIGHT
     enddo
     enddo
+    !$acc end kernels
 
     return
   end subroutine MKTOPO_flat
@@ -231,6 +233,7 @@ contains
     endif
 
     ! make bell-shaped mountain
+    !$acc kernels
     do j = 1, JA
     do i = 1, IA
 
@@ -241,6 +244,7 @@ contains
 
     enddo
     enddo
+    !$acc end kernels
 
     return
   end subroutine MKTOPO_bellshape
@@ -290,6 +294,7 @@ contains
 
     ! make bell-shaped mountain
     if ( .NOT. SCHAER_SWAPXY ) then
+       !$acc kernels
        do j = 1, JA
        do i = 1, IA
 
@@ -299,7 +304,9 @@ contains
 
        enddo
        enddo
+       !$acc end kernels
     else
+       !$acc kernels
        do j = 1, JA
        do i = 1, IA
 
@@ -309,6 +316,7 @@ contains
 
        enddo
        enddo
+       !$acc end kernels
     endif
 
     return

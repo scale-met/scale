@@ -281,6 +281,9 @@ contains
           enddo
        endif
 
+       !$acc update device(LANDUSE_frac_land, LANDUSE_frac_lake, LANDUSE_frac_urban)
+       !$acc update device(LANDUSE_frac_PFT, LANDUSE_index_PFT)
+
        ! calculate landuse factors
        call LANDUSE_fillhalo( FILL_BND=.true. )
        call LANDUSE_calc_fact
