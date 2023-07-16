@@ -1754,7 +1754,12 @@ contains
           ! calculate effect of freezing
           ! and determin new create frozen
           call CP_kf_dtfrznew( pres(kkp1), qfrz,                                  & ! [IN]
-                               temp_u(kkp1), theta_eu(kkp1), qv_u(kkp1), qi(kkp1) ) ! [OUT]
+!                               temp_u(kkp1), theta_eu(kkp1), qv_u(kkp1), qi(kkp1) ) ! [OUT]
+                               temp_u(kkp1), qv_u(kkp1), qi(kkp1),   & ! [IN]
+                               temptmp, theta_eu(kkp1), qvtmp, qitmp ) ! [OUT]
+          temp_u(kkp1) = temptmp
+          qv_u(kkp1) = qvtmp
+          qi(kkp1) = qitmp
        end if
        tempv_u(kkp1) = temp_u(kkp1) * ( 1.0_RP + EPSTvap * qv_u(kkp1) ) ! updraft vertual temperature
        ! calc bouyancy term  for verticl velocity
@@ -3451,7 +3456,8 @@ contains
   !> CP_kf_dtfrznew
   !! calculate temperature differential of air including frozen droplets
   !<
-  subroutine CP_kf_dtfrznew( P, QFRZ, TU, THTEU, QU, QICE )
+!  subroutine CP_kf_dtfrznew( P, QFRZ, TU, THTEU, QU, QICE )
+  subroutine CP_kf_dtfrznew( P, QFRZ, TU, QU, QICE, TUnew, THTEU, QUnew, QICEnew )
     !$acc routine seq
     use scale_const, &
          PRE00  => CONST_PRE00, &
@@ -3470,7 +3476,9 @@ contains
          ATMOS_SATURATION_psat_liq
     implicit none
     real(RP), intent(in)    :: P, QFRZ
-    real(RP), intent(inout) :: TU, THTEU, QU, QICE
+!    real(RP), intent(inout) :: TU, THTEU, QU, QICE
+    real(RP), intent(out) :: TU, QU, QICE
+    real(RP), intent(out) :: TUnew, THTEU, QUnew, QICEnew
 
     real(RP) :: RLS,RLF,CPP,A,DTFRZ,ES,QS,DQEVAP,PII
     !> ALLOW THE FREEZING OF LIQUID WATER IN THE UPDRAFT TO PROCEED AS AN
@@ -3487,10 +3495,10 @@ contains
     !<  FOR SATURATION VAPOR PRESSURE...
     A=(CLIQ-BLIQ*DLIQ)/((TU-DLIQ)*(TU-DLIQ))
     DTFRZ = RLF*QFRZ/(CPP+RLS*QU*A)
-    TU = TU+DTFRZ
+    TUnew = TU+DTFRZ
     ! temporary: WRF TYPE equations are used to maintain consistency
     ! call ATMOS_SATURATION_psat_liq(ES,TU) !saturation vapar pressure
-    ES = ALIQ*EXP((BLIQ*TU-CLIQ)/(TU-DLIQ))
+    ES = ALIQ*EXP((BLIQ*TUnew-CLIQ)/(TUnew-DLIQ))
     QS = ES * EPSvap / ( P - ES )
     !
     !> FREEZING WARMS THE AIR AND IT BECOMES UNSATURATED...ASSUME THAT SOME OF THE
@@ -3499,11 +3507,11 @@ contains
     !! SUBTRACT IT FROM ICE CONCENTRATION, THEN SET UPDRAFT MIXING RATIO AT THE NEW
     !< TEMPERATURE TO THE SATURATION VARIABLE...
     DQEVAP = max( min(QS-QU, QICE), 0.0_RP )
-    QICE = QICE-DQEVAP
-    QU = QU+DQEVAP
-    PII=(PRE00/P)**( ( Rdry + Rvap * QU ) / ( CPdry + CPvap * QU ) )
+    QICEnew = QICE-DQEVAP
+    QUnew = QU+DQEVAP
+    PII=(PRE00/P)**( ( Rdry + Rvap * QUnew ) / ( CPdry + CPvap * QUnew ) )
     !< Emanuel 1994 132p eq(4.7.9) pseudoequivalent PT
-    THTEU = TU*PII*EXP((3374.6525_RP/TU - 2.5403_RP)*QU*(1._RP + 0.81_RP*QU))
+    THTEU = TUnew*PII*EXP((3374.6525_RP/TUnew - 2.5403_RP)*QUnew*(1._RP + 0.81_RP*QUnew))
     !
   end subroutine CP_kf_dtfrznew
 
