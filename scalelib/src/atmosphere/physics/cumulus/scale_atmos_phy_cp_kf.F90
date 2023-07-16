@@ -1662,6 +1662,7 @@ contains
     real(RP) :: qvtmp, qctmp, qitmp             !< temporaly qv
     real(RP) :: temp_u95, temp_u10              !< temporaly Temperature value use determin Mixed Fraction
     real(RP) :: qold                            !< total q before entrainment/detrainment
+    real(RP) :: qnew
     real(RP),parameter :: temp_frzT = 268.16_RP !< frozen temperature start frozen -5degC
     real(RP),parameter :: temp_frzB = 248.16_RP !< frozen temperature all frozen  -25degC
     ! -----
@@ -1892,12 +1893,15 @@ contains
           qvdet(kkp1)      = qv_u(kkp1)
           qold             = qv_u(kkp1)
           ! below layer updraft qv and entrain q /new updraft massflux
-          qv_u(kkp1)       = ( umfold*qv_u(kkp1) + upent(kkp1)*qv(kkp1) ) / umfnew
-          qc(kkp1)         = qc(kkp1)*umfold/umfnew
-          qi(kkp1)         = qi(kkp1)*umfold/umfnew
+          !qv_u(kkp1)       = ( umfold*qv_u(kkp1) + upent(kkp1)*qv(kkp1) ) / umfnew
+          qnew              = ( umfold*qv_u(kkp1) + upent(kkp1)*qv(kkp1) ) / umfnew
           theta_eu(kkp1)   = ( umfold * ( 1.0_RP + qold ) * theta_eu(kkp1) &
                              + upent(kkp1) * ( 1.0_RP + qv(kkp1) ) * theta_ee(kkp1) &
-                             ) / ( umfnew * ( 1.0_RP + qv_u(kkp1) ) )
+!                             ) / ( umfnew * ( 1.0_RP + qv_u(kkp1) ) )
+                             ) / ( umfnew * ( 1.0_RP + qnew ) )
+          qv_u(kkp1)       = qnew
+          qc(kkp1)         = qc(kkp1)*umfold/umfnew
+          qi(kkp1)         = qi(kkp1)*umfold/umfnew
           ! flux_qr is ratio of generation of liquid fallout(RAIN)
           ! flux_qi is ratio of generation of ice fallout(SNOW)
           flux_qr(kkp1)    = qrout(kkp1)*umf(kk)
@@ -3598,8 +3602,10 @@ contains
     q11=qstab(ithtb+1,iptb+1)
 
     ! parcel temperature and saturation mixing ratio
-    ts=(t00+(t10-t00)*pp+(t01-t00)*qq+(t00-t10-t01+t11)*pp*qq)
-    qs=(q00+(q10-q00)*pp+(q01-q00)*qq+(q00-q10-q01+q11)*pp*qq)
+    ts = ( (t10-t00)*pp+(t01-t00)*qq+((t00-t10)-(t01-t11))*pp*qq )
+    ts = ts + t00
+    qs = ( (q10-q00)*pp+(q01-q00)*qq+((q00-q10)-(q01-q11))*pp*qq )
+    qs = qs + q00
 
     return
   end subroutine CP_kf_tpmix2dd
