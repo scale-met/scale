@@ -382,7 +382,7 @@ contains
     real(RP), intent(in)    :: DAMP_alpha_POTT(KA,IA,JA)
     real(RP), intent(in)    :: DAMP_alpha_QTRC(KA,IA,JA,BND_QA)
     real(RP), intent(in)    :: MFLUX_OFFSET_X(KA,JA,2)
-    real(RP), intent(in)    :: MFLUX_OFFSET_Y(KA,JA,2)
+    real(RP), intent(in)    :: MFLUX_OFFSET_Y(KA,IA,2)
 
     real(RP), intent(in)    :: divdmp_coef
 
