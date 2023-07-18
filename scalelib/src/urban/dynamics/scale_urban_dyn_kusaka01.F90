@@ -836,8 +836,8 @@ contains
     use scale_atmos_hydrometeor, only: &
        HYDROMETEOR_LHV => ATMOS_HYDROMETEOR_LHV
     use scale_atmos_saturation, only: &
-       qsat => ATMOS_SATURATION_dens2qsat_all
-!       qsat => ATMOS_SATURATION_pres2qsat_all
+       qsat => ATMOS_SATURATION_dens2qsat_liq, &
+       dqs_dtem => ATMOS_SATURATION_dqs_dtem_dens_liq
     use scale_bulkflux, only: &
        BULKFLUX_diagnose_surface
     implicit none
@@ -909,7 +909,7 @@ contains
     real(RP), intent(in)    :: DZG(UKA)
     real(DP), intent(in)    :: dt
 
-    integer , intent(in)    :: i, j
+    integer,  intent(in)    :: i, j
     logical,  intent(out)   :: converged
 
 #ifdef _OPENACC
@@ -940,6 +940,8 @@ contains
     real(RP), parameter     :: rain_rate_R = 1.0_RP
     real(RP), parameter     :: rain_rate_B = 0.1_RP
     real(RP), parameter     :: rain_rate_G = 0.9_RP
+
+    integer, parameter :: itr_max = 200
 
     !-- Local variables
 !    logical  :: SHADOW = .false.
@@ -998,12 +1000,6 @@ contains
     real(RP) :: TC1, TC2, QC1, QC2
 !    real(RP) :: CAPL1, AKSL1
 
-    real(RP) :: DTS_MAX_onestep = 0.0_RP   ! DTS_MAX * dt
-    real(RP) :: resi1,resi2     ! residual
-    real(RP) :: resi1p,resi2p     ! residual
-    real(RP) :: fact1, fact2
-    real(RP) :: G0RP,G0BP,G0GP
-
     real(RP) :: XXX, XXX2, XXX10
     real(RP) :: XXXR ! Monin-Obkhov length for roof [-]
     real(RP) :: XXXC ! Monin-Obkhov length for canopy [-]
@@ -1018,6 +1014,35 @@ contains
     real(RP) :: dt_RP
 
     integer  :: iteration
+    real(RP) :: DTS_MAX_onestep ! DTS_MAX * dt
+    real(RP) :: resi1, resi2, resi3 ! residual
+    real(RP) :: fact
+    real(RP) :: threshold
+
+    ! for Newton method
+    real(RP) :: dTR, dTB, dTG, dAC
+    real(RP) :: dTBp, dTGp, dACp
+    real(RP) :: dr1dTR
+    real(RP) :: dr1dTB, dr1dTG, dr1dAC, dr2dTB, dr2dTG, dr2dAC, dr3dTB, dr3dTG, dr3dAC
+    real(RP) :: dTRdG0R, dTBdG0B, dTGdG0G
+    real(RP) :: dG0RdTR, dG0BdTB, dG0BdTG, dG0BdAC, dG0GdTB, dG0GdTG, dG0GdAC
+    real(RP) :: dHR, dHBdTB, dHBdTG, dHBdAC, dHGdTB, dHGdTG, dHGdAC
+    real(RP) :: dELER, dELEBdTB, dELEBdTG, dELEBdAC, dELEGdTB, dELEGdTG, dELEGdAC
+    real(RP) :: dRR
+    real(RP) :: dBETR, dBETB, dBETG, BETRP, BETBP, BETGP
+    real(RP) :: dRB1dTB, dRB1dTG, dRB2dTB, dRB2dTG
+    real(RP) :: dRG1dTB, dRG1dTG, dRG2dTB, dRG2dTG
+    real(RP) :: dQCdTB, dQCdTG, dQCdAC
+    real(RP) :: dTHCdTB, dTHCdTG, dTHCdAC
+    real(RP) :: dALPHACdTB, dALPHACdTG, dALPHACdAC
+    real(RP) :: dCHCdTB, dCHCdTG, dCHCdAC
+    real(RP) :: CHC_TB, CHC_TG, CHC_AC
+    real(RP) :: dQS0R, dQS0B, dQS0G
+    real(RP) :: Tdiff, Adiff
+    real(RP) :: XXXtmp
+    real(RP) :: ALPHACp
+    real(RP) :: rdet
+    real(RP) :: b1, b2
 
     integer :: k
 
@@ -1026,6 +1051,8 @@ contains
     !-----------------------------------------------------------
 
     dt_RP = dt
+
+    threshold = sqrt(EPS)
 
     RovCP = Rdry / CPdry
     THA   = TA * ( PRE00 / PRSA )**RovCP
@@ -1064,11 +1091,6 @@ contains
     endif
 
     W    = 2.0_RP * 1.0_RP * HGT
-    VFGS = SVF
-    VFGW = 1.0_RP - SVF
-    VFWG = ( 1.0_RP - SVF ) * ( 1.0_RP - R ) / W
-    VFWS = VFWG
-    VFWW = 1.0_RP - 2.0_RP * VFWG
 
     rflux_SW   = SSG(1) + SSG(2) ! downward shortwave radiation [W/m2]
     rflux_LW   = LLG(1) + LLG(2) ! downward longwave  radiation [W/m2]
@@ -1089,6 +1111,12 @@ contains
     RAINR = RAINR + RAINT * rain_rate_R
     RAINB = RAINB + RAINT * rain_rate_B
     RAING = RAING + RAINT * rain_rate_G
+
+    VFGS = SVF
+    VFGW = 1.0_RP - SVF
+    VFWG = ( 1.0_RP - SVF ) * ( 1.0_RP - R ) / W
+    VFWS = VFWG
+    VFWW = 1.0_RP - 2.0_RP * VFWG
 
     ! save the initial value
     RAINRP = RAINR
@@ -1139,84 +1167,88 @@ contains
 
     ! new scheme
 
-     G0RP = 0.0_RP
-     XXXR = 0.0_RP
-     resi1p = 0.0_RP
-     fact1 = 1.0_RP
-     !$acc loop seq
-     do iteration = 1, 100
+    Z   = ZA - ZDC
+    BHR = LOG(Z0R/Z0HR) / 0.4_RP
 
-      THS   = TR / EXN ! potential temp
+    b1 = CAPR * DZR(1) / dt_RP + 2.0_RP * AKSR / ( DZR(1)+DZR(2) )
+    b2 = CAPR * DZR(2) / dt_RP + 2.0_RP * AKSR / ( DZR(1)+DZR(2) ) + 2.0_RP * AKSR / ( DZR(2)+DZR(3) )
+    dTRdG0R = 1.0_RP / ( b1 - ( 2.0_RP * AKSR / ( DZR(1)+DZR(2) ) )**2 / b2 )
+    ! consider only change at the layers of k<=2
+    dTRdG0R = dTRdG0R * 0.5_RP
 
-      Z    = ZA - ZDC
-      BHR  = LOG(Z0R/Z0HR) / 0.4_RP
-      RIBR = ( GRAV * 2.0_RP / (THA+THS) ) * (THA-THS) * (Z+Z0R) / (UA*UA+EPS)
-      call mos(XXXR,CHR,CDR,BHR,RIBR,Z,Z0R,UA,THA,THS,RHOO)
+    EVPR = 0.0
+    BETRP = 0.0_RP
+    XXXR = 0.0_RP
+    dTR = 1.0e10_RP
+    !$acc loop seq
+    do iteration = 1, itr_max
 
-      call qsat( TR, RHOS, & ! [IN]
-                 QS0R      ) ! [OUT]
+       THS = TR / EXN ! potential temp
 
-      call cal_beta(BETR, BETR_CONST, RAINR, STRGR)
+       RIBR = ( GRAV * 2.0_RP / (THA+THS) ) * (THA-THS) * (Z+Z0R) / (UA*UA+EPS)
+       call mos(XXXR,CHR,CDR,BHR,RIBR,Z,Z0R,UA,THA,THS,RHOO)
+       ! ignore differential of CHR for Newton method
 
-      RR    = EPSR * ( rflux_LW - STB * (TR**4)  )
-      !HR    = RHOO * CPdry * CHR * UA * (TR-TA)
-      HR    = RHOO * CPdry * CHR * UA * (THS-THA) * EXN
-      EVPR  = min( RHOO * CHR * UA * BETR * (QS0R-QA), RAINR / dt_RP )
-      ELER  = EVPR * LHV
+       call dqs_dtem( TR, RHOS,   & ! [IN]
+                      dQS0R, QS0R ) ! [OUT]
 
-      G0R   = SR + RR - HR - ELER
-    !--- calculate temperature in roof
-    !  if ( STRGR /= 0.0_RP ) then
-    !    CAPL1 = CAP_water * (RAINR / (DZR(1) + RAINR)) + CAPR * (DZR(1) / (DZR(1) + RAINR))
-    !    AKSL1 = AKS_water * (RAINR / (DZR(1) + RAINR)) + AKSR * (DZR(1) / (DZR(1) + RAINR))
-    !  else
-    !    CAPL1 = CAPR
-    !    AKSL1 = AKSR
-    !  endif
-    !! 1st layer's cap, aks are replaced.
-    !! call multi_layer2(UKE,BOUND,G0R,CAPR,AKSR,TRL,DZR,dt_RP,TRLEND,CAPL1,AKSL1)
+       RAINR = max( RAINRP - EVPR * dt_RP, 0.0_RP )
+       call cal_beta(BETR, BETR_CONST, RAINR, STRGR)
+       dBETR = ( BETR - BETRP ) / dTR
+       BETRP = BETR
 
-      do k = UKS, UKE
-         TRL(k) = TRLP(k)
-      end do
-      call multi_layer(UKE,BOUND, &
+       RR  = EPSR * ( rflux_LW - STB * (TR**4)  )
+       dRR = - EPSR * STB * 4.0_RP * TR**3
+
+       !HR  = RHOO * CPdry * CHR * UA * (TR-TA)
+       HR  = RHOO * CPdry * CHR * UA * ( THS - THA ) * EXN
+       dHR = RHOO * CPdry * CHR * UA
+
+       EVPR = min( RHOO * CHR * UA * BETR * (QS0R-QA), RAINR / dt_RP )
+       ELER = EVPR * LHV
+       dELER = RHOO * CHR * UA * ( BETR * dQS0R + dBETR * QS0R ) * LHV
+
+       G0R = SR + RR - HR - ELER
+       dG0RdTR = dRR - dHR - dELER
+
+       !--- calculate temperature in roof
+       !  if ( STRGR /= 0.0_RP ) then
+       !    CAPL1 = CAP_water * (RAINR / (DZR(1) + RAINR)) + CAPR * (DZR(1) / (DZR(1) + RAINR))
+       !    AKSL1 = AKS_water * (RAINR / (DZR(1) + RAINR)) + AKSR * (DZR(1) / (DZR(1) + RAINR))
+       !  else
+       !    CAPL1 = CAPR
+       !    AKSL1 = AKSR
+       !  endif
+       !! 1st layer's cap, aks are replaced.
+       !! call multi_layer2(UKE,BOUND,G0R,CAPR,AKSR,TRL,DZR,dt_RP,TRLEND,CAPL1,AKSL1)
+
+       do k = UKS, UKE
+          TRL(k) = TRLP(k)
+       end do
+       call multi_layer(UKE,BOUND, &
 #ifdef _OPENACC
-           A, B, C, D, P, Q, &
+            A, B, C, D, P, Q, &
 #endif
-           G0R,CAPR,AKSR,TRL,DZR,dt_RP,TRLEND)
-      resi1  = TRL(1) - TR
+            G0R,CAPR,AKSR,TRL,DZR,dt_RP,TRLEND)
+       resi1  = TRL(1) - TR
 
-     ! LOG_INFO("URBAN_DYN_kusaka01_SLC_main",'(a3,i5,f8.3,6f15.5)') "TR,",iteration,TR,G0R,SR,RR,HR,ELER,resi1
+       if( abs(resi1) < threshold ) then
+          TR = TRL(1)
+          TR = max( TRP - DTS_MAX_onestep, min( TRP + DTS_MAX_onestep, TR ) )
+          exit
+       endif
 
-      if( abs(resi1) < sqrt(EPS) ) then
-        TR = TRL(1)
-        TR = max( TRP - DTS_MAX_onestep, min( TRP + DTS_MAX_onestep, TR ) )
-        exit
-      endif
+       ! Newton method
+       dr1dTR = dTRdG0R * dG0RdTR - 1.0_RP
 
-      if ( resi1*resi1p < 0.0_RP ) then
-         fact1 = max( fact1 * 0.5_RP, 1.0E-10_RP )
-      else
-         fact1 = min( fact1 * 2.0_RP, 1.0_RP )
-      endif
+       dTR = - resi1 / dr1dTR
 
-      TR = TRL(1) * fact1 + TR * ( 1.0_RP - fact1 )
-      TR = max( TRP - DTS_MAX_onestep, min( TRP + DTS_MAX_onestep, TR ) )
+       TR = TR + dTR
 
-      RAINR = max( ( RAINRP - EVPR * dt_RP ) * fact1 + RAINR * ( 1.0_RP - fact1 ), 0.0_RP )
+    enddo
 
-      resi1p = resi1
-
-     enddo
-
-!    if( .NOT. (resi1 < sqrt(EPS)) ) then
-!       LOG_WARN("URBAN_DYN_kusaka01_SLC_main",*) 'Warning not converged for TR in URBAN SLC', &
-!            PRC_myrank, i,j, &
-!            resi1, G0R
-!    end if
-
-     ! output for debug
-     if ( iteration > 100 ) then
+    ! output for debug
+    if ( iteration > itr_max ) then
        LOG_WARN("URBAN_DYN_kusaka01_SLC_main",*) 'iteration for TR was not converged',PRC_myrank,i,j
        LOG_WARN_CONT(*) '---------------------------------------------------------------------------------'
        LOG_WARN_CONT(*) 'DEBUG Message --- Residual                                          [K] :', resi1
@@ -1226,11 +1258,13 @@ contains
 #else
        LOG_WARN_CONT(*) 'DEBUG Message --- TRLP: Initial TRL                                 [K] :', TRLP(:)
 #endif
-       LOG_WARN_CONT(*) 'DEBUG Message --- rflux_SW  : Shortwave radiation                      [W/m2] :', rflux_SW
-       LOG_WARN_CONT(*) 'DEBUG Message --- rflux_LW  : Longwave radiation                       [W/m2] :', rflux_LW
+       LOG_WARN_CONT(*) 'DEBUG Message --- rflux_SW  : Shortwave radiation                [W/m2] :', rflux_SW
+       LOG_WARN_CONT(*) 'DEBUG Message --- rflux_LW  : Longwave radiation                 [W/m2] :', rflux_LW
        LOG_WARN_CONT(*) 'DEBUG Message --- PRSS: Surface pressure                           [Pa] :', PRSS
        LOG_WARN_CONT(*) 'DEBUG Message --- PRSA: Pressure at 1st atmos layer                 [m] :', PRSA
        LOG_WARN_CONT(*) 'DEBUG Message --- RHOO: Air density                             [kg/m3] :', RHOO
+       LOG_WARN_CONT(*) 'DEBUG Message --- RHOS: Surface density                         [kg/m3] :', RHOS
+       LOG_WARN_CONT(*) 'DEBUG Message --- RAINRP: Initial RAINR                         [kg/m2] :', RAINRP
        LOG_WARN_CONT(*) 'DEBUG Message --- ZA  : Height at 1st atmos layer                   [m] :', ZA
        LOG_WARN_CONT(*) 'DEBUG Message --- TA  : Temperature at 1st atmos layer              [K] :', TA
        LOG_WARN_CONT(*) 'DEBUG Message --- UA  : Wind speed at 1st atmos layer             [m/s] :', UA
@@ -1305,181 +1339,278 @@ contains
     ! new scheme
 
     ! empirical form
-      ALPHAB = 6.15_RP + 4.18_RP * UC
-      if( UC > 5.0_RP ) ALPHAB = 7.51_RP * (UC**0.78_RP )
-      ALPHAG = 6.15_RP + 4.18_RP * UC
-      if( UC > 5.0_RP ) ALPHAG = 7.51_RP * (UC**0.78_RP )
-      CHB = ALPHAB / RHOO / CPdry / UC
-      CHG = ALPHAG / RHOO / CPdry / UC
+     ALPHAB = 6.15_RP + 4.18_RP * UC
+     if( UC > 5.0_RP ) ALPHAB = 7.51_RP * (UC**0.78_RP )
+     ALPHAG = 6.15_RP + 4.18_RP * UC
+     if( UC > 5.0_RP ) ALPHAG = 7.51_RP * (UC**0.78_RP )
+     CHB = ALPHAB / RHOO / CPdry / UC
+     CHG = ALPHAG / RHOO / CPdry / UC
 
-     G0BP = 0.0_RP
-     G0GP = 0.0_RP
+     Z   = ZA - ZDC
+     THC = TC / EXN
+     BHC = LOG(Z0C/Z0HC) / 0.4_RP
+
+     b1 = CAPB * DZB(1) / dt_RP + 2.0_RP * AKSB / ( DZB(1)+DZB(2) )
+     b2 = CAPB * DZB(2) / dt_RP + 2.0_RP * AKSB / ( DZB(1)+DZB(2) ) + 2.0_RP * AKSB / ( DZB(2)+DZB(3) )
+     dTBdG0B = 1.0_RP / ( b1 - ( 2.0_RP * AKSB / ( DZB(1)+DZB(2) ) )**2 / b2 )
+     ! consider only change at the layers of k<=2
+     dTBdG0B = dTBdG0B * 0.5_RP
+
+     b1 = CAPG * DZG(1) / dt_RP + 2.0_RP * AKSG / ( DZG(1)+DZG(2) )
+     b2 = CAPG * DZG(2) / dt_RP + 2.0_RP * AKSG / ( DZG(1)+DZG(2) ) + 2.0_RP * AKSG / ( DZG(2)+DZG(3) )
+     dTGdG0G = 1.0_RP / ( b1 - ( 2.0_RP * AKSG / ( DZG(1)+DZG(2) ) )**2 / b2 )
+     ! consider only change at the layers of k<=2
+     dTGdG0G = dTGdG0G * 0.5_RP
+
+     EVPB = 0.0_RP
+     EVPG = 0.0_RP
+     BETBP = 0.0_RP
+     BETGP = 0.0_RP
      XXXC = 0.0_RP
-     resi1p = 0.0_RP
-     resi2p = 0.0_RP
-     fact1 = 1.0_RP
-     fact2 = 1.0_RP
+     ALPHACp = ( ALPHAB + ALPHAG ) * 0.5_RP
+     ALPHAC = ALPHACp
+     dTB = 1.0e10_RP
+     dTG = 1.0e10_RP
+     dAC = 1.0_RP
+     dTBp = 0.0_RP
+     dTGp = 0.0_RP
+     dACp = 0.0_RP
+     fact = 1.0_RP
      !$acc loop seq
-     do iteration = 1, 200
+     do iteration = 1, itr_max
 
-      THS1   = TB / EXN
-      THS2   = TG / EXN
-      THC    = TC / EXN
+        THS1   = TB / EXN
+        THS2   = TG / EXN
 
-      Z    = ZA - ZDC
-      BHC  = LOG(Z0C/Z0HC) / 0.4_RP
-      RIBC = ( GRAV * 2.0_RP / (THA+THC) ) * (THA-THC) * (Z+Z0C) / (UA*UA+EPS)
-      call mos(XXXC,CHC,CDC,BHC,RIBC,Z,Z0C,UA,THA,THC,RHOO)
-      ALPHAC = CHC * RHOO * CPdry * UA
+        if ( iteration > 1 ) then
 
-      call qsat( TB, RHOS, QS0B )
-      call qsat( TG, RHOS, QS0G )
+           Tdiff = TB * sqrt(EPS) * 2.0_RP
+           Adiff = sign( ALPHAC * sqrt(EPS) * 2.0_RP, dAC )
 
-      call cal_beta(BETG, BETG_CONST, RAING, STRGG)
-      call cal_beta(BETB, BETB_CONST, RAINB, STRGB)
+           ! TB = TB + Tdiff
+           TC1    =  RW*ALPHAC    + RW*ALPHAG    + W*ALPHAB
+           TC2    =  RW*ALPHAC*THA + W*ALPHAB*(TB+Tdiff)/EXN + RW*ALPHAG*THS2
+           THC    =  TC2 / TC1
+           RIBC = ( GRAV * 2.0_RP / (THA+THC) ) * (THA-THC) * (Z+Z0C) / (UA*UA+EPS)
+           XXXtmp = XXXC
+           RIBC = ( GRAV * 2.0_RP / (THA+THC) ) * (THA-THC) * (Z+Z0C) / (UA*UA+EPS)
+           call mos(XXXtmp,CHC_TB,CDC,BHC,RIBC,Z,Z0C,UA,THA,THC,RHOO)
+
+           ! TG = TG + Tdiff
+           TC1    =  RW*ALPHAC    + RW*ALPHAG    + W*ALPHAB
+           TC2    =  RW*ALPHAC*THA + W*ALPHAB*THS1 + RW*ALPHAG*(TG+Tdiff)/EXN
+           THC    =  TC2 / TC1
+           RIBC = ( GRAV * 2.0_RP / (THA+THC) ) * (THA-THC) * (Z+Z0C) / (UA*UA+EPS)
+           XXXtmp = XXXC
+           call mos(XXXtmp,CHC_TG,CDC,BHC,RIBC,Z,Z0C,UA,THA,THC,RHOO)
+
+           ! ALPHAC = ALPHAC + Adiff
+           TC1    =  RW*(ALPHAC+Adiff)    + RW*ALPHAG    + W*ALPHAB
+           TC2    =  RW*(ALPHAC+Adiff)*THA + W*ALPHAB*THS1 + RW*ALPHAG*THS2
+           THC    =  TC2 / TC1
+           RIBC = ( GRAV * 2.0_RP / (THA+THC) ) * (THA-THC) * (Z+Z0C) / (UA*UA+EPS)
+           XXXtmp = XXXC
+           call mos(XXXtmp,CHC_AC,CDC,BHC,RIBC,Z,Z0C,UA,THA,THC,RHOO)
+
+        end if
+
+        TC1    =  RW*ALPHAC    + RW*ALPHAG    + W*ALPHAB
+        !TC2    =  RW*ALPHAC*THA + RW*ALPHAG*TG + W*ALPHAB*TB
+        TC2    =  RW*ALPHAC*THA + W*ALPHAB*THS1 + RW*ALPHAG*THS2
+        THC    =  TC2 / TC1
+        RIBC = ( GRAV * 2.0_RP / (THA+THC) ) * (THA-THC) * (Z+Z0C) / (UA*UA+EPS)
+        call mos(XXXC,CHC,CDC,BHC,RIBC,Z,Z0C,UA,THA,THC,RHOO)
+
+        if ( iteration > 1 ) then
+           dCHCdTB = ( CHC_TB - CHC ) / Tdiff
+           dCHCdTG = ( CHC_TG - CHC ) / Tdiff
+           dCHCdAC = ( CHC_AC - CHC ) / Adiff
+        else
+           dCHCdTB = 0.0_RP
+           dCHCdTG = 0.0_RP
+           dCHCdAC = 0.0_RP
+        end if
+
+        ALPHAC = CHC * RHOO * CPdry * UA
+        dALPHACdTB = dCHCdTB * RHOO * CPdry * UA
+        dALPHACdTG = dCHCdTG * RHOO * CPdry * UA
+        dALPHACdAC = dCHCdAC * RHOO * CPdry * UA
+
+        call dqs_dtem( TB, RHOS, dQS0B, QS0B )
+        call dqs_dtem( TG, RHOS, dQS0G, QS0G )
+
+        RAINB = max( ( RAINBP - EVPB * dt_RP ), 0.0_RP )
+        RAING = max( ( RAINGP - EVPG * dt_RP ), 0.0_RP )
+        call cal_beta(BETB, BETB_CONST, RAINB, STRGB)
+        call cal_beta(BETG, BETG_CONST, RAING, STRGG)
+        dBETB = ( BETB - BETBP ) / ( dTB * fact )
+        dBETG = ( BETG - BETGP ) / ( dTG * fact )
+        BETBP = BETB
+        BETGP = BETG
 
 
-      TC1   = RW*ALPHAC    + RW*ALPHAG    + W*ALPHAB
-      !TC2   = RW*ALPHAC*TA + RW*ALPHAG*TG + W*ALPHAB*TB
-      TC2   = RW*ALPHAC*THA + W*ALPHAB*THS1 + RW*ALPHAG*THS2
-      THC   = TC2 / TC1
-      QC1   = RW*(CHC*UA)    + RW*(CHG*BETG*UC)      + W*(CHB*BETB*UC)
-      QC2   = RW*(CHC*UA)*QA + RW*(CHG*BETG*UC)*QS0G + W*(CHB*BETB*UC)*QS0B
-      QC    = max( QC2 / ( QC1 + EPS ), 0.0_RP )
+        TC1 = RW*ALPHAC    + RW*ALPHAG    + W*ALPHAB
+        !TC2 = RW*ALPHAC*TA + RW*ALPHAG*TG + W*ALPHAB*TB
+        TC2 = RW*ALPHAC*THA + W*ALPHAB*THS1 + RW*ALPHAG*THS2
+        THC = TC2 / TC1
+        dTHCdTB = ( ( RW*dALPHACdTB*THA +  W*ALPHAB/EXN ) * TC1 - RW*dALPHACdTB * TC2 ) / TC1**2
+        dTHCdTG = ( ( RW*dALPHACdTG*THA + RW*ALPHAG/EXN ) * TC1 - RW*dALPHACdTG * TC2 ) / TC1**2
+        dTHCdAC = ( ( RW*           THA                 ) * TC1 - RW            * TC2 ) / TC1**2
 
-      RG1   = EPSG * ( rflux_LW * VFGS                  &
+        QC1 = RW*(CHC*UA)    + RW*(CHG*BETG*UC)      + W*(CHB*BETB*UC)
+        QC2 = RW*(CHC*UA)*QA + RW*(CHG*BETG*UC)*QS0G + W*(CHB*BETB*UC)*QS0B
+        QC  = max( QC2 / ( QC1 + EPS ), 0.0_RP )
+        dQCdTB = ( ( RW*(dCHCdTB*UA)*QA +  W*(CHB*UC)*(BETB*dQS0B+dBETB*QS0B) ) * QC1 &
+                 - ( RW*(dCHCdTB*UA)    +  W*(CHB*UC*dBETB) ) * QC2 ) / ( QC1**2 + EPS )
+        dQCdTG = ( ( RW*(dCHCdTG*UA)*QA + RW*(CHG*UC)*(BETG*dQS0G+dBETG*QS0G) ) * QC1 &
+                 - ( RW*(dCHCdTG*UA)    + RW*(CHG*UC*dBETG) ) * QC2 ) / ( QC1**2 + EPS )
+        dQCdAC = ( ( RW*(dCHCdAC*UA)*QA                                       ) * QC1 &
+                 - ( RW*(dCHCdAC*UA)                        ) * QC2 ) / ( QC1**2 + EPS )
+
+        RG1 = EPSG * ( rflux_LW * VFGS            &
                      + EPSB * VFGW * STB * TB**4  &
                      - STB * TG**4                )
+        dRG1dTB = EPSG * EPSB * VFGW * STB * 4.0_RP * TB**3
+        dRG1dTG = - EPSG * STB * 4.0_RP * TG**3
 
-      RB1   = EPSB * ( rflux_LW * VFWS                  &
+        RB1 = EPSB * ( rflux_LW * VFWS            &
                      + EPSG * VFWG * STB * TG**4  &
                      + EPSB * VFWW * STB * TB**4  &
                      - STB * TB**4                )
+        dRB1dTB = EPSB * ( EPSB * VFWW - 1.0_RP ) * STB * 4.0_RP * TB**3
+        dRB1dTG = EPSB * EPSG * VFWG * STB * 4.0_RP * TG**3
 
-      RG2   = EPSG * ( (1.0_RP-EPSB) * VFGW * VFWS * rflux_LW                   &
+        RG2 = EPSG * ( (1.0_RP-EPSB) * VFGW * VFWS * rflux_LW            &
                      + (1.0_RP-EPSB) * VFGW * VFWG * EPSG * STB * TG**4  &
                      + EPSB * (1.0_RP-EPSB) * VFGW * VFWW * STB * TB**4  )
+        dRG2dTB = EPSG * EPSB * (1.0_RP-EPSB) * VFGW * VFWW * STB * 4.0_RP * TB**3
+        dRG2dTG = EPSG * (1.0_RP-EPSB) * VFGW * VFWG * EPSG * STB * 4.0_RP * TG**3
 
-      RB2   = EPSB * ( (1.0_RP-EPSG) * VFWG * VFGS * rflux_LW                                  &
+        RB2 = EPSB * ( (1.0_RP-EPSG) * VFWG * VFGS * rflux_LW                            &
+                     + (1.0_RP-EPSB) * VFWS * VFWW * rflux_LW                            &
+                     + (1.0_RP-EPSB) * EPSG * VFWG * VFWW * STB * TG**4                  &
                      + (1.0_RP-EPSG) * EPSB * VFGW * VFWG * STB * TB**4                  &
-                     + (1.0_RP-EPSB) * VFWS * VFWW * rflux_LW                                  &
-                     + (1.0_RP-EPSB) * VFWG * VFWW * STB * EPSG * TG**4                  &
-                     + EPSB * (1.0_RP-EPSB) * VFWW * (1.0_RP-2.0_RP*VFWS) * STB * TB**4  )
+                     + (1.0_RP-EPSB) * EPSB * VFWW * (1.0_RP-2.0_RP*VFWS) * STB * TB**4  )
+        dRB2dTB = EPSB**2 * ( (1.0_RP-EPSG) * VFGW * VFWG + (1.0_RP-EPSB) * VFWW * (1.0_RP-2.0_RP*VFWS) ) * STB * 4.0_RP * TB**3
+        dRB2dTG = EPSB * (1.0_RP-EPSB) * EPSG * VFWG * VFWW * STB * 4.0_RP * TG**3
 
-      RG    = RG1 + RG2
-      RB    = RB1 + RB2
+        RG = RG1 + RG2
+        RB = RB1 + RB2
 
-      HB    = RHOO * CPdry * CHB * UC * (THS1-THC) * EXN
-      EVPB  = min( RHOO * CHB * UC * BETB * (QS0B-QC), RAINB / dt_RP )
-      ELEB  = EVPB * LHV
+        HB     = RHOO * CPdry * CHB * UC * ( THS1 - THC ) * EXN
+        dHBdTB = RHOO * CPdry * CHB * UC * ( 1.0_RP - dTHCdTB * EXN )
+        dHBdTG = RHOO * CPdry * CHB * UC * (        - dTHCdTG * EXN )
+        dHBdAC = RHOO * CPdry * CHB * UC * (        - dTHCdAC * EXN )
 
-!      G0B   = SB + RB - HB - ELEB + EFLX
-      G0B   = SB + RB - HB - ELEB
+        EVPB = min( RHOO * CHB * UC * BETB * (QS0B-QC), RAINB / dt_RP )
+        ELEB = EVPB * LHV
+        dELEBdTB = RHOO * CHB * UC * ( BETB * ( dQS0B - dQCdTB ) + dBETB * (QS0B-QC) ) * LHV
+        dELEBdTG = RHOO * CHB * UC *   BETB * (       - dQCdTG ) * LHV
+        dELEBdAC = RHOO * CHB * UC *   BETB * (       - dQCdAC ) * LHV
 
-      HG    = RHOO * CPdry * CHG * UC * (THS2-THC) * EXN
-      EVPG  = min( RHOO * CHG * UC * BETG * (QS0G-QC), RAING / dt_RP )
-      ELEG  = EVPG * LHV
+!        G0B = SB + RB - HB - ELEB + EFLX
+        G0B = SB + RB - HB - ELEB
+        dG0BdTB = dRB1dTB + dRB2dTB - dHBdTB - dELEBdTB
+        dG0BdTG = dRB1dTG + dRB2dTG - dHBdTG - dELEBdTG
+        dG0BdAC =                   - dHBdAC - dELEBdAC
 
-!      G0G   = SG + RG - HG - ELEG + EFLX
-      G0G   = SG + RG - HG - ELEG
+        HG     = RHOO * CPdry * CHG * UC * ( THS2 - THC ) * EXN
+        dHGdTB = RHOO * CPdry * CHG * UC * (        - dTHCdTB * EXN )
+        dHGdTG = RHOO * CPdry * CHG * UC * ( 1.0_RP - dTHCdTG * EXN )
+        dHGdAC = RHOO * CPdry * CHG * UC * (        - dTHCdAC * EXN )
 
-      do k = UKS, UKE
-         TBL(k) = TBLP(k)
-      end do
-      call multi_layer(UKE,BOUND, &
+        EVPG = min( RHOO * CHG * UC * BETG * (QS0G-QC), RAING / dt_RP )
+        ELEG = EVPG * LHV
+        dELEGdTB = RHOO * CHG * UC *   BETG * (       - dQCdTB ) * LHV
+        dELEGdTG = RHOO * CHG * UC * ( BETG * ( dQS0G - dQCdTG ) + dBETG * (QS0G-QC) ) * LHV
+        dELEGdAC = RHOO * CHG * UC *   BETG * (       - dQCdAC ) * LHV
+
+!        G0G = SG + RG - HG - ELEG + EFLX
+        G0G = SG + RG - HG - ELEG
+        dG0GdTB = dRG1dTB + dRG2dTB - dHGdTB - dELEGdTB
+        dG0GdTG = dRG1dTG + dRG2dTG - dHGdTG - dELEGdTG
+        dG0GdAC =                   - dHGdAC - dELEGdAC
+
+        do k = UKS, UKE
+           TBL(k) = TBLP(k)
+        end do
+        call multi_layer(UKE,BOUND, &
 #ifdef _OPENACC
            A, B, C, D, P, Q, &
 #endif
            G0B,CAPB,AKSB,TBL,DZB,dt_RP,TBLEND)
-      resi1  = TBL(1) - TB
+        resi1  = TBL(1) - TB
 
-      do k = UKS, UKE
-         TGL(k) = TGLP(k)
-      end do
-      call multi_layer(UKE,BOUND, &
+        do k = UKS, UKE
+           TGL(k) = TGLP(k)
+        end do
+        call multi_layer(UKE,BOUND, &
 #ifdef _OPENACC
            A, B, C, D, P, Q, &
 #endif
            G0G,CAPG,AKSG,TGL,DZG,dt_RP,TGLEND)
-      resi2 = TGL(1) - TG
+        resi2 = TGL(1) - TG
 
-      !-----------
-      !print *,HB, RHOO , CPdry , CHB , UC , THS1,THC
-      !print *,HG, RHOO , CPdry , CHG , UC , THS2,THC
-      !print *,ELEB ,RHOO , LHV , CHB , UC , BETB , QS0B , QC
-      !print *,ELEG ,RHOO , LHV , CHG , UC , BETG , QS0G , QC
 
-      !LOG_INFO("SLC_main",'(a3,i5,f8.3,6f15.5)') "TB,",iteration,TB,G0B,SB,RB,HB,ELEB,resi1
-      !LOG_INFO("SLC_main",'(a3,i5,f8.3,6f15.5)') "TG,",iteration,TG,G0G,SG,RG,HG,ELEG,resi2
-      !LOG_INFO("SLC_main",'(a3,i5,f8.3,3f15.5)') "TC,",iteration,TC,QC,QS0B,QS0G
-      !--------
-      !resi1  =  abs(G0B - G0BP)
-      !resi2  =  abs(G0G - G0GP)
-      !G0BP   = G0B
-      !G0GP   = G0G
+        resi3 = ALPHAC - ALPHACp
 
-      if ( abs(resi1) < sqrt(EPS) .AND. abs(resi2) < sqrt(EPS) ) then
-         TB = TBL(1)
-         TG = TGL(1)
-         TB = max( TBP - DTS_MAX_onestep, min( TBP + DTS_MAX_onestep, TB ) )
-         TG = max( TGP - DTS_MAX_onestep, min( TGP + DTS_MAX_onestep, TG ) )
-         exit
-      endif
+        if ( abs(resi1) < threshold .AND. abs(resi2) < threshold .AND. abs(resi3) < threshold ) then
+           TB = TBL(1)
+           TG = TGL(1)
+           TB = max( TBP - DTS_MAX_onestep, min( TBP + DTS_MAX_onestep, TB ) )
+           TG = max( TGP - DTS_MAX_onestep, min( TGP + DTS_MAX_onestep, TG ) )
+           exit
+        endif
 
-      if ( resi1*resi1p < 0.0_RP ) then
-         fact1 = max( fact1 * 0.5_RP, 1.0E-10_RP )
-      else
-         fact1 = min( fact1 * 2.0_RP, 1.0_RP )
-      endif
-      if ( resi2*resi2p < 0.0_RP ) then
-         fact2 = max( fact2 * 0.5_RP, 1.0E-10_RP )
-      else
-         fact2 = min( fact2 * 2.0_RP, 1.0_RP )
-      endif
+        ! Newton method
+        dr1dTB = dTBdG0B * dG0BdTB - 1.0_RP
+        dr1dTG = dTBdG0B * dG0BdTG
+        dr1dAC = dTBdG0B * dG0BdAC
+        dr2dTB = dTGdG0G * dG0GdTB
+        dr2dTG = dTGdG0G * dG0GdTG - 1.0_RP
+        dr2dAC = dTGdG0G * dG0GdAC
+        dr3dTB = dALPHACdTB
+        dr3dTG = dALPHACdTG
+        dr3dAC = dALPHACdAC - 1.0_RP
+        if ( iteration > 3 ) dr3dAC = min( dr3dAC, -0.02_RP )
 
-      TB = TBL(1) * fact1 + TB * ( 1.0_RP - fact1 )
-      TB = max( TBP - DTS_MAX_onestep, min( TBP + DTS_MAX_onestep, TB ) )
-      TG = TGL(1) * fact2 + TG * ( 1.0_RP - fact2 )
-      TG = max( TGP - DTS_MAX_onestep, min( TGP + DTS_MAX_onestep, TG ) )
+        rdet = 1.0_RP &
+             / ( dr1dTB * dr2dTG * dr3dAC + dr1dTG * dr2dAC * dr3dTB + dr1dAC * dr2dTB * dr3dTG &
+               - dr1dAC * dr2dTG * dr3dTB - dr1dTG * dr2dTB * dr3dAC - dr1dTB * dr2dAC * dr3dTG )
+        dTB = ( - ( dr2dTG * dr3dAC - dr2dAC * dr3dTG ) * resi1 &
+                + ( dr1dTG * dr3dAC - dr1dAC * dr3dTG ) * resi2 &
+                - ( dr1dTG * dr2dAC - dr1dAC * dr2dTG ) * resi3 ) * rdet
+        dTG = (   ( dr2dTB * dr3dAC - dr2dAC * dr3dTB ) * resi1 &
+                - ( dr1dTB * dr3dAC - dr1dAC * dr3dTB ) * resi2 &
+                + ( dr1dTB * dr2dAC - dr1dAC * dr2dTB ) * resi3 ) * rdet
+        dAC = ( - ( dr2dTB * dr3dTG - dr2dTG * dr3dTB ) * resi1 &
+                + ( dr1dTB * dr3dTG - dr1dTG * dr3dTB ) * resi2 &
+                - ( dr1dTB * dr2dTG - dr1dTG * dr2dTB ) * resi3 ) * rdet
 
-      RAINB = max( ( RAINBP - EVPB * dt_RP ) * fact1 + RAINB * ( 1.0_RP - fact1 ), 0.0_RP )
-      RAING = max( ( RAINGP - EVPG * dt_RP ) * fact2 + RAING * ( 1.0_RP - fact2 ), 0.0_RP )
+        if ( iteration > 50 ) then
+           if ( dTB*dTBp < 0.0_RP .or. dTG*dTGp < 0.0_RP .or. dAC*dACp < 0.0_RP ) then
+              fact = max( fact * 0.5_RP, 0.01_RP )
+           else
+              fact = min( fact * 1.1_RP, 1.1_RP )
+           end if
+        end if
 
-      resi1p = resi1
-      resi2p = resi2
+        TB = max( TB + dTB * fact, 100.0_RP )
+        TG = max( TG + dTG * fact, 100.0_RP )
+        ALPHAC = max( ALPHACp + dAC * fact, EPS )
 
-      ! this is for TC
-      THS1   = TB / EXN
-      THS2   = TG / EXN
+        ALPHACp = ALPHAC
+        dTBp = dTB
+        dTGp = dTG
+        dACp = dAC
 
-      TC1    =  RW*ALPHAC    + RW*ALPHAG    + W*ALPHAB
-      !TC2    =  RW*ALPHAC*THA + RW*ALPHAG*TG + W*ALPHAB*TB
-      TC2    =  RW*ALPHAC*THA + W*ALPHAB*THS1 + RW*ALPHAG*THS2
-      THC    =  TC2 / TC1
-      TC = THC * EXN
-
-    enddo
-
-!    if( .NOT. (resi1 < sqrt(EPS) .AND. resi2 < sqrt(EPS) ) ) then
-!       LOG_WARN("SLC_main",*) 'not converged for TG, TB in URBAN SLC', &
-!            PRC_myrank, i,j, &
-!            resi1, resi2, TB, TG, TC, G0BP, G0GP, RB, HB, RG, HG, QC, &
-!            CHC, CDC, BHC, ALPHAC
-!       LOG_WARN_CONT(*) TBP, TGP, TCP, &
-!                  PRSS, THA, UA, QA, RHOO, UC, QCP, &
-!                  ZA, ZDC, Z0C, Z0HC, &
-!                  CHG, CHB, &
-!                  W, RW, ALPHAG, ALPHAB, BETG, BETB, &
-!                  rflux_LW, VFGS, VFGW, VFWG, VFWW, VFWS, STB, &
-!                  SB, SG, LHV, TBLP, TGLP
-!       LOG_WARN_CONT(*) "6",VFGS, VFGW, VFWG, VFWW, VFWS
-!    end if
+     enddo
 
      ! output for debug
-     if ( iteration > 200 ) then
+     if ( iteration > itr_max ) then
        LOG_WARN("URBAN_DYN_Kusaka01_main",*) 'iteration for TB/TG was not converged',PRC_myrank,i,j
        LOG_WARN_CONT(*) '---------------------------------------------------------------------------------'
-       LOG_WARN_CONT(*) 'DEBUG Message --- Residual                                       [K] :', resi1,resi2
+       LOG_WARN_CONT(*) 'DEBUG Message --- Residual                                       [K] :', resi1, resi2, resi3
        LOG_WARN_CONT(*) 'DEBUG Message --- TBP : Initial TB                               [K] :', TBP
 #ifdef _OPENACC
        LOG_WARN_CONT(*) 'DEBUG Message --- TBLP: Initial TBL                              [K] :', TBLP(UKS)
@@ -1495,11 +1626,14 @@ contains
        LOG_WARN_CONT(*) 'DEBUG Message --- TCP : Initial TC                               [K] :', TCP
        LOG_WARN_CONT(*) 'DEBUG Message --- QCP : Initial QC                               [K] :', QCP
        LOG_WARN_CONT(*) 'DEBUG Message --- UC  : Canopy wind                            [m/s] :', UC
-       LOG_WARN_CONT(*) 'DEBUG Message --- rflux_SW  : Shortwave radiation                   [W/m2] :', rflux_SW
-       LOG_WARN_CONT(*) 'DEBUG Message --- rflux_LW  : Longwave radiation                    [W/m2] :', rflux_LW
+       LOG_WARN_CONT(*) 'DEBUG Message --- rflux_SW  : Shortwave radiation             [W/m2] :', rflux_SW
+       LOG_WARN_CONT(*) 'DEBUG Message --- rflux_LW  : Longwave radiation              [W/m2] :', rflux_LW
        LOG_WARN_CONT(*) 'DEBUG Message --- PRSS: Surface pressure                        [Pa] :', PRSS
        LOG_WARN_CONT(*) 'DEBUG Message --- PRSA: Pressure at 1st atmos layer              [m] :', PRSA
        LOG_WARN_CONT(*) 'DEBUG Message --- RHOO: Air density                          [kg/m3] :', RHOO
+       LOG_WARN_CONT(*) 'DEBUG Message --- RHOS: Surface density                      [kg/m3] :', RHOS
+       LOG_WARN_CONT(*) 'DEBUG Message --- RAINBP: Initial RAINB                      [kg/m2] :', RAINBP
+       LOG_WARN_CONT(*) 'DEBUG Message --- RAINGP: Initial RAING                      [kg/m2] :', RAINGP
        LOG_WARN_CONT(*) 'DEBUG Message --- ZA  : Height at 1st atmos layer                [m] :', ZA
        LOG_WARN_CONT(*) 'DEBUG Message --- TA  : Temperature at 1st atmos layer           [K] :', TA
        LOG_WARN_CONT(*) 'DEBUG Message --- UA  : Wind speed at 1st atmos layer          [m/s] :', UA
@@ -1844,72 +1978,72 @@ contains
 
     lnZ = log( (Z+Z0)/Z0 )
 
-    if( RIB <= -15.0_RP ) RIB = -15.0_RP
-
     if( RIB < 0.0_RP ) then
 
-      do NEWT = 1, NEWT_END
+       RIB = max( RIB, -15.0_RP )
 
-        if( XXX >= 0.0_RP ) XXX = -1.0e-3_RP
-!        if( XXX >= -1.0e-3_RP ) XXX = -1.0e-3_RP
+       do NEWT = 1, NEWT_END
 
-        XXX0  = XXX * Z0/(Z+Z0)
+          XXX = min( XXX, -1.0E-3_RP )
 
-        sqX   = sqrt( 1.0_RP - 16.0_RP * XXX  )
-        sqX0  = sqrt( 1.0_RP - 16.0_RP * XXX0 )
+          XXX0  = XXX * Z0/(Z+Z0)
 
-        X     = sqrt( sqX )
-        X0    = sqrt( sqX0 )
+          sqX   = sqrt( 1.0_RP - 16.0_RP * XXX  )
+          sqX0  = sqrt( 1.0_RP - 16.0_RP * XXX0 )
 
-        PSIM  = lnZ &
-              - log( (X+1.0_RP)**2 * (sqX  + 1.0_RP) ) &
-              + 2.0_RP * atan(X) &
-              + log( (X+1.0_RP)**2 * (sqX0 + 1.0_RP) ) &
-              - 2.0_RP * atan(X0)
-        FAIH  = 1.0_RP / sqX
-        PSIH  = lnZ + 0.4_RP*B1 &
-              - 2.0_RP * log( sqX  + 1.0_RP ) &
-              + 2.0_RP * log( sqX0 + 1.0_RP )
+          X     = sqrt( sqX )
+          X0    = sqrt( sqX0 )
 
-        DPSIM = 1.0_RP / ( X  * XXX ) &
-              - 1.0_RP / ( X0 * XXX )
-        DPSIH = 1.0_RP / ( sqX  * XXX ) &
-              - 1.0_RP / ( sqX0 * XXX )
+          PSIM  = lnZ &
+                - log( (X+1.0_RP)**2 * (sqX  + 1.0_RP) ) &
+                + 2.0_RP * atan(X) &
+                + log( (X+1.0_RP)**2 * (sqX0 + 1.0_RP) ) &
+                - 2.0_RP * atan(X0)
+          FAIH  = 1.0_RP / sqX
+          PSIH  = lnZ + 0.4_RP*B1 &
+                - 2.0_RP * log( sqX  + 1.0_RP ) &
+                + 2.0_RP * log( sqX0 + 1.0_RP )
 
-        F     = RIB * PSIM**2 / PSIH - XXX
+          DPSIM = 1.0_RP / ( X  * XXX ) &
+                - 1.0_RP / ( X0 * XXX )
+          DPSIH = 1.0_RP / ( sqX  * XXX ) &
+                - 1.0_RP / ( sqX0 * XXX )
 
-        DF    = RIB * ( 2.0_RP*DPSIM*PSIM*PSIH - DPSIH*PSIM**2 ) &
-              / PSIH**2 - 1.0_RP
+          F     = RIB * PSIM**2 / PSIH - XXX
 
-        XXXP  = XXX
-        XXX   = XXXP - F / DF
+          DF    = RIB * ( 2.0_RP*DPSIM*PSIM*PSIH - DPSIH*PSIM**2 ) &
+                / PSIH**2 - 1.0_RP
 
-        if( XXX <= -10.0_RP ) XXX = -10.0_RP
+          XXXP  = XXX
+          XXX   = XXXP - F / DF
 
-      end do
+          XXX = max( XXX, -10.0_RP )
+
+       end do
 
     else if( RIB >= 0.142857_RP ) then
 
-      XXX  = 0.714_RP
-      PSIM = lnZ + 7.0_RP * XXX
-      PSIH = PSIM + 0.4_RP * B1
+       XXX  = 0.714_RP
+       PSIM = lnZ + 7.0_RP * XXX
+       PSIH = PSIM + 0.4_RP * B1
 
     else
 
-      AL   = lnZ
-      XKB  = 0.4_RP * B1
-      DD   = -4.0_RP * RIB * 7.0_RP * XKB * AL + (AL+XKB)**2
-      if( DD <= 0.0_RP ) DD = 0.0_RP
+       AL   = lnZ
+       XKB  = 0.4_RP * B1
+       DD   = -4.0_RP * RIB * 7.0_RP * XKB * AL + (AL+XKB)**2
+       DD = max( DD, 0.0_RP )
 
-      XXX  = ( AL + XKB - 2.0_RP*RIB*7.0_RP*AL - sqrt(DD) ) / ( 2.0_RP * ( RIB*7.0_RP**2 - 7.0_RP ) )
-      PSIM = lnZ + 7.0_RP * min( XXX, 0.714_RP )
-      PSIH = PSIM + 0.4_RP * B1
+       XXX  = ( AL + XKB - 2.0_RP*RIB*7.0_RP*AL - sqrt(DD) ) / ( 2.0_RP * ( RIB*7.0_RP**2 - 7.0_RP ) )
+       XXX = min( XXX, 0.714_RP )
+       PSIM = lnZ + 7.0_RP * XXX
+       PSIH = PSIM + 0.4_RP * B1
 
     endif
 
     US = 0.4_RP * UA / PSIM             ! u*
     if( US <= 0.01_RP ) US = 0.01_RP
-    TS = 0.4_RP * (TA-TSF) / PSIH       ! T*
+    !TS = 0.4_RP * (TA-TSF) / PSIH       ! T*
 
     CD    = US * US / (UA+EPS)**2         ! CD
     CH    = 0.4_RP * US / PSIH / (UA+EPS) ! CH
