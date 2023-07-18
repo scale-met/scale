@@ -73,7 +73,7 @@ module mod_atmos_phy_mp_driver
   real(RP), private :: MP_cldfrac_thleshold            !> thleshold for cloud fraction
   integer,  private :: MP_NSTEP_SEDIMENTATION
   real(RP), private :: MP_RNSTEP_SEDIMENTATION
-  real(DP), private :: MP_DTSEC_SEDIMENTATION
+  real(RP), private :: MP_DTSEC_SEDIMENTATION
 
   integer, private, allocatable :: hist_vterm_id(:)
   !-----------------------------------------------------------------------------

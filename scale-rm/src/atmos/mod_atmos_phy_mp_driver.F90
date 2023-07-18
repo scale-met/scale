@@ -75,7 +75,7 @@ module mod_atmos_phy_mp_driver
   real(RP), private :: MP_cldfrac_thleshold   !> thleshold for cloud fraction
   integer,  private :: MP_NSTEP_SEDIMENTATION
   real(RP), private :: MP_RNSTEP_SEDIMENTATION
-  real(DP), private :: MP_DTSEC_SEDIMENTATION
+  real(RP), private :: MP_DTSEC_SEDIMENTATION
 
   integer,  private, allocatable :: HIST_hyd_id(:)
   integer,  private, allocatable :: HIST_crg_id(:)
@@ -789,8 +789,6 @@ contains
     real(RP) :: RFDZ(KA)
     real(RP) :: RCDZ(KA)
 
-    real(RP) :: dt_sedim
-
     real(RP) :: CPtot_t(KA,IA,JA), CVtot_t(KA,IA,JA)
     real(RP) :: CP_t, CV_t
 
@@ -1166,8 +1164,6 @@ contains
              !$acc end kernels
           end if
 
-          dt_sedim = MP_DTSEC_SEDIMENTATION
-
           !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
           !$omp shared (KA,KS,KE,IS,IE,JS,JE,QS_MP,QE_MP,QHA,QHS,QHE,QLA,QIA, &
           !$omp         QA_LT,QS_LT,QE_LT, &
@@ -1180,7 +1176,7 @@ contains
           !$omp         SFLX_rain,SFLX_snow,SFLX_ENGI, &
           !$omp         REFSTATE_dens, &
           !$omp         flg_lt,RHOC_t_MP, &
-          !$omp         dt_sedim, &
+          !$omp         MP_DTSEC_SEDIMENTATION, &
           !$omp         vterm_hist,hist_vterm_idx) &
           !$omp private(i,j,k,iq,step, &
           !$omp         FZ,FDZ,RFDZ,RCDZ, &
@@ -1286,7 +1282,7 @@ contains
                         KA, KS, KE, QE_MP-QS_MP, QLA, QIA, &
                         TEMP2(:), vterm(:,:),   & ! [IN]
                         FDZ(:), RCDZ(:),        & ! [IN]
-                        dt_sedim,               & ! [IN]
+                        MP_DTSEC_SEDIMENTATION, & ! [IN]
                         i, j,                   & ! [IN]
                         DENS2(:), RHOQ2(:,:),   & ! [INOUT]
                         CPtot2(:), CVtot2(:),   & ! [INOUT]
@@ -1298,7 +1294,7 @@ contains
                         KA, KS, KE, QE_MP-QS_MP, QLA, QIA, &
                         TEMP2(:), vterm(:,:),   & ! [IN]
                         FZ(:), FDZ(:), RCDZ(:), & ! [IN]
-                        dt_sedim,               & ! [IN]
+                        MP_DTSEC_SEDIMENTATION, & ! [IN]
                         i, j,                   & ! [IN]
                         DENS2(:), RHOQ2(:,:),   & ! [INOUT]
                         CPtot2(:), CVtot2(:),   & ! [INOUT]
@@ -1319,7 +1315,7 @@ contains
                            KA, KS, KE, QA_LT, 0, 0,    & ! no mass tracer for charge density
                            TEMP2(:), vterm(:,QHS:QHE), & ! [IN]
                            FDZ(:), RCDZ(:),            & ! [IN]
-                           dt_sedim,                   & ! [IN]
+                           MP_DTSEC_SEDIMENTATION,     & ! [IN]
                            i, j,                       & ! [IN]
                            DENS2(:), RHOQ2_crg(:,:),   & ! [INOUT]
                            CPtot2(:), CVtot2(:),       & ! [INOUT]
@@ -1331,7 +1327,7 @@ contains
                            KA, KS, KE, QA_LT, 0, 0,    & ! no mass tracer for charge density
                            TEMP2(:), vterm(:,QHS:QHE), & ! [IN]
                            FZ(:), FDZ(:), RCDZ(:),     & ! [IN]
-                           dt_sedim,                   & ! [IN]
+                           MP_DTSEC_SEDIMENTATION,     & ! [IN]
                            i, j,                       & ! [IN]
                            DENS2(:), RHOQ2_crg(:,:),   & ! [INOUT]
                            CPtot2(:), CVtot2(:),       & ! [INOUT]
