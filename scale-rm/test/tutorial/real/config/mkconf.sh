@@ -78,8 +78,8 @@ if [[ -z ${TIME_DT_ATMOS_PHY_RD+x} ]]; then TIME_DT_ATMOS_PHY_RD=( $(multiply 10
 if [[ -z ${TIME_DT_ATMOS_PHY_SF+x} ]]; then TIME_DT_ATMOS_PHY_SF=( "${TIME_DT[@]}" );                fi
 if [[ -z ${TIME_DT_ATMOS_PHY_TB+x} ]]; then TIME_DT_ATMOS_PHY_TB=( "${TIME_DT[@]}" );                fi
 if [[ -z ${TIME_DT_ATMOS_PHY_BL+x} ]]; then TIME_DT_ATMOS_PHY_BL=( "${TIME_DT[@]}" );                fi
-if [[ -z ${TIME_DT_OCEAN+x} ]];        then TIME_DT_OCEAN=( $(multiply 5 "${TIME_DT[@]}") );         fi
-if [[ -z ${TIME_DT_LAND+x} ]];         then TIME_DT_LAND=( $(multiply 5 "${TIME_DT[@]}") );          fi
+if [[ -z ${TIME_DT_OCEAN+x} ]];        then TIME_DT_OCEAN=( "${TIME_DT[@]}" );                       fi
+if [[ -z ${TIME_DT_LAND+x} ]];         then TIME_DT_LAND=(  "${TIME_DT[@]}" );                       fi
 if [[ -z ${TIME_DT_URBAN+x} ]];        then TIME_DT_URBAN=( "${TIME_DT[@]}" );                       fi
 
 if [ ${NUM_DOMAIN} -ne ${#TIME_DT_ATMOS_DYN[*]} ];    then echo "Error: Wrong array size (TIME_DT_ATMOS_DYN).";    exit 1; fi

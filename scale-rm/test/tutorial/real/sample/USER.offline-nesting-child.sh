@@ -37,9 +37,9 @@ TIME_DT_ATMOS_PHY_RD=( "150.0" ) # required parameters for each domain - unit: S
 TIME_DT_ATMOS_PHY_SF=(  "15.0" ) # required parameters for each domain - unit: SEC only
 TIME_DT_ATMOS_PHY_TB=(  "15.0" ) # required parameters for each domain - unit: SEC only
 TIME_DT_ATMOS_PHY_BL=(  "15.0" ) # required parameters for each domain - unit: SEC only
-TIME_DT_OCEAN=(         "75.0" ) # required parameters for each domain - unit: SEC only
-TIME_DT_LAND=(          "75.0" ) # required parameters for each domain - unit: SEC only
-TIME_DT_URBAN=(         "75.0" ) # required parameters for each domain - unit: SEC only
+TIME_DT_OCEAN=(         "15.0" ) # required parameters for each domain - unit: SEC only
+TIME_DT_LAND=(          "15.0" ) # required parameters for each domain - unit: SEC only
+TIME_DT_URBAN=(         "15.0" ) # required parameters for each domain - unit: SEC only
 
 #################################################
 #
