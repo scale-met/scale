@@ -2701,8 +2701,9 @@ contains
     real(RP) :: work1(KA)
     real(RP) :: work2(KA)
     real(RP) :: work3(KA)
-    logical :: error
 #endif
+
+    logical :: error
 
     integer,  parameter :: ITRMAX = 1000
     real(RP), parameter :: CONV_EPS = 1E-15_RP
@@ -2734,14 +2735,15 @@ contains
 
     !$acc data create(eta)
 
+    !$omp workshare
     !$acc kernels
     eta(:,:,:) = 1.0E-8_RP   ! Set first guess of eta
     !$acc end kernels
+    !$omp end workshare
 
-#ifdef _OPENACC
     error = .false.
-#endif
 
+    !$omp parallel do reduction(.or.:error)
     !$acc kernels
     !$acc loop collapse(2) reduction(.or.:error)
     do j = JSB, JEB
