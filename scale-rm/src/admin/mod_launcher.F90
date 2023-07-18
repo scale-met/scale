@@ -134,7 +134,7 @@ contains
     block
       integer :: ngpus, gpuid
       ngpus = acc_get_num_devices(acc_device_nvidia)
-      if( universal_master ) write(*,*) "*** Number of GPUs: ", ngpus
+      if( universal_master ) write(*,*) "*** Number of GPUs: ", min(ngpus, universal_npcocs)
       if ( ngpus > 0 ) then
          gpuid = mod(universal_myrank, ngpus)
          call acc_set_device_num(gpuid, acc_device_nvidia)
