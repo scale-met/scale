@@ -469,6 +469,8 @@ module scale_atmos_phy_mp_sn14
   ! D = a * x^b
   real(RP), private, save :: a_m(HYDRO_MAX), log_a_m(HYDRO_MAX)
   real(RP), private, save :: b_m(HYDRO_MAX)
+  !$acc declare create(a_m, log_a_m, b_m)
+
   ! constants for Terminal velocity-Mass relation
   ! vt = alpha * x^beta * f
   real(RP), private, save :: alpha_v(HYDRO_MAX,2), log_alpha_v(HYDRO_MAX,2)
@@ -476,6 +478,8 @@ module scale_atmos_phy_mp_sn14
   real(RP), private, save :: alpha_vn(HYDRO_MAX,2)   !
   real(RP), private, save :: beta_vn(HYDRO_MAX,2)    !
   real(RP), private, save :: gamma_v(HYDRO_MAX)
+  !$acc declare create(beta_v, beta_vn, gamma_v)
+
   !  Aerodynamical factor for correction of terminal velocity.(Heymsfield and Iaquinta, 2000)
   !  vt(tem,pre) = vt0 * (pre/pre0)**a_pre0 * (tem/tem0)**a_tem0
   real(RP), private, parameter :: pre0_vt   = 300.E+2_RP  ! 300hPa
@@ -491,6 +495,8 @@ module scale_atmos_phy_mp_sn14
   !     mu=1
   real(RP), private, save :: nu(HYDRO_MAX)
   real(RP), private, save :: mu(HYDRO_MAX)
+  !$acc declare create(nu)
+
   ! Mitchell(1996), JAS, vol.53, No.12, pp.1710-1723
   !  area = a_area*D^b_area
   !  area = ax_area*x^bx_area
@@ -544,6 +550,9 @@ module scale_atmos_phy_mp_sn14
   real(RP), private, save :: coef_deplc
   real(RP), private, save :: coef_dave_N(HYDRO_MAX), log_coef_dave_N(HYDRO_MAX)
   real(RP), private, save :: coef_dave_L(HYDRO_MAX), log_coef_dave_L(HYDRO_MAX)
+  !$acc declare create(log_coef_vt0, log_coef_vt1)
+  !$acc declare create(log_coef_dave_N, log_coef_dave_L)
+
   ! diameter of terminal velocity branch
   !
   real(RP), private, save :: d0_ni=261.76E-6_RP, log_d0_ni
@@ -552,6 +561,8 @@ module scale_atmos_phy_mp_sn14
   real(RP), private, parameter :: d0_ls=397.47E-6_RP, log_d0_ls = log(d0_ls)
   real(RP), private, parameter :: d0_ng=269.08E-6_RP, log_d0_ng = log(d0_ng)
   real(RP), private, parameter :: d0_lg=376.36E-6_RP, log_d0_lg = log(d0_lg)
+  !$acc declare create(log_d0_ni, log_d0_li)
+
   !
   real(RP), private, parameter :: coef_vtr_ar1=9.65_RP    ! coef. for large branch
   ! original parameter of Rogers etal.(1993)
@@ -1350,6 +1361,7 @@ contains
       RHOQ, &
       PRES, &
       vterm )
+    !$acc routine vector
     use scale_const, only: &
        CONST_UNDEF
     implicit none
@@ -2254,6 +2266,14 @@ contains
     do ia=1, HYDRO_MAX
        LOG_INFO("ATMOS_PHY_MP_sn14_init",'(a,a10,a,100ES16.6)') "theta1(a,b)=(",trim(WLABEL(ia)),",b)=",(theta_ab1(ia,ib),ib=1,HYDRO_MAX)
     enddo
+
+    !$acc update device(nu)
+    !$acc update device(a_m, log_a_m, b_m)
+    !$acc update device(beta_v, beta_vn, gamma_v)
+    !$acc update device(log_d0_ni, log_d0_li)
+    !$acc update device(log_coef_vt0, log_coef_vt1)
+    !$acc update device(log_coef_dave_N, log_coef_dave_L)
+
 
     return
   end subroutine mp_sn14_init

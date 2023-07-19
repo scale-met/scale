@@ -175,6 +175,7 @@ contains
        allocate( wdamp_coef(KA)           )
        num_diff  (:,:,:,:,:) = UNDEF
        num_diff_q(:,:,:,:)   = UNDEF
+       !$acc enter data create(num_diff, num_diff_q, wdamp_coef)
 
        call ATMOS_DYN_FVM_flux_setup     ( DYN_FVM_FLUX_TYPE,            & ! [IN]
                                            DYN_FVM_FLUX_TYPE_TRACER      ) ! [IN]
@@ -258,6 +259,7 @@ contains
 
        call SPNUDGE_finalize
 
+       !$acc exit data delete(num_diff, num_diff_q, wdamp_coef)
        deallocate( num_diff   )
        deallocate( num_diff_q )
        deallocate( wdamp_coef )
@@ -380,7 +382,7 @@ contains
     real(RP), intent(in)    :: DAMP_alpha_POTT(KA,IA,JA)
     real(RP), intent(in)    :: DAMP_alpha_QTRC(KA,IA,JA,BND_QA)
     real(RP), intent(in)    :: MFLUX_OFFSET_X(KA,JA,2)
-    real(RP), intent(in)    :: MFLUX_OFFSET_Y(KA,JA,2)
+    real(RP), intent(in)    :: MFLUX_OFFSET_Y(KA,IA,2)
 
     real(RP), intent(in)    :: divdmp_coef
 
@@ -414,6 +416,9 @@ contains
 
        call PROF_rapstart("DYN_Tinteg", 2)
 
+       !$acc data create(DENS00)
+
+       !$acc kernels
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
@@ -423,7 +428,9 @@ contains
        enddo
        enddo
        enddo
+       !$acc end kernels
 
+       !$acc kernels
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
@@ -431,7 +438,9 @@ contains
        enddo
        enddo
        enddo
+       !$acc end kernels
 
+       !$acc kernels
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
@@ -439,7 +448,9 @@ contains
        enddo
        enddo
        enddo
+       !$acc end kernels
 
+       !$acc kernels
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
@@ -447,7 +458,9 @@ contains
        enddo
        enddo
        enddo
+       !$acc end kernels
 
+       !$acc kernels
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
@@ -455,7 +468,9 @@ contains
        enddo
        enddo
        enddo
+       !$acc end kernels
 
+       !$acc kernels
        do iq = 1, QA
        do j = JS, JE
        do i = IS, IE
@@ -467,6 +482,9 @@ contains
        enddo
        enddo
        enddo
+       !$acc end kernels
+
+       !$acc end data
 
        call COMM_vars8( DENS(:,:,:), I_COMM_DENS )
        call COMM_vars8( MOMZ(:,:,:), I_COMM_MOMZ )
@@ -487,12 +505,24 @@ contains
        enddo
 
        if ( USE_AVERAGE ) then
+          !$acc kernels
           DENS_av(:,:,:)   = DENS(:,:,:)
+          !$acc end kernels
+          !$acc kernels
           MOMZ_av(:,:,:)   = MOMZ(:,:,:)
+          !$acc end kernels
+          !$acc kernels
           MOMX_av(:,:,:)   = MOMX(:,:,:)
+          !$acc end kernels
+          !$acc kernels
           MOMY_av(:,:,:)   = MOMY(:,:,:)
+          !$acc end kernels
+          !$acc kernels
           RHOT_av(:,:,:)   = RHOT(:,:,:)
+          !$acc end kernels
+          !$acc kernels
           QTRC_av(:,:,:,:) = QTRC(:,:,:,:)
+          !$acc end kernels
        endif
 
        call PROF_rapend("DYN_Tinteg", 2)
@@ -501,6 +531,20 @@ contains
     endif ! if DYN_NONE == .true.
 
     call PROF_rapstart("DYN_Tinteg", 2)
+
+    !$acc data copy(DENS, MOMZ, MOMX, MOMY, RHOT, QTRC, PROG) &
+    !$acc      copyin(DENS_tp, MOMZ_tp, MOMX_tp, MOMY_tp, RHOT_tp, RHOQ_tp, &
+    !$acc             CORIOLIS, &
+    !$acc             CDZ, CDX, CDY, FDZ, FDX, FDY, RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY, &
+    !$acc             PHI, GSQRT, J13G, J23G, MAPF, &
+    !$acc             AQ_R, AQ_CV, AQ_CP, AQ_MASS, &
+    !$acc             REF_dens, REF_pott, REF_qv, REF_pres, &
+    !$acc             BND_IQ, DAMP_DENS, DAMP_VELZ, DAMP_VELX, DAMP_VELY, DAMP_POTT, DAMP_QTRC, &
+    !$acc             DAMP_alpha_DENS, DAMP_alpha_VELZ, DAMP_alpha_VELX, DAMP_alpha_VELY, DAMP_alpha_POTT, DAMP_alpha_QTRC, &
+    !$acc             MFLUX_OFFSET_X, MFLUX_OFFSET_Y)
+
+    !$acc data copy(DENS_av, MOMZ_av, MOMX_av, MOMY_av, RHOT_av, QTRC_av) if(USE_AVERAGE)
+
 
     call ATMOS_DYN_tinteg_large( DENS,    MOMZ,    MOMX,    MOMY,    RHOT,    QTRC,    & ! [INOUT]
                                  PROG,                                                 & ! [INOUT]
@@ -532,6 +576,9 @@ contains
                                  DTSEC, DTSEC_DYN                                      ) ! [IN]
 
     call PROF_rapend  ("DYN_Tinteg", 2)
+
+    !$acc end data
+    !$acc end data
 
     return
   end subroutine ATMOS_DYN

@@ -103,6 +103,7 @@ contains
 
        LOG_INFO("ATMOS_PHY_SF_driver_setup",*) 'this component is never called.'
        LOG_INFO("ATMOS_PHY_SF_driver_setup",*) 'surface fluxes are set to zero.'
+       !$acc kernels
        SFLX_MW  (:,:) = 0.0_RP
        SFLX_MU  (:,:) = 0.0_RP
        SFLX_MV  (:,:) = 0.0_RP
@@ -115,12 +116,15 @@ contains
        Qstar    (:,:) = 0.0_RP
        Wstar    (:,:) = 0.0_RP
        RLmo     (:,:) = 0.0_RP
+       !$acc end kernels
        LOG_INFO("ATMOS_PHY_SF_driver_setup",*) 'SFC_TEMP, SFC_albedo is set in ATMOS_PHY_SF_vars.'
 
     endif
 
+    !$acc kernels
     SFLX_QTRC(:,:,:) = 0.0_RP
     SFLX_ENGI(:,:)   = 0.0_RP
+    !$acc end kernels
 
     return
   end subroutine ATMOS_PHY_SF_driver_setup
@@ -238,6 +242,8 @@ contains
 
     if ( update_flag ) then
 
+       !$acc data create(ATM_DENS,ATM_TEMP,ATM_PRES,SFLX_QV)
+
        ! update surface density, surface pressure
        call BOTTOM_estimate( KA, KS,  KE, IA, IS, IE, JA, JS, JE, &
                              DENS(:,:,:), PRES(:,:,:), QV(:,:,:), & ! [IN]
@@ -246,6 +252,7 @@ contains
                              SFC_DENS(:,:), SFC_PRES(:,:)         ) ! [OUT]
 
        !$omp parallel do
+       !$acc kernels
        do j = JS, JE
        do i = IS, IE
           ATM_DENS(i,j) = DENS(KS,i,j)
@@ -253,30 +260,39 @@ contains
           ATM_PRES(i,j) = PRES(KS,i,j)
        end do
        end do
+       !$acc end kernels
 
        if ( CPL_sw ) then
 
+          !$acc data create(SFLX_SH2)
+
           !$omp parallel do
+          !$acc kernels
           do j = JS, JE
           do i = IS, IE
              SFLX_SH2(i,j) = SFLX_SH(i,j) - SFLX_SHEX(i,j)
           end do
           end do
+          !$acc end kernels
 
           if ( ATMOS_HYDROMETEOR_dry ) then
              !$omp parallel do
+             !$acc kernels
              do j = JS, JE
              do i = IS, IE
                 SFLX_QV(i,j) = 0.0_RP
              end do
              end do
+             !$acc end kernels
           else
              !$omp parallel do
+             !$acc kernels
              do j = JS, JE
              do i = IS, IE
                 SFLX_QV(i,j) = SFLX_QTRC(i,j,I_QV) - SFLX_QVEX(i,j)
              end do
              end do
+             !$acc end kernels
           end if
 
           call BULKFLUX_diagnose_scales( IA, IS, IE, JA, JS, JE, &
@@ -285,9 +301,14 @@ contains
                                          SFC_DENS(:,:), SFC_TEMP(:,:), PBL_Zi(:,:), & ! [IN]
                                          Ustar(:,:), Tstar(:,:), Qstar(:,:),        & ! [OUT]
                                          Wstar(:,:), RLmo(:,:)                      ) ! [OUT]
+          !$acc end data
+
        else
 
+          !$acc data create(ATM_U,ATM_V,ATM_W,ATM_QV)
+
           !$omp parallel do
+          !$acc kernels
           do j = JS, JE
           do i = IS, IE
              ATM_U   (i,j) = U   (KS,i,j)
@@ -296,10 +317,12 @@ contains
              ATM_QV  (i,j) = QV  (KS,i,j)
           enddo
           enddo
+          !$acc end kernels
 
           select case ( ATMOS_PHY_SF_TYPE )
           case ( 'BULK' )
 
+             !$acc update host(ATM_W,ATM_U,ATM_V,ATM_TEMP,ATM_PRES,ATM_QV,SFC_DENS,SFC_TEMP,SFC_PRES,SFC_Z0M,SFC_Z0H,SFC_Z0E,PBL_Zi)
              call ATMOS_PHY_SF_bulk_flux( IA, IS, IE, JA, JS, JE,                      & ! [IN]
                                           ATM_W(:,:), ATM_U(:,:), ATM_V(:,:),          & ! [IN]
                                           ATM_TEMP(:,:), ATM_PRES(:,:), ATM_QV(:,:),   & ! [IN]
@@ -312,9 +335,11 @@ contains
                                           Wstar(:,:),                                  & ! [OUT]
                                           RLmo(:,:),                                   & ! [OUT]
                                           U10(:,:), V10(:,:), T2(:,:), Q2(:,:)         ) ! [OUT]
+             !$acc update device(SFLX_MW,SFLX_MU,SFLX_MV,SFLX_SH,SFLX_LH,SFLX_QV,Ustar,Tstar,Qstar,Wstar,RLmo,U10,V10,T2,Q2)
 
           case ( 'CONST' )
 
+             !$acc update host(ATM_W,ATM_U,ATM_V,ATM_TEMP,SFC_DENS)
              call ATMOS_PHY_SF_const_flux( IA, IS, IE, JA, JS, JE,                            & ! [IN]
                                            ATM_W(:,:), ATM_U(:,:), ATM_V(:,:), SFC_TEMP(:,:), & ! [IN]
                                            Z1(:,:), SFC_DENS(:,:),                            & ! [IN]
@@ -327,13 +352,18 @@ contains
              RLmo (:,:) = UNDEF
              T2(:,:) = ATM_TEMP(:,:)
              Q2(:,:) = ATM_QV(:,:)
+             !$acc update device(SFLX_MW,SFLX_MU,SFLX_MV,SFLX_SH,SFLX_LH,SFLX_QV,Ustar,Tstar,Qstar,Wstar,RLmo,U10,V10,T2,Q2)
 
           end select
 
           if ( .NOT. ATMOS_HYDROMETEOR_dry ) then
+             !$acc kernels
              SFLX_QTRC(:,:,I_QV) = SFLX_QV(:,:)
              SFLX_ENGI(:,:)      = SFLX_QV(:,:) * ( TRACER_CV(I_QV) * SFC_TEMP(:,:) + LHV )
+             !$acc end kernels
           endif
+
+          !$acc end data
 
        endif
 
@@ -342,6 +372,7 @@ contains
 !OCL XFILL
        !$omp parallel do &
        !$omp private(rdz)
+       !$acc kernels
        do j = JS, JE
        do i = IS, IE
           rdz = 1.0_RP / ( FZ(KS,i,j) - FZ(KS-1,i,j) )
@@ -350,9 +381,11 @@ contains
           RHOV_t_SF(i,j) = SFLX_MV(i,j) * rdz
        enddo
        enddo
+       !$acc end kernels
 
        !$omp parallel do &
        !$omp private(work,rdz,CP_t,CV_t,ENGI_t)
+       !$acc kernels
        do j = JS, JE
        do i = IS, IE
           rdz = 1.0_RP / ( FZ(KS,i,j) - FZ(KS-1,i,j) )
@@ -360,6 +393,7 @@ contains
           CP_t = 0.0_RP
           CV_t = 0.0_RP
           ENGI_t = SFLX_ENGI(i,j) * rdz
+          !$acc loop seq
           do iq = 1, QA
              work = SFLX_QTRC(i,j,iq) * rdz
 
@@ -376,10 +410,14 @@ contains
                        - ( CP_t + log( ATM_PRES(i,j) / PRE00 ) * ( CVtot(KS,i,j) / CPtot(KS,i,j) * CP_t - CV_t ) ) * ATM_DENS(i,j) * ATM_TEMP(i,j)
        enddo
        enddo
+       !$acc end kernels
+
+       !$acc end data
 
     endif
 
     !$omp parallel do
+    !$acc kernels
     do j = JS, JE
     do i = IS, IE
        MOMZ_t(KS,i,j) = MOMZ_t(KS,i,j) + MOMZ_t_SF(i,j)
@@ -389,8 +427,10 @@ contains
        DENS_t(KS,i,j) = DENS_t(KS,i,j) + DENS_t_SF(i,j)
     enddo
     enddo
+    !$acc end kernels
 
     !$omp parallel
+    !$acc kernels
     do iq = 1, QA
     !$omp do
     do j = JS, JE
@@ -400,6 +440,7 @@ contains
     enddo
     !$omp end do nowait
     enddo
+    !$acc end kernels
     !$omp end parallel
 
     if ( STATISTICS_checktotal ) then
@@ -500,8 +541,11 @@ contains
     integer :: i, j, iq
     !---------------------------------------------------------------------------
 
+    !$acc data create(MSLP, Uabs10, U10m, V10m)
+
 !OCL XFILL
     !$omp parallel do
+    !$acc kernels
     do j = JS, JE
     do i = IS, IE
        Uabs10(i,j) = sqrt( U10(i,j)**2 + V10(i,j)**2 )
@@ -509,6 +553,7 @@ contains
        V10m  (i,j) = U10(i,j) * ROTC(i,j,2) + V10(i,j) * ROTC(i,j,1)
     enddo
     enddo
+    !$acc end kernels
 
 
     call barometric_law_mslp( KA, KS, KE, IA, IS, IE, JA, JS, JE,  & ! [IN]
@@ -554,6 +599,8 @@ contains
     call FILE_HISTORY_in( T2    (:,:), 'T2 ',    '2m air temperature',        'K'    , fill_halo=.true. )
     call FILE_HISTORY_in( Q2    (:,:), 'Q2 ',    '2m specific humidity',      'kg/kg', fill_halo=.true. )
     call FILE_HISTORY_in( MSLP  (:,:), 'MSLP',   'mean sea-level pressure',   'Pa'   , fill_halo=.true., standard_name='air_pressure_at_mean_sea_level' )
+
+    !$acc end data
 
     return
   end subroutine history_output

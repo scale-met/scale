@@ -177,6 +177,7 @@ contains
        end if
        SR     (:,:) = 0.0_RP
        ATMOS_W(:,:) = 0.0_RP ! slope of the sea surface is zero
+       !$acc enter data copyin(WSTR, QVEF, SR, ATMOS_W)
 
     endif
 
@@ -227,6 +228,7 @@ contains
        case ( 'INIT' )
        end select
 
+       !$acc exit data delete(WSTR, QVEF, SR, ATMOS_W)
        deallocate( WSTR    )
        deallocate( QVEF    )
        deallocate( SR      )
@@ -400,27 +402,36 @@ contains
 
     call PROF_rapstart('OCN_CalcTend', 1)
 
+    !$acc data create(LHV,LHS,ATMOS_Uabs,sfc_temp,sfc_albedo,sfc_Z0M,sfc_Z0H,sfc_Z0E,subsfc_temp,TC_dz, &
+    !$acc             sflx_MW,sflx_MU,sflx_MV,sflx_SH,sflx_LH,sflx_QV,OCEAN_SFLX_QV,U10,V10,T2,Q2, &
+    !$acc             sflx_hbalance,sflx_GH,sflx_water,sflx_engi,ice_mass,exists_ice)
+
     !########## Get Surface Boundary from coupler ##########
     call OCEAN_SURFACE_GET
 
     !$omp parallel do
+    !$acc kernels
     do j = OJS, OJE
     do i = OIS, OIE
        ATMOS_Uabs(i,j) = sqrt( ATMOS_U(i,j)**2 + ATMOS_V(i,j)**2 )
     enddo
     enddo
+    !$acc end kernels
 
     !$omp parallel do
+    !$acc kernels
     do j = OJS, OJE
     do i = OIS, OIE
        exists_ice(i,j) = .false.
        if( exists_ocean(i,j) .AND. OCEAN_ICE_FRAC(i,j) > 0.0_RP ) exists_ice(i,j) = .true.
     enddo
     enddo
+    !$acc end kernels
 
     !########## reset tendencies ##########
 
     !$omp parallel do
+    !$acc kernels
     do j = OJS, OJE
     do i = OIS, OIE
     do k = OKS, OKE
@@ -431,24 +442,29 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
 
-    do iq = 1, QA
     !$omp parallel do
+    !$acc kernels
+    do iq = 1, QA
     do j  = OJS, OJE
     do i  = OIS, OIE
        OCEAN_SFLX_QTRC(i,j,iq) = 0.0_RP
     enddo
     enddo
     enddo
+    !$acc end kernels
 
     if ( ICE_flag ) then
        !$omp parallel do
+       !$acc kernels
        do j = OJS, OJE
        do i = OIS, OIE
           OCEAN_ICE_TEMP_t(i,j) = 0.0_RP
           OCEAN_ICE_MASS_t(i,j) = 0.0_RP
        enddo
        enddo
+       !$acc end kernels
     end if
 
 
@@ -456,11 +472,13 @@ contains
     !########## surface process (ice-free ocean) ##########
 
     !$omp parallel do
+    !$acc kernels
     do j = OJS, OJE
     do i = OIS, OIE
        OCEAN_SFC_TEMP(i,j) = OCEAN_TEMP(OKS,i,j)
     enddo
     enddo
+    !$acc end kernels
 
     ! albedo
     select case ( OCEAN_ALB_TYPE )
@@ -480,6 +498,8 @@ contains
                                          sfc_albedo  (:,:,:,:) ) ! [OUT]
     case ( 'INIT' )
        ! Never update OCEAN_SFC_albedo from initial condition
+       !$omp parallel do
+       !$acc kernels
        do irgn = I_R_IR, I_R_VIS
        do idir = I_R_direct, I_R_diffuse
        do j    = OJS, OJE
@@ -491,6 +511,7 @@ contains
        enddo
        enddo
        enddo
+       !$acc end kernels
     end select
 
     ! roughness length
@@ -573,7 +594,10 @@ contains
     end select
 
     !$omp parallel do
+    !$acc kernels
+    !$acc loop independent
     do j = OJS, OJE
+    !$acc loop independent
     do i = OIS, OIE
     if ( exists_ocean(i,j) ) then
        OCEAN_SFLX_water(i,j) = ATMOS_SFLX_water(i,j) - OCEAN_SFLX_QV(i,j)
@@ -582,6 +606,7 @@ contains
     end if
     enddo
     enddo
+    !$acc end kernels
 
     ! weighted average
 
@@ -595,7 +620,10 @@ contains
 
        !$omp parallel do &
        !$omp private(sfc_frac)
+       !$acc kernels
+       !$acc loop independent
        do j = OJS, OJE
+       !$acc loop independent
        do i = OIS, OIE
        if ( exists_ocean(i,j) ) then
           sfc_frac = 1.0_RP - OCEAN_ICE_FRAC(i,j)
@@ -627,6 +655,7 @@ contains
        end if
        enddo
        enddo
+       !$acc end kernels
 
     end if
 
@@ -636,11 +665,13 @@ contains
     if ( ICE_flag ) then
 
        !$omp parallel do
+       !$acc kernels
        do j = OJS, OJE
        do i = OIS, OIE
           subsfc_temp(i,j) = OCEAN_TEMP(OKS,i,j)
        enddo
        enddo
+       !$acc end kernels
 
        ! albedo
        select case ( OCEAN_ALB_TYPE )
@@ -654,6 +685,8 @@ contains
                                         sfc_albedo(:,:,:,:) ) ! [OUT]
        case ( 'INIT' )
           ! Never update OCEAN_SFC_albedo from initial condition
+          !$omp parallel do
+          !$acc kernels
           do irgn = I_R_IR, I_R_VIS
           do idir = I_R_direct, I_R_diffuse
           do j    = OJS, OJE
@@ -663,6 +696,7 @@ contains
           enddo
           enddo
           enddo
+          !$acc end kernels
        end select
 
        ! roughness length
@@ -682,6 +716,7 @@ contains
        case ( 'INIT' )
           ! Never update OCEAN_SFC_Z0M/H/E from initial condition
           !$omp parallel do
+          !$acc kernels
           do j = OJS, OJE
           do i = OIS, OIE
              sfc_Z0M(i,j) = OCEAN_SFC_Z0M(i,j)
@@ -689,6 +724,7 @@ contains
              sfc_Z0E(i,j) = OCEAN_SFC_Z0E(i,j)
           enddo
           enddo
+          !$acc end kernels
        end select
 
        ! thermal conductivity / depth
@@ -703,6 +739,7 @@ contains
        select case ( OCEAN_SFC_TYPE )
        case ( 'FIXED-TEMP' )
           !$omp parallel do private(sw)
+          !$acc kernels
           do j = OJS, OJE
           do i = OIS, OIE
           if ( exists_ocean(i,j) ) then
@@ -711,6 +748,7 @@ contains
           end if
           end do
           end do
+          !$acc end kernels
 
           call HYDROMETEOR_LHS( OIA, OIS, OIE, OJA, OJS, OJE, & ! [IN]
                                 OCEAN_ICE_TEMP(:,:), & ! [IN]
@@ -760,6 +798,7 @@ contains
        end select
 
        !$omp parallel do
+       !$acc kernels
        do j = OJS, OJE
        do i = OIS, OIE
        if ( exists_ocean(i,j) ) then
@@ -769,10 +808,14 @@ contains
        end if
        enddo
        enddo
+       !$acc end kernels
 
        ! weighted average
        !$omp parallel do
+       !$acc kernels
+       !$acc loop independent
        do j = OJS, OJE
+       !$acc loop independent
        do i = OIS, OIE
        if ( exists_ocean(i,j) ) then
           OCEAN_SFC_TEMP(i,j) = OCEAN_SFC_TEMP(i,j) + OCEAN_ICE_TEMP(i,j) * OCEAN_ICE_FRAC(i,j)
@@ -800,8 +843,10 @@ contains
        end if
        end do
        end do
+       !$acc end kernels
 
        !$omp parallel do
+       !$acc kernels
        do irgn = I_R_IR, I_R_VIS
        do idir = I_R_direct, I_R_diffuse
        do j    = OJS, OJE
@@ -813,6 +858,7 @@ contains
        enddo
        enddo
        enddo
+       !$acc end kernels
 
 
        ! seaice
@@ -820,6 +866,7 @@ contains
        case ( 'SIMPLE' )
 
           !$omp parallel do
+          !$acc kernels
           do j = OJS, OJE
           do i = OIS, OIE
           if ( exists_ocean(i,j) ) then
@@ -827,6 +874,7 @@ contains
           end if
           enddo
           enddo
+          !$acc end kernels
 
           call OCEAN_PHY_ICE_simple( OIA, OIS, OIE,         & ! [IN]
                                      OJA, OJS, OJE,         & ! [IN]
@@ -846,6 +894,7 @@ contains
                                      sflx_engi       (:,:)  ) ! [OUT]
        case ( 'INIT' )
           !$omp parallel do
+          !$acc kernels
           do j = OJS, OJE
           do i = OIS, OIE
           if ( exists_ocean(i,j) ) then
@@ -855,6 +904,7 @@ contains
           end if
           enddo
           enddo
+          !$acc end kernels
        end select
 
        ! history (sea ice)
@@ -865,7 +915,10 @@ contains
 
        ! weighted average
        !$omp parallel do
+       !$acc kernels
+       !$acc loop independent
        do j = OJS, OJE
+       !$acc loop independent
        do i = OIS, OIE
        if ( exists_ocean(i,j) ) then
           OCEAN_OFLX_GH   (i,j) = OCEAN_OFLX_GH   (i,j) + sflx_GH   (i,j)
@@ -874,6 +927,7 @@ contains
        end if
        enddo
        enddo
+       !$acc end kernels
 
        call BULKFLUX_diagnose_scales( OIA, OIS, OIE, OJA, OJS, OJE, &
                                       OCEAN_SFLX_MW(:,:), OCEAN_SFLX_MU(:,:), OCEAN_SFLX_MV(:,:), & ! [IN]
@@ -890,6 +944,7 @@ contains
 
     if ( .NOT. ATMOS_HYDROMETEOR_dry ) then
        !$omp parallel do
+       !$acc kernels
        do j = OJS, OJE
        do i = OIS, OIE
        if ( exists_ocean(i,j) ) then
@@ -897,6 +952,7 @@ contains
        end if
        enddo
        enddo
+       !$acc end kernels
     endif
 
 
@@ -922,10 +978,12 @@ contains
        end if
     endif
 
-    call PROF_rapend  ('OCN_CalcTend', 1)
-
     !########## Set Surface Boundary to coupler ##########
     call OCEAN_SURFACE_SET( countup=.true. )
+
+    !$acc end data
+
+    call PROF_rapend  ('OCN_CalcTend', 1)
 
     return
   end subroutine OCEAN_driver_calc_tendency
@@ -979,27 +1037,34 @@ contains
 
     real(RP) :: sflx_GH(OIA,OJA)
 
+    real(RP) :: OCEAN_TEMP_KS(OIA,OJA)
+
     integer :: i, j
     !---------------------------------------------------------------------------
 
     call PROF_rapstart('OCN_Update', 1)
+
+    !$acc data create(MASS_FLUX,ENGI_FLUX,MASS_SUPL,ENGI_SUPL)
 
     !########## Get Surface Boundary from coupler ##########
     call OCEAN_SURFACE_GET
 
     !########## Dynamics / Update ##########
     !$omp parallel do
+    !$acc kernels
     do j = OJS, OJE
     do i = OIS, OIE
        OCEAN_MASS_SUPL(i,j) = 0.0_RP
        OCEAN_ENGI_SUPL(i,j) = 0.0_RP
     end do
     end do
+    !$acc end kernels
 
     select case ( OCEAN_DYN_TYPE )
     case ( 'SLAB' )
 
        !$omp parallel do
+       !$acc kernels
        do j = OJS, OJE
        do i = OIS, OIE
        if ( exists_ocean(i,j) ) then
@@ -1007,6 +1072,7 @@ contains
        end if
        end do
        end do
+       !$acc end kernels
 
        call OCEAN_DYN_SLAB( OKMAX, OKS, OKE,         & ! [IN]
                             OIA,   OIS, OIE,         & ! [IN]
@@ -1021,6 +1087,7 @@ contains
                             ENGI_SUPL       (:,:)    ) ! [OUT]
 
        !$omp parallel do
+       !$acc kernels
        do j = OJS, OJE
        do i = OIS, OIE
        if ( exists_ocean(i,j) ) then
@@ -1029,6 +1096,7 @@ contains
        end if
        end do
        end do
+       !$acc end kernels
 
     case ( 'OFFLINE' )
 
@@ -1048,6 +1116,7 @@ contains
     case ( 'SIMPLE' )
 
        !$omp parallel do
+       !$acc kernels
        do j = OJS, OJE
        do i = OIS, OIE
        if ( exists_ocean(i,j) ) then
@@ -1056,22 +1125,44 @@ contains
        end if
        enddo
        enddo
+       !$acc end kernels
 
        ! ice adjustment
-       call OCEAN_PHY_ICE_adjustment( OIA, OIS, OIE,           & ! [IN]
-                                      OJA, OJS, OJE,           & ! [IN]
-                                      exists_ocean  (:,:),     & ! [IN]
-                                      CDZ(OKS),                & ! [IN]
-                                      OCEAN_TEMP    (OKS,:,:), & ! [INOUT]
-                                      OCEAN_ICE_TEMP(:,:),     & ! [INOUT]
-                                      OCEAN_ICE_MASS(:,:),     & ! [INOUT]
-                                      MASS_FLUX     (:,:),     & ! [OUT]
-                                      ENGI_FLUX     (:,:),     & ! [OUT]
-                                      MASS_SUPL     (:,:),     & ! [OUT]
-                                      ENGI_SUPL     (:,:)      ) ! [OUT]
+       !$acc data create(OCEAN_TEMP_KS)
+       !$omp parallel do
+       !$acc kernels
+       do j = OJS, OJE
+       do i = OIS, OIE
+          OCEAN_TEMP_KS(i,j) = OCEAN_TEMP(OKS,i,j)
+       end do
+       end do
+       !$acc end kernels
+       call OCEAN_PHY_ICE_adjustment( OIA, OIS, OIE,       & ! [IN]
+                                      OJA, OJS, OJE,       & ! [IN]
+                                      exists_ocean  (:,:), & ! [IN]
+                                      CDZ(OKS),            & ! [IN]
+                                      OCEAN_TEMP_KS(:,:),  & ! [INOUT]
+                                      OCEAN_ICE_TEMP(:,:), & ! [INOUT]
+                                      OCEAN_ICE_MASS(:,:), & ! [INOUT]
+                                      MASS_FLUX     (:,:), & ! [OUT]
+                                      ENGI_FLUX     (:,:), & ! [OUT]
+                                      MASS_SUPL     (:,:), & ! [OUT]
+                                      ENGI_SUPL     (:,:)  ) ! [OUT]
+       !$omp parallel do
+       !$acc kernels
+       do j = OJS, OJE
+       do i = OIS, OIE
+          OCEAN_TEMP(OKS,i,j) = OCEAN_TEMP_KS(i,j)
+       end do
+       end do
+       !$acc end kernels
+       !$acc end data
 
        !$omp parallel do
+       !$acc kernels
+       !$acc loop independent
        do j = OJS, OJE
+       !$acc loop independent
        do i = OIS, OIE
        if ( exists_ocean(i,j) ) then
           OCEAN_OFLX_water(i,j) = OCEAN_OFLX_water(i,j) - MASS_FLUX(i,j) / dt
@@ -1081,7 +1172,7 @@ contains
        end if
        end do
        end do
-
+       !$acc end kernels
 
        ! update ice fraction
        call OCEAN_PHY_ICE_fraction( OIA, OIS, OIE,       & ! [IN]
@@ -1094,6 +1185,8 @@ contains
     end select
 
     call OCEAN_vars_check
+
+    !$acc end data
 
     call PROF_rapend  ('OCN_Update', 1)
 

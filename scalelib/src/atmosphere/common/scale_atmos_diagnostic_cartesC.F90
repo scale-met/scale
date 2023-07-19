@@ -85,9 +85,12 @@ contains
     integer :: k, i, j
     !---------------------------------------------------------------------------
 
+    !$acc data copyin(DENS, MOMZ, MOMY, MOMX, GSQRT, J23G, J13G) copyout(W, U, V)
+
     ! Note: W(KS,:,:) is filled because the values at i=1 or j=1 are not calculated below.
 !OCL XFILL
     !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+    !$acc kernels
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE-1
@@ -95,10 +98,12 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
     if ( PRC_TwoD ) then
 !OCL XFILL
        !$omp parallel do OMP_SCHEDULE_ &
        !$omp private(j,momws)
+       !$acc kernels
        do j = max(2,JS), JE
           ! at KS+1/2
           momws = MOMZ(KS,IS,j) &
@@ -111,10 +116,12 @@ contains
                          * 0.5_RP / GSQRT(KS,IS,j,I_XYZ)                           &
                       ) / DENS(KS,IS,j)
        enddo
+       !$acc end kernels
     else
 !OCL XFILL
        !$omp parallel do OMP_SCHEDULE_ collapse(2) &
        !$omp private(i,j,momws)
+       !$acc kernels
        do j = max(2,JS), JE
        do i = max(2,IS), IE
           ! at KS+1/2
@@ -131,26 +138,32 @@ contains
                       ) / DENS(KS,i,j)
        enddo
        enddo
+       !$acc end kernels
     end if
 !OCL XFILL
     !$omp parallel do private(i,j) OMP_SCHEDULE_ collapse(2)
+    !$acc kernels
     do j = JS, JE
     do i = IS, IE
        W(KE,i,j) = 0.5_RP * ( MOMZ(KE-1,i,j) ) / DENS(KE,i,j)
     enddo
     enddo
+    !$acc end kernels
 
     if ( PRC_TwoD ) then
 !OCL XFILL
        !$omp parallel do private(j,k) OMP_SCHEDULE_
+       !$acc kernels
        do j = JS, JE
        do k = KS, KE
           U(k,IS,j) = MOMX(k,IS,j) / DENS(k,IS,j)
        enddo
        enddo
+       !$acc end kernels
     else
 !OCL XFILL
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+       !$acc kernels
        do j = JS, JE
        do i = max(2,IS), IE
        do k = KS, KE
@@ -158,17 +171,21 @@ contains
        enddo
        enddo
        enddo
+       !$acc end kernels
 !OCL XFILL
        !$omp parallel do private(j,k) OMP_SCHEDULE_ collapse(2)
+       !$acc kernels
        do j = JS, JE
        do k = KS, KE
           U(k,1,j) = MOMX(k,1,j) / DENS(k,1,j)
        enddo
        enddo
+       !$acc end kernels
     end if
 
    !OCL XFILL
     !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+    !$acc kernels
     do j = max(2,JS), JE
     do i = IS, IE
     do k = KS, KE
@@ -176,25 +193,36 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
 !OCL XFILL
     !$omp parallel do private(i,k) OMP_SCHEDULE_ collapse(2)
+    !$acc kernels
     do i = IS, IE
     do k = KS, KE
        V(k,i,1) = MOMY(k,i,1) / DENS(k,i,1)
     enddo
     enddo
+    !$acc end kernels
 
     !$omp parallel do private(i,j) OMP_SCHEDULE_ collapse(2)
+    !$acc kernels
     do j  = JS, JE
     do i  = IS, IE
-       W(   1:KS-1,i,j) = W(KS,i,j)
-       U(   1:KS-1,i,j) = U(KS,i,j)
-       V(   1:KS-1,i,j) = V(KS,i,j)
-       W(KE+1:KA,  i,j) = W(KE,i,j)
-       U(KE+1:KA,  i,j) = U(KE,i,j)
-       V(KE+1:KA,  i,j) = V(KE,i,j)
+       !$acc loop seq
+       do k = 1, KS-1
+          W(k,i,j) = W(KS,i,j)
+          U(k,i,j) = U(KS,i,j)
+          V(k,i,j) = V(KS,i,j)
+       end do
+       !$acc loop seq
+       do k = KE+1, KA
+          W(k,i,j) = W(KE,i,j)
+          U(k,i,j) = U(KE,i,j)
+          V(k,i,j) = V(KE,i,j)
+       end do
     enddo
     enddo
+    !$acc end kernels
 
     call COMM_vars8( W(:,:,:), 1 )
     call COMM_vars8( U(:,:,:), 2 )
@@ -202,6 +230,8 @@ contains
     call COMM_wait ( W(:,:,:), 1, .false. )
     call COMM_wait ( U(:,:,:), 2, .false. )
     call COMM_wait ( V(:,:,:), 3, .false. )
+
+    !$acc end data
 
     return
   end subroutine ATMOS_DIAGNOSTIC_CARTESC_get_vel

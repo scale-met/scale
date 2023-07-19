@@ -78,6 +78,8 @@ module scale_interp
 
   real(RP), private :: EPS_bilinear
 
+  !$acc declare create(INTERP_weight_order, INTERP_search_limit, INTERP_use_spline_vert, EPS_bilinear)
+
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
@@ -127,6 +129,8 @@ contains
     else
        EPS_bilinear = 0.025_RP
     end if
+
+    !$acc update device(INTERP_weight_order, INTERP_search_limit, INTERP_use_spline_vert, EPS_bilinear)
 
     return
   end subroutine INTERP_setup
@@ -249,6 +253,7 @@ contains
        idx_k,                  &
        vfact,                  &
        flag_extrap             )
+    !$acc routine vector
     use scale_prc, only: &
        PRC_abort
     use scale_const, only: &
@@ -320,6 +325,7 @@ contains
           idx_k(k,2) = -1
           vfact(k) = 1.0_RP
        else
+          !$acc loop seq
           do kk = 1, kmax-1
              if (       hgt(k) >= hgt_ref(idx(kk)  ) &
                   .AND. hgt(k) <  hgt_ref(idx(kk+1)) ) then
@@ -362,14 +368,19 @@ contains
     integer,  intent(out) :: idx_j(IA,JA,4)
     real(RP), intent(out) :: hfact(IA,JA,4)
 
+    real(RP) :: workh(4)
+    integer  :: worki(4), workj(4)
+
     real(RP) :: f1, f2
     integer  :: i, j, ii, jj
 
     call PROF_rapstart('INTERP_fact',3)
 
     !$omp parallel do schedule(dynamic) collapse(2) &
-    !$omp private(f1,f2)
+    !$omp private(f1,f2,workh,worki,workj)
+    !$acc kernels
     do j = 1, JA
+    !$acc loop private(workh, worki, workj)
     do i = 1, IA
 
        ! longitude
@@ -434,12 +445,23 @@ contains
           end do
        end if
 
+       do ii = 1, 4
+          workh(ii) = hfact(i,j,ii)
+          worki(ii) = idx_i(i,j,ii)
+          workj(ii) = idx_j(i,j,ii)
+       end do
        call SORT_exec( 4,                                        & ! [IN]
-                       hfact(i,j,:), idx_i(i,j,:), idx_j(i,j,:), & ! [INOUT]
+                       workh(:), worki(:), workj(:),             & ! [INOUT]
                        reverse = .true.                          ) ! [IN]
+       do ii = 1, 4
+          hfact(i,j,ii) = workh(ii)
+          idx_i(i,j,ii) = worki(ii)
+          idx_j(i,j,ii) = workj(ii)
+       end do
 
     end do
     end do
+    !$acc end kernels
 
     call PROF_rapend  ('INTERP_fact',3)
 
@@ -485,6 +507,9 @@ contains
     logical  :: error, err
     logical  :: zonal_, pole_
 
+    real(RP) :: workh(4)
+    integer  :: worki(4), workj(4)
+
     integer :: ii0, jj0
     integer :: ii, jj
     integer :: i1, i2, i3, i4
@@ -512,15 +537,23 @@ contains
     ite_max = IA_ref + JA_ref
 
     !$omp parallel do &
-    !$omp private(inc_i,inc_j,ii,jj,i1,i2,i3,i4,j1,j2,j3,j4,u,v,err) &
+    !$omp private(inc_i,inc_j,ii,jj,i1,i2,i3,i4,j1,j2,j3,j4,u,v,err,workh,worki,workj) &
     !$omp firstprivate(ii0,jj0)
+    !$acc kernels
+    !$acc loop reduction(.or.:error)
     do j = 1, JA
+    !$acc loop private(inc_i,inc_j,ii,jj,i1,i2,i3,i4,j1,j2,j3,j4,u,v,err,workh,worki,workj) reduction(.or.:error)
     do i = 1, IA
 
+#ifndef _OPENACC
        if ( i==1 ) then
+#endif
           ii = ii0
           jj = jj0
+#ifndef _OPENACC
        end if
+#endif
+       !$acc loop seq
        do ite = 1, ite_max
           i1 = ii
           i2 = ii + 1
@@ -640,29 +673,45 @@ contains
           end if
        end do
        if ( ite == ite_max+1 ) then
+          idx_i(i,j,:) = 1
+          idx_j(i,j,:) = 1
+          hfact(i,j,:) = 0.0_RP
+          error = .true.
+#ifndef _OPENACC
           LOG_ERROR("INTERP_factor2d_linear_xy",*) 'iteration max has been reached', i, j, x(i), y(j)
           LOG_ERROR_CONT(*) minval(x_ref), maxval(x_ref), minval(y_ref), maxval(y_ref)
           LOG_ERROR_CONT(*) x_ref(1,1), x_ref(IA_ref,1),x_ref(1,JA_ref)
           LOG_ERROR_CONT(*) y_ref(1,1), y_ref(IA_ref,1),y_ref(1,JA_ref)
-          idx_i(i,j,:) = 1
-          idx_j(i,j,:) = 1
-          hfact(i,j,:) = 0.0_RP
           call PRC_abort
+#endif
        end if
 
+#ifndef _OPENACC
        if ( i==1 ) then
           ii0 = ii
           jj0 = jj
        end if
 
        if ( error ) exit
+#endif
 
+       do ii = 1, 4
+          workh(ii) = hfact(i,j,ii)
+          worki(ii) = idx_i(i,j,ii)
+          workj(ii) = idx_j(i,j,ii)
+       end do
        call SORT_exec( 4,                                        & ! [IN]
-                       hfact(i,j,:), idx_i(i,j,:), idx_j(i,j,:), & ! [INOUT]
+                       workh(:), worki(:), workj(:),             & ! [INOUT]
                        reverse = .true.                          ) ! [IN]
+       do ii = 1, 4
+          hfact(i,j,ii) = workh(ii)
+          idx_i(i,j,ii) = worki(ii)
+          idx_j(i,j,ii) = workj(ii)
+       end do
 
     end do
     end do
+    !$acc end kernels
 
     if ( error ) call PRC_abort
 
@@ -721,6 +770,9 @@ contains
     integer, allocatable :: idx_blk(:,:,:), nidx(:,:)
     integer  :: idx_ref(npoints)
 
+    integer  :: idx_it(npoints)
+    integer  :: idx_jt(npoints)
+    real(RP) :: hfactt(npoints)
 
     integer  :: i, j, ii, jj, n
     !---------------------------------------------------------------------------
@@ -784,7 +836,10 @@ contains
        j1(psizey) = JA_ref
 
        !$omp parallel do OMP_SCHEDULE_ collapse(2)
+       !$acc kernels copyin(lon_1d, lat_1d, i0, i1, j0, j1, lon, lat) copyout(idx_i, idx_j, hfact)
+       !$acc loop independent
        do j = 1, JA
+       !$acc loop private(idx_it,idx_jt,hfactt) independent
        do i = 1, IA
           ! main search
           call INTERP_search_horiz_struct( npoints,                     & ! [IN]
@@ -795,12 +850,18 @@ contains
                                            dlon, dlat,                  & ! [IN]
                                            i0(:), i1(:), j0(:), j1(:),  & ! [IN]
                                            lon(i,j), lat(i,j),          & ! [IN]
-                                           idx_i(i,j,:), idx_j(i,j,:),  & ! [OUT]
-                                           hfact(i,j,:),                & ! [OUT]
+                                           idx_it(:), idx_jt(:),        & ! [OUT]
+                                           hfactt(:),                   & ! [OUT]
                                            search_limit = search_limit, & ! [IN]
                                            weight_order = weight_order  ) ! [IN]
+          do n = 1, npoints
+             idx_i(i,j,n) = idx_it(n)
+             idx_j(i,j,n) = idx_jt(n)
+             hfact(i,j,n) = hfactt(n)
+          end do
        enddo
        enddo
+       !$acc end kernels
 
        deallocate( i0, i1, j0, j1 )
 
@@ -818,6 +879,8 @@ contains
        allocate(idx_blk(nidx_max,psize,psize))
        allocate(nidx   (         psize,psize))
 
+       !$acc data copyin(lon_ref, lat_ref, lon, lat) copyout(idx_i, idx_j, hfact) create(idx_blk, nidx)
+
        call INTERP_div_block(nsize, psize, nidx_max,     & ! [IN]
                              lon_ref(:,:), lat_ref(:,:), & ! [IN]
                              idx_blk(:,:,:), nidx(:,:),  & ! [OUT]
@@ -827,7 +890,10 @@ contains
 
        !$omp parallel do OMP_SCHEDULE_ collapse(2) &
        !$omp private(idx_ref)
+       !$acc kernels
+       !$acc loop independent
        do j = 1, JA
+       !$acc loop private(idx_ref,hfactt) independent
        do i = 1, IA
           ! main search
           call INTERP_search_horiz( npoints,                     & ! [IN]
@@ -840,15 +906,19 @@ contains
                                     idx_blk(:,:,:), nidx(:,:),   & ! [IN]
                                     lon(i,j), lat(i,j),          & ! [IN]
                                     idx_ref(:),                  & ! [OUT]
-                                    hfact(i,j,:),                & ! [OUT]
+                                    hfactt(:),                   & ! [OUT]
                                     search_limit = search_limit, & ! [IN]
                                     weight_order = weight_order  ) ! [IN]
           do n = 1, npoints
              idx_i(i,j,n) = mod(idx_ref(n) - 1, IA_ref) + 1
              idx_j(i,j,n) = ( idx_ref(n) - 1 ) / IA_ref + 1
+             hfact(i,j,n) = hfactt(n)
           end do
        enddo
        enddo
+       !$acc end kernels
+
+       !$acc end data
 
        deallocate(idx_blk, nidx)
 
@@ -901,6 +971,8 @@ contains
 
     integer :: i, j, ii, jj, n
 
+    !$acc data copyin(lon_ref, lat_ref, hgt_ref, lon, lat, hgt) copyout(idx_i, idx_j, hfact, idx_k, vfact)
+
     call INTERP_factor2d_linear_latlon( &
          IA_ref, JA_ref,                          & ! [IN]
          IA, JA,                                  & ! [IN]
@@ -912,8 +984,12 @@ contains
 
     !$omp parallel do OMP_SCHEDULE_ collapse(2) &
     !$omp private(ii,jj)
+    !$acc kernels
+    !$acc loop independent
     do j = 1, JA
+    !$acc loop independent
     do i = 1, IA
+       !$acc loop seq
        do n = 1, 4
           ii = idx_i(i,j,n)
           jj = idx_j(i,j,n)
@@ -928,6 +1004,9 @@ contains
        enddo
     enddo
     enddo
+    !$acc end kernels
+
+    !$acc end data
 
     call PROF_rapend('INTERP_fact',3)
 
@@ -978,6 +1057,8 @@ contains
 
     integer :: i, j, ii, jj, n
 
+    !$acc data copyin(x_ref, y_ref, hgt_ref, x, y, hgt) copyout(idx_i, idx_j, hfact, idx_k, vfact)
+
     call INTERP_factor2d_linear_xy( &
          IA_ref, JA_ref,                           & ! [IN]
          IA, JA,                                   & ! [IN]
@@ -990,8 +1071,12 @@ contains
 
     !$omp parallel do OMP_SCHEDULE_ collapse(2) &
     !$omp private(ii,jj)
+    !$acc kernels
+    !$acc loop independent
     do j = 1, JA
+    !$acc loop independent
     do i = 1, IA
+       !$acc loop seq
        do n = 1, 4
           ii = idx_i(i,j,n)
           jj = idx_j(i,j,n)
@@ -1006,6 +1091,9 @@ contains
        enddo
     enddo
     enddo
+    !$acc end kernels
+
+    !$acc end data
 
     call PROF_rapend('INTERP_fact',3)
 
@@ -1061,6 +1149,7 @@ contains
     real(RP) :: lat_min, lat_max
     real(RP) :: dlon, dlat
     integer  :: idx_ref(npoints)
+    real(RP) :: hfactt(npoints)
 
     integer  :: i, j, ii, jj, n
     !---------------------------------------------------------------------------
@@ -1079,6 +1168,10 @@ contains
     allocate(idx_blk(nidx_max,psize,psize))
     allocate(nidx   (         psize,psize))
 
+    !$acc data copyin(lon_ref, lat_ref, hgt_ref, lon, lat, hgt) &
+    !$acc      copyout(idx_i, idx_j, hfact, idx_k, vfact) &
+    !$acc      create(idx_blk, nidx)
+
     call INTERP_div_block(nsize, psize, nidx_max,     & ! [IN]
                           lon_ref(:,:), lat_ref(:,:), & ! [IN]
                           idx_blk(:,:,:), nidx(:,:),  & ! [OUT]
@@ -1088,7 +1181,10 @@ contains
 
     !$omp parallel do OMP_SCHEDULE_ collapse(2) &
     !$omp private(ii,jj,idx_ref)
+    !$acc kernels
+    !$acc loop independent
     do j = 1, JA
+    !$acc loop private(idx_ref,hfactt) independent
     do i = 1, IA
 
        ! main search
@@ -1101,13 +1197,15 @@ contains
                                  dlon, dlat,                  & ! [IN]
                                  idx_blk(:,:,:), nidx(:,:),   & ! [IN]
                                  lon(i,j), lat(i,j),          & ! [IN]
-                                 idx_ref(:), hfact(i,j,:)     ) ! [OUT]
+                                 idx_ref(:), hfactt(:)        ) ! [OUT]
 
+       !$acc loop seq
        do n = 1, npoints
           ii = mod(idx_ref(n) - 1, IA_ref) + 1
           jj = ( idx_ref(n) - 1 ) / IA_ref + 1
           idx_i(i,j,n) = ii
           idx_j(i,j,n) = jj
+          hfact(i,j,n) = hfactt(n)
           call INTERP_factor1d( KA_ref, KS_ref, KE_ref,   & ! [IN]
                                 KA,     KS,     KE,       & ! [IN]
                                 hgt_ref(:,ii,jj),         & ! [IN]
@@ -1119,6 +1217,9 @@ contains
        enddo
     enddo
     enddo
+    !$acc end kernels
+
+    !$acc end data
 
     deallocate(idx_blk, nidx)
 
@@ -1133,6 +1234,9 @@ contains
   subroutine INTERP_interp1d( &
        KA_ref, KS_ref, KE_ref, &
        KA, KS, KE, &
+#ifdef _OPENACC
+       workr, worki, &
+#endif
        idx_k,         &
        vfact,         &
        hgt_ref,       &
@@ -1141,6 +1245,7 @@ contains
        val,           &
        spline,        &
        logwgt         )
+    !$acc routine vector
     use scale_const, only: &
        UNDEF => CONST_UNDEF, &
        EPS   => CONST_EPS
@@ -1164,16 +1269,27 @@ contains
 
     real(RP), pointer :: work(:)
 
-    integer  :: idx  (KA_ref)
-    integer  :: idx_r(KA_ref)
-    real(RP) :: FDZ  (KA_ref)
-    real(RP) :: U    (KA_ref)
+#ifdef _OPENACC
+    real(RP), intent(out), target :: workr(KA_ref,7)
+    integer,  intent(out)         :: worki(KA_ref,2)
+#define idx_i1(k)   worki(k,1)
+#define idx_r_i1(k) worki(k,2)
+#define FDZ_i1(k)   workr(k,1)
+#define U_i1(k)     workr(k,2)
+#else
+    integer  :: idx_i1  (KA_ref)
+    integer  :: idx_r_i1(KA_ref)
+    real(RP) :: FDZ_i1  (KA_ref)
+    real(RP) :: U_i1    (KA_ref)
+#endif
 
     integer :: kmax
     integer :: k
     !---------------------------------------------------------------------------
 
+#ifndef _OPENACC
     call PROF_rapstart('INTERP_interp',3)
+#endif
 
     spline_ = INTERP_use_spline_vert
     if ( present(spline) ) then
@@ -1186,7 +1302,11 @@ contains
     endif
 
     if ( logwgt_ ) then
+#ifdef _OPENACC
+       work => workr(:,3)
+#else
        allocate( work(KA_ref) )
+#endif
        do k = KS_ref, KE_ref
           if ( abs( val_ref(k) - UNDEF ) < EPS ) then
              work(k) = UNDEF
@@ -1199,22 +1319,27 @@ contains
     endif
 
     call spline_coef( KA_ref, KS_ref, KE_ref, &
-                      hgt_ref(:), work(:), & ! (in)
-                      spline_,             & ! (in)
-                      kmax,                & ! (out)
-                      idx(:), idx_r(:),    & ! (out)
-                      U(:), FDZ(:)         ) ! (out)
+#ifdef _OPENACC
+                      workr(:,4:7), &
+#endif
+                      hgt_ref(:), work(:),    & ! (in)
+                      spline_,                & ! (in)
+                      kmax,                   & ! (out)
+                      idx_i1(:), idx_r_i1(:), & ! (out)
+                      U_i1(:), FDZ_i1(:)      ) ! (out)
 
     call spline_exec( KA_ref, kmax, KA, KS, KE, &
-                      idx_k(:,:), vfact(:), & ! (in)
-                      hgt_ref(:), hgt(:),   & ! (in)
-                      work(:),              & ! (in)
-                      idx(:), idx_r(:),     & ! (in)
-                      U(:), FDZ(:),         & ! (in)
-                      val(:)                ) ! (out)
+                      idx_k(:,:), vfact(:),   & ! (in)
+                      hgt_ref(:), hgt(:),     & ! (in)
+                      work(:),                & ! (in)
+                      idx_i1(:), idx_r_i1(:), & ! (in)
+                      U_i1(:), FDZ_i1(:),     & ! (in)
+                      val(:)                  ) ! (out)
 
     if ( logwgt_ ) then
+#ifndef _OPENACC
        deallocate( work )
+#endif
        do k = KS, KE
           if ( abs( val(k) - UNDEF ) > EPS ) then
              val(k) = exp( val(k) )
@@ -1222,7 +1347,9 @@ contains
        end do
     endif
 
+#ifndef _OPENACC
     call PROF_rapend  ('INTERP_interp',3)
+#endif
 
     return
   end subroutine INTERP_interp1d
@@ -1282,11 +1409,13 @@ contains
 
     !$omp parallel do OMP_SCHEDULE_ collapse(2) &
     !$omp private(fact,valn,f,w,sw)
+    !$acc kernels
 !OCL PREFETCH
     do j = 1, JA
     do i = 1, IA
        fact = 0.0_RP
        valn = 0.0_RP
+       !$acc loop seq
        do n = 1, npoints
           f = hfact(i,j,n)
           w = val_ref(idx_i(i,j,n),idx_j(i,j,n))
@@ -1304,6 +1433,7 @@ contains
        end if
     enddo
     enddo
+    !$acc end kernels
 
     call PROF_rapend  ('INTERP_interp',3)
 
@@ -1375,6 +1505,10 @@ contains
     real(RP) :: w(KA,npoints)
     logical  :: lval2
 
+#ifdef _OPENACC
+    real(RP) :: workr(KA_ref,4)
+#endif
+
     integer :: imin, imax
     integer :: jmin, jmax
     integer :: ii, jj
@@ -1405,6 +1539,12 @@ contains
     lval2 = present(wsum) .and. present(val2)
 
 
+    !$acc data copyin(idx_i, idx_j, hfact, idx_k, vfact, hgt_ref, hgt, val_ref) &
+    !$acc      copyout(val)
+
+    !$acc data copyout(wsum) if(present(wsum))
+    !$acc data copyout(val2) if(present(val2))
+
     imin = IA_ref
     jmin = JA_ref
     imax = 1
@@ -1412,8 +1552,12 @@ contains
     !$omp parallel do OMP_SCHEDULE_ collapse(2) &
     !$omp reduction(min: imin,jmin) &
     !$omp reduction(max: imax,jmax)
+    !$acc kernels
+    !$acc loop reduction(min:imin,jmin) reduction(max:imax,jmax)
     do n = 1, npoints
+    !$acc loop reduction(min:imin,jmin) reduction(max:imax,jmax)
     do j = 1, JA
+    !$acc loop reduction(min:imin,jmin) reduction(max:imax,jmax)
     do i = 1, IA
        imin = min(imin, idx_i(i,j,n))
        imax = max(imax, idx_i(i,j,n))
@@ -1422,16 +1566,23 @@ contains
     end do
     end do
     end do
+    !$acc end kernels
 
     allocate( kmax(imin:imax,jmin:jmax) )
     allocate( idx(KA_ref,imin:imax,jmin:jmax), idx_r(KA_ref,imin:imax,jmin:jmax) )
     allocate( U(KA_ref,imin:imax,jmin:jmax), FDZ(KA_ref,imin:imax,jmin:jmax) )
+    !$acc enter data create(kmax, idx, idx_r, U, FDZ)
 
     if ( logwgt_ ) then
        allocate( work(KA_ref,imin:imax,jmin:jmax) )
+       !$acc enter data create(work)
        !$omp parallel do OMP_SCHEDULE_ collapse(2)
+       !$acc kernels
+       !$acc loop independent
        do j = jmin, jmax
+       !$acc loop independent
        do i = imin, imax
+       !$acc loop independent
        do k = KS_ref, KE_ref
           if ( abs( val_ref(k,i,j) - UNDEF ) < EPS ) then
              work(k,i,j) = UNDEF
@@ -1441,14 +1592,21 @@ contains
        enddo
        enddo
        enddo
+       !$acc end kernels
     else
        work => val_ref
     endif
 
     !$omp parallel do OMP_SCHEDULE_ collapse(2)
+    !$acc kernels
+    !$acc loop independent
     do j = jmin, jmax
+    !$acc loop independent private(workr)
     do i = imin, imax
        call spline_coef( KA_ref, KS_ref, KE_ref, &
+#ifdef _OPENACC
+                         workr(:,:), &
+#endif
                          hgt_ref(:,i,j), work(:,i,j), & ! (in)
                          spline_,                     & ! (in)
                          kmax(i,j),                   & ! (out)
@@ -1456,28 +1614,35 @@ contains
                          U(:,i,j), FDZ(:,i,j)         ) ! (out)
     end do
     end do
+    !$acc end kernels
 
     !$omp parallel do OMP_SCHEDULE_ collapse(2) &
     !$omp private(valn,fact,w,f,ii,jj,sw)
+    !$acc kernels
+    !$acc loop independent
     do j = 1, JA
+    !$acc loop independent private(w)
     do i = 1, IA
 
+       !$acc loop seq
        do n = 1, npoints
-          if ( hfact(i,j,n) < EPS ) exit
-          ii = idx_i(i,j,n)
-          jj = idx_j(i,j,n)
-          call spline_exec( KA_ref, kmax(ii,jj), KA, KS, KE, &
-                            idx_k(:,:,i,j,n), vfact(:,  i,j,n), & ! (in)
-                            hgt_ref(:,ii,jj), hgt(:,i,j),       & ! (in)
-                            work(:,ii,jj),                      & ! (in)
-                            idx(:,ii,jj), idx_r(:,ii,jj),       & ! (in)
-                            U(:,ii,jj), FDZ(:,ii,jj),           & ! (in)
-                            w(:,n)                              ) ! (out)
+          if ( hfact(i,j,n) > EPS ) then
+             ii = idx_i(i,j,n)
+             jj = idx_j(i,j,n)
+             call spline_exec( KA_ref, kmax(ii,jj), KA, KS, KE, &
+                               idx_k(:,:,i,j,n), vfact(:,  i,j,n), & ! (in)
+                               hgt_ref(:,ii,jj), hgt(:,i,j),       & ! (in)
+                               work(:,ii,jj),                      & ! (in)
+                               idx(:,ii,jj), idx_r(:,ii,jj),       & ! (in)
+                               U(:,ii,jj), FDZ(:,ii,jj),           & ! (in)
+                               w(:,n)                              ) ! (out)
+          end if
        end do
 
        do k = KS, KE
           fact = 0.0_RP
           valn = 0.0_RP
+          !$acc loop seq
           do n = 1, npoints
              f = hfact(i,j,n)
              if ( f > EPS .and. abs( w(k,n) - UNDEF ) > EPS ) then
@@ -1496,13 +1661,17 @@ contains
 
     enddo
     enddo
+    !$acc end kernels
 
+    !$acc exit data delete(kmax, idx, idx_r, U, FDZ)
     deallocate( kmax, idx, idx_r )
     deallocate( U, FDZ )
 
     if ( logwgt_ ) then
+       !$acc exit data delete(work)
        deallocate( work )
        !$omp parallel do OMP_SCHEDULE_ collapse(2)
+       !$acc kernels
        do j = 1, JA
        do i = 1, IA
        do k = KS, KE
@@ -1512,7 +1681,12 @@ contains
        end do
        end do
        end do
+       !$acc end kernels
     end if
+
+    !$acc end data
+    !$acc end data
+    !$acc end data
 
     call PROF_rapend  ('INTERP_interp',3)
 
@@ -1540,6 +1714,7 @@ contains
        hfact,            &
        search_limit,     &
        weight_order      )
+    !$acc routine seq
     use scale_const, only: &
        EPS => CONST_EPS, &
        RADIUS => CONST_RADIUS
@@ -1695,6 +1870,7 @@ contains
        hfact,            &
        search_limit,     &
        weight_order      )
+    !$acc routine seq
     use scale_const, only: &
        EPS    => CONST_EPS,   &
        RADIUS => CONST_RADIUS
@@ -1848,6 +2024,7 @@ contains
                             lon_ref, lat_ref, &
                             i,                &
                             drad, idx_i       )
+    !$acc routine seq
     use scale_const, only: &
        UNDEF => CONST_UNDEF, &
        EPS   => CONST_EPS
@@ -1857,7 +2034,7 @@ contains
     integer,  intent(in) :: npoints
     real(RP), intent(in) :: lon, lat
     real(RP), intent(in) :: lon_ref, lat_ref
-    integer,  intent(in) :: i
+    integer,  intent(in), value :: i
 
     real(RP), intent(inout) :: drad(npoints)
     integer,  intent(inout) :: idx_i(npoints)
@@ -1888,6 +2065,7 @@ contains
                                lon_ref, lat_ref,  &
                                i, j,              &
                                drad, idx_i, idx_j )
+    !$acc routine seq
     use scale_const, only: &
        UNDEF => CONST_UNDEF, &
        EPS   => CONST_EPS
@@ -1897,7 +2075,7 @@ contains
     integer,  intent(in) :: npoints
     real(RP), intent(in) :: lon, lat
     real(RP), intent(in) :: lon_ref, lat_ref
-    integer,  intent(in) :: i, j
+    integer,  intent(in), value :: i, j
 
     real(RP), intent(inout) :: drad(npoints)
     integer,  intent(inout) :: idx_i(npoints)
@@ -1951,23 +2129,49 @@ contains
 
     integer :: i, ii, jj, n
 
-    lon_min = minval(lon_ref(:), mask=abs(lon_ref-UNDEF)>EPS)
-    lon_max = maxval(lon_ref(:), mask=abs(lon_ref-UNDEF)>EPS)
-    lat_min = minval(lat_ref(:), mask=abs(lat_ref-UNDEF)>EPS)
-    lat_max = maxval(lat_ref(:), mask=abs(lat_ref-UNDEF)>EPS)
+    !$acc data copyin(lon_ref, lat_ref) copyout(idx, nidx)
+
+    lon_min =  999.D0
+    lon_max = -999.D0
+    lat_min =  999.D0
+    lat_max = -999.D0
+    !$omp parallel do reduction(min: lon_min, lat_min) reduction(max: lon_max, lat_max)
+    !$acc kernels
+    !$acc loop reduction(min: lon_min, lat_min) reduction(max: lon_max, lat_max)
+    do i = 1, nsize
+       if ( abs(lon_ref(i) - UNDEF) > EPS ) then
+          lon_min = min( lon_min, lon_ref(i) )
+          lon_max = max( lon_max, lon_ref(i) )
+       end if
+       if ( abs(lat_ref(i) - UNDEF) > EPS ) then
+          lat_min = min( lat_min, lat_ref(i) )
+          lat_max = max( lat_max, lat_ref(i) )
+       end if
+    end do
+    !$acc end kernels
 
     dlon = ( lon_max - lon_min ) / psize
     dlat = ( lat_max - lat_min ) / psize
 
+    !$acc kernels
     nidx(:,:) = 0
+    !$acc end kernels
+    !$acc kernels
+    !$acc loop independent
     do i = 1, nsize
        if ( abs( lon_ref(i) - UNDEF ) < EPS ) cycle
        ii = min(int((lon_ref(i) - lon_min) / dlon) + 1, psize)
        jj = min(int((lat_ref(i) - lat_min) / dlat) + 1, psize)
-       n = nidx(ii,jj) + 1
-       nidx(ii,jj) = n
+       !$acc atomic capture
+       n = nidx(ii,jj)
+       nidx(ii,jj) = n + 1
+       !$acc end atomic
+       n = n + 1
        if ( n <= nidx_max ) idx(n,ii,jj) = i
     end do
+    !$acc end kernels
+
+    !$acc end data
 
     if ( maxval(nidx) > nidx_max ) then
        LOG_ERROR("INTERP_search_horiz",*) 'Buffer size is not enough'
@@ -1985,10 +2189,11 @@ contains
        x, y,                           &
        u, v,                           &
        error                           )
+    !$acc routine seq
     implicit none
-    real(RP), intent(in) :: x_ref0, x_ref1, x_ref2, x_ref3
-    real(RP), intent(in) :: y_ref0, y_ref1, y_ref2, y_ref3
-    real(RP), intent(in) :: x, y
+    real(RP), intent(in), value :: x_ref0, x_ref1, x_ref2, x_ref3
+    real(RP), intent(in), value :: y_ref0, y_ref1, y_ref2, y_ref3
+    real(RP), intent(in), value :: x, y
 
     real(RP), intent(out) :: u, v
     logical,  intent(out) :: error
@@ -2019,16 +2224,20 @@ contains
 
     w = k1**2 - 4.0_RP * k0 * k2
     if ( w < 0.0_RP ) then
+#ifndef _OPENACC
        LOG_ERROR("INTERP_bilinear_inv",*) 'Outside of the quadrilateral'
+#endif
        error = .true.
        return
     end if
 
     if ( abs(k1) < EPS_bilinear ) then
+#ifndef _OPENACC
        LOG_ERROR("INTERP_bilinear_inv",*) 'Unexpected error occured', k1
        LOG_ERROR_CONT(*) x_ref0, x_ref1, x_ref2, x_ref3
        LOG_ERROR_CONT(*) y_ref0, y_ref1, y_ref2, y_ref3
        LOG_ERROR_CONT(*) x, y
+#endif
        error = .true.
        return
     end if
@@ -2041,11 +2250,13 @@ contains
     u = ( h_x - f_x * v ) / ( e_x + g_x * v )
 
     if ( u < -EPS_bilinear .or. u > 1.0_RP+EPS_bilinear .or. v < -EPS_bilinear .or. v > 1.0_RP+EPS_bilinear ) then
+#ifndef _OPENACC
        LOG_ERROR("INTERP_bilinear_inv",*) 'Unexpected error occured', u, v
        LOG_ERROR_CONT(*) x_ref0, x_ref1, x_ref2, x_ref3
        LOG_ERROR_CONT(*) y_ref0, y_ref1, y_ref2, y_ref3
        LOG_ERROR_CONT(*) x, y
        LOG_ERROR_CONT(*) k0, k1, k2, sig
+#endif
        error = .true.
        return
     end if
@@ -2065,12 +2276,13 @@ contains
        x, y,                           &
        inc_i, inc_j,                   &
        error                           )
+    !$acc routine seq
     use scale_const, only: &
        EPS => CONST_EPS
     implicit none
-    real(RP), intent(in) :: x_ref0, x_ref1, x_ref2, x_ref3
-    real(RP), intent(in) :: y_ref0, y_ref1, y_ref2, y_ref3
-    real(RP), intent(in) :: x, y
+    real(RP), intent(in), value :: x_ref0, x_ref1, x_ref2, x_ref3
+    real(RP), intent(in), value :: y_ref0, y_ref1, y_ref2, y_ref3
+    real(RP), intent(in), value :: x, y
 
     integer,  intent(out) :: inc_i, inc_j
     logical,  intent(out) :: error
@@ -2102,10 +2314,12 @@ contains
     fx = c2 < th .and. c4 < th
     fy = c1 < th .and. c3 < th
     if ( fx .and. fy ) then
+#ifndef _OPENACC
        LOG_ERROR("INTERP_check_inside",*) 'Unexpected error occured', c1, c2, c3, c4
        LOG_ERROR_CONT(*) x_ref0, x_ref1, x_ref2, x_ref3
        LOG_ERROR_CONT(*) y_ref0, y_ref1, y_ref2, y_ref3
        LOG_ERROR_CONT(*) x, y
+#endif
        error = .true.
        return
     else if ( fx ) then
@@ -2122,6 +2336,7 @@ contains
   function cross( &
        x0, y0, &
        x1, y1 )
+    !$acc routine seq
     implicit none
     real(RP), intent(in) :: x0, y0
     real(RP), intent(in) :: x1, y1
@@ -2138,6 +2353,7 @@ contains
        lon0, lat0, &
        lon1, lat1  ) &
        result( d )
+    !$acc routine seq
     implicit none
 
     real(RP), intent(in) :: lon0   ! [rad]
@@ -2163,16 +2379,20 @@ contains
 !OCL SERIAL
   subroutine spline_coef( &
        KA_ref, KS_ref, KE_ref, &
+#ifdef _OPENACC
+       work,             &
+#endif
        hgt_ref, val_ref, &
        spline,           &
        kmax,             &
        idx, idx_r,       &
        U, FDZ            )
+    !$acc routine seq
     use scale_const, only: &
        UNDEF => CONST_UNDEF, &
        EPS   => CONST_EPS
     use scale_matrix, only: &
-       MATRIX_SOLVER_tridiagonal
+       MATRIX_SOLVER_tridiagonal_1D_TA
     implicit none
     integer,  intent(in) :: KA_ref, KS_ref, KE_ref
 
@@ -2186,8 +2406,14 @@ contains
     real(RP), intent(out) :: U  (KA_ref)
     real(RP), intent(out) :: FDZ(KA_ref)
 
-    real(RP) :: MD(KA_ref)
-    real(RP) :: V (KA_ref)
+#ifdef _OPENACC
+    real(RP), intent(out) :: work(KA_ref,4)
+#define MD_sc(k) work(k,1)
+#define V_sc(k) work(k,2)
+#else
+    real(RP) :: MD_sc(KA_ref)
+    real(RP) :: V_sc (KA_ref)
+#endif
     real(RP) :: dz
     integer  :: k
 
@@ -2222,21 +2448,24 @@ contains
 
        if ( kmax > 3 ) then
 
-          MD(2) = 2.0_RP * ( FDZ(2) + FDZ(3) ) + FDZ(2)
+          MD_sc(2) = 2.0_RP * ( FDZ(2) + FDZ(3) ) + FDZ(2)
           do k = 3, kmax-2
-             MD(k) = 2.0_RP * ( FDZ(k) + FDZ(k+1) )
+             MD_sc(k) = 2.0_RP * ( FDZ(k) + FDZ(k+1) )
           end do
-          MD(kmax-1) = 2.0_RP * ( FDZ(kmax-1) + FDZ(kmax) ) + FDZ(kmax)
+          MD_sc(kmax-1) = 2.0_RP * ( FDZ(kmax-1) + FDZ(kmax) ) + FDZ(kmax)
 
           do k = 2, kmax-1
-             V(k) = ( val_ref(idx(k+1)) - val_ref(idx(k  )) ) / FDZ(k+1) &
-                  - ( val_ref(idx(k  )) - val_ref(idx(k-1)) ) / FDZ(k  )
+             V_sc(k) = ( val_ref(idx(k+1)) - val_ref(idx(k  )) ) / FDZ(k+1) &
+                     - ( val_ref(idx(k  )) - val_ref(idx(k-1)) ) / FDZ(k  )
           end do
 
-          call MATRIX_SOLVER_tridiagonal( kmax, 2, kmax-1, &
-                                          FDZ(2:), MD(:), FDZ(:), & ! (in)
-                                          V(:),                   & ! (in)
-                                          U(:)                    ) ! (out)
+          call MATRIX_SOLVER_tridiagonal_1D_TA( kmax, 2, kmax-1, &
+#ifdef _OPENACC
+                                                work(:,3:4), &
+#endif
+                                                FDZ(2:), MD_sc(:), FDZ(:), & ! (in)
+                                                V_sc(:),                   & ! (in)
+                                                U(:)                       ) ! (out)
 !          U(1) = 0.0_RP
 !          U(kmax) = 0.0_RP
           U(1) = U(2)
@@ -2267,6 +2496,7 @@ contains
        idx, idx_r,   &
        U, FDZ,       &
        val           )
+    !$acc routine vector
     use scale_const, only: &
        UNDEF => CONST_UNDEF, &
        EPS   => CONST_EPS

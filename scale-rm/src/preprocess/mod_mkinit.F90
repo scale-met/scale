@@ -257,6 +257,7 @@ contains
     allocate( bubble(KA,IA,JA) )
     allocate( rect  (KA,IA,JA) )
 
+    !$acc enter data create(pres,temp,pott,qdry,qsat,qv,qc,nc,velx,vely,ptrc,pres_sfc,temp_sfc,pott_sfc,psat_sfc,qsat_sfc,qv_sfc,qc_sfc,rndm,bubble,rect)
 
     select case(trim(MKINIT_initname))
     case('NONE')
@@ -349,6 +350,8 @@ contains
     LOG_NEWLINE
     LOG_INFO("MKINIT_finalize",*) 'Finalize'
 
+    !$acc exit data delete(pres,temp,pott,qdry,qsat,qv,qc,nc,velx,vely,ptrc,pres_sfc,temp_sfc,pott_sfc,psat_sfc,qsat_sfc,qv_sfc,qc_sfc,rndm,bubble,rect)
+
     deallocate( pres )
     deallocate( temp )
     deallocate( pott )
@@ -412,6 +415,7 @@ contains
 
       !--- Initialize variables
       !$omp workshare
+      !$acc kernels
       pres(:,:,:) = UNDEF
       temp(:,:,:) = UNDEF
       pott(:,:,:) = UNDEF
@@ -420,27 +424,38 @@ contains
       vely(:,:,:) = UNDEF
 
       rndm  (:,:,:) = UNDEF
+      !$acc end kernels
 
+      !$acc kernels
       pres_sfc(:,:) = UNDEF
       temp_sfc(:,:) = UNDEF
       pott_sfc(:,:) = UNDEF
       psat_sfc(:,:) = UNDEF
       qsat_sfc(:,:) = UNDEF
+      !$acc end kernels
 
+      !$acc kernels
       qv    (:,:,:) = 0.0_RP
       qc    (:,:,:) = 0.0_RP
       nc    (:,:,:) = 0.0_RP
+      !$acc end kernels
+      !$acc kernels
       qv_sfc(:,:) = 0.0_RP
       qc_sfc(:,:) = 0.0_RP
+      !$acc end kernels
 
+      !$acc kernels
       ptrc(:,:,:) = UNDEF
+      !$acc end kernels
 
+      !$acc kernels
 !OCL XFILL
       QTRC(:,:,:,:) = UNDEF
 !OCL XFILL
       QHYD(:,:,:,:) = 0.0_RP
 !OCL XFILL
       QNUM(:,:,:,:) = 0.0_RP
+      !$acc end kernels
       !$omp end workshare
 
       call PROF_rapstart('_MkInit_main',3)
@@ -534,10 +549,12 @@ contains
 
       ! water content
       if ( ( .not. ATMOS_HYDROMETEOR_dry ) .AND. convert_qtrc ) then
+         !$acc kernels
 !OCL XFILL
          QHYD(:,:,:,I_HC) = qc(:,:,:)
 !OCL XFILL
          QNUM(:,:,:,I_HC) = nc(:,:,:)
+         !$acc end kernels
          call ATMOS_PHY_MP_driver_qhyd2qtrc( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
                                              qv(:,:,:), QHYD(:,:,:,:), & ! [IN]
                                              QTRC(:,:,:,QS_MP:QE_MP),  & ! [OUT]
@@ -549,6 +566,7 @@ contains
       if ( iq > 0 ) QTRC(:,:,:,iq) = ptrc(:,:,:)
 
       !$omp parallel do collapse(3)
+      !$acc kernels
       do iq = 1, QA
       do j = 1, JA
       do i = 1, iA
@@ -560,6 +578,7 @@ contains
       end do
       end do
       end do
+      !$acc end kernels
 
       call PROF_rapend  ('_MkInit_main',3)
 
@@ -606,6 +625,7 @@ contains
 
     real(RP) :: Domain_RX, Domain_RY
 
+    logical  :: error
     integer  :: ierr
     integer  :: k, i, j
     !---------------------------------------------------------------------------
@@ -626,10 +646,14 @@ contains
 
     if ( abs(BBL_RZ*BBL_RX*BBL_RY) <= 0.0_RP ) then
        LOG_INFO("BUBBLE_setup",*) 'no bubble'
+       !$acc kernels
        bubble(:,:,:) = 0.0_RP
+       !$acc end kernels
     else
 
+       !$acc kernels
        bubble(:,:,:) = CONST_UNDEF8
+       !$acc end kernels
 
        if ( BBL_eachnode ) then
           CZ_offset = CZ(KS)
@@ -645,7 +669,11 @@ contains
           Domain_RY = FYG(JAG-JHALO) - FYG(JHALO)
        endif
 
+       error = .false.
+
        ! make bubble coefficient
+       !$acc kernels
+       !$acc loop collapse(3) reduction(.or.:error)
        do j = 1, JA
        do i = 1, IA
        do k = KS, KE
@@ -666,13 +694,20 @@ contains
           case('GAUSSIAN')
              bubble(k,i,j) = exp( -(distz+distx+disty) )
           case default
+#ifdef _OPENACC
+            LOG_ERROR("BUBBLE_setup",*) 'Not appropriate BBL_functype. Check!', BBL_functype
+#else
             LOG_ERROR("BUBBLE_setup",*) 'Not appropriate BBL_functype. Check!', trim(BBL_functype)
             call PRC_abort                  
+#endif
           end select
        enddo
        enddo
        enddo
+       !$acc end kernels
     endif
+
+    if ( error ) call PRC_abort
 
     return
   end subroutine BUBBLE_setup
@@ -726,7 +761,9 @@ contains
     endif
     LOG_NML(PARAM_RECT)
 
+    !$acc kernels
     rect(:,:,:) = CONST_UNDEF8
+    !$acc end kernels
 
     if ( RCT_eachnode ) then
        CZ_offset = CZ(KS)
@@ -738,6 +775,7 @@ contains
        CY_offset = 0.0_RP
     endif
 
+    !$acc kernels
     do j = 1, JA
     do i = 1, IA
     do k = KS, KE
@@ -756,6 +794,7 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
 
     return
   end subroutine RECT_setup
@@ -825,7 +864,10 @@ contains
 
        select case ( ATMOS_PHY_AE_TYPE )
        case ( 'KAJINO13' )
+          !$acc kernels
           qdry(:,:,:) = 1.0_RP - qv(:,:,:) - qc(:,:,:)
+          !$acc end kernels
+          !$acc update host(dens,temp,pres,qdry,qv)
           call ATMOS_PHY_AE_kajino13_mkinit( KA, KS, KE, IA, IS, IE, JA, JS, JE, & ! (in)
                                              QA_AE,                   & ! (in)
                                              DENS(:,:,:),             & ! (in)
@@ -843,12 +885,15 @@ contains
                                              n_kap_inp(:),            & ! (in)
                                              QTRC(:,:,:,QS_AE:QE_AE), & ! (out)
                                              CCN(:,:,:)               ) ! (out)
+          !$acc update device(QTRC(:,:,:,QS_AE:QE_AE),CCN)
        case ( 'OFFLINE' )
           call ATMOS_PHY_AE_offline_mkinit ( KA, KS, KE, IA, IS, IE, JA, JS, JE, & ! (in)
                                              ccn_init,                & ! (in)
                                              CCN(:,:,:)               ) ! (out)
        case default
+          !$acc kernels
           CCN(:,:,:) = ccn_init
+          !$acc end kernels
        end select
 
     endif
@@ -879,6 +924,7 @@ contains
     if ( .not. convert_qtrc ) return
 
     !--- Super saturated air at initial
+    !$acc kernels
     do j = JSB, JEB
     do i = ISB, IEB
     do k  = KS, KE
@@ -886,9 +932,12 @@ contains
     end do
     end do
     end do
+    !$acc end kernels
 
     !-- Aerosol distribution
     if ( nccn /= 0 ) then
+       !$acc kernels
+       !$acc loop collapse(4) independent
        do iq = 1, nccn
        do j = JSB, JEB
        do i = ISB, IEB
@@ -898,6 +947,7 @@ contains
        enddo
        enddo
        enddo
+       !$acc end kernels
     endif
 
     convert_qtrc = .false.
@@ -965,6 +1015,7 @@ contains
     endif
     LOG_NML(PARAM_MKINIT_FLUX)
 
+    !$acc kernels
     do j = JSB, JEB
     do i = ISB, IEB
        SFLX_rain (i,j) = FLX_rain
@@ -976,6 +1027,7 @@ contains
        SFLX_SW_dn(i,j) = FLX_NIR_dn + FLX_VIS_dn
     enddo
     enddo
+    !$acc end kernels
 
     return
   end subroutine flux_setup
@@ -1029,22 +1081,30 @@ contains
     endif
     LOG_NML(PARAM_MKINIT_LAND)
 
+    !$acc kernels
     LAND_TEMP      (:,:,:)         = LND_TEMP
     LAND_WATER     (:,:,:)         = LND_WATER
     LAND_ICE       (:,:,:)         = LND_ICE
+    !$acc end kernels
 
+    !$acc kernels
     LAND_SFC_TEMP  (:,:)           = SFC_TEMP
+    !$acc end kernels
+    !$acc kernels
     LAND_SFC_albedo(:,:,:,I_R_IR)  = SFC_albedo_LW
     LAND_SFC_albedo(:,:,:,I_R_NIR) = SFC_albedo_SW
     LAND_SFC_albedo(:,:,:,I_R_VIS) = SFC_albedo_SW
+    !$acc end kernels
 
     if ( SNOW_flag ) then
       !!!!! Tentative for snow model !!!!!
+       !$acc kernels
        SNOW_SFC_TEMP (:,:) = 273.15_RP
        SNOW_SWE      (:,:) = 0.0_RP
        SNOW_Depth    (:,:) = 0.0_RP
        SNOW_Dzero    (:,:) = 0.0_RP
        SNOW_nosnowsec(:,:) = 0.0_RP
+       !$acc end kernels
     end if
 
     return
@@ -1114,22 +1174,32 @@ contains
     endif
     LOG_NML(PARAM_MKINIT_OCEAN)
 
+    !$acc kernels
     OCEAN_TEMP      (:,:,:) = OCN_TEMP
     OCEAN_SALT      (:,:,:) = OCN_SALT
     OCEAN_UVEL      (:,:,:) = OCN_UVEL
     OCEAN_VVEL      (:,:,:) = OCN_VVEL
+    !$acc end kernels
+    !$acc kernels
     OCEAN_OCN_Z0M   (:,:)   = SFC_Z0M
     OCEAN_SFC_TEMP  (:,:)           = SFC_TEMP
+    !$acc end kernels
+    !$acc kernels
     OCEAN_SFC_albedo(:,:,:,I_R_IR)  = SFC_albedo_LW
     OCEAN_SFC_albedo(:,:,:,I_R_NIR) = SFC_albedo_SW
     OCEAN_SFC_albedo(:,:,:,I_R_VIS) = SFC_albedo_SW
+    !$acc end kernels
+    !$acc kernels
     OCEAN_SFC_Z0M   (:,:)           = SFC_Z0M
     OCEAN_SFC_Z0H   (:,:)           = SFC_Z0H
     OCEAN_SFC_Z0E   (:,:)           = SFC_Z0E
+    !$acc end kernels
 
     if ( ICE_flag ) then
+       !$acc kernels
        OCEAN_ICE_TEMP  (:,:)   = ICE_TEMP
        OCEAN_ICE_MASS  (:,:)   = ICE_MASS
+       !$acc end kernels
     end if
 
     return
@@ -1212,10 +1282,13 @@ contains
     endif
     LOG_NML(PARAM_MKINIT_URBAN)
 
+    !$acc kernels
     URBAN_TRL       (:,:,:)         = URB_ROOF_LAYER_TEMP
     URBAN_TBL       (:,:,:)         = URB_BLDG_LAYER_TEMP
     URBAN_TGL       (:,:,:)         = URB_GRND_LAYER_TEMP
+    !$acc end kernels
 
+    !$acc kernels
     URBAN_TR        (:,:)           = URB_ROOF_TEMP
     URBAN_TB        (:,:)           = URB_BLDG_TEMP
     URBAN_TG        (:,:)           = URB_GRND_TEMP
@@ -1226,9 +1299,12 @@ contains
     URBAN_RAINB     (:,:)           = URB_BLDG_RAIN
     URBAN_RAING     (:,:)           = URB_GRND_RAIN
     URBAN_SFC_TEMP  (:,:)           = URB_SFC_TEMP
+    !$acc end kernels
+    !$acc kernels
     URBAN_SFC_albedo(:,:,:,I_R_IR)  = URB_ALB_LW
     URBAN_SFC_albedo(:,:,:,I_R_NIR) = URB_ALB_SW
     URBAN_SFC_albedo(:,:,:,I_R_VIS) = URB_ALB_SW
+    !$acc end kernels
 
     return
   end subroutine urban_setup
@@ -1274,6 +1350,7 @@ contains
 
     if ( I_TKE > 0 ) then
        !$omp parallel do collapse(2)
+       !$acc kernels
        do j = 1, JA
        do i = 1, IA
        do k = 1, KA
@@ -1283,9 +1360,11 @@ contains
        enddo
        enddo
        enddo
+       !$acc end kernels
     end if
     if ( QS_BL > 0 ) then
        !$omp parallel do collapse(2)
+       !$acc kernels
        do j = 1, JA
        do i = 1, IA
        do k = 1, KA
@@ -1300,13 +1379,16 @@ contains
        enddo
        enddo
        enddo
+       !$acc end kernels
     end if
 
+    !$acc kernels
     do j = 1, JA
     do i = 1, IA
        Zi(i,j) = Zi_CONST
     end do
     end do
+    !$acc end kernels
 
     return
   end subroutine tke_setup
@@ -1349,6 +1431,14 @@ contains
 
     integer :: fid
     character(len=H_LONG) :: fname
+
+    logical :: converged
+
+#ifdef _OPENACC
+    real(RP) :: work1(KA)
+    real(RP) :: work2(KA)
+    real(RP) :: work3(KA)
+#endif
 
     integer :: ierr
 
@@ -1448,7 +1538,11 @@ contains
                                pott(:), qv(:), qc(:),                                  & ! [IN]
                                pres_sfc(1,1), pott_sfc(1,1), qv_sfc(1,1), qc_sfc(1,1), & ! [IN]
                                CZ(:), FZ(:),                                           & ! [IN]
-                               DENS(:), temp(:), pres(:), temp_sfc(1,1)                ) ! [OUT]
+#ifdef _OPENACC
+                               work1(:), work2(:), work3(:),                           & ! [WORK]
+#endif
+                               DENS(:), temp(:), pres(:), temp_sfc(1,1),               & ! [OUT]
+                               converged                                               ) ! [OUT]
 
     return
   end subroutine read_sounding
@@ -1514,12 +1608,14 @@ contains
     LOG_NML(PARAM_MKINIT_PLANESTATE)
 
     ! calc in dry condition
+    !$acc kernels
     do j = JSB, JEB
     do i = ISB, IEB
        pott_sfc(i,j) = SFC_THETA
        pres_sfc(i,j) = SFC_PRES
     enddo
     enddo
+    !$acc end kernels
 
     if ( ENV_THETA < 0.0_RP ) then ! use isa profile
 
@@ -1533,6 +1629,7 @@ contains
 
     else
 
+       !$acc kernels
        do j = JSB, JEB
        do i = ISB, IEB
        do k = KS, KE
@@ -1540,6 +1637,7 @@ contains
        enddo
        enddo
        enddo
+       !$acc end kernels
 
     endif
 
@@ -1559,12 +1657,15 @@ contains
        call SATURATION_psat_all( IA, ISB, IEB, JA, JSB, JEB, &
                                  temp_sfc(:,:), & ! [IN]
                                  psat_sfc(:,:)  ) ! [OUT]
+       !$acc kernels
        qdry(:,:,:) = 1.0_RP - qv(:,:,:) - qc(:,:,:)
+       !$acc end kernels
        call SATURATION_pres2qsat_all( KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
                                       temp(:,:,:), pres(:,:,:), qdry(:,:,:), & ! [IN]
                                       qsat(:,:,:)                            ) ! [OUT]
 
        call RANDOM_uniform(rndm) ! make random
+       !$acc kernels
        do j = JSB, JEB
        do i = ISB, IEB
           qsat_sfc(i,j) = EPSvap * psat_sfc(i,j) / ( pres_sfc(i,j) - ( 1.0_RP-EPSvap ) * psat_sfc(i,j) )
@@ -1575,9 +1676,11 @@ contains
           enddo
        enddo
        enddo
+       !$acc end kernels
     end if
 
     call RANDOM_uniform(rndm) ! make random
+    !$acc kernels
     do j = JSB, JEB
     do i = ISB, IEB
        pott_sfc(i,j) = pott_sfc(i,j) + ( rndm(KS-1,i,j) * 2.0_RP - 1.0_RP ) * RANDOM_THETA
@@ -1587,6 +1690,7 @@ contains
        enddo
     enddo
     enddo
+    !$acc end kernels
 
     ! make density & pressure profile in moist condition
     call HYDROSTATIC_buildrho( KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
@@ -1599,6 +1703,8 @@ contains
     call COMM_wait ( DENS(:,:,:), 1 )
 
     call RANDOM_uniform(rndm) ! make random
+    !$acc kernels
+    !$acc loop collapse(3) independent
     do j = JSB, JEB
     do i = ISB, min(IEB,IA-1)
     do k = KS, KE
@@ -1607,8 +1713,11 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
 
     call RANDOM_uniform(rndm) ! make random
+    !$acc kernels
+    !$acc loop collapse(3) independent
     do j = JSB, min(JEB,JA-1)
     do i = ISB, IEB
     do k = KS, KE
@@ -1617,7 +1726,10 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
 
+    !$acc kernels
+    !$acc loop collapse(3) independent
     do j = JSB, JEB
     do i = ISB, IEB
     do k = KS, KE
@@ -1626,6 +1738,7 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
 
     call flux_setup
 
@@ -1648,7 +1761,6 @@ contains
     ! Bubble
     character(len=H_SHORT) :: SHAPE_PTracer = 'BUBBLE' ! BUBBLE or RECT
     real(RP)               :: BBL_PTracer   = 1.0_RP   ! extremum of passive tracer in bubble [kg/kg]
-
     namelist / PARAM_MKINIT_TRACERBUBBLE / &
        SFC_THETA, &
        SFC_PRES,  &
@@ -1659,6 +1771,14 @@ contains
        BBL_PTracer
 
     real(RP), pointer :: shapeFac(:,:,:) => null()
+
+    logical :: converged
+
+#ifdef _OPENACC
+    real(RP) :: work1(KA)
+    real(RP) :: work2(KA)
+    real(RP) :: work3(KA)
+#endif
 
     integer :: k, i, j
     integer :: ierr
@@ -1684,20 +1804,30 @@ contains
     LOG_NML(PARAM_MKINIT_TRACERBUBBLE)
 
     ! calc in dry condition
+    !$acc kernels
     pres_sfc(1,1) = SFC_PRES
     pott_sfc(1,1) = SFC_THETA
+    !$acc end kernels
 
+    !$acc kernels
     do k = KS, KE
        pott(k,1,1) = ENV_THETA
     enddo
+    !$acc end kernels
 
     ! make density & pressure profile in dry condition
     call HYDROSTATIC_buildrho( KA, KS, KE, &
                                pott(:,1,1), qv(:,1,1), qc(:,1,1),                      & ! [IN]
                                pres_sfc(1,1), pott_sfc(1,1), qv_sfc(1,1), qc_sfc(1,1), & ! [IN]
                                CZ(:), FZ(:),                                           & ! [IN]
-                               DENS(:,1,1), temp(:,1,1), pres(:,1,1), temp_sfc(1,1)    ) ! [OUT]
+#ifdef _OPENACC
+                               work1(:), work2(:), work3(:),                           & ! [WORK]
+#endif
+                               DENS(:,1,1), temp(:,1,1), pres(:,1,1), temp_sfc(1,1),   & ! [OUT]
+                               converged                                               ) ! [OUT]
 
+    !$acc kernels
+    !$acc loop collapse(3) independent
     do j = JSB, JEB
     do i = ISB, IEB
     do k = KS, KE
@@ -1709,6 +1839,7 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
 
     ! make tracer bubble
     select case(SHAPE_PTracer)
@@ -1723,6 +1854,7 @@ contains
        call PRC_abort
     end select
 
+    !$acc kernels
     do j = JSB, JEB
     do i = ISB, IEB
     do k = KS, KE
@@ -1730,6 +1862,7 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
 
 #endif
 
@@ -1765,6 +1898,14 @@ contains
 
     real(RP) :: RovCP
 
+    logical :: converged
+
+#ifdef _OPENACC
+    real(RP) :: work1(KA)
+    real(RP) :: work2(KA)
+    real(RP) :: work3(KA)
+#endif
+
     integer :: ierr
     integer :: k, i, j
     !---------------------------------------------------------------------------
@@ -1791,20 +1932,30 @@ contains
     RovCP = Rdry / CPdry
 
     ! calc in dry condition
+    !$acc kernels
     pres_sfc(1,1) = SFC_PRES
     pott_sfc(1,1) = SFC_THETA
+    !$acc end kernels
 
+    !$acc kernels
     do k = KS, KE
        pott(k,1,1) = ENV_THETA
     enddo
+    !$acc end kernels
 
     ! make density & pressure profile in dry condition
     call HYDROSTATIC_buildrho( KA, KS, KE, &
                                pott(:,1,1), qv(:,1,1), qc(:,1,1),                      & ! [IN]
                                pres_sfc(1,1), pott_sfc(1,1), qv_sfc(1,1), qc_sfc(1,1), & ! [IN]
                                CZ(:), FZ(:),                                           & ! [IN]
-                               DENS(:,1,1), temp(:,1,1), pres(:,1,1), temp_sfc(1,1)    ) ! [OUT]
+#ifdef _OPENACC
+                               work1(:), work2(:), work3(:),                           & ! [WORK]
+#endif
+                               DENS(:,1,1), temp(:,1,1), pres(:,1,1), temp_sfc(1,1),   & ! [OUT]
+                               converged                                               ) ! [OUT]
 
+    !$acc kernels
+    !$acc loop collapse(3) independent
     do j = 1, JA
     do i = 1, IA
     do k = KS, KE
@@ -1819,6 +1970,7 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
 
     return
   end subroutine MKINIT_coldbubble
@@ -1869,6 +2021,8 @@ contains
 
     RovCP = Rdry / CPdry
 
+    !$acc kernels
+    !$acc loop collapse(3) independent
     do j = JSB, JEB
     do i = ISB, IEB
     do k = KS, KE
@@ -1884,6 +2038,7 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
 
     return
   end subroutine MKINIT_lambwave
@@ -1912,6 +2067,14 @@ contains
        ENV_BVF,   &
        BBL_THETA
 
+    logical :: converged
+
+#ifdef _OPENACC
+    real(RP) :: work1(KA)
+    real(RP) :: work2(KA)
+    real(RP) :: work3(KA)
+#endif
+
     integer :: ierr
     integer :: k, i, j
     !---------------------------------------------------------------------------
@@ -1935,20 +2098,30 @@ contains
     LOG_NML(PARAM_MKINIT_GRAVITYWAVE)
 
     ! calc in dry condition
+    !$acc kernels
     pres_sfc(1,1) = SFC_PRES
     pott_sfc(1,1) = SFC_THETA
+    !$acc end kernels
 
+    !$acc kernels
     do k = KS, KE
        pott(k,1,1) = SFC_THETA * exp( ENV_BVF*ENV_BVF / GRAV * CZ(k) )
     enddo
+    !$acc end kernels
 
     ! make density & pressure profile in dry condition
     call HYDROSTATIC_buildrho( KA, KS, KE, &
                                pott(:,1,1), qv(:,1,1), qc(:,1,1),                      & ! [IN]
                                pres_sfc(1,1), pott_sfc(1,1), qv_sfc(1,1), qc_sfc(1,1), & ! [IN]
                                CZ(:), FZ(:),                                           & ! [IN]
-                               DENS(:,1,1), temp(:,1,1), pres(:,1,1), temp_sfc(1,1)    ) ! [OUT]
+#ifdef _OPENACC
+                               work1(:), work2(:), work3(:),                           & ! [WORK]
+#endif
+                               DENS(:,1,1), temp(:,1,1), pres(:,1,1), temp_sfc(1,1),   & ! [OUT]
+                               converged                                               ) ! [OUT]
 
+    !$acc kernels
+    !$acc loop collapse(3) independent
     do j = JSB, JEB
     do i = ISB, IEB
     do k = KS, KE
@@ -1963,6 +2136,7 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
 
     return
   end subroutine MKINIT_gravitywave
@@ -1998,6 +2172,14 @@ contains
 
     real(RP) :: fact
 
+    logical :: converged
+
+#ifdef _OPENACC
+    real(RP) :: work1(KA)
+    real(RP) :: work2(KA)
+    real(RP) :: work3(KA)
+#endif
+
     integer :: ierr
     integer :: k, i, j
     !---------------------------------------------------------------------------
@@ -2021,9 +2203,12 @@ contains
     LOG_NML(PARAM_MKINIT_KHWAVE)
 
     ! calc in dry condition
+    !$acc kernels
     pres_sfc(1,1) = SFC_PRES
     pott_sfc(1,1) = SFC_THETA
+    !$acc end kernels
 
+    !$acc kernels
     do k = KS, KE
        fact = ( CZ(k)-ENV_L1_ZTOP ) / ( ENV_L3_ZBOTTOM-ENV_L1_ZTOP )
        fact = max( min( fact, 1.0_RP ), 0.0_RP )
@@ -2031,14 +2216,21 @@ contains
        pott(k,1,1) = ENV_L1_THETA * ( 1.0_RP - fact ) &
                    + ENV_L3_THETA * (          fact )
     enddo
+    !$acc end kernels
 
     ! make density & pressure profile in dry condition
     call HYDROSTATIC_buildrho( KA, KS, KE, &
                                pott(:,1,1), qv(:,1,1), qc(:,1,1),                      & ! [IN]
                                pres_sfc(1,1), pott_sfc(1,1), qv_sfc(1,1), qc_sfc(1,1), & ! [IN]
                                CZ(:), FZ(:),                                           & ! [IN]
-                               DENS(:,1,1), temp(:,1,1), pres(:,1,1), temp_sfc(1,1)    ) ! [OUT]
+#ifdef _OPENACC
+                               work1(:), work2(:), work3(:),                           & ! [WORK]
+#endif
+                               DENS(:,1,1), temp(:,1,1), pres(:,1,1), temp_sfc(1,1),   & ! [OUT]
+                               converged                                               ) ! [OUT]
 
+    !$acc kernels
+    !$acc loop collapse(3) independent
     do j = JSB, JEB
     do i = ISB, IEB
     do k = KS, KE
@@ -2049,8 +2241,11 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
 
     call RANDOM_uniform(rndm) ! make random
+    !$acc kernels
+    !$acc loop collapse(3) independent
     do j = JSB, JEB
     do i = ISB, IEB
     do k = KS, KE
@@ -2064,6 +2259,7 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
 
     return
   end subroutine MKINIT_khwave
@@ -2105,6 +2301,14 @@ contains
        RANDOM_V,     &
        RANDOM_RH
 
+    logical :: converged
+
+#ifdef _OPENACC
+    real(RP) :: work1(KA)
+    real(RP) :: work2(KA)
+    real(RP) :: work3(KA)
+#endif
+
     integer :: ierr
     integer :: k, i, j
     !---------------------------------------------------------------------------
@@ -2129,30 +2333,42 @@ contains
     LOG_NML(PARAM_MKINIT_TURBULENCE)
 
     ! calc in dry condition
+    !$acc kernels
     pres_sfc(1,1) = SFC_PRES
     pott_sfc(1,1) = SFC_THETA
+    !$acc end kernels
 
+    !$acc kernels
     do k = KS, KE
        pott(k,1,1) = ENV_THETA + ENV_TLAPS * CZ(k)
     enddo
+    !$acc end kernels
 
     ! make density & pressure profile in dry condition
     call HYDROSTATIC_buildrho( KA, KS, KE, &
                                pott(:,1,1), qv(:,1,1), qc(:,1,1),                      & ! [IN]
                                pres_sfc(1,1), pott_sfc(1,1), qv_sfc(1,1), qc_sfc(1,1), & ! [IN]
                                CZ(:), FZ(:),                                           & ! [IN]
-                               DENS(:,1,1), temp(:,1,1), pres(:,1,1), temp_sfc(1,1)    ) ! [OUT]
+#ifdef _OPENACC
+                               work1(:), work2(:), work3(:),                           & ! [WORK]
+#endif
+                               DENS(:,1,1), temp(:,1,1), pres(:,1,1), temp_sfc(1,1),   & ! [OUT]
+                               converged                                               ) ! [OUT]
 
     if ( .not. ATMOS_HYDROMETEOR_dry ) then
        ! calc QV from RH
        call SATURATION_psat_all( temp_sfc(1,1), & ! [IN]
                                  psat_sfc(1,1)  ) ! [OUT]
+       !$acc kernels
        qdry(:,1,1) = 1.0_RP - qv(:,1,1) - qc(:,1,1)
+       !$acc end kernels
        call SATURATION_pres2qsat_all( KA, KS, KE, &
                                       temp(:,1,1), pres(:,1,1), qdry(:,1,1), & ! [IN]
                                       qsat(:,1,1)                            ) ! [OUT]
 
        call RANDOM_uniform(rndm) ! make random
+       !$acc kernels
+       !$acc loop collapse(2) independent
        do j = JSB, JEB
        do i = ISB, IEB
           qsat_sfc(1,1) = EPSvap * psat_sfc(i,j) / ( pres_sfc(i,j) - ( 1.0_RP-EPSvap ) * psat_sfc(i,j) )
@@ -2163,9 +2379,11 @@ contains
           enddo
        enddo
        enddo
+       !$acc end kernels
     end if
 
     call RANDOM_uniform(rndm) ! make random
+    !$acc kernels
     do j = JSB, JEB
     do i = ISB, IEB
        pres_sfc(i,j) = SFC_PRES
@@ -2176,6 +2394,7 @@ contains
        enddo
     enddo
     enddo
+    !$acc end kernels
 
     ! make density & pressure profile in moist condition
     call HYDROSTATIC_buildrho( KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
@@ -2188,6 +2407,8 @@ contains
     call COMM_wait ( DENS(:,:,:), 1 )
 
     call RANDOM_uniform(rndm) ! make random
+    !$acc kernels
+    !$acc loop collapse(3) independent
     do j = JSB, JEB
     do i = ISB, IEB
     do k = KS, KE
@@ -2196,8 +2417,11 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
 
     call RANDOM_uniform(rndm) ! make random
+    !$acc kernels
+    !$acc loop collapse(3) independent
     do j = JSB, JEB
     do i = ISB, IEB
     do k = KS, KE
@@ -2206,7 +2430,10 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
 
+    !$acc kernels
+    !$acc loop collapse(3) independent
     do j = JSB, JEB
     do i = ISB, IEB
     do k = KS, KE
@@ -2215,6 +2442,7 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
 
     return
   end subroutine MKINIT_turbulence
@@ -2271,6 +2499,8 @@ contains
     LOG_INFO("MKINIT_cavityflow",*) "Ulid = ", Ulid
     LOG_INFO("MKINIT_cavityflow",*) "Cs   = ", sqrt(Cs2)
 
+    !$acc kernels
+    !$acc loop collapse(3) independent
     do j = 1, JA
     do i = 1, IA
     do k = KS, KE
@@ -2283,8 +2513,11 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
 
+    !$acc kernels
     MOMX(KE+1:KA,:,:) = DENS0 * Ulid
+    !$acc end kernels
 
     return
   end subroutine MKINIT_cavityflow
@@ -2337,13 +2570,16 @@ contains
     LOG_NML(PARAM_MKINIT_MOUNTAINWAVE)
 
     ! calc in dry condition
+    !$acc kernels
     do j = JSB, JEB
     do i = ISB, IEB
        pres_sfc(i,j) = SFC_PRES
        pott_sfc(i,j) = SFC_THETA
     enddo
     enddo
+    !$acc end kernels
 
+    !$acc kernels
     do j = JSB, JEB
     do i = ISB, IEB
     do k = KS, KE
@@ -2354,6 +2590,7 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
 
     ! make density & pressure profile in dry condition
     call HYDROSTATIC_buildrho( KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
@@ -2362,6 +2599,8 @@ contains
                                REAL_CZ(:,:,:), REAL_FZ(:,:,:), AREA(:,:),              & ! [IN]
                                DENS(:,:,:), temp(:,:,:), pres(:,:,:), temp_sfc(:,:)    ) ! [OUT]
 
+    !$acc kernels
+    !$acc loop collapse(3) independent
     do j = JSB, JEB
     do i = ISB, IEB
     do k = KS, KE
@@ -2373,9 +2612,11 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
 
     ! optional : add tracer bubble
     if ( BBL_PTracer > 0.0_RP ) then
+       !$acc kernels
        do j = JSB, JEB
        do i = ISB, IEB
        do k = KS, KE
@@ -2383,6 +2624,7 @@ contains
        enddo
        enddo
        enddo
+       !$acc end kernels
     endif
 
     return
@@ -2448,10 +2690,20 @@ contains
     real(RP) :: temp_vfunc
     real(RP) :: geopot_hvari
 
+    logical :: converged
+
     integer :: ierr
     integer :: k, i, j
 
     integer :: itr
+
+#ifdef _OPENACC
+    real(RP) :: work1(KA)
+    real(RP) :: work2(KA)
+    real(RP) :: work3(KA)
+#endif
+
+    logical :: error
 
     integer,  parameter :: ITRMAX = 1000
     real(RP), parameter :: CONV_EPS = 1E-15_RP
@@ -2481,8 +2733,19 @@ contains
     ! Calculate eta(=p/p_s) level corresponding to z level of each (y,z) grid point
     ! using Newton's iteration method
 
-    eta(:,:,:) = 1.0E-8_RP   ! Set first guess of eta
+    !$acc data create(eta)
 
+    !$omp workshare
+    !$acc kernels
+    eta(:,:,:) = 1.0E-8_RP   ! Set first guess of eta
+    !$acc end kernels
+    !$omp end workshare
+
+    error = .false.
+
+    !$omp parallel do reduction(.or.:error)
+    !$acc kernels
+    !$acc loop collapse(2) reduction(.or.:error)
     do j = JSB, JEB
     do i = ISB, IEB            ! Note that initial fields are zonaly symmetric
 
@@ -2526,7 +2789,11 @@ contains
                 LOG_ERROR("MKINIT_barocwave",*) "Fail the convergence of iteration. Check!"
                 LOG_ERROR_CONT(*) "* (X,Y,Z)=", CX(i), CY(j), CZ(k)
                 LOG_ERROR_CONT(*) "itr=", itr, "del_eta=", del_eta, "eta=", eta(k,i,j), "temp=", temp(k,i,j)
+#ifdef _OPENACC
+                error = .true.
+#else
                 call PRC_abort
+#endif
              end if
           enddo !- End of loop for iteration ----------------------------
 
@@ -2542,12 +2809,23 @@ contains
                                   pott(:,i,j), qv(:,i,j), qc(:,i,j),                      & ! [IN]
                                   pres_sfc(i,j), pott_sfc(i,j), qv_sfc(i,j), qc_sfc(i,j), & ! [IN]
                                   REAL_CZ(:,i,j), REAL_FZ(:,i,j),                         & ! [IN]
-                                  DENS(:,i,j), temp(:,i,j), pres(:,i,j), temp_sfc(i,j)    ) ! [OUT]
+#ifdef _OPENACC
+                                  work1(:), work2(:), work3(:),                           & ! [WORK]
+#endif
+                                  DENS(:,i,j), temp(:,i,j), pres(:,i,j), temp_sfc(i,j),   & ! [OUT]
+                                  converged                                               ) ! [OUT]
     enddo
     enddo
+    !$acc end kernels
+
+    if ( error ) then
+       call PRC_abort
+    end if
 
     !-----------------------------------------------------------------------------------
 
+    !$acc kernels
+    !$acc loop collapse(2) independent
     do j = JSB, JEB
     do k = KS, KE
 
@@ -2556,24 +2834,41 @@ contains
        yphase = 2.0_RP*PI*CY(j)/Ly
 !!$       PRES(k,IS:IE,j) = eta(k,IS,j)*REF_PRES
 !!$       DENS(k,IS:IE,j) = PRES(k,IS,j)/(Rdry*temp(k,IS,j))
-       DENS(k,IS:IE,j) = DENS(k,IS,j)
-       PRES(k,IS:IE,j) = PRES(k,IS,j)
-       MOMX(k,IS-1:IE,j) = DENS(k,IS,j)*(-U0*sin(0.5_RP*yphase)**2*ln_eta*exp(-(ln_eta/b)**2))
-       RHOT(k,IS:IE,j) = DENS(k,IS,j)*pott(k,IS,j) !temp(k,IS,j)*eta(k,IS,j)**(-Rdry/CPdry)
+       !$acc loop independent
+       do i = IS, IE
+          DENS(k,i,j) = DENS(k,IS,j)
+          PRES(k,i,j) = PRES(k,IS,j)
+          RHOT(k,i,j) = DENS(k,IS,j)*pott(k,IS,j) !temp(k,IS,j)*eta(k,IS,j)**(-Rdry/CPdry)
+       end do
+       !$acc loop independent
+       do i = IS-1, IE
+          MOMX(k,i,j) = DENS(k,IS,j)*(-U0*sin(0.5_RP*yphase)**2*ln_eta*exp(-(ln_eta/b)**2))
+       end do
     enddo
     enddo
+    !$acc end kernels
+
+    !$acc kernels
     MOMY(:,:,:) = 0.0_RP
     MOMZ(:,:,:) = 0.0_RP
+    !$acc end kernels
 
     !---------------------------------------------------------------------------------------
 
     ! Add the inital perturbation for zonal velocity
+    !$acc kernels
+    !$acc loop collapse(3) independent
     do j = JSB, JEB
     do i = max(ISB-1,1), IEB
-       MOMX(KS:kE,i,j) = MOMX(KS:KE,i,j) &
-           +  DENS(KS:KE,i,j)* Up*exp( - ((FX(i) - Xc)**2 + (CY(j) - Yc)**2)/Lp**2 )
+    do k = KS, KE
+       MOMX(k,i,j) = MOMX(k,i,j) &
+           +  DENS(k,i,j)* Up*exp( - ((FX(i) - Xc)**2 + (CY(j) - Yc)**2)/Lp**2 )
     enddo
     enddo
+    enddo
+    !$acc end kernels
+
+    !$acc end data
 
     return
   end subroutine MKINIT_barocwave
@@ -2612,6 +2907,14 @@ contains
        ENV_L3_TLAPS, &
        BBL_THETA
 
+    logical :: converged
+
+#ifdef _OPENACC
+    real(RP) :: work1(KA)
+    real(RP) :: work2(KA)
+    real(RP) :: work3(KA)
+#endif
+
     integer :: ierr
     integer :: k, i, j
     !---------------------------------------------------------------------------
@@ -2640,9 +2943,13 @@ contains
     LOG_NML(PARAM_MKINIT_WARMBUBBLE)
 
     ! calc in dry condition
+    !$acc kernels
     pres_sfc(1,1) = SFC_PRES
     pott_sfc(1,1) = SFC_THETA
+    !$acc end kernels
 
+    !$acc kernels
+    !$acc loop seq
     do k = KS, KE
        if    ( CZ(k) <= ENV_L1_ZTOP ) then ! Layer 1
           pott(k,1,1) = SFC_THETA
@@ -2652,23 +2959,33 @@ contains
           pott(k,1,1) = pott(k-1,1,1) + ENV_L3_TLAPS * ( CZ(k)-CZ(k-1) )
        endif
     enddo
+    !$acc end kernels
 
     ! make density & pressure profile in dry condition
     call HYDROSTATIC_buildrho( KA, KS, KE, &
                                pott(:,1,1), qv(:,1,1), qc(:,1,1),                      & ! [IN]
                                pres_sfc(1,1), pott_sfc(1,1), qv_sfc(1,1), qc_sfc(1,1), & ! [IN]
                                CZ(:), FZ(:),                                           & ! [IN]
-                               DENS(:,1,1), temp(:,1,1), pres(:,1,1), temp_sfc(1,1)    ) ! [OUT]
+#ifdef _OPENACC
+                               work1(:), work2(:), work3(:),                           & ! [WORK]
+#endif
+                               DENS(:,1,1), temp(:,1,1), pres(:,1,1), temp_sfc(1,1),   & ! [OUT]
+                               converged                                               ) ! [OUT]
 
     ! calc QV from RH
     call SATURATION_psat_all( temp_sfc(1,1), & ! [IN]
                               psat_sfc(1,1)  ) ! [OUT]
+    !$acc kernels
     qsat_sfc(1,1) = EPSvap * psat_sfc(1,1) / ( pres_sfc(1,1) - ( 1.0_RP-EPSvap ) * psat_sfc(1,1) )
     qv_sfc(1,1) = SFC_RH * 1.E-2_RP * qsat_sfc(1,1)
+    !$acc end kernels
+    !$acc kernels
     qdry(:,1,1) = 1.0_RP - qv(:,1,1) - qc(:,1,1)
+    !$acc end kernels
     call SATURATION_pres2qsat_all( KA, KS, KE, &
                                    temp(:,1,1), pres(:,1,1), qdry(:,1,1), & ! [IN]
                                    qsat(:,1,1)                            ) ! [OUT]
+    !$acc kernels
     do k = KS, KE
        if    ( CZ(k) <= ENV_L1_ZTOP ) then ! Layer 1
           qv(k,1,1) = ENV_RH * 1.E-2_RP * qsat(k,1,1)
@@ -2678,14 +2995,21 @@ contains
           qv(k,1,1) = 0.0_RP
        endif
     enddo
+    !$acc end kernels
 
     ! make density & pressure profile in moist condition
     call HYDROSTATIC_buildrho( KA, KS, KE, &
                                pott(:,1,1), qv(:,1,1), qc(:,1,1),                      & ! [IN]
                                pres_sfc(1,1), pott_sfc(1,1), qv_sfc(1,1), qc_sfc(1,1), & ! [IN]
                                CZ(:), FZ(:),                                           & ! [IN]
-                               DENS(:,1,1), temp(:,1,1), pres(:,1,1), temp_sfc(1,1)    ) ! [OUT]
+#ifdef _OPENACC
+                               work1(:), work2(:), work3(:),                           & ! [WORK]
+#endif
+                               DENS(:,1,1), temp(:,1,1), pres(:,1,1), temp_sfc(1,1),   & ! [OUT]
+                               converged                                               ) ! [OUT]
 
+    !$acc kernels
+    !$acc loop collapse(3) independent
     do j = JSB, JEB
     do i = ISB, IEB
     do k = KS, KE
@@ -2701,6 +3025,7 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
 
     call flux_setup
 
@@ -2752,6 +3077,8 @@ contains
 
     call read_sounding( RHO, VELX, VELY, POTT, QV1D ) ! (out)
 
+    !$acc kernels
+    !$acc loop collapse(3) independent
     do j = JSB, JEB
     do i = ISB, IEB
     do k = KS, KE
@@ -2767,6 +3094,7 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
 
     call flux_setup
 
@@ -2822,6 +3150,8 @@ contains
     call read_sounding( RHO, VELX, VELY, POTT, QV1D ) ! (out)
 
     call RANDOM_uniform(rndm) ! make random
+    !$acc kernels
+    !$acc loop collapse(3) independent
     do j = JSB, JEB
     do i = ISB, IEB
     do k = KS, KE
@@ -2834,6 +3164,7 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
 
     call flux_setup
 
@@ -2899,6 +3230,7 @@ contains
     LOG_NML(PARAM_MKINIT_WK1982)
 
     ! calc in dry condition
+    !$acc kernels
     do j = JSB, JEB
     do i = ISB, IEB
        pres_sfc(i,j) = SFC_PRES
@@ -2914,6 +3246,7 @@ contains
        enddo
     enddo
     enddo
+    !$acc end kernels
 
     ! make density & pressure profile in dry condition
     call HYDROSTATIC_buildrho( KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
@@ -2922,7 +3255,10 @@ contains
                                REAL_CZ(:,:,:), REAL_FZ(:,:,:), AREA(:,:),              & ! [IN]
                                DENS(:,:,:), temp(:,:,:), pres(:,:,:), temp_sfc(:,:)    ) ! [OUT]
 
+    !$acc data create(rh,rh_sfc)
+
     ! calc QV from RH
+    !$acc kernels
     do j = JSB, JEB
     do i = ISB, IEB
        rh_sfc(i,j) = 1.0_RP - 0.75_RP * ( REAL_FZ(KS-1,i,j) / TR_Z )**1.25_RP
@@ -2936,11 +3272,14 @@ contains
        enddo
     enddo
     enddo
+    !$acc end kernels
 
     call SATURATION_psat_all( IA, ISB, IEB, JA, JSB, JEB, &
                               temp_sfc(:,:), & ! [IN]
                               psat_sfc(:,:)  ) ! [OUT]
+    !$acc kernels
     qdry(:,:,:) = 1.0_RP - qv(:,:,:) - qc(:,:,:)
+    !$acc end kernels
     call SATURATION_pres2qsat_all( KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
                                    temp(:,:,:), pres(:,:,:), qdry(:,:,:), & ! [IN]
                                    qsat(:,:,:)                            ) ! [OUT]
@@ -2948,6 +3287,7 @@ contains
     QV0 = QV0 * 1e-3_RP ! g/kg to kg/kg
     QV0 = QV0 / ( 1.0_RP + QV0 ) ! mixing ratio to specicic humidity
 
+    !$acc kernels
     do j = JSB, JEB
     do i = ISB, IEB
        qsat_sfc(i,j) = EPSvap * psat_sfc(i,j) / ( pres_sfc(i,j) - ( 1.0_RP-EPSvap ) * psat_sfc(i,j) )
@@ -2957,6 +3297,7 @@ contains
        enddo
     enddo
     enddo
+    !$acc end kernels
 
     ! make density & pressure profile in moist condition
     call HYDROSTATIC_buildrho( KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
@@ -2965,6 +3306,7 @@ contains
                                REAL_CZ(:,:,:), REAL_FZ(:,:,:), AREA(:,:),              & ! [IN]
                                DENS(:,:,:), temp(:,:,:), pres(:,:,:), temp_sfc(:,:)    ) ! [OUT]
 
+    !$acc update host(pres(:,IS,JS),pott(:,IS,JS),rh(:,IS,JS),qv(:,IS,JS))
     do k = KS, KE
        LOG_INFO("MKINIT_wk1982",*) k, REAL_CZ(k,IS,JS), pres(k,IS,JS), pott(k,IS,JS), rh(k,IS,JS), qv(k,IS,JS)*1000
     enddo
@@ -2972,6 +3314,8 @@ contains
     call COMM_vars8( DENS(:,:,:), 1 )
     call COMM_wait ( DENS(:,:,:), 1 )
 
+    !$acc kernels
+    !$acc loop collapse(3) independent
     do j = JSB, JEB
     do i = ISB, IEB
     do k = KS, KE
@@ -2980,7 +3324,10 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
 
+    !$acc kernels
+    !$acc loop collapse(3) independent
     do j = JSB, JEB
     do i = ISB, IEB
     do k = KS, KE
@@ -2993,8 +3340,11 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
 
     call flux_setup
+
+    !$acc end data
 
     return
   end subroutine MKINIT_wk1982
@@ -3068,7 +3418,10 @@ contains
        GEOP_sw = 0.0_RP
     endif
 
+    !$acc data create(potl,lhv)
+
     ! calc in dry condition
+    !$acc kernels
     do j = JSB, JEB
     do i = ISB, IEB
 
@@ -3093,6 +3446,7 @@ contains
 
     enddo
     enddo
+    !$acc end kernels
 
     ! make density & pressure profile in dry condition
     call HYDROSTATIC_buildrho( KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
@@ -3102,6 +3456,7 @@ contains
                                DENS(:,:,:), temp(:,:,:), pres(:,:,:), temp_sfc(:,:)    ) ! [OUT]
 
     ! calc in moist condition
+    !$acc kernels
     do j = JSB, JEB
     do i = ISB, IEB
        qv_sfc  (i,j) = 9.0E-3_RP   ! [kg/kg]
@@ -3137,10 +3492,12 @@ contains
 
     enddo
     enddo
+    !$acc end kernels
 
     call HYDROMETEOR_LHV( KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
                           temp(:,:,:), LHV(:,:,:) )
 
+    !$acc kernels
     do j = JSB, JEB
     do i = ISB, IEB
     do k = KS, KE
@@ -3152,6 +3509,7 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
 
     ! make density & pressure profile in moist condition
     call HYDROSTATIC_buildrho( KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
@@ -3160,17 +3518,22 @@ contains
                                REAL_CZ(:,:,:), REAL_FZ(:,:,:), AREA(:,:),              & ! [IN]
                                DENS(:,:,:), temp(:,:,:), pres(:,:,:), temp_sfc(:,:)    ) ! [OUT]
 
+    !$acc kernels
+    !$acc loop collapse(2) independent
     do j = JSB, JEB
     do i = ISB, IEB
        DENS(   1:KS-1,i,j) = DENS(KS,i,j)
        DENS(KE+1:KA,  i,j) = DENS(KE,i,j)
     enddo
     enddo
+    !$acc end kernels
 
     call COMM_vars8( DENS(:,:,:), 1 )
     call COMM_wait ( DENS(:,:,:), 1 )
 
     call RANDOM_uniform(rndm) ! make random
+    !$acc kernels
+    !$acc loop collapse(3) independent
     do j = JSB, JEB
     do i = ISB, IEB
     do k = KS, KE
@@ -3183,8 +3546,11 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
 
     call RANDOM_uniform(rndm) ! make random
+    !$acc kernels
+    !$acc loop collapse(3) independent
     do j = JSB, JEB
     do i = ISB, IEB
     do k = KS, KE
@@ -3197,8 +3563,11 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
 
     call RANDOM_uniform(rndm) ! make random
+    !$acc kernels
+    !$acc loop collapse(3) independent
     do j = JSB, JEB
     do i = ISB, IEB
     do k = KS, KE
@@ -3211,8 +3580,11 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
 
     call RANDOM_uniform(rndm) ! make random
+    !$acc kernels
+    !$acc loop collapse(3) independent
     do j = JSB, JEB
     do i = ISB, IEB
     do k = KS, KE
@@ -3225,7 +3597,9 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
 
+    !$acc kernels
     do j = JSB, JEB
     do i = ISB, IEB
     do k = KS, KE
@@ -3235,6 +3609,9 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
+
+    !$acc end data
 
 #endif
     return
@@ -3297,8 +3674,11 @@ contains
     endif
     LOG_NML(PARAM_MKINIT_RF02)
 
+    !$acc data create(potl,LHV)
+
     ! calc in dry condition
     call RANDOM_uniform(rndm) ! make random
+    !$acc kernels
     do j = JSB, JEB
     do i = ISB, IEB
 
@@ -3322,6 +3702,7 @@ contains
        enddo
     enddo
     enddo
+    !$acc end kernels
 
     ! make density & pressure profile in dry condition
     call HYDROSTATIC_buildrho( KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
@@ -3331,6 +3712,7 @@ contains
                                DENS(:,:,:), temp(:,:,:), pres(:,:,:), temp_sfc(:,:)    ) ! [OUT]
 
     ! calc in moist condition
+    !$acc kernels
     do j = JSB, JEB
     do i = ISB, IEB
        qv_sfc(i,j) = 9.45E-3_RP
@@ -3363,10 +3745,12 @@ contains
 
     enddo
     enddo
+    !$acc end kernels
 
     call HYDROMETEOR_LHV( KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
                           temp(:,:,:), LHV(:,:,:) )
 
+    !$acc kernels
     do j = JSB, JEB
     do i = ISB, IEB
     do k = KS, KE
@@ -3378,6 +3762,7 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
 
     ! make density & pressure profile in moist condition
     call HYDROSTATIC_buildrho( KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
@@ -3386,17 +3771,22 @@ contains
                                REAL_CZ(:,:,:), REAL_FZ(:,:,:), AREA(:,:),              & ! [IN]
                                DENS(:,:,:), temp(:,:,:), pres(:,:,:), temp_sfc(:,:)    ) ! [OUT]
 
+    !$acc kernels
+    !$acc loop collapse(2) independent
     do j = JSB, JEB
     do i = ISB, IEB
        DENS(   1:KS-1,i,j) = DENS(KS,i,j)
        DENS(KE+1:KA,  i,j) = DENS(KE,i,j)
     enddo
     enddo
+    !$acc end kernels
 
     call COMM_vars8( DENS(:,:,:), 1 )
     call COMM_wait ( DENS(:,:,:), 1 )
 
     call RANDOM_uniform(rndm) ! make random
+    !$acc kernels
+    !$acc loop collapse(3) independent
     do j = JSB, JEB
     do i = ISB, IEB
     do k = KS, KE
@@ -3409,8 +3799,11 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
 
     call RANDOM_uniform(rndm) ! make random
+    !$acc kernels
+    !$acc loop collapse(3) independent
     do j = JSB, JEB
     do i = ISB, IEB
     do k = KS, KE
@@ -3423,8 +3816,11 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
 
     call RANDOM_uniform(rndm) ! make random
+    !$acc kernels
+    !$acc loop collapse(3) independent
     do j = JSB, JEB
     do i = ISB, IEB
     do k = KS, KE
@@ -3437,8 +3833,11 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
 
     call RANDOM_uniform(rndm) ! make random
+    !$acc kernels
+    !$acc loop collapse(3) independent
     do j = JSB, JEB
     do i = ISB, IEB
     do k = KS, KE
@@ -3451,7 +3850,9 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
 
+    !$acc kernels
     do j = JSB, JEB
     do i = ISB, IEB
     do k = KS, KE
@@ -3461,6 +3862,9 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
+
+    !$acc end data
 
 #endif
     return
@@ -3530,8 +3934,11 @@ contains
     endif
     LOG_NML(PARAM_MKINIT_RF02_DNS)
 
+    !$acc data create(potl,LHV)
+
     ! calc in dry condition
     call RANDOM_uniform(rndm) ! make random
+    !$acc kernels
     do j = JSB, JEB
     do i = ISB, IEB
 
@@ -3574,12 +3981,15 @@ contains
        enddo
     enddo
     enddo
+    !$acc end kernels
 
     !LOG_INFO("MKINIT_DYCOMS2_RF02_DNS",*)'chk3',ks,ke
     ! extrapolation (temtative)
+    !$acc kernels
     pott_sfc(:,:) = potl(ks,:,:)-0.5*(potl(ks+1,:,:)-potl(ks,:,:))
     qv_sfc  (:,:) = qv  (ks,:,:)-0.5*(qv  (ks+1,:,:)-qv  (ks,:,:))
     qc_sfc  (:,:) = qc  (ks,:,:)-0.5*(qc  (ks+1,:,:)-qc  (ks,:,:))
+    !$acc end kernels
 
     ! make density & pressure profile in moist condition
     call HYDROSTATIC_buildrho( KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
@@ -3591,6 +4001,7 @@ contains
     call HYDROMETEOR_LHV( KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
                           temp(:,:,:), LHV(:,:,:) )
 
+    !$acc kernels
     do j = JSB, JEB
     do i = ISB, IEB
     do k = KS, KE
@@ -3602,6 +4013,7 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
 
     ! make density & pressure profile in moist condition
     call HYDROSTATIC_buildrho( KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
@@ -3610,17 +4022,22 @@ contains
                                REAL_CZ(:,:,:), REAL_FZ(:,:,:), AREA(:,:),              & ! [IN]
                                DENS(:,:,:), temp(:,:,:), pres(:,:,:), temp_sfc(:,:)    ) ! [OUT]
 
+    !$acc kernels
+    !$acc loop collapse(2) independent
     do j = JSB, JEB
     do i = ISB, IEB
        DENS(   1:KS-1,i,j) = DENS(KS,i,j)
        DENS(KE+1:KA,  i,j) = DENS(KE,i,j)
     enddo
     enddo
+    !$acc end kernels
 
     call COMM_vars8( DENS(:,:,:), 1 )
     call COMM_wait ( DENS(:,:,:), 1 )
 
     call RANDOM_uniform(rndm) ! make random
+    !$acc kernels
+    !$acc loop collapse(3) independent
     do j = JSB, JEB
     do i = ISB, IEB
     do k = KS, KE
@@ -3633,9 +4050,12 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
 
     !LOG_INFO("MKINIT_DYCOMS2_RF02_DNS",*)'chk8'
     call RANDOM_uniform(rndm) ! make random
+    !$acc kernels
+    !$acc loop collapse(3) independent
     do j = JSB, JEB
     do i = ISB, IEB
     do k = KS, KE
@@ -3648,9 +4068,12 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
     !LOG_INFO("MKINIT_DYCOMS2_RF02_DNS",*)'chk9'
 
     call RANDOM_uniform(rndm) ! make random
+    !$acc kernels
+    !$acc loop collapse(3) independent
     do j = JSB, JEB
     do i = ISB, IEB
     do k = KS, KE
@@ -3663,8 +4086,11 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
 
     call RANDOM_uniform(rndm) ! make random
+    !$acc kernels
+    !$acc loop collapse(3) independent
     do j = JSB, JEB
     do i = ISB, IEB
     do k = KS, KE
@@ -3677,7 +4103,9 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
 
+    !$acc kernels
     do j = JSB, JEB
     do i = ISB, IEB
     do k = KS, KE
@@ -3687,6 +4115,9 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
+
+    !$acc end data
 
 #endif
     return
@@ -3742,7 +4173,10 @@ contains
     endif
     LOG_NML(PARAM_MKINIT_RICO)
 
+    !$acc data create(potl,LHV)
+
     ! calc in moist condition
+    !$acc kernels
     do j = JSB, JEB
     do i = ISB, IEB
 
@@ -3771,6 +4205,7 @@ contains
 
     enddo
     enddo
+    !$acc end kernels
 
     ! make density & pressure profile in moist condition
     call HYDROSTATIC_buildrho( KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
@@ -3780,6 +4215,7 @@ contains
                                DENS(:,:,:), temp(:,:,:), pres(:,:,:), temp_sfc(:,:)    ) ! [OUT]
 
 
+    !$acc kernels
     do j = JSB, JEB
     do i = ISB, IEB
        qv_sfc  (i,j) = 16.0E-3_RP   ! [kg/kg]
@@ -3804,10 +4240,12 @@ contains
 
     enddo
     enddo
+    !$acc end kernels
 
     call HYDROMETEOR_LHV( KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
                           temp(:,:,:), LHV(:,:,:) )
 
+    !$acc kernels
     do j = JSB, JEB
     do i = ISB, IEB
     do k = KS, KE
@@ -3819,6 +4257,7 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
 
     ! make density & pressure profile in moist condition
     call HYDROSTATIC_buildrho( KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
@@ -3828,16 +4267,20 @@ contains
                                DENS(:,:,:), temp(:,:,:), pres(:,:,:), temp_sfc(:,:)    ) ! [OUT]
 
 
+    !$acc kernels
+    !$acc loop collapse(2) independent
     do j = JSB, JEB
     do i = ISB, IEB
        DENS(   1:KS-1,i,j) = DENS(KS,i,j)
        DENS(KE+1:KA  ,i,j) = DENS(KE,i,j)
     enddo
     enddo
+    !$acc end kernels
 
     call COMM_vars8( DENS(:,:,:), 1 )
     call COMM_wait ( DENS(:,:,:), 1 )
 
+    !$acc kernels
     do j = JSB, JEB
     do i = ISB, IEB
     do k = KS, KE
@@ -3845,7 +4288,10 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
 
+    !$acc kernels
+    !$acc loop collapse(3) independent
     do j = JSB, JEB
     do i = ISB, IEB
     do k = KS, KE
@@ -3853,7 +4299,10 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
 
+    !$acc kernels
+    !$acc loop collapse(3) independent
     do j = JSB, JEB
     do i = ISB, IEB
     do k = KS, KE
@@ -3861,8 +4310,11 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
 
     call RANDOM_uniform(rndm) ! make random
+    !$acc kernels
+    !$acc loop collapse(3) independent
     do j = JSB, JEB
     do i = ISB, IEB
     do k = KS, KE
@@ -3870,8 +4322,10 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
 
     call RANDOM_uniform(rndm) ! make random
+    !$acc kernels
     do j = JSB, JEB
     do i = ISB, IEB
     do k = KS, KE
@@ -3879,7 +4333,9 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
 
+    !$acc kernels
     do j = JSB, JEB
     do i = ISB, IEB
     do k = KS, KE
@@ -3889,6 +4345,9 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
+
+    !$acc end data
 
 #endif
     return
@@ -3944,7 +4403,10 @@ contains
     endif
     LOG_NML(PARAM_MKINIT_BOMEX)
 
+    !$acc data create(potl,LHV)
+
     ! calc in moist condition
+    !$acc kernels
     do j = JSB, JEB
     do i = ISB, IEB
 
@@ -3979,6 +4441,7 @@ contains
 
     enddo
     enddo
+    !$acc end kernels
 
     ! make density & pressure profile in moist condition
     call HYDROSTATIC_buildrho( KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
@@ -3988,6 +4451,7 @@ contains
                                DENS(:,:,:), temp(:,:,:), pres(:,:,:), temp_sfc(:,:)    ) ! [OUT]
 
 
+    !$acc kernels
     do j = JSB, JEB
     do i = ISB, IEB
        qv_sfc(i,j) = 22.45E-3_RP   ! [kg/kg]
@@ -4013,10 +4477,12 @@ contains
 
     enddo
     enddo
+    !$acc end kernels
 
     call HYDROMETEOR_LHV( KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
                           temp(:,:,:), LHV(:,:,:) )
 
+    !$acc kernels
     do j = JSB, JEB
     do i = ISB, IEB
     do k = KS, KE
@@ -4027,6 +4493,7 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
 
     ! make density & pressure profile in moist condition
     call HYDROSTATIC_buildrho( KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
@@ -4036,16 +4503,20 @@ contains
                                DENS(:,:,:), temp(:,:,:), pres(:,:,:), temp_sfc(:,:)    ) ! [OUT]
 
 
+    !$acc kernels
+    !$acc loop collapse(2) independent
     do j = JSB, JEB
     do i = ISB, IEB
        DENS(   1:KS-1,i,j) = DENS(KS,i,j)
        DENS(KE+1:KA  ,i,j) = DENS(KE,i,j)
     enddo
     enddo
+    !$acc end kernels
 
     call COMM_vars8( DENS(:,:,:), 1 )
     call COMM_wait ( DENS(:,:,:), 1 )
 
+    !$acc kernels
     do j = JSB, JEB
     do i = ISB, IEB
     do k = KS, KE
@@ -4053,7 +4524,10 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
 
+    !$acc kernels
+    !$acc loop collapse(3) independent
     do j = JSB, JEB
     do i = ISB, IEB
     do k = KS, KE
@@ -4061,7 +4535,10 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
 
+    !$acc kernels
+    !$acc loop collapse(3) independent
     do j = JSB, JEB
     do i = ISB, IEB
     do k = KS, KE
@@ -4069,8 +4546,11 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
 
     call RANDOM_uniform(rndm) ! make random
+    !$acc kernels
+    !$acc loop collapse(3) independent
     do j = JSB, JEB
     do i = ISB, IEB
     do k = KS, KE
@@ -4082,8 +4562,11 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
 
     call RANDOM_uniform(rndm) ! make random
+    !$acc kernels
+    !$acc loop collapse(3) independent
     do j = JSB, JEB
     do i = ISB, IEB
     do k = KS, KE
@@ -4093,7 +4576,9 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
 
+    !$acc kernels
     do j = JSB, JEB
     do i = ISB, IEB
     do k = KS, KE
@@ -4103,6 +4588,9 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
+
+    !$acc end data
 
 #endif
     return
@@ -4203,6 +4691,7 @@ contains
     call ocean_setup
 
     ! make landuse conditions
+    !$acc kernels
     do j = JSB, JEB
     do i = ISB, IEB
        if ( abs( CX(i) - DOMAIN_CENTER_X ) < LAND_SIZE ) then
@@ -4212,6 +4701,7 @@ contains
        endif
     enddo
     enddo
+    !$acc end kernels
 
     ! calculate landuse factors
     call LANDUSE_fillhalo( FILL_BND=.true. )
@@ -4253,6 +4743,7 @@ contains
     dist = ( CXG(IMAX*PRC_NUM_X) - CXG(1) ) / 9.0_RP
 
     ! make landuse conditions
+    !$acc kernels
     do j = JSB, JEB
     do i = ISB, IEB
        if (       CX(i) >= dist * 4.0_RP &
@@ -4265,6 +4756,7 @@ contains
        endif
     enddo
     enddo
+    !$acc end kernels
 
     ! calculate landuse factors
     call LANDUSE_fillhalo( FILL_BND=.true. )
@@ -4323,6 +4815,7 @@ contains
 
     call read_sounding( RHO, VELX, VELY, POTT, QV1D ) ! (out)
 
+    !$acc kernels
 !   do j = JS, JE
 !   do i = IS, IE
     do j = 1, ja
@@ -4338,15 +4831,21 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
 
+    !$acc kernels
+    !$acc loop collapse(2) independent
     do j = JSB, JEB
     do i = ISB, IEB
        DENS(   1:KS-1,i,j) = DENS(KS,i,j)
        DENS(KE+1:KA,  i,j) = DENS(KE,i,j)
     enddo
     enddo
+    !$acc end kernels
 
     call RANDOM_uniform(rndm) ! make random
+    !$acc kernels
+    !$acc loop collapse(3) independent
     do j = JSB, JEB
     do i = ISB, IEB
     do k = KS, KE
@@ -4359,8 +4858,11 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
 
     call RANDOM_uniform(rndm) ! make random
+    !$acc kernels
+    !$acc loop collapse(3) independent
     do j = JSB, JEB
     do i = ISB, IEB
     do k = KS, KE
@@ -4373,8 +4875,11 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
 
     call RANDOM_uniform(rndm) ! make random
+    !$acc kernels
+    !$acc loop collapse(3) independent
     do j = JSB, JEB
     do i = ISB, IEB
     do k = KS, KE
@@ -4387,8 +4892,11 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
 
     call RANDOM_uniform(rndm) ! make random
+    !$acc kernels
+    !$acc loop collapse(3) independent
     do j = JSB, JEB
     do i = ISB, IEB
     do k = KS, KE
@@ -4401,6 +4909,7 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
 
     return
   end subroutine MKINIT_grayzone
@@ -4470,6 +4979,10 @@ contains
     call SATURATION_psat_all( init_temp, psat )
     qsat = EPSvap * psat / ( init_pres - ( 1.0_RP-EPSvap ) * psat )
 
+    !$acc data create(rtot,cvtot,cptot)
+
+    !$acc kernels
+    !$acc loop collapse(3) independent
     do j = 1, JA
     do i = 1, IA
     do k = 1, KA
@@ -4489,11 +5002,14 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
 
     call ATMOS_THERMODYN_rhot2temp_pres( KA, 1, KA, IA, 1, IA, JA, 1, JA, &
                                          dens(:,:,:), RHOT(:,:,:),                & ! (in)
                                          rtot(:,:,:), cvtot(:,:,:), cptot(:,:,:), & ! (in)
                                          temp(:,:,:), pres(:,:,:)                 ) ! (out)
+
+    !$acc end data
 
     return
   end subroutine MKINIT_boxaero
@@ -4532,6 +5048,14 @@ contains
        ENV_L3_TLAPS, &
        BBL_THETA
 
+    logical :: converged
+
+#ifdef _OPENACC
+    real(RP) :: work1(KA)
+    real(RP) :: work2(KA)
+    real(RP) :: work3(KA)
+#endif
+
     integer :: ierr
     integer :: k, i, j
     !---------------------------------------------------------------------------
@@ -4561,9 +5085,13 @@ contains
     LOG_NML(PARAM_MKINIT_WARMBUBBLE)
 
     ! calc in dry condition
+    !$acc kernels
     pres_sfc(1,1) = SFC_PRES
     pott_sfc(1,1) = SFC_THETA
+    !$acc end kernels
 
+    !$acc kernels
+    !$acc loop seq
     do k = KS, KE
        if    ( CZ(k) <= ENV_L1_ZTOP ) then ! Layer 1
           pott(k,1,1) = SFC_THETA
@@ -4573,23 +5101,35 @@ contains
           pott(k,1,1) = pott(k-1,1,1) + ENV_L3_TLAPS * ( CZ(k)-CZ(k-1) )
        endif
     enddo
+    !$acc end kernels
 
     ! make density & pressure profile in dry condition
     call HYDROSTATIC_buildrho( KA, KS, KE, &
                                pott(:,1,1), qv(:,1,1), qc(:,1,1),                      & ! [IN]
                                pres_sfc(1,1), pott_sfc(1,1), qv_sfc(1,1), qc_sfc(1,1), & ! [IN]
                                CZ(:), FZ(:),                                           & ! [IN]
-                               DENS(:,1,1), temp(:,1,1), pres(:,1,1), temp_sfc(1,1)    ) ! [OUT]
+#ifdef _OPENACC
+                               work1(:), work2(:), work3(:),                           & ! [WORK]
+#endif
+                               DENS(:,1,1), temp(:,1,1), pres(:,1,1), temp_sfc(1,1),   & ! [OUT]
+                               converged                                               ) ! [OUT]
 
     ! calc QV from RH
     call SATURATION_psat_all( temp_sfc(1,1), psat_sfc(1,1) ) ! [IN], [OUT]
+    !$acc kernels
     qsat_sfc(1,1) = EPSvap * psat_sfc(1,1) / ( pres_sfc(1,1) - ( 1.0_RP-EPSvap ) * psat_sfc(1,1) )
 
+    !$acc end kernels
+    !$acc kernels
     qdry(:,1,1) = 1.0_RP - qv(:,1,1) - qc(:,1,1)
+    !$acc end kernels
     call SATURATION_pres2qsat_all( KA, KS, KE, &
                                    temp(:,1,1), pres(:,1,1), qdry(:,1,1), & ! [IN]
                                    qsat(:,1,1)                            ) ! [OUT]
+    !$acc kernels
     qv_sfc(1,1) = SFC_RH * 1.E-2_RP * qsat_sfc(1,1)
+    !$acc end kernels
+    !$acc kernels
     do k = KS, KE
        if    ( CZ(k) <= ENV_L1_ZTOP ) then ! Layer 1
           qv(k,1,1) = ENV_RH * 1.E-2_RP * qsat(k,1,1)
@@ -4599,14 +5139,21 @@ contains
           qv(k,1,1) = 0.0_RP
        endif
     enddo
+    !$acc end kernels
 
     ! make density & pressure profile in moist condition
     call HYDROSTATIC_buildrho( KA, KS, KE, &
                                pott(:,1,1), qv(:,1,1), qc(:,1,1),                      & ! [IN]
                                pres_sfc(1,1), pott_sfc(1,1), qv_sfc(1,1), qc_sfc(1,1), & ! [IN]
                                CZ(:), FZ(:),                                           & ! [IN]
-                               DENS(:,1,1), temp(:,1,1), pres(:,1,1), temp_sfc(1,1)    ) ! [OUT]
+#ifdef _OPENACC
+                               work1(:), work2(:), work3(:),                           & ! [WORK]
+#endif
+                               DENS(:,1,1), temp(:,1,1), pres(:,1,1), temp_sfc(1,1),   & ! [OUT]
+                               converged                                               ) ! [OUT]
 
+    !$acc kernels
+    !$acc loop collapse(3) independent
     do j = JSB, JEB
     do i = ISB, IEB
     do k = KS, KE
@@ -4622,6 +5169,7 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
 
     call flux_setup
 

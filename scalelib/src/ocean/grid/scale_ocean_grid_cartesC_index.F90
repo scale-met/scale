@@ -32,18 +32,22 @@ module scale_ocean_grid_cartesC_index
   integer, public :: OKMAX = -1 ! # of computational cells: z for ocean
   integer, public :: OIMAX = -1 ! # of computational cells: x for ocean
   integer, public :: OJMAX = -1 ! # of computational cells: y for ocean
+  !$acc declare create(OKMAX,OIMAX,OJMAX)
 
   integer, public :: OKA   = -1 ! # of total grids: z for ocean, local
   integer, public :: OKS        ! start point of inner domain: z for ocean, local
   integer, public :: OKE        ! end   point of inner domain: z for ocean, local
+  !$acc declare create(OKA,OKS,OKE)
 
   integer, public :: OIA        ! # of total grids: x for ocean, local
   integer, public :: OIS        ! start point of inner domain: x for ocean, local
   integer, public :: OIE        ! end   point of inner domain: x for ocean, local
+  !$acc declare create(OIA,OIS,OIE)
 
   integer, public :: OJA        ! # of total grids: y for ocean, local
   integer, public :: OJS        ! start point of inner domain: y for ocean, local
   integer, public :: OJE        ! end   point of inner domain: y for ocean, local
+  !$acc declare create(OJA,OJS,OJE)
 
   !-----------------------------------------------------------------------------
   !
@@ -111,6 +115,11 @@ contains
     OJA = JA
     OJS = JS
     OJE = JE
+
+    !$acc update device(OKMAX,OIMAX,OJMAX)
+    !$acc update device(OKA,OKS,OKE)
+    !$acc update device(OIA,OIS,OIE)
+    !$acc update device(OJA,OJS,OJE)
 
     return
   end subroutine OCEAN_GRID_CARTESC_INDEX_setup

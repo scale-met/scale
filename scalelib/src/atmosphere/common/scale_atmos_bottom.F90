@@ -74,8 +74,11 @@ contains
     integer :: i, j
     !---------------------------------------------------------------------------
 
+    !$acc data copyin(DENS, PRES, QV, SFC_TEMP, FZ) copyout(SFC_DENS, SFC_PRES)
+
     !$omp parallel do OMP_SCHEDULE_ &
     !$omp private (Rtot,dz1,dz2,F2H1,F2H2,LogP1,LogP2,PRESH)
+    !$acc kernels
     do j = JS, JE
     do i = IS, IE
        ! interpolate half-level pressure
@@ -96,12 +99,16 @@ contains
        SFC_DENS(i,j) = SFC_PRES(i,j) / ( Rtot * SFC_TEMP(i,j) )
     enddo
     enddo
+    !$acc end kernels
+
+    !$acc end data
 
     return
   end subroutine ATMOS_BOTTOM_estimate
 
   !-----------------------------------------------------------------------------
   function lagrange_interp( p, x, y ) result(q)
+    !$acc routine seq
     implicit none
 
     real(RP), intent(in) :: p

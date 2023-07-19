@@ -82,6 +82,7 @@ contains
        allocate( AHL_URB(UIA,UJA,1:24) )
        AH_URB  (:,:,:) = UNDEF
        AHL_URB (:,:,:) = UNDEF
+       !$acc enter data create(AH_URB,AHL_URB)
 
        select case ( URBAN_DYN_TYPE )
        case ( 'KUSAKA01' )
@@ -133,6 +134,7 @@ contains
        case ( 'KUSAKA01' )
        end select
 
+       !$acc exit data delete(AH_URB,AHL_URB)
        deallocate( AH_URB  )
        deallocate( AHL_URB )
 
@@ -268,11 +270,14 @@ contains
 
     call PROF_rapstart('URB_CalcTend', 1)
 
+    !$acc data create(TRL,TBL,TGL,TR,TB,TG,TC,QC,UC,RAINR,RAINB,RAING,ROFF,LHV)
+
     !########## Get Surface Boundary from coupler ##########
     call URBAN_SURFACE_GET
 
     !########## initialize tendency ##########
 !OCL XFILL
+    !$acc kernels
     do j = UJS, UJE
     do i = UIS, UIE
     do k = UKS, UKE
@@ -282,8 +287,10 @@ contains
     end do
     end do
     end do
+    !$acc end kernels
 
 !OCL XFILL
+    !$acc kernels
     do j = UJS, UJE
     do i = UIS, UIE
        URBAN_TR_t(i,j) = 0.0_RP
@@ -298,9 +305,11 @@ contains
        URBAN_RAING_t(i,j) = 0.0_RP
     enddo
     enddo
+    !$acc end kernels
 
 !OCL XFILL
     !$omp parallel do
+    !$acc kernels
     do iq = 1, QA
     do j  = UJS, UJE
     do i  = UIS, UIE
@@ -308,12 +317,14 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
 
     select case ( URBAN_SFC_TYPE )
     case ( 'KUSAKA01' )
 
 !OCL XFILL
        !$omp parallel do
+       !$acc kernels
        do j = UJS, UJE
        do i = UIS, UIE
        do k = UKS, UKE
@@ -323,9 +334,11 @@ contains
        end do
        end do
        end do
+       !$acc end kernels
 
 !OCL XFILL
        !$omp parallel do
+       !$acc kernels
        do j = UJS, UJE
        do i = UIS, UIE
           TR(i,j) = URBAN_TR(i,j)
@@ -339,6 +352,7 @@ contains
           RAING(i,j) = URBAN_RAING(i,j)
        end do
        end do
+       !$acc end kernels
 
 
        ! universal time
@@ -351,6 +365,7 @@ contains
          tloc_next = tloc + 1
        end if
        !--- Calculate AH at UTC
+       !$acc kernels
        do j = UJS, UJE
        do i = UIS, UIE
        if ( exists_urban(i,j) ) then
@@ -361,6 +376,7 @@ contains
        end if
        enddo
        enddo
+       !$acc end kernels
 
        call HYDROMETEOR_LHV( UIA, UIS, UIE, UJA, UJS, UJE, &
                              ATMOS_TEMP(:,:), LHV(:,:) )
@@ -395,6 +411,7 @@ contains
        ! anthropogenic heat fluxes
        !-----------------------------------------------------------
        !$omp parallel do
+       !$acc kernels
        do j = UJS, UJE
        do i = UIS, UIE
        if ( exists_urban(i,j) ) then
@@ -407,9 +424,11 @@ contains
        end if
        end do
        end do
+       !$acc end kernels
 
 !OCL XFILL
        !$omp parallel do
+       !$acc kernels
        do j = UJS, UJE
        do i = UIS, UIE
        if ( exists_urban(i,j) ) then
@@ -421,9 +440,11 @@ contains
        end if
        end do
        end do
+       !$acc end kernels
 
 !OCL XFILL
        !$omp parallel do
+       !$acc kernels
        do j = UJS, UJE
        do i = UIS, UIE
        if ( exists_urban(i,j) ) then
@@ -439,9 +460,11 @@ contains
        end if
        end do
        end do
+       !$acc end kernels
 
        if ( .NOT. ATMOS_HYDROMETEOR_dry ) then
           !$omp parallel do
+          !$acc kernels
           do j = UJS, UJE
           do i = UIS, UIE
           if ( exists_urban(i,j) ) then
@@ -450,6 +473,7 @@ contains
           end if
           enddo
           enddo
+          !$acc end kernels
        endif
 
     end select
@@ -534,10 +558,12 @@ contains
     endif
 
 
-    call PROF_rapend  ('URB_CalcTend', 1)
-
     !########## Set Surface Boundary to coupler ##########
     call URBAN_SURFACE_SET( countup=.true. )
+
+    !$acc end data
+
+    call PROF_rapend  ('URB_CalcTend', 1)
 
     return
   end subroutine URBAN_driver_calc_tendency
@@ -593,6 +619,7 @@ contains
 
 !OCL XFILL
        !$omp parallel do
+       !$acc kernels
        do j = UJS, UJE
        do i = UIS, UIE
        if ( exists_urban(i,j) ) then
@@ -604,9 +631,11 @@ contains
        end if
        end do
        end do
+       !$acc end kernels
 
 !OCL XFILL
        !$omp parallel do
+       !$acc kernels
        do j = UJS, UJE
        do i = UIS, UIE
        if ( exists_urban(i,j) ) then
@@ -622,6 +651,7 @@ contains
        end if
        end do
        end do
+       !$acc end kernels
 
     end select
 
@@ -664,6 +694,8 @@ contains
 
     call PROF_rapstart('URB_SfcExch', 2)
 
+    !$acc data create(ATMOS_SFLX_rad_dn)
+
     if ( URBAN_do ) then
        call CPL_getATM_URB( ATMOS_TEMP       (:,:),     & ! [OUT]
                             ATMOS_PRES       (:,:),     & ! [OUT]
@@ -682,6 +714,8 @@ contains
     endif
 
 !OCL XFILL
+    !$omp parallel do
+    !$acc kernels
     do j = UJS, UJE
     do i = UIS, UIE
        ATMOS_SFLX_LW(i,j,I_R_direct ) = ATMOS_SFLX_rad_dn(i,j,I_R_direct ,I_R_IR)    ! IR, direct
@@ -693,6 +727,9 @@ contains
                                       + ATMOS_SFLX_rad_dn(i,j,I_R_diffuse,I_R_VIS)   ! VIS, diffuse
     enddo
     enddo
+    !$acc end kernels
+
+    !$acc end data
 
     call PROF_rapend  ('URB_SfcExch', 2)
 

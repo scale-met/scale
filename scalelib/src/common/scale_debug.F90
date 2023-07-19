@@ -16,6 +16,9 @@ module scale_debug
   use scale_precision
   use scale_io
   use scale_prof
+#ifdef _OPENACC
+  use openacc
+#endif
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -106,8 +109,11 @@ contains
 
     call PROF_rapstart('Debug', 1)
 
+    !$acc update host(var) if(acc_is_present(var))
+
     invalid_value = .false.
     if ( present(mask) ) then
+       !$acc update host(mask) if(acc_is_present(mask))
        do k = KS, KE
           if ( .not. mask(k) ) cycle
           if (      var(k)*0.0_RP /= 0.0_RP &
@@ -172,8 +178,11 @@ contains
 
     call PROF_rapstart('Debug', 1)
 
+    !$acc update host(var) if(acc_is_present(var))
+
     invalid_value = .false.
     if ( present(mask) ) then
+       !$acc update host(mask) if(acc_is_present(mask))
        outer1:do j = JS, JE
               do i = IS, IE
                  if ( .not. mask(i,j) ) cycle
@@ -245,8 +254,11 @@ contains
 
     call PROF_rapstart('Debug', 1)
 
+    !$acc update host(var) if(acc_is_present(var))
+
     invalid_value = .false.
     if ( present(mask) ) then
+       !$acc update host(mask) if(acc_is_present(mask))
        outer1:do j = JS, JE
               do i = IS, IE
                  if ( .not. mask(i,j) ) cycle

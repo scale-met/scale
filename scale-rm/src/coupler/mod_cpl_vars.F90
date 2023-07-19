@@ -242,7 +242,7 @@ contains
     allocate( OCN_SFLX_SH   (IA,JA)                     )
     allocate( OCN_SFLX_LH   (IA,JA)                     )
     allocate( OCN_SFLX_GH   (IA,JA)                     )
-    allocate( OCN_SFLX_QTRC (IA,JA,QA)                  )
+    allocate( OCN_SFLX_QTRC (IA,JA,max(QA,1))           )
     allocate( OCN_SFLX_ENGI (IA,JA)                     )
     allocate( OCN_U10       (IA,JA)                     )
     allocate( OCN_V10       (IA,JA)                     )
@@ -265,6 +265,7 @@ contains
     OCN_V10       (:,:)     = UNDEF
     OCN_T2        (:,:)     = UNDEF
     OCN_Q2        (:,:)     = UNDEF
+    !$acc enter data create(OCN_SFC_TEMP,OCN_SFC_albedo,OCN_SFC_Z0M,OCN_SFC_Z0H,OCN_SFC_Z0E,OCN_SFLX_MU,OCN_SFLX_MV,OCN_SFLX_MW,OCN_SFLX_SH,OCN_SFLX_LH,OCN_SFLX_GH,OCN_SFLX_QTRC,OCN_SFLX_ENGI,OCN_U10,OCN_V10,OCN_T2,OCN_Q2)
 
     allocate( LND_SFC_TEMP  (IA,JA)                     )
     allocate( LND_SFC_albedo(IA,JA,N_RAD_DIR,N_RAD_RGN) )
@@ -277,7 +278,7 @@ contains
     allocate( LND_SFLX_SH   (IA,JA)                     )
     allocate( LND_SFLX_LH   (IA,JA)                     )
     allocate( LND_SFLX_GH   (IA,JA)                     )
-    allocate( LND_SFLX_QTRC (IA,JA,QA)                  )
+    allocate( LND_SFLX_QTRC (IA,JA,max(QA,1))           )
     allocate( LND_SFLX_ENGI (IA,JA)                     )
     allocate( LND_U10       (IA,JA)                     )
     allocate( LND_V10       (IA,JA)                     )
@@ -300,6 +301,7 @@ contains
     LND_V10       (:,:)     = UNDEF
     LND_T2        (:,:)     = UNDEF
     LND_Q2        (:,:)     = UNDEF
+    !$acc enter data create(LND_SFC_TEMP,LND_SFC_albedo,LND_SFC_Z0M,LND_SFC_Z0H,LND_SFC_Z0E,LND_SFLX_MU,LND_SFLX_MV,LND_SFLX_MW,LND_SFLX_SH,LND_SFLX_LH,LND_SFLX_GH,LND_SFLX_QTRC,LND_SFLX_ENGI,LND_U10,LND_V10,LND_T2,LND_Q2)
 
     allocate( URB_SFC_TEMP  (IA,JA)                     )
     allocate( URB_SFC_albedo(IA,JA,N_RAD_DIR,N_RAD_RGN) )
@@ -315,7 +317,7 @@ contains
     allocate( URB_SFLX_LHEX (IA,JA)                     )
     allocate( URB_SFLX_QVEX (IA,JA)                     )
     allocate( URB_SFLX_GH   (IA,JA)                     )
-    allocate( URB_SFLX_QTRC (IA,JA,QA)                  )
+    allocate( URB_SFLX_QTRC (IA,JA,max(QA,1))           )
     allocate( URB_SFLX_ENGI (IA,JA)                     )
     allocate( URB_U10       (IA,JA)                     )
     allocate( URB_V10       (IA,JA)                     )
@@ -341,6 +343,7 @@ contains
     URB_V10       (:,:)     = UNDEF
     URB_T2        (:,:)     = UNDEF
     URB_Q2        (:,:)     = UNDEF
+    !$acc enter data create(URB_SFC_TEMP,URB_SFC_albedo,URB_SFC_Z0M,URB_SFC_Z0H,URB_SFC_Z0E,URB_SFLX_MU,URB_SFLX_MV,URB_SFLX_MW,URB_SFLX_SH,URB_SFLX_LH,URB_SFLX_SHEX,URB_SFLX_LHEX,URB_SFLX_QVEX,URB_SFLX_GH,URB_SFLX_QTRC,URB_SFLX_ENGI,URB_U10,URB_V10,URB_T2,URB_Q2)
 
     allocate( OCN_ATM_TEMP       (IA,JA)                     )
     allocate( OCN_ATM_PRES       (IA,JA)                     )
@@ -370,6 +373,7 @@ contains
     OCN_ATM_cosSZA     (:,:)     = UNDEF
     OCN_ATM_SFLX_water (:,:)     = UNDEF
     OCN_ATM_SFLX_ENGI  (:,:)     = UNDEF
+    !$acc enter data create(OCN_ATM_TEMP,OCN_ATM_PRES,OCN_ATM_W,OCN_ATM_U,OCN_ATM_V,OCN_ATM_DENS,OCN_ATM_QV,OCN_ATM_PBL,OCN_ATM_SFC_DENS,OCN_ATM_SFC_PRES,OCN_ATM_SFLX_rad_dn,OCN_ATM_cosSZA,OCN_ATM_SFLX_water,OCN_ATM_SFLX_ENGI)
 
     allocate( LND_ATM_TEMP       (IA,JA)                     )
     allocate( LND_ATM_PRES       (IA,JA)                     )
@@ -399,7 +403,12 @@ contains
     LND_ATM_cosSZA     (:,:)     = UNDEF
     LND_ATM_SFLX_water (:,:)     = UNDEF
     LND_ATM_SFLX_ENGI  (:,:)     = UNDEF
+    !$acc enter data create(LND_ATM_TEMP,LND_ATM_PRES,LND_ATM_W,LND_ATM_U,LND_ATM_V,LND_ATM_DENS,LND_ATM_QV,LND_ATM_PBL,LND_ATM_SFC_DENS,LND_ATM_SFC_PRES,LND_ATM_SFLX_rad_dn,LND_ATM_cosSZA,LND_ATM_SFLX_water,LND_ATM_SFLX_ENGI)
 
+    !$acc enter data create(LND_SFC_TEMP,LND_SFC_albedo,LND_SFC_Z0M,LND_SFC_Z0H,LND_SFC_Z0E,LND_SFLX_MU,LND_SFLX_MV,LND_SFLX_MW,LND_SFLX_SH,LND_SFLX_LH,LND_SFLX_GH,LND_SFLX_QTRC,LND_SFLX_ENGI,LND_U10,LND_V10,LND_T2,LND_Q2)
+    !$acc enter data create(URB_SFC_TEMP,URB_SFC_albedo,URB_SFC_Z0M,URB_SFC_Z0H,URB_SFC_Z0E,URB_SFLX_MU,URB_SFLX_MV,URB_SFLX_MW,URB_SFLX_SH,URB_SFLX_LH,URB_SFLX_GH,URB_SFLX_QTRC,URB_SFLX_ENGI,URB_U10,URB_V10,URB_T2,URB_Q2)
+    !$acc enter data create(OCN_ATM_TEMP,OCN_ATM_PRES,OCN_ATM_W,OCN_ATM_U,OCN_ATM_V,OCN_ATM_DENS,OCN_ATM_QV,OCN_ATM_PBL,OCN_ATM_SFC_DENS,OCN_ATM_SFC_PRES,OCN_ATM_SFLX_rad_dn,OCN_ATM_cosSZA,OCN_ATM_SFLX_water,OCN_ATM_SFLX_ENGI)
+    !$acc enter data create(LND_ATM_TEMP,LND_ATM_PRES,LND_ATM_W,LND_ATM_U,LND_ATM_V,LND_ATM_DENS,LND_ATM_QV,LND_ATM_PBL,LND_ATM_SFC_DENS,LND_ATM_SFC_PRES,LND_ATM_SFLX_rad_dn,LND_ATM_cosSZA,LND_ATM_SFLX_water,LND_ATM_SFLX_ENGI)
     allocate( URB_ATM_TEMP       (IA,JA)                     )
     allocate( URB_ATM_PRES       (IA,JA)                     )
     allocate( URB_ATM_W          (IA,JA)                     )
@@ -428,6 +437,7 @@ contains
     URB_ATM_cosSZA     (:,:)     = UNDEF
     URB_ATM_SFLX_water (:,:)     = UNDEF
     URB_ATM_SFLX_ENGI  (:,:)     = UNDEF
+    !$acc enter data create(URB_ATM_TEMP,URB_ATM_PRES,URB_ATM_W,URB_ATM_U,URB_ATM_V,URB_ATM_DENS,URB_ATM_QV,URB_ATM_PBL,URB_ATM_SFC_DENS,URB_ATM_SFC_PRES,URB_ATM_SFLX_rad_dn,URB_ATM_cosSZA,URB_ATM_SFLX_water,URB_ATM_SFLX_ENGI)
 
     ! counter intialize
     CNT_putATM_OCN = 0.0_RP
@@ -455,6 +465,7 @@ contains
     LOG_NEWLINE
     LOG_INFO("CPL_vars_finalize",*) 'Finalize'
 
+    !$acc exit data delete(OCN_SFC_TEMP,OCN_SFC_albedo,OCN_SFC_Z0M,OCN_SFC_Z0H,OCN_SFC_Z0E,OCN_SFLX_MU,OCN_SFLX_MV,OCN_SFLX_MW,OCN_SFLX_SH,OCN_SFLX_LH,OCN_SFLX_GH,OCN_SFLX_QTRC,OCN_SFLX_ENGI,OCN_U10,OCN_V10,OCN_T2,OCN_Q2)
     deallocate( OCN_SFC_TEMP   )
     deallocate( OCN_SFC_albedo )
     deallocate( OCN_SFC_Z0M    )
@@ -473,6 +484,7 @@ contains
     deallocate( OCN_T2         )
     deallocate( OCN_Q2         )
 
+    !$acc exit data delete(LND_SFC_TEMP,LND_SFC_albedo,LND_SFC_Z0M,LND_SFC_Z0H,LND_SFC_Z0E,LND_SFLX_MU,LND_SFLX_MV,LND_SFLX_MW,LND_SFLX_SH,LND_SFLX_LH,LND_SFLX_GH,LND_SFLX_QTRC,LND_SFLX_ENGI,LND_U10,LND_V10,LND_T2,LND_Q2)
     deallocate( LND_SFC_TEMP   )
     deallocate( LND_SFC_albedo )
     deallocate( LND_SFC_Z0M    )
@@ -491,6 +503,7 @@ contains
     deallocate( LND_T2         )
     deallocate( LND_Q2         )
 
+    !$acc exit data delete(URB_SFC_TEMP,URB_SFC_albedo,URB_SFC_Z0M,URB_SFC_Z0H,URB_SFC_Z0E,URB_SFLX_MU,URB_SFLX_MV,URB_SFLX_MW,URB_SFLX_SH,URB_SFLX_LH,URB_SFLX_SHEX,URB_SFLX_LHEX,URB_SFLX_QVEX,URB_SFLX_GH,URB_SFLX_QTRC,URB_SFLX_ENGI,URB_U10,URB_V10,URB_T2,URB_Q2)
     deallocate( URB_SFC_TEMP   )
     deallocate( URB_SFC_albedo )
     deallocate( URB_SFC_Z0M    )
@@ -512,6 +525,7 @@ contains
     deallocate( URB_T2         )
     deallocate( URB_Q2         )
 
+    !$acc exit data delete(OCN_ATM_TEMP,OCN_ATM_PRES,OCN_ATM_W,OCN_ATM_U,OCN_ATM_V,OCN_ATM_DENS,OCN_ATM_QV,OCN_ATM_PBL,OCN_ATM_SFC_DENS,OCN_ATM_SFC_PRES,OCN_ATM_SFLX_rad_dn,OCN_ATM_cosSZA,OCN_ATM_SFLX_water,OCN_ATM_SFLX_ENGI)
     deallocate( OCN_ATM_TEMP        )
     deallocate( OCN_ATM_PRES        )
     deallocate( OCN_ATM_W           )
@@ -527,6 +541,7 @@ contains
     deallocate( OCN_ATM_SFLX_water  )
     deallocate( OCN_ATM_SFLX_ENGI   )
 
+    !$acc exit data delete(LND_ATM_TEMP,LND_ATM_PRES,LND_ATM_W,LND_ATM_U,LND_ATM_V,LND_ATM_DENS,LND_ATM_QV,LND_ATM_PBL,LND_ATM_SFC_DENS,LND_ATM_SFC_PRES,LND_ATM_SFLX_rad_dn,LND_ATM_cosSZA,LND_ATM_SFLX_water,LND_ATM_SFLX_ENGI)
     deallocate( LND_ATM_TEMP        )
     deallocate( LND_ATM_PRES        )
     deallocate( LND_ATM_W           )
@@ -542,6 +557,7 @@ contains
     deallocate( LND_ATM_SFLX_water  )
     deallocate( LND_ATM_SFLX_ENGI   )
 
+    !$acc exit data delete(URB_ATM_TEMP,URB_ATM_PRES,URB_ATM_W,URB_ATM_U,URB_ATM_V,URB_ATM_DENS,URB_ATM_QV,URB_ATM_PBL,URB_ATM_SFC_DENS,URB_ATM_SFC_PRES,URB_ATM_SFLX_rad_dn,URB_ATM_cosSZA,URB_ATM_SFLX_water,URB_ATM_SFLX_ENGI)
     deallocate( URB_ATM_TEMP        )
     deallocate( URB_ATM_PRES        )
     deallocate( URB_ATM_W           )
@@ -615,6 +631,7 @@ contains
     !$omp shared(URB_ATM_TEMP,URB_ATM_PRES,URB_ATM_W,URB_ATM_U,URB_ATM_V,URB_ATM_DENS) &
     !$omp shared(URB_ATM_QV,URB_ATM_PBL,URB_ATM_SFC_DENS,URB_ATM_SFC_PRES,URB_ATM_SFLX_rad_dn,URB_ATM_cosSZA) &
     !$omp shared(URB_ATM_SFLX_water,URB_ATM_SFLX_ENGI,CNT_putATM_URB,CNT_putATM_LND)
+    !$acc kernels
     do j = JS, JE
     do i = IS, IE
        ! for ocean
@@ -742,6 +759,7 @@ contains
        enddo
     enddo
     enddo
+    !$acc end kernels
 
     if( countup ) then
        CNT_putATM_OCN = CNT_putATM_OCN + 1.0_RP
@@ -804,6 +822,7 @@ contains
     !$omp shared(mask) &
     !$omp shared(CNT_putOCN) &
     !$omp shared(TRACER_CV,TRACER_ENGI0)
+    !$acc kernels
     do j = JS, JE
     do i = IS, IE
     if ( mask(i,j) ) then
@@ -856,6 +875,7 @@ contains
        end if
     enddo
     enddo
+    !$acc end kernels
 
     if( countup ) then
        CNT_putOCN = CNT_putOCN + 1.0_RP
@@ -917,6 +937,7 @@ contains
     !$omp shared(mask) &
     !$omp shared(TRACER_CV,TRACER_ENGI0) &
     !$omp private(i,j,idir,irgn) OMP_SCHEDULE_
+    !$acc kernels
     do j = JS, JE
     do i = IS, IE
     if ( mask(i,j) ) then
@@ -969,6 +990,7 @@ contains
        end if
     enddo
     enddo
+    !$acc end kernels
 
     if( countup ) then
        CNT_putLND = CNT_putLND + 1.0_RP
@@ -1035,6 +1057,7 @@ contains
     !$omp        SFC_TEMP,SFC_albedo,SFC_Z0M,SFC_Z0H,SFC_Z0E,SFLX_MW,SFLX_MU,SFLX_MV,SFLX_SH,SFLX_LH,SFLX_SHEX,SFLX_LHEX,SFLX_QVEX,SFLX_GH,SFLX_QTRC,U10,V10,T2,Q2, &
     !$omp        mask, &
     !$omp        TRACER_CV,TRACER_ENGI0)
+    !$acc kernels
     do j = JS, JE
     do i = IS, IE
     if ( mask(i,j) ) then
@@ -1093,6 +1116,7 @@ contains
        end if
     enddo
     enddo
+    !$acc end kernels
 
     if( countup ) then
        CNT_putURB = CNT_putURB + 1.0_RP
@@ -1169,6 +1193,7 @@ contains
     !$omp shared(OCN_SFLX_GH,LND_SFLX_GH,URB_SFLX_GH,OCN_SFLX_QTRC,LND_SFLX_QTRC,URB_SFLX_QTRC,OCN_SFLX_ENGI,LND_SFLX_ENGI,URB_SFLX_ENGI) &
     !$omp shared(OCN_U10,LND_U10,URB_U10,OCN_V10,LND_V10,URB_V10,OCN_T2,LND_T2,URB_T2,OCN_Q2,LND_Q2,URB_Q2) &
     !$omp private(i,j,iq) OMP_SCHEDULE_
+    !$acc kernels
     do j = JS, JE
     do i = IS, IE
        SFC_TEMP (i,j)      =   fact_ocean(i,j) * OCN_SFC_TEMP (i,j) &
@@ -1255,6 +1280,7 @@ contains
                              + fact_urban(i,j) * URB_Q2       (i,j)
     enddo
     enddo
+    !$acc end kernels
 
     CNT_putOCN = 0.0_RP
     CNT_putLND = 0.0_RP
@@ -1304,6 +1330,7 @@ contains
     !$omp shared(JS,JE,IS,IE,TEMP,PRES,W,U,V,DENS,QV,PBL,SFC_DENS,SFC_PRES,SFLX_rad_dn,cosSZA,SFLX_water,SFLX_ENGI) &
     !$omp shared(OCN_ATM_TEMP,OCN_ATM_PRES,OCN_ATM_W,OCN_ATM_U,OCN_ATM_V,OCN_ATM_DENS,OCN_ATM_QV) &
     !$omp shared(OCN_ATM_PBL,OCN_ATM_SFC_DENS,OCN_ATM_SFC_PRES,OCN_ATM_SFLX_rad_dn,OCN_ATM_cosSZA,OCN_ATM_SFLX_water,OCN_ATM_SFLX_ENGI)
+    !$acc kernels
     do j = JS, JE
     do i = IS, IE
        TEMP     (i,j) = OCN_ATM_TEMP     (i,j)
@@ -1326,6 +1353,7 @@ contains
        enddo
     enddo
     enddo
+    !$acc end kernels
 
     CNT_putATM_OCN = 0.0_RP
 
@@ -1373,6 +1401,7 @@ contains
     !$omp shared(JS,JE,IS,IE,TEMP,PRES,W,U,V,DENS,QV,PBL,SFC_DENS,SFC_PRES,SFLX_rad_dn,cosSZA,SFLX_water,SFLX_ENGI) &
     !$omp shared(LND_ATM_TEMP,LND_ATM_PRES,LND_ATM_W,LND_ATM_U,LND_ATM_V,LND_ATM_DENS,LND_ATM_QV) &
     !$omp shared(LND_ATM_PBL,LND_ATM_SFC_DENS,LND_ATM_SFC_PRES,LND_ATM_SFLX_rad_dn,LND_ATM_cosSZA,LND_ATM_SFLX_water,LND_ATM_SFLX_ENGI)
+    !$acc kernels
     do j = JS, JE
     do i = IS, IE
        TEMP     (i,j) = LND_ATM_TEMP     (i,j)
@@ -1395,6 +1424,7 @@ contains
        enddo
     enddo
     enddo
+    !$acc end kernels
 
     CNT_putATM_LND = 0.0_RP
 
@@ -1442,6 +1472,7 @@ contains
     !$omp shared(JS,JE,IS,IE,TEMP,PRES,W,U,V,DENS,QV,PBL,SFC_DENS,SFC_PRES,SFLX_rad_dn,cosSZA,SFLX_water,SFLX_ENGI) &
     !$omp shared(URB_ATM_TEMP,URB_ATM_PRES,URB_ATM_W,URB_ATM_U,URB_ATM_V,URB_ATM_DENS,URB_ATM_QV) &
     !$omp shared(URB_ATM_PBL,URB_ATM_SFC_DENS,URB_ATM_SFC_PRES,URB_ATM_SFLX_rad_dn,URB_ATM_cosSZA,URB_ATM_SFLX_water,URB_ATM_SFLX_ENGI)
+    !$acc kernels
     do j = JS, JE
     do i = IS, IE
        TEMP     (i,j) = URB_ATM_TEMP     (i,j)
@@ -1464,6 +1495,7 @@ contains
        enddo
     enddo
     enddo
+    !$acc end kernels
 
     CNT_putATM_URB = 0.0_RP
 

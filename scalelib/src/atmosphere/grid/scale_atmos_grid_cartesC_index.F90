@@ -54,6 +54,7 @@ module scale_atmos_grid_cartesC_index
   integer, public :: IE          !< end   point of inner domain: x, local
   integer, public :: JS          !< start point of inner domain: y, local
   integer, public :: JE          !< end   point of inner domain: y, local
+  !$acc declare create(KA, KS, KE, IA, IS, IE, JA, JS, JE)
 
   integer, public :: KIJMAX = -1 !< # of computational cells: z*x*y
 
@@ -297,6 +298,7 @@ contains
     IE = IMAX + IHALO
     JS = 1    + JHALO
     JE = JMAX + JHALO
+    !$acc update device(KA, KS, KE, IA, IS, IE, JA, JS, JE)
 
     if( IBLOCK == -1 ) IBLOCK = IMAX
     if( JBLOCK == -1 ) JBLOCK = JMAX

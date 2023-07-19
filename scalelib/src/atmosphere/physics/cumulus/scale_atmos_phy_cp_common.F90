@@ -123,6 +123,7 @@ contains
        fact_W0      = 1.0_RP
     endif
 
+    !$acc kernels
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -131,6 +132,7 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
 
     return
   end subroutine ATMOS_PHY_CP_common_wmean

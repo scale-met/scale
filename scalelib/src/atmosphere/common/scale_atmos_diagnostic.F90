@@ -76,6 +76,8 @@ contains
     integer :: k, i, j
     !---------------------------------------------------------------------------
 
+    !$acc data copyin(DENS, RHOT, Rtot, CVtot, CPtot) copyout(POTT, TEMP, PRES, EXNER)
+
     call THERMODYN_rhot2temp_pres( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
                                    DENS(:,:,:), RHOT(:,:,:),                & ! (in)
                                    Rtot(:,:,:), CVtot(:,:,:), CPtot(:,:,:), & ! (in)
@@ -87,6 +89,7 @@ contains
     !$omp private(i,j,k) &
     !$omp shared(POTT,EXNER,RHOT,DENS,TEMP) &
     !$omp shared(KS,KE,IS,IE,JS,JE)
+    !$acc kernels
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -95,6 +98,9 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
+
+    !$acc end data
 
     return
   end subroutine ATMOS_DIAGNOSTIC_get_therm_rhot
@@ -128,6 +134,7 @@ contains
     integer :: i, j, k
 
     !$omp parallel do
+    !$acc kernels
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -138,6 +145,7 @@ contains
     end do
     end do
     end do
+    !$acc end kernels
 
     return
   end subroutine ATMOS_DIAGNOSTIC_get_therm_rhoe
@@ -179,6 +187,7 @@ contains
     !$omp private(diff) &
     !$omp shared(PHYD,PHYDH,DENS,PRES,CZ,FZ,GRAV,EPS) &
     !$omp shared(KS,KE,IS,IE,JS,JE)
+    !$acc kernels copyin(DENS, CZ, FZ) copyout(PHYD, PHYDH)
     do j = JS, JE
     do i = IS, IE
        PHYDH(KE,i,j) = PRES(KE,i,j) - DENS(KE,i,j) * GRAV * ( FZ(KE,i,j) - CZ(KE,i,j) )
@@ -203,6 +212,7 @@ contains
        end do
     enddo
     enddo
+    !$acc end kernels
 
     return
   end subroutine ATMOS_DIAGNOSTIC_get_phyd
@@ -244,7 +254,10 @@ contains
     !$omp private(RPT,RPT_h) &
     !$omp shared(N2,POTT,Rtot,CZ,FZ,F2H,GRAV) &
     !$omp shared(KS,KE,IS,IE,JS,JE)
+    !$acc kernels
+    !$acc loop private(RPT,RPT_h)
     do j = JS, JE
+    !$acc loop private(RPT,RPT_h)
     do i = IS, IE
        do k = KS, KE
           RPT(k) = Rtot(k,i,j) * POTT(k,i,j)
@@ -261,6 +274,7 @@ contains
        N2(KE,i,j) = GRAV * ( RPT(KE) - RPT_h(KE-1) ) / ( ( CZ(KE,i,j) - FZ(KE-1,i,j) ) * RPT(KE) )
     end do
     end do
+    !$acc end kernels
 
     return
   end subroutine ATMOS_DIAGNOSTIC_get_n2
@@ -295,6 +309,7 @@ contains
     !$omp private(i,j,k) &
     !$omp shared(POTV,POTT,Rtot,Rdry) &
     !$omp shared(KS,KE,IS,IE,JS,JE)
+    !$acc kernels
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -302,6 +317,7 @@ contains
     end do
     end do
     end do
+    !$acc end kernels
 
     return
   end subroutine ATMOS_DIAGNOSTIC_get_potv
@@ -340,6 +356,7 @@ contains
     !$omp private(i,j,k) &
     !$omp shared(TEML,TEMP,LHV,LHS,QC,QI,CPtot) &
     !$omp shared(KS,KE,IS,IE,JS,JE)
+    !$acc kernels
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -348,6 +365,7 @@ contains
     end do
     end do
     end do
+    !$acc end kernels
 
     return
   end subroutine ATMOS_DIAGNOSTIC_get_teml

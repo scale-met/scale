@@ -89,6 +89,9 @@ contains
     use scale_random, only: &
        RANDOM_setup, &
        RANDOM_finalize
+    use scale_matrix, only: &
+       MATRIX_setup, &
+       MATRIX_finalize
     use scale_tracer, only: &
        TRACER_finalize
     use scale_atmos_hydrometeor, only: &
@@ -345,6 +348,9 @@ contains
 
     ! setup random number
     call RANDOM_setup
+
+    ! setup matrix
+    call MATRIX_setup
 
     ! setup submodel administrator
     call ATMOS_admin_setup
@@ -652,6 +658,8 @@ contains
 
     call PRC_CARTESC_finalize
 
+    call MATRIX_finalize
+
     call RANDOM_finalize
 
     call CONST_finalize
@@ -751,8 +759,7 @@ contains
                                    DENS(:,:,:), POTT(:,:,:), TEMP(:,:,:), PRES(:,:,:), QV(:,:,:), & ! [IN]
                                    CZ(:), FZ(:), FDZ(:), RCDZ(:),                                 & ! [IN]
                                    REAL_CZ(:,:,:), REAL_FZ(:,:,:), REAL_PHI(:,:,:), AREA(:,:),    & ! [IN]
-                                   TIME_NOWDAYSEC,                                                & ! [IN]
-                                   force = .true.                                                 )
+                                   TIME_NOWDAYSEC                                                 )
        call PROF_rapend('ATM_Refstate', 2)
        call ATMOS_BOUNDARY_driver_set( TIME_NOWDAYSEC )
        call ATMOS_vars_calc_diagnostics

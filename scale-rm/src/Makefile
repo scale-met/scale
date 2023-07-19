@@ -24,6 +24,12 @@ ifneq ($(SCALE_IGNORE_SRCDEP),T)
   DEPENDLIB = $(LIBS)
 endif
 
+ifeq ($(SCALE_IGNORE_OPENACC),T)
+  ENABLE_OPENACC = F
+else
+  ENABLE_OPENACC = $(SCALE_ENABLE_OPENACC)
+endif
+
 VPATH = $(BUILD_DIR): \
         admin:        \
         atmos:        \
@@ -116,6 +122,7 @@ build:
 	$(MAKE) makelib
 	@echo;echo "Entering scale-rm...";echo "Current version is " $(VERSION)
 	mkdir -p $(BUILD_DIR)
+	$(MAKE) makeobjs
 	$(MAKE) makebin
 	@echo "Complete making scale-rm."
 
@@ -132,7 +139,15 @@ info:
 makelib:
 	$(MAKE) -C $(SCALELIBDIR)/src
 
+makeobjs:
+	@$(MAKE) sub_objs SCALE_ENABLE_OPENACC=$(ENABLE_OPENACC)
+	@$(MAKE) main_objs
+
 makebin: $(BUILD_DIR)/$(BINNAME)$(POSTFIX) $(BUILD_DIR)/$(PPNAME)$(POSTFIX)
+
+sub_objs: $(patsubst %,$(BUILD_DIR)/%,$(SUB_OBJS)) $(BUILD_DIR)/mod_user.o
+
+main_objs: $(patsubst %,$(BUILD_DIR)/%,$(MAIN_OBJS))
 
 $(BUILD_DIR)/$(BINNAME)$(POSTFIX)  : $(BUILD_DIR)/$(BINNAME).o $(LIBS) $(patsubst %,$(BUILD_DIR)/%,$(OBJS)) $(BUILD_DIR)/mod_user.o
 	$(LD) $(LDFLAGS) $(ADDITIONAL_FFLAGS) -o $@ $< $(patsubst %,$(BUILD_DIR)/%,$(OBJS)) $(BUILD_DIR)/mod_user.o -L$(LIBDIR) -lscale$(POSTFIX) $(CONTRIB_LIBS) $(SCALE_NETCDF_LIBS) $(SCALE_MATHLIB_LIBS) $(SCALE_PAPI_LIBS)

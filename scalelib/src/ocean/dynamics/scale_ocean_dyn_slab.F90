@@ -210,6 +210,11 @@ contains
     logical  :: error
     integer  :: k, i, j
     !---------------------------------------------------------------------------
+    !$acc data copyin (OCEAN_TEMP_t,OCEAN_SFLX_G,OCEAN_SFLX_water,calc_flag) &
+    !$acc      copyout(MASS_SUPL,ENGI_SUPL) &
+    !$acc      copy(OCEAN_TEMP) &
+    !$acc      create (OCEAN_TEMP_t_ndg,OCEAN_TEMP_ref)
+
 
     LOG_PROGRESS(*) 'ocean / dynamics / slab'
 
@@ -229,6 +234,7 @@ contains
           rtau = 1.0_RP / max(OCEAN_DYN_SLAB_nudging_tausec,dt)
 
           !$omp parallel do
+          !$acc kernels
           do j = OJS, OJE
           do i = OIS, OIE
           do k = OKS, OKE
@@ -240,11 +246,13 @@ contains
           enddo
           enddo
           enddo
+          !$acc end kernels
 
        end if
 
     else
        !$omp parallel do
+       !$acc kernels
        do j = OJS, OJE
        do i = OIS, OIE
        do k = OKS, OKE
@@ -252,11 +260,13 @@ contains
        end do
        end do
        end do
+       !$acc end kernels
     endif
 
     if ( OCEAN_DYN_SLAB_offline_mode ) then
 
        !$omp parallel do
+       !$acc kernels
        do j = OJS, OJE
        do i = OIS, OIE
           if ( calc_flag(i,j) ) then
@@ -266,10 +276,12 @@ contains
           ENGI_SUPL(i,j) = 0.0_RP
        enddo
        enddo
+       !$acc end kernels
 
     else
 
        !$omp parallel do private(dCP)
+       !$acc kernels
        do j = OJS, OJE
        do i = OIS, OIE
           if ( calc_flag(i,j) ) then
@@ -290,8 +302,10 @@ contains
           endif
        enddo
        enddo
+       !$acc end kernels
 
     endif
+    !$acc end data
 
     return
   end subroutine OCEAN_DYN_SLAB

@@ -15,6 +15,9 @@ module scale_random
   !
   use scale_precision
   use scale_io
+#ifdef _OPENACC
+  use openacc
+#endif
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -152,6 +155,7 @@ contains
     !---------------------------------------------------------------------------
 
     call random_number(var)
+    !$acc update device(var) if(acc_is_present(var))
 
     return
   end subroutine RANDOM_uniform_1D
@@ -164,6 +168,7 @@ contains
     !---------------------------------------------------------------------------
 
     call random_number(var)
+    !$acc update device(var) if(acc_is_present(var))
 
     return
   end subroutine RANDOM_uniform_2D
@@ -176,6 +181,7 @@ contains
     !---------------------------------------------------------------------------
 
     call random_number(var)
+    !$acc update device(var) if(acc_is_present(var))
 
     return
   end subroutine RANDOM_uniform_3D
@@ -259,6 +265,8 @@ contains
        theta = 2.0_RP * PI * rnd(n+1)
        var(n) = fact * cos(theta)
     end if
+
+    !$acc update device(var) if(acc_is_present(var))
 
     return
   end subroutine get_normal

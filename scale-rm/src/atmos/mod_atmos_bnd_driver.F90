@@ -325,38 +325,41 @@ contains
           BND_IQ(iq) = BND_QA
        end do
     endif
-
+    !$acc enter data copyin(BND_IQ)
 
     allocate( ATMOS_BOUNDARY_DENS(KA,IA,JA) )
     allocate( ATMOS_BOUNDARY_VELZ(KA,IA,JA) )
     allocate( ATMOS_BOUNDARY_VELX(KA,IA,JA) )
     allocate( ATMOS_BOUNDARY_VELY(KA,IA,JA) )
     allocate( ATMOS_BOUNDARY_POTT(KA,IA,JA) )
-    allocate( ATMOS_BOUNDARY_QTRC(KA,IA,JA,BND_QA) )
+    allocate( ATMOS_BOUNDARY_QTRC(KA,IA,JA,max(BND_QA,1)) )
     ATMOS_BOUNDARY_DENS(:,:,:)   = UNDEF
     ATMOS_BOUNDARY_VELZ(:,:,:)   = UNDEF
     ATMOS_BOUNDARY_VELX(:,:,:)   = UNDEF
     ATMOS_BOUNDARY_VELY(:,:,:)   = UNDEF
     ATMOS_BOUNDARY_POTT(:,:,:)   = UNDEF
     ATMOS_BOUNDARY_QTRC(:,:,:,:) = UNDEF
+    !$acc enter data create(ATMOS_BOUNDARY_DENS, ATMOS_BOUNDARY_VELZ, ATMOS_BOUNDARY_VELX, ATMOS_BOUNDARY_VELY, ATMOS_BOUNDARY_POTT, ATMOS_BOUNDARY_QTRC)
 
     allocate( ATMOS_BOUNDARY_alpha_DENS(KA,IA,JA) )
     allocate( ATMOS_BOUNDARY_alpha_VELZ(KA,IA,JA) )
     allocate( ATMOS_BOUNDARY_alpha_VELX(KA,IA,JA) )
     allocate( ATMOS_BOUNDARY_alpha_VELY(KA,IA,JA) )
     allocate( ATMOS_BOUNDARY_alpha_POTT(KA,IA,JA) )
-    allocate( ATMOS_BOUNDARY_alpha_QTRC(KA,IA,JA,BND_QA) )
+    allocate( ATMOS_BOUNDARY_alpha_QTRC(KA,IA,JA,max(BND_QA,1)) )
     ATMOS_BOUNDARY_alpha_DENS(:,:,:)   = 0.0_RP
     ATMOS_BOUNDARY_alpha_VELZ(:,:,:)   = 0.0_RP
     ATMOS_BOUNDARY_alpha_VELX(:,:,:)   = 0.0_RP
     ATMOS_BOUNDARY_alpha_VELY(:,:,:)   = 0.0_RP
     ATMOS_BOUNDARY_alpha_POTT(:,:,:)   = 0.0_RP
     ATMOS_BOUNDARY_alpha_QTRC(:,:,:,:) = 0.0_RP
+    !$acc enter data copyin(ATMOS_BOUNDARY_alpha_DENS, ATMOS_BOUNDARY_alpha_VELZ, ATMOS_BOUNDARY_alpha_VELX, ATMOS_BOUNDARY_alpha_VELY, ATMOS_BOUNDARY_alpha_POTT, ATMOS_BOUNDARY_alpha_QTRC)
 
     allocate( ATMOS_BOUNDARY_MFLUX_OFFSET_X(KA,JA,2) )
     allocate( ATMOS_BOUNDARY_MFLUX_OFFSET_Y(KA,IA,2) )
     ATMOS_BOUNDARY_MFLUX_OFFSET_X(:,:,:) = 0.0_RP
     ATMOS_BOUNDARY_MFLUX_OFFSET_Y(:,:,:) = 0.0_RP
+    !$acc enter data copyin(ATMOS_BOUNDARY_MFLUX_OFFSET_X, ATMOS_BOUNDARY_MFLUX_OFFSET_Y)
 
     if ( ATMOS_BOUNDARY_TYPE == 'REAL' .OR. do_daughter_process ) then
        l_bnd = .true.
@@ -370,15 +373,17 @@ contains
        allocate( VELX_ref(KA,IA,JA) )
        allocate( VELY_ref(KA,IA,JA) )
        allocate( POTT_ref(KA,IA,JA) )
-       allocate( QTRC_ref(KA,IA,JA,BND_QA) )
+       allocate( QTRC_ref(KA,IA,JA,max(BND_QA,1)) )
        DENS_ref(:,:,:) = 0.0_RP
        VELX_ref(:,:,:) = 0.0_RP
        VELY_ref(:,:,:) = 0.0_RP
        POTT_ref(:,:,:) = 0.0_RP
        QTRC_ref(:,:,:,:) = 0.0_RP
+       !$acc enter data copyin(DENS_ref, VELX_ref, VELY_ref, POTT_ref, QTRC_ref)
        if ( ATMOS_BOUNDARY_USE_VELZ ) then
           allocate( VELZ_ref(KA,IA,JA) )
           VELZ_ref(:,:,:) = 0.0_RP
+          !$acc enter data copyin(VELZ_ref)
        end if
 
        ! initialize boundary value (reading file or waiting parent domain)
@@ -440,6 +445,8 @@ contains
              zero_y(k,i) = 0.0_RP
           end do
           end do
+
+          !$acc enter data copyin(AREAZUY_W, AREAZUY_E, MFLUX_OFFSET_X, MFLUX_OFFSET_Y, zero_x, zero_y)
        end if
 
     elseif ( ATMOS_BOUNDARY_TYPE == 'NONE' ) then
@@ -524,9 +531,11 @@ contains
 
     if ( ONLINE_SEND_DIAGQHYD ) then
        allocate( Q_SEND_WORK(KA,IA,JA,ONLINE_SEND_QA) )
+       !$acc enter data create( Q_SEND_WORK )
     end if
     if ( ONLINE_RECV_DIAGQHYD ) then
        allocate( Q_RECV_WORK(KA,IA,JA,ONLINE_RECV_QA) )
+       !$acc enter data create( Q_RECV_WORK )
     end if
 
     return
@@ -631,26 +640,26 @@ contains
     integer :: i, j, iq
     !---------------------------------------------------------------------------
 
-    do j = 1, JA
-    do i = 1, IA
-       ATMOS_BOUNDARY_DENS(   1:KS-1,i,j) = ATMOS_BOUNDARY_DENS(KS,i,j)
-       ATMOS_BOUNDARY_VELZ(   1:KS-1,i,j) = ATMOS_BOUNDARY_VELZ(KS,i,j)
-       ATMOS_BOUNDARY_VELX(   1:KS-1,i,j) = ATMOS_BOUNDARY_VELX(KS,i,j)
-       ATMOS_BOUNDARY_VELY(   1:KS-1,i,j) = ATMOS_BOUNDARY_VELY(KS,i,j)
-       ATMOS_BOUNDARY_POTT(   1:KS-1,i,j) = ATMOS_BOUNDARY_POTT(KS,i,j)
-
-       ATMOS_BOUNDARY_DENS(KE+1:KA,  i,j) = ATMOS_BOUNDARY_DENS(KE,i,j)
-       ATMOS_BOUNDARY_VELZ(KE+1:KA,  i,j) = ATMOS_BOUNDARY_VELZ(KE,i,j)
-       ATMOS_BOUNDARY_VELX(KE+1:KA,  i,j) = ATMOS_BOUNDARY_VELX(KE,i,j)
-       ATMOS_BOUNDARY_VELY(KE+1:KA,  i,j) = ATMOS_BOUNDARY_VELY(KE,i,j)
-       ATMOS_BOUNDARY_POTT(KE+1:KA,  i,j) = ATMOS_BOUNDARY_POTT(KE,i,j)
-
-       do iq = 1, BND_QA
-          ATMOS_BOUNDARY_QTRC(   1:KS-1,i,j,iq) = ATMOS_BOUNDARY_QTRC(KS,i,j,iq)
-          ATMOS_BOUNDARY_QTRC(KE+1:KA,  i,j,iq) = ATMOS_BOUNDARY_QTRC(KE,i,j,iq)
-       end do
-    end do
-    end do
+!!$    do j = 1, JA
+!!$    do i = 1, IA
+!!$       ATMOS_BOUNDARY_DENS(   1:KS-1,i,j) = ATMOS_BOUNDARY_DENS(KS,i,j)
+!!$       ATMOS_BOUNDARY_VELZ(   1:KS-1,i,j) = ATMOS_BOUNDARY_VELZ(KS,i,j)
+!!$       ATMOS_BOUNDARY_VELX(   1:KS-1,i,j) = ATMOS_BOUNDARY_VELX(KS,i,j)
+!!$       ATMOS_BOUNDARY_VELY(   1:KS-1,i,j) = ATMOS_BOUNDARY_VELY(KS,i,j)
+!!$       ATMOS_BOUNDARY_POTT(   1:KS-1,i,j) = ATMOS_BOUNDARY_POTT(KS,i,j)
+!!$
+!!$       ATMOS_BOUNDARY_DENS(KE+1:KA,  i,j) = ATMOS_BOUNDARY_DENS(KE,i,j)
+!!$       ATMOS_BOUNDARY_VELZ(KE+1:KA,  i,j) = ATMOS_BOUNDARY_VELZ(KE,i,j)
+!!$       ATMOS_BOUNDARY_VELX(KE+1:KA,  i,j) = ATMOS_BOUNDARY_VELX(KE,i,j)
+!!$       ATMOS_BOUNDARY_VELY(KE+1:KA,  i,j) = ATMOS_BOUNDARY_VELY(KE,i,j)
+!!$       ATMOS_BOUNDARY_POTT(KE+1:KA,  i,j) = ATMOS_BOUNDARY_POTT(KE,i,j)
+!!$
+!!$       do iq = 1, BND_QA
+!!$          ATMOS_BOUNDARY_QTRC(   1:KS-1,i,j,iq) = ATMOS_BOUNDARY_QTRC(KS,i,j,iq)
+!!$          ATMOS_BOUNDARY_QTRC(KE+1:KA,  i,j,iq) = ATMOS_BOUNDARY_QTRC(KE,i,j,iq)
+!!$       end do
+!!$    end do
+!!$    end do
 
     call COMM_vars8( ATMOS_BOUNDARY_DENS(:,:,:),   1 )
     call COMM_vars8( ATMOS_BOUNDARY_VELZ(:,:,:),   2 )
@@ -684,26 +693,26 @@ contains
     integer :: i, j, iq
     !---------------------------------------------------------------------------
 
-    do j = 1, JA
-    do i = 1, IA
-       ATMOS_BOUNDARY_alpha_DENS(   1:KS-1,i,j) = ATMOS_BOUNDARY_alpha_DENS(KS,i,j)
-       ATMOS_BOUNDARY_alpha_VELZ(   1:KS-1,i,j) = ATMOS_BOUNDARY_alpha_VELZ(KS,i,j)
-       ATMOS_BOUNDARY_alpha_VELX(   1:KS-1,i,j) = ATMOS_BOUNDARY_alpha_VELX(KS,i,j)
-       ATMOS_BOUNDARY_alpha_VELY(   1:KS-1,i,j) = ATMOS_BOUNDARY_alpha_VELY(KS,i,j)
-       ATMOS_BOUNDARY_alpha_POTT(   1:KS-1,i,j) = ATMOS_BOUNDARY_alpha_POTT(KS,i,j)
-
-       ATMOS_BOUNDARY_alpha_DENS(KE+1:KA,  i,j) = ATMOS_BOUNDARY_alpha_DENS(KE,i,j)
-       ATMOS_BOUNDARY_alpha_VELZ(KE+1:KA,  i,j) = ATMOS_BOUNDARY_alpha_VELZ(KE,i,j)
-       ATMOS_BOUNDARY_alpha_VELX(KE+1:KA,  i,j) = ATMOS_BOUNDARY_alpha_VELX(KE,i,j)
-       ATMOS_BOUNDARY_alpha_VELY(KE+1:KA,  i,j) = ATMOS_BOUNDARY_alpha_VELY(KE,i,j)
-       ATMOS_BOUNDARY_alpha_POTT(KE+1:KA,  i,j) = ATMOS_BOUNDARY_alpha_POTT(KE,i,j)
-
-       do iq = 1, BND_QA
-          ATMOS_BOUNDARY_alpha_QTRC(   1:KS-1,i,j,iq) = ATMOS_BOUNDARY_alpha_QTRC(KS,i,j,iq)
-          ATMOS_BOUNDARY_alpha_QTRC(KE+1:KA,  i,j,iq) = ATMOS_BOUNDARY_alpha_QTRC(KE,i,j,iq)
-       end do
-    enddo
-    enddo
+!!$    do j = 1, JA
+!!$    do i = 1, IA
+!!$       ATMOS_BOUNDARY_alpha_DENS(   1:KS-1,i,j) = ATMOS_BOUNDARY_alpha_DENS(KS,i,j)
+!!$       ATMOS_BOUNDARY_alpha_VELZ(   1:KS-1,i,j) = ATMOS_BOUNDARY_alpha_VELZ(KS,i,j)
+!!$       ATMOS_BOUNDARY_alpha_VELX(   1:KS-1,i,j) = ATMOS_BOUNDARY_alpha_VELX(KS,i,j)
+!!$       ATMOS_BOUNDARY_alpha_VELY(   1:KS-1,i,j) = ATMOS_BOUNDARY_alpha_VELY(KS,i,j)
+!!$       ATMOS_BOUNDARY_alpha_POTT(   1:KS-1,i,j) = ATMOS_BOUNDARY_alpha_POTT(KS,i,j)
+!!$
+!!$       ATMOS_BOUNDARY_alpha_DENS(KE+1:KA,  i,j) = ATMOS_BOUNDARY_alpha_DENS(KE,i,j)
+!!$       ATMOS_BOUNDARY_alpha_VELZ(KE+1:KA,  i,j) = ATMOS_BOUNDARY_alpha_VELZ(KE,i,j)
+!!$       ATMOS_BOUNDARY_alpha_VELX(KE+1:KA,  i,j) = ATMOS_BOUNDARY_alpha_VELX(KE,i,j)
+!!$       ATMOS_BOUNDARY_alpha_VELY(KE+1:KA,  i,j) = ATMOS_BOUNDARY_alpha_VELY(KE,i,j)
+!!$       ATMOS_BOUNDARY_alpha_POTT(KE+1:KA,  i,j) = ATMOS_BOUNDARY_alpha_POTT(KE,i,j)
+!!$
+!!$       do iq = 1, BND_QA
+!!$          ATMOS_BOUNDARY_alpha_QTRC(   1:KS-1,i,j,iq) = ATMOS_BOUNDARY_alpha_QTRC(KS,i,j,iq)
+!!$          ATMOS_BOUNDARY_alpha_QTRC(KE+1:KA,  i,j,iq) = ATMOS_BOUNDARY_alpha_QTRC(KE,i,j,iq)
+!!$       end do
+!!$    enddo
+!!$    enddo
 
     call COMM_vars8( ATMOS_BOUNDARY_alpha_DENS(:,:,:),   1 )
     call COMM_vars8( ATMOS_BOUNDARY_alpha_VELZ(:,:,:),   2 )
@@ -722,6 +731,8 @@ contains
     do iq = 1, BND_QA
        call COMM_wait ( ATMOS_BOUNDARY_alpha_QTRC(:,:,:,iq), 5+iq, .false. )
     end do
+
+    !$acc update host(ATMOS_BOUNDARY_alpha_DENS,ATMOS_BOUNDARY_alpha_VELZ,ATMOS_BOUNDARY_alpha_VELX,ATMOS_BOUNDARY_alpha_VELY,ATMOS_BOUNDARY_alpha_POTT)
 
     return
   end subroutine ATMOS_BOUNDARY_alpha_fillhalo
@@ -798,6 +809,7 @@ contains
     !$omp shared(alpha_nug) &
     !$omp private(i,j,k,iq) &
     !$omp private(ee1,ee2,alpha_z1,alpha_z2,alpha_x1,alpha_x2,alpha_y1,alpha_y2,alpha_zm,alpha_xm,alpha_ym)
+    !$acc kernels
     do j = 1, JA
     do i = 1, IA
     do k = KS, KE
@@ -895,6 +907,7 @@ contains
           ATMOS_BOUNDARY_alpha_VELX(k,i,j) = max( alpha_z1, alpha_x2, alpha_y1 ) * ATMOS_BOUNDARY_ALPHAFACT_VELX
           ATMOS_BOUNDARY_alpha_VELY(k,i,j) = max( alpha_z1, alpha_x1, alpha_y2 ) * ATMOS_BOUNDARY_ALPHAFACT_VELY
           ATMOS_BOUNDARY_alpha_POTT(k,i,j) = max( alpha_z1, alpha_x1, alpha_y1 ) * ATMOS_BOUNDARY_ALPHAFACT_PT
+          !$acc loop seq
           do iq = 1, BND_QA
              ATMOS_BOUNDARY_alpha_QTRC(k,i,j,iq) = max( alpha_z1, alpha_x1, alpha_y1 ) * ATMOS_BOUNDARY_ALPHAFACT_QTRC
           end do
@@ -924,6 +937,7 @@ contains
           else
              ATMOS_BOUNDARY_alpha_POTT(k,i,j) = 0.0_RP
           end if
+          !$acc loop seq
           do iq = 1, BND_QA
              if ( I_QV > 0 .and. iq == BND_IQ(I_QV) ) then
                 if ( ATMOS_BOUNDARY_USE_QV ) then
@@ -953,7 +967,7 @@ contains
     enddo
     enddo
     enddo
-
+    !$acc end kernels
 
     call ATMOS_BOUNDARY_alpha_fillhalo
 
@@ -976,12 +990,16 @@ contains
     integer :: i, j, k, iq, iqb
     !---------------------------------------------------------------------------
 
+    !$acc data copyin(DENS, MOMZ, MOMX, MOMY, RHOT, QTRC)
+
+    !$acc kernels
     do j = 1, JA
     do i = 1, IA
     do k = KS, KE
        ATMOS_BOUNDARY_DENS(k,i,j) = DENS(k,i,j)
        ATMOS_BOUNDARY_VELZ(k,i,j) = MOMZ(k,i,j) / ( DENS(k,i,j)+DENS(k+1,i,  j  ) ) * 2.0_RP
        ATMOS_BOUNDARY_POTT(k,i,j) = RHOT(k,i,j) / DENS(k,i,j)
+       !$acc loop seq
        do iq = 1, QA
           iqb = BND_IQ(iq)
           if ( iqb > 0 ) ATMOS_BOUNDARY_QTRC(k,i,j,iqb) = QTRC(k,i,j,iq)
@@ -989,7 +1007,9 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
 
+    !$acc kernels
     do j = 1, JA
     do i = 1, IA-1
     do k = KS, KE
@@ -997,12 +1017,16 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
+    !$acc kernels
     do j = 1, JA
     do k = KS, KE
        ATMOS_BOUNDARY_VELX(k,IA,j) = MOMX(k,IA,j) / DENS(k,IA,j)
     enddo
     enddo
+    !$acc end kernels
 
+    !$acc kernels
     do j = 1, JA-1
     do i = 1, IA
     do k = KS, KE
@@ -1010,13 +1034,18 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
+    !$acc kernels
     do i = 1, IA
     do k = KS, KE
        ATMOS_BOUNDARY_VELY(k,i,JA) = MOMY(k,i,JA) / DENS(k,i,JA)
     enddo
     enddo
+    !$acc end kernels
 
     call ATMOS_BOUNDARY_var_fillhalo
+
+    !$acc end data
 
     return
   end subroutine ATMOS_BOUNDARY_setinitval
@@ -1030,6 +1059,7 @@ contains
        FILE_CARTESC_open, &
        FILE_CARTESC_check_coordinates, &
        FILE_CARTESC_read, &
+       FILE_CARTESC_flush, &
        FILE_CARTESC_close
     implicit none
 
@@ -1050,29 +1080,53 @@ contains
          .OR. ATMOS_BOUNDARY_USE_PT &
          ) then
        call FILE_CARTESC_read( fid, 'DENS', 'ZXY', ATMOS_BOUNDARY_DENS(:,:,:) )
+#ifdef _OPENACC
+       call FILE_CARTESC_flush(fid)
+#endif
+       !$acc update device(ATMOS_BOUNDARY_DENS)
     end if
     if ( ATMOS_BOUNDARY_USE_DENS ) then
        call FILE_CARTESC_read( fid, 'ALPHA_DENS', 'ZXY', ATMOS_BOUNDARY_alpha_DENS(:,:,:) )
+#ifdef _OPENACC
+       call FILE_CARTESC_flush(fid)
+#endif
+       !$acc update device(ATMOS_BOUNDARY_alpha_DENS)
     endif
 
     if ( ATMOS_BOUNDARY_USE_VELZ ) then
        call FILE_CARTESC_read( fid, 'VELZ', 'ZHXY', ATMOS_BOUNDARY_VELZ(:,:,:) )
        call FILE_CARTESC_read( fid, 'ALPHA_VELZ', 'ZHXY', ATMOS_BOUNDARY_alpha_VELZ(:,:,:) )
+#ifdef _OPENACC
+       call FILE_CARTESC_flush(fid)
+#endif
+       !$acc update device(ATMOS_BOUNDARY_VELZ, ATMOS_BOUNDARY_alpha_VELZ)
     endif
 
     if ( ATMOS_BOUNDARY_USE_VELX ) then
        call FILE_CARTESC_read( fid, 'VELX', 'ZXHY', ATMOS_BOUNDARY_VELX(:,:,:) )
        call FILE_CARTESC_read( fid, 'ALPHA_VELX', 'ZXHY', ATMOS_BOUNDARY_alpha_VELX(:,:,:) )
+#ifdef _OPENACC
+       call FILE_CARTESC_flush(fid)
+#endif
+       !$acc update device(ATMOS_BOUNDARY_VELX, ATMOS_BOUNDARY_alpha_VELX)
     endif
 
     if ( ATMOS_BOUNDARY_USE_VELY ) then
        call FILE_CARTESC_read( fid, 'VELY', 'ZXYH', ATMOS_BOUNDARY_VELY(:,:,:) )
        call FILE_CARTESC_read( fid, 'ALPHA_VELY', 'ZXYH', ATMOS_BOUNDARY_alpha_VELY(:,:,:) )
+#ifdef _OPENACC
+       call FILE_CARTESC_flush(fid)
+#endif
+       !$acc update device(ATMOS_BOUNDARY_VELY, ATMOS_BOUNDARY_alpha_VELY)
     endif
 
     if ( ATMOS_BOUNDARY_USE_PT ) then
        call FILE_CARTESC_read( fid, 'PT', 'ZXY', ATMOS_BOUNDARY_POTT(:,:,:) )
        call FILE_CARTESC_read( fid, 'ALPHA_PT', 'ZXY', ATMOS_BOUNDARY_alpha_POTT(:,:,:) )
+#ifdef _OPENACC
+       call FILE_CARTESC_flush(fid)
+#endif
+       !$acc update device(ATMOS_BOUNDARY_POTT, ATMOS_BOUNDARY_alpha_POTT)
     endif
 
     do iq = 1, QA
@@ -1081,6 +1135,10 @@ contains
           call FILE_CARTESC_read( fid, TRACER_NAME(iq), 'ZXY', ATMOS_BOUNDARY_QTRC(:,:,:,iqb) )
           call FILE_CARTESC_read( fid, 'ALPHA_'//trim(TRACER_NAME(iq)), 'ZXY', ATMOS_BOUNDARY_alpha_QTRC(:,:,:,iqb) )
        endif
+#ifdef _OPENACC
+       call FILE_CARTESC_flush(fid)
+       !$acc update device(ATMOS_BOUNDARY_QTRC, ATMOS_BOUNDARY_alpha_QTRC)
+#endif
     end do
 
     call FILE_CARTESC_close( fid )
@@ -1228,6 +1286,7 @@ contains
     !---------------------------------------------------------------------------
 
     !$omp parallel do collapse(2)
+    !$acc kernels
     do j = 1, JA
     do i = 1, IA
     do k = KS, KE
@@ -1236,12 +1295,14 @@ contains
        ATMOS_BOUNDARY_VELX(k,i,j) = ATMOS_BOUNDARY_VALUE_VELX
        ATMOS_BOUNDARY_VELY(k,i,j) = ATMOS_BOUNDARY_VALUE_VELY
        ATMOS_BOUNDARY_POTT(k,i,j) = ATMOS_BOUNDARY_VALUE_PT
+       !$acc loop seq
        do iq = 1, BND_QA
           ATMOS_BOUNDARY_QTRC(k,i,j,iq) = ATMOS_BOUNDARY_VALUE_QTRC
        end do
     enddo
     enddo
     enddo
+    !$acc end kernels
 
     call ATMOS_BOUNDARY_var_fillhalo
 
@@ -1301,6 +1362,7 @@ contains
 
     if ( ATMOS_BOUNDARY_USE_VELZ ) then
        !$omp parallel do collapse(2)
+       !$acc kernels
        do j = 1, JA
        do i = 1, IA
        do k = KS, KE
@@ -1308,6 +1370,7 @@ contains
        end do
        end do
        end do
+       !$acc end kernels
     end if
 
     return
@@ -1504,7 +1567,10 @@ contains
        call COMM_CARTESC_NEST_recv_cancel_recv
     endif
 
+    !$acc exit data delete(BND_IQ)
     deallocate( BND_IQ )
+
+    !$acc exit data delete(ATMOS_BOUNDARY_DENS, ATMOS_BOUNDARY_VELZ, ATMOS_BOUNDARY_VELX, ATMOS_BOUNDARY_VELY, ATMOS_BOUNDARY_POTT, ATMOS_BOUNDARY_QTRC)
     deallocate( ATMOS_BOUNDARY_DENS )
     deallocate( ATMOS_BOUNDARY_VELZ )
     deallocate( ATMOS_BOUNDARY_VELX )
@@ -1512,6 +1578,7 @@ contains
     deallocate( ATMOS_BOUNDARY_POTT )
     deallocate( ATMOS_BOUNDARY_QTRC )
 
+    !$acc exit data delete(ATMOS_BOUNDARY_alpha_DENS, ATMOS_BOUNDARY_alpha_VELZ, ATMOS_BOUNDARY_alpha_VELX, ATMOS_BOUNDARY_alpha_VELY, ATMOS_BOUNDARY_alpha_POTT, ATMOS_BOUNDARY_alpha_QTRC)
     deallocate( ATMOS_BOUNDARY_alpha_DENS )
     deallocate( ATMOS_BOUNDARY_alpha_VELZ )
     deallocate( ATMOS_BOUNDARY_alpha_VELX )
@@ -1519,10 +1586,12 @@ contains
     deallocate( ATMOS_BOUNDARY_alpha_POTT )
     deallocate( ATMOS_BOUNDARY_alpha_QTRC )
 
+    !$acc exit data delete(ATMOS_BOUNDARY_MFLUX_OFFSET_X, ATMOS_BOUNDARY_MFLUX_OFFSET_Y)
     deallocate( ATMOS_BOUNDARY_MFLUX_OFFSET_X )
     deallocate( ATMOS_BOUNDARY_MFLUX_OFFSET_Y )
 
     if ( l_bnd ) then
+       !$acc exit data delete(DENS_ref, VELX_ref, VELY_ref, POTT_ref, QTRC_ref)
        deallocate( DENS_ref )
        deallocate( VELX_ref )
        deallocate( VELY_ref )
@@ -1530,10 +1599,12 @@ contains
        deallocate( QTRC_ref )
 
        if ( ATMOS_BOUNDARY_USE_VELZ ) then
+          !$acc exit data delete(VELZ_ref)
           deallocate( VELZ_ref )
        end if
 
        if ( ATMOS_BOUNDARY_DENS_ADJUST ) then
+          !$acc exit data delete(AREAZUY_W, AREAZUY_E, MFLUX_OFFSET_X, MFLUX_OFFSET_Y, zero_x, zero_y)
           deallocate( AREAZUY_W, AREAZUY_E )
           deallocate( MFLUX_OFFSET_X, MFLUX_OFFSET_Y )
           deallocate( zero_x )
@@ -1541,8 +1612,14 @@ contains
        end if
     end if
 
-    if ( allocated( Q_SEND_WORK ) ) deallocate( Q_SEND_WORK )
-    if ( allocated( Q_RECV_WORK ) ) deallocate( Q_RECV_WORK )
+    if ( allocated( Q_SEND_WORK ) ) then
+       !$acc exit data delete(Q_SEND_WORK)
+       deallocate( Q_SEND_WORK )
+    end if
+    if ( allocated( Q_RECV_WORK ) ) then
+       !$acc exit data delete(Q_RECV_WORK)
+       deallocate( Q_RECV_WORK )
+    end if
 
 
     return
@@ -1855,12 +1932,18 @@ contains
     integer :: iq
     !---------------------------------------------------------------------------
 
+    !$acc data copyin(DENS, MOMZ, MOMX, MOMY, RHOT, QTRC, QV, Qe)
+
     if ( ONLINE_SEND_DIAGQHYD ) then
        Q => Q_SEND_WORK
+       !$acc kernels
        Q(:,:,:,1) = QV(:,:,:)
+       !$acc end kernels
+       !$acc kernels
        do iq = 2, ONLINE_SEND_QA
           Q(:,:,:,iq) = Qe(:,:,:,iq-1)
        end do
+       !$acc end kernels
     else
        Q => QTRC
     end if
@@ -1871,6 +1954,8 @@ contains
                                           MOMY(:,:,:),      &  !(KA,IA,JA)
                                           RHOT(:,:,:),      &  !(KA,IA,JA)
                                           Q   (:,:,:,:)     )  !(KA,IA,JA,NESTQA)
+
+    !$acc end data
 
     return
   end subroutine ATMOS_BOUNDARY_send
@@ -1932,6 +2017,7 @@ contains
 
     integer :: i, j, k, iq, iqb
 
+    !$acc data copy(DENS, MOMZ, MOMX, MOMY, RHOT, QTRC)
 
     ! fill HALO in western region
     if ( .NOT. PRC_HAS_W ) then
@@ -1941,6 +2027,8 @@ contains
        !$omp shared(ATMOS_BOUNDARY_POTT,ATMOS_BOUNDARY_QTRC) &
        !$omp shared(BND_QA,BND_IQ) &
        !$omp private(i,j,k,iq,iqb)
+       !$acc kernels
+       !$acc loop collapse(3) independent
        do j = 1, JA
        do i = 1, IS-1
        do k = KS, KE
@@ -1948,6 +2036,7 @@ contains
           MOMX(k,i,j) = ATMOS_BOUNDARY_VELX(k,i,j) &
                   * ( ATMOS_BOUNDARY_DENS(k,i,j) + ATMOS_BOUNDARY_DENS(k,i+1,j) ) * 0.5_RP
           RHOT(k,i,j) = ATMOS_BOUNDARY_POTT(k,i,j) * ATMOS_BOUNDARY_DENS(k,i,j)
+          !$acc loop seq
           do iq = 1, QA
              iqb = BND_IQ(iq)
              if ( iqb > 0 ) then
@@ -1959,7 +2048,9 @@ contains
        end do
        end do
        end do
+       !$acc end kernels
        !$omp parallel do
+       !$acc kernels
        do j = 1, JA-1
        do i = 1, IS-1
        do k = KS, KE
@@ -1968,14 +2059,18 @@ contains
        end do
        end do
        end do
+       !$acc end kernels
+       !$acc kernels
        do i = 1, IS-1
        do k = KS, KE
           MOMY(k,i,JA) = ATMOS_BOUNDARY_VELY(k,i,JA) &
                   * ATMOS_BOUNDARY_DENS(k,i,JA)
        end do
        end do
+       !$acc end kernels
        if ( ATMOS_BOUNDARY_USE_VELZ ) then
           !$omp parallel do
+          !$acc kernels
           do j = 1, JA
           do i = 1, IS-1
           do k = KS, KE-1
@@ -1984,15 +2079,19 @@ contains
           end do
           end do
           end do
+          !$acc end kernels
        else
           !$omp parallel do
+          !$acc kernels
           do j = 1, JA
+          !$acc loop independent
           do i = 1, IS-1
           do k = KS, KE-1
              MOMZ(k,i,j) = MOMZ(k,IS,j)
           end do
           end do
           end do
+          !$acc end kernels
        end if
     end if
 
@@ -2005,11 +2104,14 @@ contains
        !$omp shared(ATMOS_BOUNDARY_POTT,ATMOS_BOUNDARY_QTRC) &
        !$omp shared(BND_QA,BND_IQ) &
        !$omp private(i,j,k,iq,iqb)
+       !$acc kernels
+       !$acc loop collapse(3) independent
        do j = 1, JA
        do i = IE+1, IA
        do k = KS, KE
           DENS(k,i,j) = ATMOS_BOUNDARY_DENS(k,i,j)
           RHOT(k,i,j) = ATMOS_BOUNDARY_POTT(k,i,j) * ATMOS_BOUNDARY_DENS(k,i,j)
+          !$acc loop seq
           do iq = 1, QA
              iqb = BND_IQ(iq)
              if ( iqb > 0 ) then
@@ -2021,7 +2123,9 @@ contains
        end do
        end do
        end do
+       !$acc end kernels
        !$omp parallel do
+       !$acc kernels
        do j = 1, JA
        do i = IE, IA-1
        do k = KS, KE
@@ -2030,13 +2134,17 @@ contains
        end do
        end do
        end do
+       !$acc end kernels
        !$omp parallel do
+       !$acc kernels
        do j = 1, JA
        do k = KS, KE
           MOMX(k,IA,j) = ATMOS_BOUNDARY_VELX(k,IA,j) * ATMOS_BOUNDARY_DENS(k,IA,j)
        end do
        end do
+       !$acc end kernels
        !$omp parallel do
+       !$acc kernels
        do j = 1, JA-1
        do i = IE+1, IA
        do k = KS, KE
@@ -2045,14 +2153,18 @@ contains
        end do
        end do
        end do
+       !$acc end kernels
+       !$acc kernels
        do i = IE+1, IA
        do k = KS, KE
           MOMY(k,i,JA) = ATMOS_BOUNDARY_VELY(k,i,JA) &
                   * ATMOS_BOUNDARY_DENS(k,i,JA)
        end do
        end do
+       !$acc end kernels
        if ( ATMOS_BOUNDARY_USE_VELZ ) then
           !$omp parallel do
+          !$acc kernels
           do j = 1, JA
           do i = IE+1, IA
           do k = KS, KE-1
@@ -2061,8 +2173,10 @@ contains
           end do
           end do
           end do
+          !$acc end kernels
        else
           !$omp parallel do
+          !$acc kernels
           do j = 1, JA
           do i = IE+1, IA
           do k = KS, KE-1
@@ -2070,11 +2184,14 @@ contains
           end do
           end do
           end do
+          !$acc end kernels
        end if
     end if
 
     ! fill HALO in southern region
     if ( .NOT. PRC_HAS_S ) then
+       !$acc kernels
+       !$acc loop collapse(3) independent
        do j = 1, JS-1
        do i = 1, IA
        do k = KS, KE
@@ -2082,6 +2199,7 @@ contains
           MOMY(k,i,j) = ATMOS_BOUNDARY_VELY(k,i,j) &
                   * ( ATMOS_BOUNDARY_DENS(k,i,j) + ATMOS_BOUNDARY_DENS(k,i,j+1) ) * 0.5_RP
           RHOT(k,i,j) = ATMOS_BOUNDARY_POTT(k,i,j) * ATMOS_BOUNDARY_DENS(k,i,j)
+          !$acc loop seq
           do iq = 1, QA
              iqb = BND_IQ(iq)
              if ( iqb > 0 ) then
@@ -2093,6 +2211,8 @@ contains
        end do
        end do
        end do
+       !$acc end kernels
+       !$acc kernels
        do j = 1, JS-1
        do i = 1, IA-1
        do k = KS, KE
@@ -2101,13 +2221,17 @@ contains
        end do
        end do
        end do
+       !$acc end kernels
+       !$acc kernels
        do j = 1, JS-1
        do k = KS, KE
           MOMX(k,IA,j) = ATMOS_BOUNDARY_VELX(k,IA,j) &
                   * ATMOS_BOUNDARY_DENS(k,IA,j)
        end do
        end do
+       !$acc end kernels
        if ( ATMOS_BOUNDARY_USE_VELZ ) then
+          !$acc kernels
           do j = 1, JS-1
           do i = 1, IA
           do k = KS, KE-1
@@ -2116,7 +2240,10 @@ contains
           end do
           end do
           end do
+          !$acc end kernels
        else
+          !$acc kernels
+          !$acc loop independent
           do j = 1, JS-1
           do i = 1, IA
           do k = KS, KE-1
@@ -2124,16 +2251,20 @@ contains
           end do
           end do
           end do
+          !$acc end kernels
        end if
     end if
 
     ! fill HALO in northern region
     if ( .NOT. PRC_HAS_N ) then
+       !$acc kernels
+       !$acc loop collapse(3) independent
        do j = JE+1, JA
        do i = 1, IA
        do k = KS, KE
           DENS(k,i,j) = ATMOS_BOUNDARY_DENS(k,i,j)
           RHOT(k,i,j) = ATMOS_BOUNDARY_POTT(k,i,j) * ATMOS_BOUNDARY_DENS(k,i,j)
+          !$acc loop seq
           do iq = 1, QA
              iqb = BND_IQ(iq)
              if ( iqb > 0 ) then
@@ -2145,6 +2276,8 @@ contains
        end do
        end do
        end do
+       !$acc end kernels
+       !$acc kernels
        do j = JE, JA-1
        do i = 1, IA
        do k = KS, KE
@@ -2153,11 +2286,15 @@ contains
        end do
        end do
        end do
+       !$acc end kernels
+       !$acc kernels
        do i = 1, IA
        do k = KS, KE
           MOMY(k,i,JA) = ATMOS_BOUNDARY_VELY(k,i,JA) * ATMOS_BOUNDARY_DENS(k,i,JA)
        end do
        end do
+       !$acc end kernels
+       !$acc kernels
        do j = JE+1, JA
        do i = 1, IA-1
        do k = KS, KE
@@ -2166,13 +2303,17 @@ contains
        end do
        end do
        end do
+       !$acc end kernels
+       !$acc kernels
        do j = JE+1, JA
        do k = KS, KE
           MOMX(k,IA,j) = ATMOS_BOUNDARY_VELX(k,IA,j) &
                   * ATMOS_BOUNDARY_DENS(k,IA,j)
        end do
        end do
+       !$acc end kernels
        if ( ATMOS_BOUNDARY_USE_VELZ ) then
+          !$acc kernels
           do j = JE+1, JA
           do i = 1, IA
           do k = KS, KE-1
@@ -2181,7 +2322,9 @@ contains
           end do
           end do
           end do
+          !$acc end kernels
        else
+          !$acc kernels
           do j = JE+1, JA
           do i = 1, IA
           do k = KS, KE-1
@@ -2189,8 +2332,11 @@ contains
           end do
           end do
           end do
+          !$acc end kernels
        end if
     end if
+
+    !$acc end data
 
     return
   end subroutine set_boundary
@@ -2264,6 +2410,8 @@ contains
 
     integer :: k, i, j
 
+    !$acc data create(work_x, work_y)
+
     ! total mass
     call STATISTICS_total( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
                            DENS_ref(:,:,:),                        & ! (in)
@@ -2282,12 +2430,14 @@ contains
     ! West
     if ( .NOT. PRC_HAS_W ) then
        !$omp parallel do
+       !$acc kernels
        do j = JS, JE
        do k = KS, KE
           work_x(k,j) = VELX_ref(k,IS-1,j) &
                       * ( DENS_ref(k,IS-1,j) + DENS_ref(k,IS,j) ) * 0.5_RP
        end do
        end do
+       !$acc end kernels
        ptr => work_x
     else
        ptr => zero_x
@@ -2299,11 +2449,13 @@ contains
                            sum = flx_w                             ) ! (out)
     if ( .NOT. PRC_HAS_W ) then
        !$omp parallel do
+       !$acc kernels
        do j = JS, JE
        do k = KS, KE
           work_x(k,j) = DENS_ref(k,IS,j)
        end do
        end do
+       !$acc end kernels
     end if
     call STATISTICS_total( KA, KS, KE, JA, JS, JE, &
                            ptr(:,:), "DENS_ref_w",                 & ! (in)
@@ -2314,12 +2466,14 @@ contains
     ! East
     if ( .NOT. PRC_HAS_E ) then
        !$omp parallel do
+       !$acc kernels
        do j = JS, JE
        do k = KS, KE
           work_x(k,j) = VELX_ref(k,IE,j) &
                       * ( DENS_ref(k,IE,j) + DENS_ref(k,IE+1,j) ) * 0.5_RP
        end do
        end do
+       !$acc end kernels
        ptr => work_x
     else
        ptr => zero_x
@@ -2331,11 +2485,13 @@ contains
                            sum = flx_e                             ) ! (out)
     if ( .NOT. PRC_HAS_E ) then
        !$omp parallel do
+       !$acc kernels
        do j = JS, JE
        do k = KS, KE
           work_x(k,j) = DENS_ref(k,IE,j)
        end do
        end do
+       !$acc end kernels
     end if
     call STATISTICS_total( KA, KS, KE, JA, JS, JE, &
                            ptr(:,:), "DENS_ref_e",                 & ! (in)
@@ -2346,12 +2502,14 @@ contains
     ! South
     if ( .NOT. PRC_HAS_S ) then
        !$omp parallel do
+       !$acc kernels
        do i = IS, IE
        do k = KS, KE
           work_y(k,i) = VELY_ref(k,i,JS-1) &
                       * ( DENS_ref(k,i,JS-1) + DENS_ref(k,i,JS) ) * 0.5_RP
        end do
        end do
+       !$acc end kernels
        ptr => work_y
     else
        ptr => zero_y
@@ -2363,11 +2521,13 @@ contains
                            sum = flx_s                              ) ! (out)
     if ( .NOT. PRC_HAS_S ) then
        !$omp parallel do
+       !$acc kernels
        do i = IS, IE
        do k = KS, KE
           work_y(k,i) = DENS_ref(k,i,JS)
        end do
        end do
+       !$acc end kernels
     end if
     call STATISTICS_total( KA, KS, KE, IA, IS, IE, &
                            ptr(:,:), "DENS_ref_s",                  & ! (in)
@@ -2378,12 +2538,14 @@ contains
     ! North
     if ( .NOT. PRC_HAS_N ) then
        !$omp parallel do
+       !$acc kernels
        do i = IS, IE
        do k = KS, KE
           work_y(k,i) = VELY_ref(k,i,JE) &
                       * ( DENS_ref(k,i,JE) + DENS_ref(k,i,JE+1) ) * 0.5_RP
        end do
        end do
+       !$acc end kernels
        ptr => work_y
     else
        ptr => zero_y
@@ -2395,11 +2557,13 @@ contains
                            sum = flx_n                             ) ! (out)
     if ( .NOT. PRC_HAS_N ) then
        !$omp parallel do
+       !$acc kernels
        do i = IS, IE
        do k = KS, KE
           work_y(k,i) = DENS_ref(k,i,JE)
        end do
        end do
+       !$acc end kernels
     end if
     call STATISTICS_total( KA, KS, KE, IA, IS, IE, &
                            ptr(:,:), "DENS_ref_n",                 & ! (in)
@@ -2424,43 +2588,53 @@ contains
     ! density of the reference state is used as weight
     if ( .not. PRC_HAS_W ) then
        !$omp parallel do
+       !$acc kernels
        do j = JS, JE
        do k = KS, KE
           MFLUX_OFFSET_X(k,j,1,1) = offset_band * DENS_ref(k,IS,j)
 !          MFLUX_OFFSET_X(k,j,1,2) = offset_bias * DENS_ref(k,IS,j)
        end do
        end do
+       !$acc end kernels
     end if
     if ( .not. PRC_HAS_E ) then
        !$omp parallel do
+       !$acc kernels
        do j = JS, JE
        do k = KS, KE
           MFLUX_OFFSET_X(k,j,2,1) = - offset_band * DENS_ref(k,IE,j)
 !          MFLUX_OFFSET_X(k,j,2,2) = - offset_bias * DENS_ref(k,IE,j)
        end do
        end do
+       !$acc end kernels
     end if
     if ( .not. PRC_HAS_S ) then
        !$omp parallel do
+       !$acc kernels
        do i = IS, IE
        do k = KS, KE
           MFLUX_OFFSET_Y(k,i,1,1) = offset_band * DENS_ref(k,i,JS)
 !          MFLUX_OFFSET_Y(k,i,1,2) = offset_bias * DENS_ref(k,i,JS)
        end do
        end do
+       !$acc end kernels
     end if
     if ( .not. PRC_HAS_N ) then
        !$omp parallel do
+       !$acc kernels
        do i = IS, IE
        do k = KS, KE
           MFLUX_OFFSET_Y(k,i,2,1) = - offset_band * DENS_ref(k,i,JE)
 !          MFLUX_OFFSET_Y(k,i,2,2) = - offset_bias * DENS_ref(k,i,JE)
        end do
        end do
+       !$acc end kernels
     end if
 
     MASSTOT_now = masstot
     MASSFLX_now = massflx
+
+    !$acc end data
 
     return
   end subroutine calc_mass
@@ -2470,6 +2644,7 @@ contains
     integer :: k, i, j, n
 
     !$omp parallel do
+    !$acc kernels
     do j = JS, JE
     do k = KS, KE
     do n = 1, 2
@@ -2478,8 +2653,10 @@ contains
     end do
     end do
     end do
+    !$acc end kernels
 
     !$omp parallel do
+    !$acc kernels
     do i = IS, IE
     do k = KS, KE
     do n = 1, 2
@@ -2488,6 +2665,7 @@ contains
     end do
     end do
     end do
+    !$acc end kernels
 
     return
   end subroutine set_offset

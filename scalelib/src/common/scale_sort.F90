@@ -52,6 +52,7 @@ contains
       val,          &
       idx_i, idx_j, &
       reverse       )
+    !$acc routine seq
     implicit none
     integer,  intent(in)    :: npoints                ! number of interpolation points
     real(RP), intent(inout) :: val  (npoints)         ! value to sort
@@ -99,6 +100,7 @@ contains
       npoints,    &
       val, index, &
       reverse     )
+    !$acc routine seq
     implicit none
     integer,  intent(in)    :: npoints                ! number of interpolation points
     real(RP), intent(inout) :: val  (npoints)         ! value to sort
@@ -141,6 +143,7 @@ contains
       npoints, &
       val,     &
       reverse  )
+    !$acc routine seq
     implicit none
     integer,  intent(in)    :: npoints                ! number of interpolation points
     real(RP), intent(inout) :: val  (npoints)         ! value to sort

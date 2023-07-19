@@ -852,6 +852,9 @@ contains
        UNDEF => CONST_UNDEF, &
        EPS   => CONST_EPS,   &
        HUGE  => CONST_HUGE
+#ifdef _OPENACC
+    use openacc
+#endif
     implicit none
 
     integer,  intent(in) :: itemid
@@ -875,6 +878,10 @@ contains
     if ( .not. do_put ) return
 
     call PROF_rapstart('FILE_HISTORY_OUT', 2)
+
+    !$acc data copyin(var)
+    !$acc update host(var)
+    !$acc end data
 
     do i = 1, FILE_HISTORY_var_inputs(itemid)%nvariants
        id = FILE_HISTORY_var_inputs(itemid)%variants(i)
@@ -904,6 +911,7 @@ contains
        endif
 
        dimid = FILE_HISTORY_vars(id)%dimid
+       !$acc wait
        if ( FILE_HISTORY_vars(id)%tstats_op > I_NONE ) then
          if ( FILE_HISTORY_vars(id)%varsum(1) /= RMISS ) then
             if ( var /= UNDEF ) then
@@ -928,7 +936,7 @@ contains
       FILE_HISTORY_vars(id)%laststep_put = FILE_HISTORY_NOWSTEP
       FILE_HISTORY_vars(id)%flag_clear   = .false.
 
-   end do ! variants
+    end do ! variants
 
     call PROF_rapend('FILE_HISTORY_OUT', 2)
 
@@ -990,6 +998,9 @@ contains
        UNDEF => CONST_UNDEF, &
        EPS   => CONST_EPS,   &
        HUGE  => CONST_HUGE
+#ifdef _OPENACC
+    use openacc
+#endif
     implicit none
 
     integer,  intent(in) :: itemid
@@ -1013,6 +1024,8 @@ contains
     if ( .not. do_put ) return
 
     call PROF_rapstart('FILE_HISTORY_OUT', 2)
+
+    !$acc update host(var) async if( acc_is_present(var) )
 
     do i = 1, FILE_HISTORY_var_inputs(itemid)%nvariants
        id = FILE_HISTORY_var_inputs(itemid)%variants(i)
@@ -1042,6 +1055,7 @@ contains
        endif
 
        dimid = FILE_HISTORY_vars(id)%dimid
+       !$acc wait
        if ( FILE_HISTORY_vars(id)%tstats_op > I_NONE ) then
          allocate( buffer( FILE_HISTORY_vars(id)%size ) )
          call FILE_HISTORY_truncate_1D( var(:),               & ! (in)
@@ -1098,7 +1112,7 @@ contains
       FILE_HISTORY_vars(id)%laststep_put = FILE_HISTORY_NOWSTEP
       FILE_HISTORY_vars(id)%flag_clear   = .false.
 
-   end do ! variants
+    end do ! variants
 
     call PROF_rapend('FILE_HISTORY_OUT', 2)
 
@@ -1160,6 +1174,9 @@ contains
        UNDEF => CONST_UNDEF, &
        EPS   => CONST_EPS,   &
        HUGE  => CONST_HUGE
+#ifdef _OPENACC
+    use openacc
+#endif
     implicit none
 
     integer,  intent(in) :: itemid
@@ -1183,6 +1200,8 @@ contains
     if ( .not. do_put ) return
 
     call PROF_rapstart('FILE_HISTORY_OUT', 2)
+
+    !$acc update host(var) async if( acc_is_present(var) )
 
     do i = 1, FILE_HISTORY_var_inputs(itemid)%nvariants
        id = FILE_HISTORY_var_inputs(itemid)%variants(i)
@@ -1212,6 +1231,7 @@ contains
        endif
 
        dimid = FILE_HISTORY_vars(id)%dimid
+       !$acc wait
        if ( FILE_HISTORY_vars(id)%tstats_op > I_NONE ) then
          allocate( buffer( FILE_HISTORY_vars(id)%size ) )
          call FILE_HISTORY_truncate_2D( var(:,:),               & ! (in)
@@ -1268,7 +1288,7 @@ contains
       FILE_HISTORY_vars(id)%laststep_put = FILE_HISTORY_NOWSTEP
       FILE_HISTORY_vars(id)%flag_clear   = .false.
 
-   end do ! variants
+    end do ! variants
 
     call PROF_rapend('FILE_HISTORY_OUT', 2)
 
@@ -1330,6 +1350,9 @@ contains
        UNDEF => CONST_UNDEF, &
        EPS   => CONST_EPS,   &
        HUGE  => CONST_HUGE
+#ifdef _OPENACC
+    use openacc
+#endif
     implicit none
 
     integer,  intent(in) :: itemid
@@ -1353,6 +1376,8 @@ contains
     if ( .not. do_put ) return
 
     call PROF_rapstart('FILE_HISTORY_OUT', 2)
+
+    !$acc update host(var) async if( acc_is_present(var) )
 
     do i = 1, FILE_HISTORY_var_inputs(itemid)%nvariants
        id = FILE_HISTORY_var_inputs(itemid)%variants(i)
@@ -1382,6 +1407,7 @@ contains
        endif
 
        dimid = FILE_HISTORY_vars(id)%dimid
+       !$acc wait
        if ( FILE_HISTORY_vars(id)%tstats_op > I_NONE ) then
          allocate( buffer( FILE_HISTORY_vars(id)%size ) )
          call FILE_HISTORY_truncate_3D( var(:,:,:),               & ! (in)
@@ -1438,7 +1464,7 @@ contains
       FILE_HISTORY_vars(id)%laststep_put = FILE_HISTORY_NOWSTEP
       FILE_HISTORY_vars(id)%flag_clear   = .false.
 
-   end do ! variants
+    end do ! variants
 
     call PROF_rapend('FILE_HISTORY_OUT', 2)
 
@@ -1500,6 +1526,9 @@ contains
        UNDEF => CONST_UNDEF, &
        EPS   => CONST_EPS,   &
        HUGE  => CONST_HUGE
+#ifdef _OPENACC
+    use openacc
+#endif
     implicit none
 
     integer,  intent(in) :: itemid
@@ -1523,6 +1552,8 @@ contains
     if ( .not. do_put ) return
 
     call PROF_rapstart('FILE_HISTORY_OUT', 2)
+
+    !$acc update host(var) async if( acc_is_present(var) )
 
     do i = 1, FILE_HISTORY_var_inputs(itemid)%nvariants
        id = FILE_HISTORY_var_inputs(itemid)%variants(i)
@@ -1552,6 +1583,7 @@ contains
        endif
 
        dimid = FILE_HISTORY_vars(id)%dimid
+       !$acc wait
        if ( FILE_HISTORY_vars(id)%tstats_op > I_NONE ) then
          allocate( buffer( FILE_HISTORY_vars(id)%size ) )
          call FILE_HISTORY_truncate_4D( var(:,:,:,:),               & ! (in)
@@ -1608,7 +1640,7 @@ contains
       FILE_HISTORY_vars(id)%laststep_put = FILE_HISTORY_NOWSTEP
       FILE_HISTORY_vars(id)%flag_clear   = .false.
 
-   end do ! variants
+    end do ! variants
 
     call PROF_rapend('FILE_HISTORY_OUT', 2)
 

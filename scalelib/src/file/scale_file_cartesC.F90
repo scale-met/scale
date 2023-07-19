@@ -22,6 +22,9 @@ module scale_file_cartesC
   use scale_urban_grid_cartesC_index
   use scale_file_h, only: &
      FILE_FILE_MAX
+#ifdef _OPENACC
+  use openacc
+#endif
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -745,6 +748,7 @@ contains
   subroutine FILE_CARTESC_open( &
        basename, &
        fid,      &
+       single,   &
        aggregate )
     use scale_file_h, only: &
        FILE_FREAD
@@ -757,6 +761,7 @@ contains
 
     character(len=*), intent(in)  :: basename !< basename of the file
     integer,          intent(out) :: fid      !< file ID
+    logical,          intent(in), optional :: single
     logical,          intent(in), optional :: aggregate
     !---------------------------------------------------------------------------
 
@@ -764,6 +769,7 @@ contains
 
     call FILE_Open( basename,            & ! [IN]
                     fid,                 & ! [OUT]
+                    single=single,       & ! [IN]
                     aggregate=aggregate, & ! [IN]
                     rankid=PRC_myrank    ) ! [IN]
 
@@ -1437,6 +1443,7 @@ contains
           call PRC_abort
        end if
        call FILE_Read( fid, varname, var(dim1_S:dim1_E,dim2_S:dim2_E), step=step )
+       !$acc update device(var) if(acc_is_present(var))
     endif
 
     call PROF_rapend('FILE_I_NetCDF', 2, disable_barrier = FILE_single(fid) )
@@ -1615,7 +1622,7 @@ contains
        end if
        call FILE_Read( fid, varname, var(dim1_S:dim1_E,dim2_S:dim2_E,dim3_S:dim3_E), &
                        step=step, allow_missing=allow_missing                        )
-
+       !$acc update device(var) if(acc_is_present(var))
     endif
 
     call PROF_rapend('FILE_I_NetCDF', 2, disable_barrier = FILE_single(fid) )
@@ -1767,6 +1774,7 @@ contains
        dim4_E   = step
        call FILE_Read( fid, varname,                                     & ! (in)
             var(dim1_S:dim1_E,dim2_S:dim2_E,dim3_S:dim3_E,dim4_S:dim4_E) ) ! (out)
+       !$acc update device(var) if(acc_is_present(var))
     endif
 
     call PROF_rapend('FILE_I_NetCDF', 2, disable_barrier = FILE_single(fid) )
@@ -1854,6 +1862,7 @@ contains
 
     call FILE_read( fid, varname, var(:,:), step=step, start=start(:), count=count(:) )
     call FILE_CARTESC_flush( fid )
+    !$acc update device(var) if(acc_is_present(var))
 
     call PROF_rapend('FILE_I_NetCDF', 2, disable_barrier = FILE_single(fid) )
 
@@ -1947,6 +1956,7 @@ contains
        count(:) = (/nz,nx,ny/)
        call FILE_read( fid, varname, var(:,:,:), step=step, start=start(:), count=count(:) )
        call FILE_CARTESC_flush( fid )
+       !$acc update device(var) if(acc_is_present(var))
     else if ( dnames(1)(1:1)=="x" .and. dnames(2)(1:1)=="y" .and. ( dnames(3)(1:1)=="z" .or. dnames(3)(2:2)=="z" ) ) then
        allocate( buf(nx,ny,nz) )
        if ( nx==dims(1) .and. ny==dims(2) .and. nz==dims(3) ) then
@@ -1970,6 +1980,7 @@ contains
        call FILE_CARTESC_flush( fid )
 
        !$omp parallel do
+       !$acc kernels if(acc_is_present(var))
        do j = 1, ny
        do i = 1, nx
        do k = 1, nz
@@ -1977,6 +1988,7 @@ contains
        end do
        end do
        end do
+       !$acc end kernels
        deallocate(buf)
     else
        LOG_ERROR("FILE_CARTESC_read_auto_3D",*) 'invalid dimension'
@@ -3677,6 +3689,7 @@ contains
     endif
 
     if ( exec ) then
+       !$acc update host(var) if(acc_is_present(var))
        if ( fill_halo_ ) then ! fill halo cells with RMISS
           do j = JS, JE
           do i = IS, IE
@@ -3826,7 +3839,10 @@ contains
        dim3_E   = JEB
     endif
 
+    !$acc update host(var) if(acc_is_present(var))
+
     if ( fill_halo_ ) then
+
        !$omp parallel do
        do j = JS, JE
        do i = IS, IE
@@ -3975,7 +3991,10 @@ contains
     if ( present(timetarg) ) then
        nowtime = timeofs_ + (timetarg-1) * time_interval
 
+       !$acc update host(var) if(acc_is_present(var))
+
        if ( fill_halo_ ) then
+
           do j = JS, JE
           do i = IS, IE
              varhalo(i,j) = var(i,j,timetarg)
@@ -4015,8 +4034,12 @@ contains
        endif
     else
        nowtime = timeofs_
+
+       !$acc update host(var) if(acc_is_present(var))
+
        do n = 1, step
           if ( fill_halo_ ) then
+
              do j = JS, JE
              do i = IS, IE
                 varhalo(i,j) = var(i,j,n)
@@ -4191,10 +4214,13 @@ contains
        call PRC_abort
     endif
 
+    !$acc update host(var) if(acc_is_present(var))
+
     if ( present(timetarg) ) then
        nowtime = timeofs_ + (timetarg-1) * time_interval
 
        if ( fill_halo_ ) then
+
           do j = JS, JE
           do i = IS, IE
           do k = 1, dim1_max
@@ -4246,6 +4272,7 @@ contains
        nowtime = timeofs_
        do n = 1, step
           if ( fill_halo_ ) then
+
              do j = JS, JE
              do i = IS, IE
              do k = 1, dim1_max

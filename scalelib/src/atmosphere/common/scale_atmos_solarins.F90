@@ -1105,31 +1105,41 @@ contains
                                             now_date(:), & ! [IN]
                                             offset_year  ) ! [IN]
 
+    !$acc data create(lon, lat)
+
     if ( ATMOS_SOLARINS_fixedlatlon ) then
        !$omp parallel do OMP_SCHEDULE_ collapse(2)
+       !$acc kernels
        do j = JS, JE
        do i = IS, IE
           lon(i,j) = ATMOS_SOLARINS_lon
           lat(i,j) = ATMOS_SOLARINS_lat
        enddo
        enddo
+       !$acc end kernels
     else
        !$omp parallel do OMP_SCHEDULE_ collapse(2)
+       !$acc kernels
        do j = JS, JE
        do i = IS, IE
           lon(i,j) = real_lon(i,j)
           lat(i,j) = real_lat(i,j)
        enddo
        enddo
+       !$acc end kernels
     endif
 
     !$omp parallel do OMP_SCHEDULE_ collapse(2)
+    !$acc kernels
     do j = JS, JE
     do i = IS, IE
        cosSZA(i,j) = sin(lat(i,j))*sinDEC + cos(lat(i,j))*cosDEC*cos(lon(i,j)+hourangle)
        solins(i,j) = ATMOS_SOLARINS_constant * Re_factor * ( 0.5_RP + sign(0.5_RP,cosSZA(i,j)-EPS) )
     enddo
     enddo
+    !$acc end kernels
+
+    !$acc end data
 
     return
   end subroutine ATMOS_SOLARINS_insolation_2D

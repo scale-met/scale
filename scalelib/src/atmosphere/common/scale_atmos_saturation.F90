@@ -194,11 +194,13 @@ module scale_atmos_saturation
 
   real(RP), private :: ATMOS_SATURATION_ULIMIT_TEMP = 273.15_RP !< upper limit temperature
   real(RP), private :: ATMOS_SATURATION_LLIMIT_TEMP = 233.15_RP !< lower limit temperature
+  !$acc declare create(ATMOS_SATURATION_ULIMIT_TEMP, ATMOS_SATURATION_LLIMIT_TEMP)
 
   real(RP), private :: RTEM00         !> inverse of TEM00
   real(RP), private :: dalphadT_const !> d(alfa)/dt
   real(RP), private :: psat_min_liq   !> psat_liq for TEM_MIN
   real(RP), private :: psat_min_ice   !> psat_ice for TEM_MIN
+  !$acc declare create(RTEM00, dalphadT_const, psat_min_liq, psat_min_ice)
 
   real(RP), private :: CPovR_liq
   real(RP), private :: CPovR_ice
@@ -206,6 +208,7 @@ module scale_atmos_saturation
   real(RP), private :: CVovR_ice
   real(RP), private :: LovR_liq
   real(RP), private :: LovR_ice
+  !$acc declare create(CPovR_liq, CPovR_ice, CVovR_liq, CVovR_ice, LovR_liq, LovR_ice)
 
   !-----------------------------------------------------------------------------
 contains
@@ -280,10 +283,16 @@ contains
                                                       ATMOS_SATURATION_LLIMIT_TEMP, ' - ', &
                                                       ATMOS_SATURATION_ULIMIT_TEMP
 
+    !$acc update device(ATMOS_SATURATION_ULIMIT_TEMP, ATMOS_SATURATION_LLIMIT_TEMP)
+    !$acc update device(RTEM00, dalphadT_const)
+    !$acc update device(CPovR_liq, CPovR_ice, CVovR_liq, CVovR_ice, LovR_liq, LovR_ice)
+
     call ATMOS_HYDROMETEOR_setup
 
     call ATMOS_SATURATION_psat_liq( TEM_MIN, psat_min_liq ) ! [IN], [OUT]
     call ATMOS_SATURATION_psat_ice( TEM_MIN, psat_min_ice ) ! [IN], [OUT]
+
+    !$acc update device(psat_min_liq, psat_min_ice)
 
     return
   end subroutine ATMOS_SATURATION_setup
@@ -293,6 +302,7 @@ contains
   subroutine ATMOS_SATURATION_alpha_0D( &
        temp, &
        alpha )
+    !$acc routine
     implicit none
 
     real(RP), intent(in)  :: temp  !< temperature [K]
@@ -314,6 +324,7 @@ contains
        KA, KS, KE, &
        temp, &
        alpha )
+    !$acc routine vector
     implicit none
     integer,  intent(in)  :: KA, KS, KE
 
@@ -350,6 +361,7 @@ contains
     !---------------------------------------------------------------------------
 
     !$omp parallel do OMP_SCHEDULE_ collapse(2)
+    !$acc kernels copyin(temp) copyout(alpha)
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -359,6 +371,7 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
 
     return
   end subroutine ATMOS_SATURATION_alpha_3D
@@ -368,6 +381,7 @@ contains
   subroutine ATMOS_SATURATION_psat_all_0D( &
        temp, &
        psat  )
+    !$acc routine
     implicit none
 
     real(RP), intent(in)  :: temp !< temperature               [K]
@@ -393,6 +407,7 @@ contains
        KA, KS, KE, &
        temp, &
        psat  )
+    !$acc routine vector
     implicit none
     integer,  intent(in)  :: KA, KS, KE
 
@@ -403,6 +418,7 @@ contains
     integer  :: k
     !---------------------------------------------------------------------------
 
+    !$acc loop private(alpha,psatl,psati)
     do k = KS, KE
 !       call ATMOS_SATURATION_psat_all_0D( temp(k), & ! [IN]
 !                                          psat(k)  ) ! [OUT]
@@ -438,7 +454,9 @@ contains
 
     !$omp parallel do OMP_SCHEDULE_ &
     !$omp private(alpha,psatl,psati)
+    !$acc kernels copyin(temp) copyout(psat)
     do j = JS, JE
+    !$acc loop private(alpha,psatl,psati)
     do i = IS, IE
 !       call ATMOS_SATURATION_psat_all_0D( temp(i,j), & ! [IN]
 !                                          psat(i,j)  ) ! [OUT]
@@ -450,6 +468,7 @@ contains
                  + psati * ( 1.0_RP - alpha )
     enddo
     enddo
+    !$acc end kernels
 
     return
   end subroutine ATMOS_SATURATION_psat_all_2D
@@ -477,8 +496,10 @@ contains
 
     !$omp parallel do OMP_SCHEDULE_ collapse(2) &
     !$omp private(alpha,psatl,psati)
+    !$acc kernels copyin(temp) copyout(psat)
     do j = JS, JE
     do i = IS, IE
+    !$acc loop private(alpha,psatl,psati)
     do k = KS, KE
 !       call ATMOS_SATURATION_psat_all_0D( temp(k,i,j), & ! [IN]
 !                                          psat(k,i,j)  ) ! [OUT]
@@ -491,6 +512,7 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
 
     return
   end subroutine ATMOS_SATURATION_psat_all_3D
@@ -500,6 +522,7 @@ contains
   subroutine ATMOS_SATURATION_psat_liq_0D( &
        temp, &
        psat  )
+    !$acc routine
     implicit none
 
     real(RP), intent(in)  :: temp !< temperature               [K]
@@ -521,6 +544,7 @@ contains
        KA, KS, KE, &
        temp, &
        psat  )
+    !$acc routine vector
     implicit none
     integer,  intent(in)  :: KA, KS, KE
 
@@ -557,12 +581,14 @@ contains
     !---------------------------------------------------------------------------
 
     !$omp parallel do OMP_SCHEDULE_
+    !$acc kernels copyin(temp) copyout(psat)
     do j = JS, JE
     do i = IS, IE
        call ATMOS_SATURATION_psat_liq_0D( temp(i,j), & ! [IN]
                                           psat(i,j)  ) ! [OUT]
     enddo
     enddo
+    !$acc end kernels
 
     return
   end subroutine ATMOS_SATURATION_psat_liq_2D
@@ -588,6 +614,7 @@ contains
     !---------------------------------------------------------------------------
 
     !$omp parallel do OMP_SCHEDULE_ collapse(2)
+    !$acc kernels copyin(temp) copyout(psat)
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -596,6 +623,7 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
 
     return
   end subroutine ATMOS_SATURATION_psat_liq_3D
@@ -605,6 +633,7 @@ contains
   subroutine ATMOS_SATURATION_psat_ice_0D( &
        temp, &
        psat  )
+    !$acc routine
     implicit none
 
     real(RP), intent(in)  :: temp !< temperature               [K]
@@ -627,6 +656,7 @@ contains
        KA, KS, KE, &
        temp, &
        psat  )
+    !$acc routine vector
     implicit none
     integer,  intent(in)  :: KA, KS, KE
 
@@ -663,12 +693,14 @@ contains
     !---------------------------------------------------------------------------
 
     !$omp parallel do OMP_SCHEDULE_
+    !$acc kernels copyin(temp) copyout(psat)
     do j = JS, JE
     do i = IS, IE
        call ATMOS_SATURATION_psat_ice_0D( temp(i,j), & ! [IN]
                                           psat(i,j)  ) ! [OUT]
     enddo
     enddo
+    !$acc end kernels
 
     return
   end subroutine ATMOS_SATURATION_psat_ice_2D
@@ -694,6 +726,7 @@ contains
     !---------------------------------------------------------------------------
 
     !$omp parallel do OMP_SCHEDULE_ collapse(2)
+    !$acc kernels copyin(temp) copyout(psat)
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -702,6 +735,7 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
 
     return
   end subroutine ATMOS_SATURATION_psat_ice_3D
@@ -712,6 +746,7 @@ contains
   subroutine ATMOS_SATURATION_psat2qsat_pres_0D( &
        psat, pres, qdry, &
        qsat              )
+    !$acc routine
     implicit none
 
     real(RP), intent(in)  :: psat !< saturation pressure [Pa]
@@ -732,6 +767,7 @@ contains
   subroutine ATMOS_SATURATION_pres2qsat_all_0D( &
        temp, pres, qdry, &
        qsat              )
+    !$acc routine
     implicit none
 
     real(RP), intent(in)  :: temp !< temperature           [K]
@@ -758,6 +794,7 @@ contains
        KA, KS, KE, &
        temp, pres, qdry, &
        qsat              )
+    !$acc routine vector
     implicit none
     integer, intent(in) :: KA, KS, KE
 
@@ -798,12 +835,14 @@ contains
     !---------------------------------------------------------------------------
 
     !$omp parallel do OMP_SCHEDULE_
+    !$acc kernels copyin(temp,pres,qdry) copyout(qsat)
     do j = JS, JE
     do i = IS, IE
        call ATMOS_SATURATION_pres2qsat_all_0D( temp(i,j), pres(i,j), qdry(i,j), &
                                                qsat(i,j)                        )
     enddo
     enddo
+    !$acc end kernels
 
     return
   end subroutine ATMOS_SATURATION_pres2qsat_all_2D
@@ -829,6 +868,7 @@ contains
     !---------------------------------------------------------------------------
 
     !$omp parallel do OMP_SCHEDULE_ collapse(2)
+    !$acc kernels copyin(temp,pres,qdry) copyout(qsat)
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -837,6 +877,7 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
 
     return
   end subroutine ATMOS_SATURATION_pres2qsat_all_3D
@@ -846,6 +887,7 @@ contains
   subroutine ATMOS_SATURATION_pres2qsat_liq_0D( &
        temp, pres, qdry, &
        qsat              )
+    !$acc routine
     implicit none
 
     real(RP), intent(in)  :: temp !< temperature           [K]
@@ -871,6 +913,7 @@ contains
        KA, KS, KE, &
        temp, pres, qdry, &
        qsat              )
+    !$acc routine vector
     implicit none
     integer, intent(in) :: KA, KS, KE
 
@@ -912,6 +955,7 @@ contains
     !---------------------------------------------------------------------------
 
     !$omp parallel do OMP_SCHEDULE_ collapse(2)
+    !$acc kernels copyin(temp,pres,qdry) copyout(qsat)
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -920,6 +964,7 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
 
     return
   end subroutine ATMOS_SATURATION_pres2qsat_liq_3D
@@ -929,6 +974,7 @@ contains
   subroutine ATMOS_SATURATION_pres2qsat_ice_0D( &
        temp, pres, qdry, &
        qsat              )
+    !$acc routine
     implicit none
 
     real(RP), intent(in)  :: temp !< temperature           [K]
@@ -954,6 +1000,7 @@ contains
        KA, KS, KE, &
        temp, pres, qdry, &
        qsat              )
+    !$acc routine vector
     implicit none
     integer, intent(in) :: KA, KS, KE
 
@@ -995,6 +1042,7 @@ contains
     !---------------------------------------------------------------------------
 
     !$omp parallel do OMP_SCHEDULE_ collapse(2)
+    !$acc kernels copyin(temp,pres,qdry) copyout(qsat)
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -1003,6 +1051,7 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
 
     return
   end subroutine ATMOS_SATURATION_pres2qsat_ice_3D
@@ -1012,6 +1061,7 @@ contains
   subroutine ATMOS_SATURATION_psat2qsat_dens_0D( &
        psat, temp, dens, &
        qsat              )
+    !$acc routine
     implicit none
     real(RP), intent(in)  :: psat
     real(RP), intent(in)  :: temp
@@ -1030,6 +1080,7 @@ contains
        temp, &
        dens, &
        qsat  )
+    !$acc routine
     implicit none
     real(RP), intent(in)  :: temp
     real(RP), intent(in)  :: dens
@@ -1053,6 +1104,7 @@ contains
        KA, KS, KE, &
        temp, dens, &
        qsat        )
+    !$acc routine vector
     implicit none
     integer,  intent(in)  :: KA, KS, KE
 
@@ -1095,6 +1147,7 @@ contains
     !---------------------------------------------------------------------------
 
     !$omp parallel do OMP_SCHEDULE_ collapse(2)
+    !$acc kernels copyin(temp,dens) copyout(qsat)
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -1103,6 +1156,7 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
 
     return
   end subroutine ATMOS_SATURATION_dens2qsat_all_3D
@@ -1113,6 +1167,7 @@ contains
        temp, &
        dens, &
        qsat  )
+    !$acc routine
     implicit none
     real(RP), intent(in)  :: temp
     real(RP), intent(in)  :: dens
@@ -1136,6 +1191,7 @@ contains
        KA, KS, KE, &
        temp, dens, &
        qsat        )
+    !$acc routine vector
     implicit none
     integer, intent(in) :: KA, KS, KE
 
@@ -1175,6 +1231,7 @@ contains
     !---------------------------------------------------------------------------
 
     !$omp parallel do OMP_SCHEDULE_ collapse(2)
+    !$acc kernels copyin(temp,dens) copyout(qsat)
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -1183,6 +1240,7 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
 
     return
   end subroutine ATMOS_SATURATION_dens2qsat_liq_3D
@@ -1193,6 +1251,7 @@ contains
        temp, &
        dens, &
        qsat  )
+    !$acc routine
     implicit none
     real(RP), intent(in)  :: temp
     real(RP), intent(in)  :: dens
@@ -1215,6 +1274,7 @@ contains
        KA, KS, KE, &
        temp, dens, &
        qsat        )
+    !$acc routine vector
     implicit none
     integer, intent(in) :: KA, KS, KE
 
@@ -1254,6 +1314,7 @@ contains
     !---------------------------------------------------------------------------
 
     !$omp parallel do OMP_SCHEDULE_ collapse(2)
+    !$acc kernels copyin(temp,dens) copyout(qsat)
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -1262,6 +1323,7 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
 
     return
   end subroutine ATMOS_SATURATION_dens2qsat_ice_3D
@@ -1271,6 +1333,7 @@ contains
   subroutine ATMOS_SATURATION_dalphadT_0D( &
        temp,     &
        dalpha_dT )
+    !$acc routine
     implicit none
     real(RP), intent(in)  :: temp
 
@@ -1296,6 +1359,7 @@ contains
        KA, KS, KE, &
        temp,     &
        dalpha_dT )
+    !$acc routine vector
     implicit none
     integer, intent(in) :: KA, KS, KE
 
@@ -1332,6 +1396,7 @@ contains
     !---------------------------------------------------------------------------
 
     !$omp parallel do OMP_SCHEDULE_ collapse(2)
+    !$acc kernels copyin(temp) copyout(dalpha_dT)
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -1339,6 +1404,7 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
 
     return
   end subroutine ATMOS_SATURATION_dalphadT_3D
@@ -1348,6 +1414,7 @@ contains
   subroutine ATMOS_SATURATION_dqs_dtem_dens_liq_0D( &
        temp, dens, &
        dqsdtem, qsat )
+    !$acc routine
     use scale_atmos_hydrometeor, only: &
        HYDROMETEOR_LHV => ATMOS_HYDROMETEOR_LHV
     implicit none
@@ -1381,6 +1448,7 @@ contains
        KA, KS, KE, &
        temp, dens, &
        dqsdtem     )
+    !$acc routine vector
     implicit none
     integer, intent(in) :: KA, KS, KE
 
@@ -1420,6 +1488,7 @@ contains
     !---------------------------------------------------------------------------
 
     !$omp parallel do OMP_SCHEDULE_ collapse(2)
+    !$acc kernels copyin(temp,dens) copyout(dqsdtem)
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -1428,6 +1497,7 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
 
     return
   end subroutine ATMOS_SATURATION_dqs_dtem_dens_liq_3D
@@ -1437,6 +1507,7 @@ contains
   subroutine ATMOS_SATURATION_dqs_dtem_dens_ice_0D( &
        temp, dens,   &
        dqsdtem, qsat )
+    !$acc routine
     use scale_atmos_hydrometeor, only: &
        HYDROMETEOR_LHS => ATMOS_HYDROMETEOR_LHS
     implicit none
@@ -1470,6 +1541,7 @@ contains
        KA, KS, KE, &
        temp, dens, &
        dqsdtem     )
+    !$acc routine vector
     implicit none
     integer, intent(in) :: KA, KS, KE
 
@@ -1509,6 +1581,7 @@ contains
     !---------------------------------------------------------------------------
 
     !$omp parallel do OMP_SCHEDULE_ collapse(2)
+    !$acc kernels copyin(temp,dens) copyout(dqsdtem)
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -1517,6 +1590,7 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
 
     return
   end subroutine ATMOS_SATURATION_dqs_dtem_dens_ice_3D
@@ -1528,6 +1602,7 @@ contains
        dqsat_dT,                 &
        qsat, qsat_liq, qsat_ice, &
        alpha                     )
+    !$acc routine
     implicit none
 
     real(RP), intent(in)  :: temp
@@ -1569,6 +1644,7 @@ contains
        temp, pres, qdry,   &
        dqsat_dT, dqsat_dP, &
        qsat, psat          )
+    !$acc routine
     use scale_atmos_hydrometeor, only: &
        HYDROMETEOR_LHV => ATMOS_HYDROMETEOR_LHV
     implicit none
@@ -1612,6 +1688,7 @@ contains
        KA, KS, KE, &
        temp, pres, qdry,  &
        dqsat_dT, dqsat_dP )
+    !$acc routine vector
     implicit none
     integer, intent(in) :: KA, KS, KE
 
@@ -1655,6 +1732,7 @@ contains
     !---------------------------------------------------------------------------
 
     !$omp parallel do OMP_SCHEDULE_ collapse(2)
+    !$acc kernels copyin(temp,pres,qdry) copyout(dqsat_dT,dqsat_dP)
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -1663,6 +1741,7 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
 
     return
   end subroutine ATMOS_SATURATION_dqs_dtem_dpre_liq_3D
@@ -1674,6 +1753,7 @@ contains
        temp, pres, qdry,   &
        dqsat_dT, dqsat_dP, &
        qsat                )
+    !$acc routine
     use scale_atmos_hydrometeor, only: &
        HYDROMETEOR_LHS => ATMOS_HYDROMETEOR_LHS
     implicit none
@@ -1714,6 +1794,7 @@ contains
        KA, KS, KE, &
        temp, pres, qdry,  &
        dqsat_dT, dqsat_dP )
+    !$acc routine vector
     implicit none
     integer, intent(in) :: KA, KS, KE
 
@@ -1758,6 +1839,7 @@ contains
     !---------------------------------------------------------------------------
 
     !$omp parallel do OMP_SCHEDULE_ collapse(2)
+    !$acc kernels copyin(temp,pres,qdry) copyout(dqsat_dT,dqsat_dP)
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -1766,6 +1848,7 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
 
     return
   end subroutine ATMOS_SATURATION_dqs_dtem_dpre_ice_3D
@@ -1778,6 +1861,7 @@ contains
        dqsat_dT, dqsat_dP,       &
        qsat, qsat_liq, qsat_ice, &
        alpha                     )
+    !$acc routine
     implicit none
 
     real(RP), intent(in)  :: temp
@@ -1828,6 +1912,7 @@ contains
        DENS, TEMP, QV, &
        Tdew,           &
        converged       )
+    !$acc routine
     use scale_const, only: &
        UNDEF => CONST_UNDEF
     use scale_atmos_hydrometeor, only: &
@@ -1865,6 +1950,7 @@ contains
     ! See Lawrence (2005) BAMS
     Tdew = B * log( pvap / C ) / ( A - log( pvap / C ) ) + TEM00
     converged = .false.
+    !$acc loop seq
     do ite = 1, itelim
 
        call ATMOS_SATURATION_psat_liq( Tdew, psat ) ! [IN], [OUT]
@@ -1879,9 +1965,11 @@ contains
 
        Tdew = Tdew - dTdew
     end do
+#ifndef _OPENACC
     if( .not. converged ) then
        LOG_WARN("ATMOS_SATURATION_tdew_liq_0D",*) DENS, TEMP, QV, pvap, Tdew, dTdew, dpsat_dT
     endif
+#endif
 
     return
   end subroutine ATMOS_SATURATION_tdew_liq_0D
@@ -1892,6 +1980,7 @@ contains
        DENS, TEMP, QV, &
        Tdew,           &
        converged       )
+    !$acc routine vector
     integer, intent(in) :: KA, KS, KE
 
     real(RP), intent(in) :: DENS(KA)
@@ -1935,19 +2024,26 @@ contains
     error = .false.
     !$omp parallel do OMP_SCHEDULE_ collapse(2) &
     !$omp private(converged)
+    !$acc kernels copyin(DENS,TEMP,QV) copyout(Tdew)
+    !$acc loop reduction(.or.:error)
     do j = JS, JE
+    !$acc loop reduction(.or.:error)
     do i = IS, IE
+    !$acc loop private(converged) reduction(.or.:error)
     do k = KS, KE
        call ATMOS_SATURATION_tdew_liq_0D( DENS(k,i,j), TEMP(k,i,j), QV(k,i,j), & ! [IN]
                                           Tdew(k,i,j), converged               ) ! [OUT]
        if ( .not. converged ) then
-          LOG_ERROR("ATMOS_SATURATION_tdew_liq_3D",*) 'not converged! ', k,i,j
           error = .true.
+#ifndef _OPENACC
+          LOG_ERROR("ATMOS_SATURATION_tdew_liq_3D",*) 'not converged! ', k,i,j
           exit
+#endif
        end if
     end do
     end do
     end do
+    !$acc end kernels
 
     if ( error ) call PRC_abort
 
@@ -1964,6 +2060,7 @@ contains
   subroutine ATMOS_SATURATION_pote_0D( &
        DENS, POTT, TEMP, QV, &
        POTE                  )
+    !$acc routine
     use scale_const, only: &
        Rdry  => CONST_Rdry, &
        CPdry => CONST_CPdry
@@ -1995,6 +2092,7 @@ contains
        KA, KS, KE, &
        DENS, POTT, TEMP, QV, &
        POTE                  )
+    !$acc routine vector
     integer, intent(in) :: KA, KS, KE
 
     real(RP), intent(in) :: DENS(KA)
@@ -2032,6 +2130,7 @@ contains
     integer :: k, i, j
 
     !$omp parallel do
+    !$acc kernels copyin(DENS,POTT,TEMP,QV) copyout(POTE)
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -2041,6 +2140,7 @@ contains
     end do
     end do
     end do
+    !$acc end kernels
 
     return
   end subroutine ATMOS_SATURATION_pote_3D
@@ -2053,8 +2153,7 @@ contains
        DENS, Emoist0,              &
        TEMP, QV, QC, CPtot, CVtot, &
        converged                   )
-    use scale_prc, only: &
-       PRC_abort
+    !$acc routine
     use scale_atmos_hydrometeor, only: &
        CP_VAPOR, &
        CP_WATER, &
@@ -2123,6 +2222,7 @@ contains
     CVtot = CVtot0
     
     converged = .false.
+    !$acc loop seq
     do ite = 1, itelim
 
        ! get qsat and dX/dT under the temp
@@ -2169,8 +2269,7 @@ contains
        DENS, Emoist0,                  &
        TEMP, QV, QC, QI, CPtot, CVtot, &
        converged                       )
-    use scale_prc, only: &
-       PRC_abort
+    !$acc routine
     use scale_atmos_hydrometeor, only: &
        CP_VAPOR, &
        CP_WATER, &
@@ -2181,7 +2280,6 @@ contains
        LHV, &
        LHF
     implicit none
-
     real(RP), intent(in)    :: DENS
     real(RP), intent(in)    :: Emoist0
 
@@ -2249,6 +2347,7 @@ contains
     CVtot = CVtot0
     
     converged = .false.
+    !$acc loop seq
     do ite = 1, itelim
 
        ! dX/dT
@@ -2276,7 +2375,9 @@ contains
              + CV_WATER * ( qc - QC0 ) &
              + CV_ICE   * ( qi - QI0 )
 
-       Emoist = temp * CVtot + qv * LHV - qi * LHF
+
+!       Emoist = temp * CVtot + qv * LHV - qi * LHF
+       Emoist = temp * CVtot + qsat * LHV - qi * LHF
 
        ! update temp by the newtonian method
        dtemp = ( Emoist - Emoist0 ) / dEmoist_dT
@@ -2307,6 +2408,7 @@ contains
        Rtot, CPtot,      &
        TEMP,             &
        converged         )
+    !$acc routine
     use scale_const, only: &
        EPS   => CONST_EPS, &
        LHV0  => CONST_LHV0
@@ -2374,6 +2476,7 @@ contains
 
        TEMP_ite = TEMP
 
+       !$acc loop seq
        do ite = 1, itelim
 
           call ATMOS_SATURATION_dqs_dtem_dpre_liq_0d( TEMP_ite, PRES, Qdry, & ! [IN]

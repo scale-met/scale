@@ -400,6 +400,8 @@ contains
              LOG_INFO("REALINPUT_atmos",*) 'store initial state.'
 
              !$omp parallel do collapse(2)
+             !$acc kernels
+             !$acc loop collapse(3) independent
              do j = 1, JA
              do i = 1, IA
              do k = 1, KA
@@ -411,8 +413,10 @@ contains
              enddo
              enddo
              enddo
+             !$acc end kernels
 
              !$omp parallel do collapse(3)
+             !$acc kernels
              do iq = 1, QA
              do j  = 1, JA
              do i  = 1, IA
@@ -422,6 +426,7 @@ contains
              enddo
              enddo
              enddo
+             !$acc end kernels
 
           endif
 
@@ -492,6 +497,12 @@ contains
        fact_land  => LANDUSE_fact_land,  &
        fact_urban => LANDUSE_fact_urban, &
        LANDUSE_PFT_nmax
+    use mod_atmos_vars, only: &
+       DENS, &
+       MOMX, &
+       MOMY, &
+       RHOT, &
+       QTRC
     use mod_atmos_phy_sf_vars, only: &
        ATMOS_PHY_SF_SFC_TEMP,   &
        ATMOS_PHY_SF_SFC_albedo, &
@@ -929,6 +940,7 @@ contains
           end if
 
           ! read all prepared data
+          !$acc update host(DENS,MOMX,MOMY,RHOT,QTRC)
           call ParentSurfaceInput( LAND_TEMP_in       (:,:,:),            &
                                    LAND_WATER_in      (:,:,:),            &
                                    LAND_SFC_TEMP_in   (:,:),              &
@@ -959,12 +971,14 @@ contains
                                    elevation_correction_ocean,            &
                                    oistep, listep,                        &
                                    multi_land,                            &
-                                   URBAN_do                               )
+                                   URBAN_do,                              &
+                                   DENS, MOMX, MOMY, RHOT, QTRC           )
 
           !--- input initial data
           if ( t == 1 ) then
 
              !$omp parallel do
+             !$acc kernels
              do j = 1, JA
              do i = 1, IA
                 OCEAN_SFC_TEMP(i,j) = OCEAN_SFC_TEMP_in(i,j)
@@ -1056,6 +1070,8 @@ contains
                 endif
              enddo
              enddo
+             !$acc end kernels
+
 
           end if ! t==1
 
@@ -3271,7 +3287,8 @@ contains
        elevation_correction_ocean,            &
        oistep, listep,                        &
        multi_land,                            &
-       URBAN_do                               )
+       URBAN_do,                              &
+       DENS, MOMX, MOMY, RHOT, QTRC           )
     use scale_comm_cartesC, only: &
          COMM_bcast, &
          COMM_vars8, &
@@ -3340,6 +3357,12 @@ contains
     integer,          intent(in)  :: listep
     logical,          intent(in)  :: multi_land
     logical,          intent(in)  :: URBAN_do
+
+    real(RP),         intent(in)  :: DENS(KA,IA,JA)
+    real(RP),         intent(in)  :: MOMX(KA,IA,JA)
+    real(RP),         intent(in)  :: MOMY(KA,IA,JA)
+    real(RP),         intent(in)  :: RHOT(KA,IA,JA)
+    real(RP),         intent(in)  :: QTRC(KA,IA,JA,QA)
 
    ! land
     real(RP) :: tg_org   (lKA_org,lIA_org,lJA_org)
@@ -3628,6 +3651,7 @@ contains
 
     if ( URBAN_do .and. first_surface ) then
        call urban_input( lst(:,:), albg(:,:,:,:),               & ! [IN]
+                         DENS, MOMX, MOMY, RHOT, QTRC,          & ! [IN]
                          tc_urb(:,:), qc_urb(:,:), uc_urb(:,:), & ! [OUT]
                          ust(:,:), albu(:,:,:,:)                ) ! [OUT]
     end if
@@ -4523,14 +4547,10 @@ contains
   !-------------------------------
   subroutine urban_input( &
        lst, albg,              &
+       DENS, MOMX, MOMY, RHOT, &
+       QTRC ,                  &
        tc_urb, qc_urb, uc_urb, &
        ust, albu               )
-    use mod_atmos_vars, only: &
-         DENS, &
-         MOMX, &
-         MOMY, &
-         RHOT, &
-         QTRC
     use scale_atmos_hydrometeor, only: &
          I_QV
     use scale_atmos_thermodyn, only: &
@@ -4542,6 +4562,11 @@ contains
     implicit none
     real(RP), intent(in)  :: lst   (IA,JA)
     real(RP), intent(in)  :: albg  (IA,JA,N_RAD_DIR,N_RAD_RGN)
+    real(RP), intent(in)  :: DENS(KA,IA,JA)
+    real(RP), intent(in)  :: MOMX(KA,IA,JA)
+    real(RP), intent(in)  :: MOMY(KA,IA,JA)
+    real(RP), intent(in)  :: RHOT(KA,IA,JA)
+    real(RP), intent(in)  :: QTRC(KA,IA,JA,QA)
     real(RP), intent(out) :: tc_urb(IA,JA)
     real(RP), intent(out) :: qc_urb(IA,JA)
     real(RP), intent(out) :: uc_urb(IA,JA)

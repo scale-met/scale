@@ -26,6 +26,7 @@ module scale_land_grid_icoA
   !++ Public procedure
   !
   public :: LAND_GRID_ICOA_setup
+  public :: LAND_GRID_ICOA_finalize
 
   !-----------------------------------------------------------------------------
   !
@@ -97,6 +98,7 @@ contains
     allocate( LAND_GRID_ICOA_CZ (LKS  :LKE) )
     allocate( LAND_GRID_ICOA_FZ (LKS-1:LKE) )
     allocate( LAND_GRID_ICOA_CDZ(LKS  :LKE) )
+    !$acc enter data create(LAND_GRID_ICOA_CZ, LAND_GRID_ICOA_FZ, LAND_GRID_ICOA_CDZ) async
 
     LOG_NEWLINE
     LOG_INFO("LAND_GRID_ICOA_setup",*) 'Land grid information '
@@ -133,6 +135,23 @@ contains
   end subroutine LAND_GRID_ICOA_setup
 
   !-----------------------------------------------------------------------------
+  !> Finalize
+  subroutine LAND_GRID_ICOA_finalize
+   implicit none
+   !---------------------------------------------------------------------------
+
+   LOG_NEWLINE
+   LOG_INFO("LAND_GRID_ICOA_finalize",*) 'Finalize'
+
+   !$acc exit data delete(LAND_GRID_ICOA_CZ, LAND_GRID_ICOA_FZ, LAND_GRID_ICOA_CDZ)
+   deallocate( LAND_GRID_ICOA_CZ  )
+   deallocate( LAND_GRID_ICOA_FZ  )
+   deallocate( LAND_GRID_ICOA_CDZ )
+
+   return
+ end subroutine LAND_GRID_ICOA_finalize
+
+  !-----------------------------------------------------------------------------
   !> Read land grid
   subroutine LAND_GRID_ICOA_read
     use scale_file, only: &
@@ -153,6 +172,7 @@ contains
     call FILE_read( fid, 'LCZ',  LAND_GRID_ICOA_CZ (:) )
     call FILE_read( fid, 'LCDZ', LAND_GRID_ICOA_CDZ(:) )
     call FILE_read( fid, 'LFZ',  LAND_GRID_ICOA_FZ (:) )
+    !$acc update device(LAND_GRID_ICOA_CZ, LAND_GRID_ICOA_CDZ, LAND_GRID_ICOA_FZ)
 
     return
   end subroutine LAND_GRID_ICOA_read
@@ -168,6 +188,7 @@ contains
     do k = LKS, LKE
        LAND_GRID_ICOA_CDZ(k) = LDZ(k)
     enddo
+    !$acc update device(LAND_GRID_ICOA_CDZ) async
 
     LAND_GRID_ICOA_FZ(LKS-1) = 0.0_RP
 
@@ -175,6 +196,9 @@ contains
        LAND_GRID_ICOA_CZ(k) = LAND_GRID_ICOA_CDZ(k) / 2.0_RP + LAND_GRID_ICOA_FZ(k-1)
        LAND_GRID_ICOA_FZ(k) = LAND_GRID_ICOA_CDZ(k)          + LAND_GRID_ICOA_FZ(k-1)
     enddo
+    !$acc update device(LAND_GRID_ICOA_CZ, LAND_GRID_ICOA_FZ) async
+    
+    !$acc wait
 
     return
   end subroutine LAND_GRID_ICOA_generate

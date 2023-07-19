@@ -131,17 +131,21 @@ contains
     ATMOS_PHY_BL_RHOV_t(:,:,:)   = UNDEF
     ATMOS_PHY_BL_RHOT_t(:,:,:)   = UNDEF
     ATMOS_PHY_BL_RHOQ_t(:,:,:,:) = UNDEF
+    !$acc enter data create(ATMOS_PHY_BL_RHOU_t,ATMOS_PHY_BL_RHOV_t,ATMOS_PHY_BL_RHOT_t,ATMOS_PHY_BL_RHOQ_t)
 
     allocate( ATMOS_PHY_BL_Zi      (IA,JA) )
     ATMOS_PHY_BL_Zi      (:,:) = UNDEF
+    !$acc enter data create(ATMOS_PHY_BL_Zi)
 
     allocate( ATMOS_PHY_BL_SFLX_BUOY(IA,JA) )
     ATMOS_PHY_BL_SFLX_BUOY(:,:) = UNDEF
+    !$acc enter data create(ATMOS_PHY_BL_SFLX_BUOY)
 
     allocate( ATMOS_PHY_BL_QL     (KA,IA,JA) )
     allocate( ATMOS_PHY_BL_cldfrac(KA,IA,JA) )
     ATMOS_PHY_BL_QL     (:,:,:) = UNDEF
     ATMOS_PHY_BL_cldfrac(:,:,:) = UNDEF
+    !$acc enter data create(ATMOS_PHY_BL_QL,ATMOS_PHY_BL_cldfrac)
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -192,15 +196,19 @@ contains
     LOG_NEWLINE
     LOG_INFO("ATMOS_PHY_BL_vars_finalize",*) 'Finalize'
 
+    !$acc exit data delete(ATMOS_PHY_BL_RHOU_t,ATMOS_PHY_BL_RHOV_t,ATMOS_PHY_BL_RHOT_t,ATMOS_PHY_BL_RHOQ_t)
     deallocate( ATMOS_PHY_BL_RHOU_t )
     deallocate( ATMOS_PHY_BL_RHOV_t )
     deallocate( ATMOS_PHY_BL_RHOT_t )
     deallocate( ATMOS_PHY_BL_RHOQ_t )
 
+    !$acc exit data delete(ATMOS_PHY_BL_Zi)
     deallocate( ATMOS_PHY_BL_Zi )
 
+    !$acc exit data delete(ATMOS_PHY_BL_SFLX_BUOY)
     deallocate( ATMOS_PHY_BL_SFLX_BUOY )
 
+    !$acc exit data delete(ATMOS_PHY_BL_QL,ATMOS_PHY_BL_cldfrac)
     deallocate( ATMOS_PHY_BL_QL      )
     deallocate( ATMOS_PHY_BL_cldfrac )
 
@@ -279,6 +287,7 @@ contains
 
        if ( FILE_get_AGGREGATE(restart_fid) ) then
           call FILE_CARTESC_flush( restart_fid ) ! X/Y halos have been read from file
+          !$acc update device(ATMOS_PHY_BL_Zi)
        else
           call ATMOS_PHY_BL_vars_fillhalo
        end if

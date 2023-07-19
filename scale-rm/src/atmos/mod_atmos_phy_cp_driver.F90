@@ -227,17 +227,22 @@ contains
     if ( ATMOS_PHY_CP_TYPE /= "KF-JMAPPLIB" ) then
 
        ! temporal running mean of vertical velocity
+!       !$acc update host(W,w0mean)
        call ATMOS_PHY_CP_common_wmean( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
                                        W(:,:,:),                            & ! [IN]
                                        TIME_DTSEC, TIME_DTSEC_ATMOS_PHY_CP, & ! [IN]
                                        w0mean(:,:,:)                        ) ! [INOUT]
+!       !$acc update device(w0mean)
     end if
 
 
     if ( update_flag ) then ! update
+
+       !$acc data create(SFLX_prec)
+
        select case ( ATMOS_PHY_CP_TYPE )
        case ( 'KF' )
-
+!          !$acc update host(DENS,U,V,RHOT,TEMP,PRES,QDRY,QV,DENS_t_CP,RHOT_t_CP,RHOQV_t_CP,RHOHYD_t_CP,kf_nca,SFLX_rain,SFLX_snow,SFLX_ENGI,cloudtop,cloudbase,cldfrac_dp,cldfrac_sh)
           call ATMOS_PHY_CP_kf_tendency( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
                                          DENS(:,:,:),                              & ! [IN]
                                          U(:,:,:), V(:,:,:),                       & ! [IN]
@@ -254,16 +259,29 @@ contains
                                          SFLX_ENGI(:,:),                           & ! [INOUT]
                                          cloudtop(:,:), cloudbase(:,:),            & ! [INOUT]
                                          cldfrac_dp(:,:,:), cldfrac_sh(:,:,:)      ) ! [INOUT]
+!          !$acc update device(DENS_t_CP,RHOT_t_CP,RHOQV_t_CP,RHOHYD_t_CP,kf_nca,SFLX_rain,SFLX_snow,SFLX_ENGI,cloudtop,cloudbase,cldfrac_dp,cldfrac_sh)
 
           !$omp parallel do
+          !$acc kernels
           do j = JS, JE
           do i = IS, IE
              SFLX_prec(i,j) = SFLX_rain(i,j) + SFLX_snow(i,j)
           end do
           end do
+          !$acc end kernels
 
        case ( 'KF-JMAPPLIB' )
 
+          !$omp parallel do
+          !$acc kernels
+          do j = JS, JE
+          do i = IS, IE
+             SFLX_prec(i,j) = SFLX_rain(i,j) + SFLX_snow(i,j)
+          end do
+          end do
+          !$acc end kernels
+
+          !$acc update host(DENS,U,V,W,TEMP,POTT,PRES,EXNER,QDRY,QV,QC,QI,us,PBLH,SFLX_BUOY,RHOT_t_CP,RHOQV_t_CP,RHOHYD_t_CP,w0mean,kf_nca,SFLX_rain,SFLX_snow,SFLX_prec,cloudtop,cloudbase)
           call ATMOS_PHY_CP_KF_JMAPPLIB_tendency( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
                                                   DENS(:,:,:),                             & ! [IN]
                                                   U(:,:,:), V(:,:,:), W(:,:,:),            & ! [IN]
@@ -280,7 +298,9 @@ contains
                                                   SFLX_rain(:,:), SFLX_snow(:,:),          & ! [INOUT]
                                                   SFLX_prec(:,:),                          & ! [INOUT]
                                                   cloudtop(:,:), cloudbase(:,:)            ) ! [INOUT]
+          !$acc update device(DENS_t_CP,RHOT_t_CP,RHOQV_t_CP,RHOHYD_t_CP,w0mean,kf_nca,SFLX_rain,SFLX_snow,SFLX_prec,cloudtop,cloudbase)
           !$omp parallel do
+          !$acc kernels
           do j = JS, JE
           do i = IS, IE
              ! assume that temperature of precipitation is the same as that at the lowest layer
@@ -288,16 +308,19 @@ contains
                             + SFLX_snow(i,j) * ( CV_ICE * TEMP(KS,i,j) - LHF )
           end do
           end do
+          !$acc end kernels
 
        end select
 
 !OCL XFILL
        !$omp parallel do
+       !$acc kernels
        do j  = JS, JE
        do i  = IS, IE
           MFLX_cloudbase(i,j) = 0.0_RP
        enddo
        enddo
+       !$acc end kernels
 
        ! diagnose tendency of number concentration
 
@@ -321,9 +344,12 @@ contains
                                 'tendency rho*'//trim(HYD_NAME(iq))//' in CP', 'kg/m3/s', fill_halo=.true. )
        enddo
 
+       !$acc end data
+
     endif ! update
 
     !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+    !$acc kernels
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -332,12 +358,16 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
+
+    !$acc data create(RHOQ_t_CP)
 
     call ATMOS_PHY_MP_driver_qhyd2qtrc( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
                                         RHOQV_t_CP(:,:,:), RHOHYD_t_CP(:,:,:,:), & ! [IN]
                                         RHOQ_t_CP(:,:,:,QS_MP:QE_MP)             ) ! [OUT]
 
     !$omp parallel do private(iq,i,j,k) OMP_SCHEDULE_ collapse(3)
+    !$acc kernels
     do iq = QS_MP, QE_MP
     do j  = JS, JE
     do i  = IS, IE
@@ -347,6 +377,7 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
 
     if ( STATISTICS_checktotal ) then
        call STATISTICS_total( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
@@ -365,6 +396,8 @@ contains
                                  ATMOS_GRID_CARTESC_REAL_TOTVOL                       )
        enddo
     endif
+
+    !$acc end data
 
     return
   end subroutine ATMOS_PHY_CP_driver_calc_tendency

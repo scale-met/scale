@@ -77,32 +77,66 @@ contains
     integer :: k, i, j
     !---------------------------------------------------------------------------
 
-    !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
-    !$omp private(i,j,k, &
-    !$omp         RHOH_LW,RHOH_SW) &
-    !$omp shared(RHOH,TEMP_t,flux_rad,DENS,CVtot,FZ, &
-    !$omp        KS,KE,IS,IE,JS,JE)
-    do j = JS, JE
-    do i = IS, IE
-    do k = KS, KE
+    if ( present(TEMP_t) ) then
 
-       RHOH_LW = ( ( flux_rad(k,i,j,I_LW,I_dn) - flux_rad(k-1,i,j,I_LW,I_dn) ) &
-                 - ( flux_rad(k,i,j,I_LW,I_up) - flux_rad(k-1,i,j,I_LW,I_up) ) &
-                 ) / ( FZ(k,i,j) - FZ(k-1,i,j) )
+       !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
+       !$omp private(i,j,k, &
+       !$omp         RHOH_LW,RHOH_SW) &
+       !$omp shared(RHOH,TEMP_t,flux_rad,DENS,CVtot,FZ, &
+       !$omp        KS,KE,IS,IE,JS,JE)
+       !$acc kernels
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
 
-       RHOH_SW = ( ( flux_rad(k,i,j,I_SW,I_dn) - flux_rad(k-1,i,j,I_SW,I_dn) ) &
-                 - ( flux_rad(k,i,j,I_SW,I_up) - flux_rad(k-1,i,j,I_SW,I_up) ) &
-                 ) / ( FZ(k,i,j) - FZ(k-1,i,j) )
+          RHOH_LW = ( ( flux_rad(k,i,j,I_LW,I_dn) - flux_rad(k-1,i,j,I_LW,I_dn) ) &
+                    - ( flux_rad(k,i,j,I_LW,I_up) - flux_rad(k-1,i,j,I_LW,I_up) ) &
+                    ) / ( FZ(k,i,j) - FZ(k-1,i,j) )
 
-       RHOH(k,i,j) = RHOH_LW + RHOH_SW
+          RHOH_SW = ( ( flux_rad(k,i,j,I_SW,I_dn) - flux_rad(k-1,i,j,I_SW,I_dn) ) &
+                    - ( flux_rad(k,i,j,I_SW,I_up) - flux_rad(k-1,i,j,I_SW,I_up) ) &
+                    ) / ( FZ(k,i,j) - FZ(k-1,i,j) )
 
-       TEMP_t(k,i,j,I_LW) = RHOH_LW / DENS(k,i,j) / CVtot(k,i,j) * 86400.0_RP ! [K/day]
-       TEMP_t(k,i,j,I_SW) = RHOH_SW / DENS(k,i,j) / CVtot(k,i,j) * 86400.0_RP ! [K/day]
+          RHOH(k,i,j) = RHOH_LW + RHOH_SW
 
-       TEMP_t(k,i,j,3)    = TEMP_t(k,i,j,I_LW) + TEMP_t(k,i,j,I_SW)
-    enddo
-    enddo
-    enddo
+          TEMP_t(k,i,j,I_LW) = RHOH_LW / DENS(k,i,j) / CVtot(k,i,j) * 86400.0_RP ! [K/day]
+          TEMP_t(k,i,j,I_SW) = RHOH_SW / DENS(k,i,j) / CVtot(k,i,j) * 86400.0_RP ! [K/day]
+
+          TEMP_t(k,i,j,3)    = TEMP_t(k,i,j,I_LW) + TEMP_t(k,i,j,I_SW)
+
+       enddo
+       enddo
+       enddo
+       !$acc end kernels
+
+    else
+
+       !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
+       !$omp private(i,j,k, &
+       !$omp         RHOH_LW,RHOH_SW) &
+       !$omp shared(RHOH,flux_rad,FZ, &
+       !$omp        KS,KE,IS,IE,JS,JE)
+       !$acc kernels
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+
+          RHOH_LW = ( ( flux_rad(k,i,j,I_LW,I_dn) - flux_rad(k-1,i,j,I_LW,I_dn) ) &
+                    - ( flux_rad(k,i,j,I_LW,I_up) - flux_rad(k-1,i,j,I_LW,I_up) ) &
+                    ) / ( FZ(k,i,j) - FZ(k-1,i,j) )
+
+          RHOH_SW = ( ( flux_rad(k,i,j,I_SW,I_dn) - flux_rad(k-1,i,j,I_SW,I_dn) ) &
+                    - ( flux_rad(k,i,j,I_SW,I_up) - flux_rad(k-1,i,j,I_SW,I_up) ) &
+                    ) / ( FZ(k,i,j) - FZ(k-1,i,j) )
+
+          RHOH(k,i,j) = RHOH_LW + RHOH_SW
+
+       enddo
+       enddo
+       enddo
+       !$acc end kernels
+
+    end if
 
     return
   end subroutine ATMOS_PHY_RD_calc_heating

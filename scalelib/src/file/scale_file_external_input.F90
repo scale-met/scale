@@ -324,6 +324,8 @@ contains
                                         step_limit        = step_limit         ) ! [IN]
     enddo
 
+    !$acc enter data create(FILE_EXTERNAL_INPUT_item)
+
     return
   end subroutine FILE_EXTERNAL_INPUT_setup
 
@@ -338,12 +340,14 @@ contains
     LOG_INFO("FILE_EXTERNAL_INPUT_finalize",*) 'Finalize'
 
     do id = 1, FILE_EXTERNAL_INPUT_item_count
+       !$acc exit data delete(FILE_EXTERNAL_INPUT_item(id)%value)
        deallocate( FILE_EXTERNAL_INPUT_item(id)%value )
        deallocate( FILE_EXTERNAL_INPUT_item(id)%time )
        if ( allocated( FILE_EXTERNAL_INPUT_item(id)%basename ) ) &
             deallocate( FILE_EXTERNAL_INPUT_item(id)%basename )
     end do
 
+    !$acc exit data delete(FILE_EXTERNAL_INPUT_item)
     FILE_EXTERNAL_INPUT_item_count = 0
 
     return
@@ -589,6 +593,7 @@ contains
        FILE_EXTERNAL_INPUT_item(nid)%var_start(n) = 1
        FILE_EXTERNAL_INPUT_item(nid)%var_max  (n) = 0
     enddo
+    !$acc update device(FILE_EXTERNAL_INPUT_item(nid)%dim_max,FILE_EXTERNAL_INPUT_item(nid)%dim_start,FILE_EXTERNAL_INPUT_item(nid)%var_start)
 
     FILE_EXTERNAL_INPUT_item(nid)%ndim        = dim_rank
     FILE_EXTERNAL_INPUT_item(nid)%step_num    = step_num
@@ -596,6 +601,7 @@ contains
 
     allocate( FILE_EXTERNAL_INPUT_item(nid)%value(FILE_EXTERNAL_INPUT_item(nid)%dim_size(1),FILE_EXTERNAL_INPUT_item(nid)%dim_size(2),FILE_EXTERNAL_INPUT_item(nid)%dim_size(3),2) )
     FILE_EXTERNAL_INPUT_item(nid)%value(:,:,:,:) = defval
+    !$acc enter data copyin(FILE_EXTERNAL_INPUT_item(nid)%value)
 
     allocate( FILE_EXTERNAL_INPUT_item(nid)%time(step_num*file_num) )
     do n = 1, FILE_EXTERNAL_INPUT_item(nid)%step_num*file_num
@@ -1054,6 +1060,7 @@ contains
     LOG_INFO("FILE_EXTERNAL_INPUT_regist",'(1x,A,A15)') 'Initial read of external data : ', trim(varname)
 
     allocate( buf(FILE_EXTERNAL_INPUT_item(nid)%var_size(1),FILE_EXTERNAL_INPUT_item(nid)%var_size(2),FILE_EXTERNAL_INPUT_item(nid)%var_size(3)) )
+    !$acc data create(buf)
 
     select case ( dim_rank )
     case ( 1 )
@@ -1199,6 +1206,8 @@ contains
        call PRC_abort
     end select
 
+    !$acc end data
+
     deallocate( buf )
 
     if ( present(check_coordinates) ) then
@@ -1277,6 +1286,7 @@ contains
                ' (step= ', FILE_EXTERNAL_INPUT_item(nid)%data_step_next, ', file step=', step_next, ')'
 
           allocate( buf(FILE_EXTERNAL_INPUT_item(nid)%var_size(1)) )
+          !$acc data create(buf)
 
           ! read next
           if ( FILE_EXTERNAL_INPUT_item(nid)%aggregate ) then
@@ -1296,6 +1306,7 @@ contains
                                                buf(:),                                &
                                                error                                  )
 
+          !$acc end data
           deallocate( buf )
 
           if ( error ) return
@@ -1309,9 +1320,12 @@ contains
     n1s = FILE_EXTERNAL_INPUT_item(nid)%dim_start(1)
     n1e = n1s - 1 + FILE_EXTERNAL_INPUT_item(nid)%dim_max(1)
 
+    !$acc data copyout(var)
+
     ! store data with weight
     if ( FILE_EXTERNAL_INPUT_item(nid)%allow_missing ) then
        !$omp parallel do
+       !$acc kernels present(FILE_EXTERNAL_INPUT_item(nid))
        do n1 = n1s, n1e
           if (       abs( FILE_EXTERNAL_INPUT_item(nid)%value(n1,1,1,I_prev) - UNDEF ) > EPS &
                .and. abs( FILE_EXTERNAL_INPUT_item(nid)%value(n1,1,1,I_next) - UNDEF ) > EPS ) then
@@ -1321,13 +1335,18 @@ contains
              var(n1) = UNDEF
           end if
        enddo
+       !$acc end kernels
     else
        !$omp parallel do
+       !$acc kernels present(FILE_EXTERNAL_INPUT_item(nid))
        do n1 = n1s, n1e
           var(n1) = ( 1.0_RP-weight ) * FILE_EXTERNAL_INPUT_item(nid)%value(n1,1,1,I_prev) &
                   + (        weight ) * FILE_EXTERNAL_INPUT_item(nid)%value(n1,1,1,I_next)
        enddo
+       !$acc end kernels
     end if
+
+    !$acc end data
 
     return
   end subroutine FILE_EXTERNAL_INPUT_update_1D
@@ -1391,6 +1410,7 @@ contains
                ' (step= ', FILE_EXTERNAL_INPUT_item(nid)%data_step_next, ', file step=', step_next, ')'
 
           allocate( buf(FILE_EXTERNAL_INPUT_item(nid)%var_size(1),FILE_EXTERNAL_INPUT_item(nid)%var_size(2)) )
+          !$acc data create(buf)
 
           ! read next
           if ( FILE_EXTERNAL_INPUT_item(nid)%aggregate ) then
@@ -1410,6 +1430,7 @@ contains
                                                buf(:,:),                              &
                                                error                                  )
 
+          !$acc end data
           deallocate( buf )
 
           if ( error ) return
@@ -1424,9 +1445,12 @@ contains
     n2s = FILE_EXTERNAL_INPUT_item(nid)%dim_start(2)
     n2e = n2s - 1 + FILE_EXTERNAL_INPUT_item(nid)%dim_max(2)
 
+    !$acc data copyout(var)
+
     ! store data with weight
     if ( FILE_EXTERNAL_INPUT_item(nid)%allow_missing ) then
        !$omp parallel do
+       !$acc kernels present(FILE_EXTERNAL_INPUT_item(nid))
        do n2 = n2s, n2e
           do n1 = n1s, n1e
              if (       abs( FILE_EXTERNAL_INPUT_item(nid)%value(n1,n2,1,I_prev) - UNDEF ) > EPS &
@@ -1438,15 +1462,20 @@ contains
              end if
           enddo
        enddo
+       !$acc end kernels
     else
        !$omp parallel do
+       !$acc kernels present(FILE_EXTERNAL_INPUT_item(nid))
        do n2 = n2s, n2e
           do n1 = n1s, n1e
              var(n1,n2) = ( 1.0_RP-weight ) * FILE_EXTERNAL_INPUT_item(nid)%value(n1,n2,1,I_prev) &
                         + (        weight ) * FILE_EXTERNAL_INPUT_item(nid)%value(n1,n2,1,I_next)
           enddo
        enddo
+       !$acc end kernels
     end if
+
+    !$acc end data
 
     return
   end subroutine FILE_EXTERNAL_INPUT_update_2D
@@ -1510,6 +1539,7 @@ contains
                ' (step= ', FILE_EXTERNAL_INPUT_item(nid)%data_step_next, ', file step=', step_next, ')'
 
           allocate( buf(FILE_EXTERNAL_INPUT_item(nid)%var_size(1),FILE_EXTERNAL_INPUT_item(nid)%var_size(2),FILE_EXTERNAL_INPUT_item(nid)%var_size(3)) )
+          !$acc data create(buf)
 
           ! read next
           if ( FILE_EXTERNAL_INPUT_item(nid)%aggregate ) then
@@ -1529,6 +1559,7 @@ contains
                                                buf(:,:,:),                            &
                                                error                                  )
 
+          !$acc end data
           deallocate(buf)
 
           if ( error ) return
@@ -1545,9 +1576,12 @@ contains
     n3s = FILE_EXTERNAL_INPUT_item(nid)%dim_start(3)
     n3e = n3s - 1 + FILE_EXTERNAL_INPUT_item(nid)%dim_max(3)
 
+    !$acc data copyout(var)
+
     ! store data with weight
     if ( FILE_EXTERNAL_INPUT_item(nid)%allow_missing ) then
        !$omp parallel do
+       !$acc kernels present(FILE_EXTERNAL_INPUT_item(nid))
        do n3 = n3s, n3e
           do n2 = n2s, n2e
              do n1 = n1s, n1e
@@ -1561,8 +1595,10 @@ contains
              enddo
           enddo
        enddo
+       !$acc end kernels
     else
        !$omp parallel do
+       !$acc kernels present(FILE_EXTERNAL_INPUT_item(nid))
        do n3 = n3s, n3e
           do n2 = n2s, n2e
              do n1 = n1s, n1e
@@ -1571,7 +1607,10 @@ contains
              enddo
           enddo
        enddo
+       !$acc end kernels
     end if
+
+    !$acc end data
 
     return
   end subroutine FILE_EXTERNAL_INPUT_update_3D
@@ -1604,22 +1643,31 @@ contains
     error = .false.
 
     !$omp workshare
+    !$acc kernels present(FILE_EXTERNAL_INPUT_item(nid))
     FILE_EXTERNAL_INPUT_item(nid)%value(:,:,:,I_prev) = FILE_EXTERNAL_INPUT_item(nid)%value(:,:,:,I_next)
+    !$acc end kernels
     !$omp end workshare
 
     !$omp parallel do private(nn1,nnn1)
+    !$acc kernels copyin(var) present(FILE_EXTERNAL_INPUT_item(nid))
+    !$acc loop reduction(.or.:error) independent
     do n1 = 1, FILE_EXTERNAL_INPUT_item(nid)%dim_max(1)
        nn1  = n1 + FILE_EXTERNAL_INPUT_item(nid)%dim_start(1) - 1
        nnn1 = n1 + FILE_EXTERNAL_INPUT_item(nid)%var_start(1) - 1
        if ( .not. FILE_EXTERNAL_INPUT_item(nid)%allow_missing ) then
           if ( abs( var(nnn1) - UNDEF ) < EPS ) then
-             LOG_INFO("FILE_EXTERNAL_INPUT_put_ref_1D",*) 'missing value is found in ', &
+             LOG_WARN("FILE_EXTERNAL_INPUT_put_ref_1D",*) 'missing value is found in ', &
+#ifdef _OPENACC
+                  FILE_EXTERNAL_INPUT_item(nid)%varname, ' at (',nnn1,')'
+#else
                   trim(FILE_EXTERNAL_INPUT_item(nid)%varname), ' at (',nnn1,')'
+#endif
              error = .true.
           end if
        end if
        FILE_EXTERNAL_INPUT_item(nid)%value(nn1,1,1,I_next) = var(nnn1)
     enddo
+    !$acc end kernels
 
     return
   end subroutine FILE_EXTERNAL_INPUT_put_ref_1D
@@ -1650,51 +1698,77 @@ contains
     error = .false.
 
     !$omp workshare
+    !$acc kernels present(FILE_EXTERNAL_INPUT_item(nid))
     FILE_EXTERNAL_INPUT_item(nid)%value(:,:,:,I_prev) = FILE_EXTERNAL_INPUT_item(nid)%value(:,:,:,I_next)
+    !$acc end kernels
     !$omp end workshare
 
     if ( FILE_EXTERNAL_INPUT_item(nid)%transpose ) then
        ! (x,z)->(z,x)
        !$omp parallel do private(nn1,nn2,nnn1,nnn2)
+       !$acc kernels copyin(var) present(FILE_EXTERNAL_INPUT_item(nid))
+       !$acc loop collapse(2) reduction(.or.:error) independent
        do n2 = 1, FILE_EXTERNAL_INPUT_item(nid)%dim_max(2)
+#ifndef _OPENACC
           if ( error ) cycle
           nn2  = n2 + FILE_EXTERNAL_INPUT_item(nid)%dim_start(2) - 1
           nnn2 = n2 + FILE_EXTERNAL_INPUT_item(nid)%var_start(1) - 1
-
+#endif
           do n1 = 1, FILE_EXTERNAL_INPUT_item(nid)%dim_max(1)
+#ifdef _OPENACC
+             nn2  = n2 + FILE_EXTERNAL_INPUT_item(nid)%dim_start(2) - 1
+             nnn2 = n2 + FILE_EXTERNAL_INPUT_item(nid)%var_start(1) - 1
+#endif
              nn1  = n1 + FILE_EXTERNAL_INPUT_item(nid)%dim_start(1) - 1
              nnn1 = n1 + FILE_EXTERNAL_INPUT_item(nid)%var_start(2) - 1
              if ( .not. FILE_EXTERNAL_INPUT_item(nid)%allow_missing ) then
                 if ( abs( var(nnn2,nnn1) - UNDEF ) < EPS ) then
-                   LOG_INFO("FILE_EXTERNAL_INPUT_put_ref_2D",*) 'missing value is found in ', &
+                   LOG_WARN("FILE_EXTERNAL_INPUT_put_ref_2D",*) 'missing value is found in ', &
+#ifdef _OPENACC
+                        FILE_EXTERNAL_INPUT_item(nid)%varname, ' at (',nnn2,',',nnn1,')'
+#else
                         trim(FILE_EXTERNAL_INPUT_item(nid)%varname), ' at (',nnn2,',',nnn1,')'
+#endif
                    error = .true.
                 end if
              end if
              FILE_EXTERNAL_INPUT_item(nid)%value(nn1,nn2,1,I_next) = var(nnn2,nnn1)
           enddo
        enddo
+       !$acc end kernels
     else
        ! (z,x)->(z,x)
        !$omp parallel do private(nn1,nn2,nnn1,nnn2)
+       !$acc kernels copyin(var) present(FILE_EXTERNAL_INPUT_item(nid))
+       !$acc loop collapse(2) reduction(.or.:error) independent
        do n2 = 1, FILE_EXTERNAL_INPUT_item(nid)%dim_max(2)
+#ifndef _OPENACC
           if ( error ) cycle
           nn2  = n2 + FILE_EXTERNAL_INPUT_item(nid)%dim_start(2) - 1
           nnn2 = n2 + FILE_EXTERNAL_INPUT_item(nid)%var_start(2) - 1
-
+#endif
           do n1 = 1, FILE_EXTERNAL_INPUT_item(nid)%dim_max(1)
+#ifdef _OPENACC
+             nn2  = n2 + FILE_EXTERNAL_INPUT_item(nid)%dim_start(2) - 1
+             nnn2 = n2 + FILE_EXTERNAL_INPUT_item(nid)%var_start(2) - 1
+#endif
              nn1  = n1 + FILE_EXTERNAL_INPUT_item(nid)%dim_start(1) - 1
              nnn1 = n1 + FILE_EXTERNAL_INPUT_item(nid)%var_start(1) - 1
              if ( .not. FILE_EXTERNAL_INPUT_item(nid)%allow_missing ) then
                 if ( abs( var(nnn2,nnn1) - UNDEF ) < EPS ) then
-                   LOG_INFO("FILE_EXTERNAL_INPUT_put_ref_2D",*) 'missing value is found in ', &
+                   LOG_WARN("FILE_EXTERNAL_INPUT_put_ref_2D",*) 'missing value is found in ', &
+#ifdef _OPENACC
+                        FILE_EXTERNAL_INPUT_item(nid)%varname, ' at (',nnn1,',',nnn2,')'
+#else
                         trim(FILE_EXTERNAL_INPUT_item(nid)%varname), ' at (',nnn1,',',nnn2,')'
+#endif
                    error = .true.
                 end if
              end if
              FILE_EXTERNAL_INPUT_item(nid)%value(nn1,nn2,1,I_next) = var(nnn1,nnn2)
           enddo
        enddo
+       !$acc end kernels
     endif
 
     return
@@ -1726,29 +1800,45 @@ contains
     error = .false.
 
     !$omp workshare
+    !$acc kernels
     FILE_EXTERNAL_INPUT_item(nid)%value(:,:,:,I_prev) = FILE_EXTERNAL_INPUT_item(nid)%value(:,:,:,I_next)
+    !$acc end kernels
     !$omp end workshare
 
     if ( FILE_EXTERNAL_INPUT_item(nid)%transpose ) then
        ! (x,y,z)->(z,x,y)
        !$omp parallel do private(nn1,nn2,nn3,nnn1,nnn2,nnn3)
+       !$acc kernels copyin(var) present(FILE_EXTERNAL_INPUT_item(nid))
+       !$acc loop collapse(3) reduction(.or.:error) independent
        do n3 = 1, FILE_EXTERNAL_INPUT_item(nid)%dim_max(3)
+#ifndef _OPENACC
           if ( error ) cycle
           nn3  = n3 + FILE_EXTERNAL_INPUT_item(nid)%dim_start(3) - 1
           nnn3 = n3 + FILE_EXTERNAL_INPUT_item(nid)%var_start(2) - 1
-
+#endif
           do n2 = 1, FILE_EXTERNAL_INPUT_item(nid)%dim_max(2)
+#ifndef _OPENACC
              if ( error ) exit
              nn2  = n2 + FILE_EXTERNAL_INPUT_item(nid)%dim_start(2) - 1
              nnn2 = n2 + FILE_EXTERNAL_INPUT_item(nid)%var_start(1) - 1
-
+#endif
              do n1 = 1, FILE_EXTERNAL_INPUT_item(nid)%dim_max(1)
+#ifdef _OPENACC
+                nn3  = n3 + FILE_EXTERNAL_INPUT_item(nid)%dim_start(3) - 1
+                nnn3 = n3 + FILE_EXTERNAL_INPUT_item(nid)%var_start(2) - 1
+                nn2  = n2 + FILE_EXTERNAL_INPUT_item(nid)%dim_start(2) - 1
+                nnn2 = n2 + FILE_EXTERNAL_INPUT_item(nid)%var_start(1) - 1
+#endif
                 nn1  = n1 + FILE_EXTERNAL_INPUT_item(nid)%dim_start(1) - 1
                 nnn1 = n1 + FILE_EXTERNAL_INPUT_item(nid)%var_start(3) - 1
                 if ( .not. FILE_EXTERNAL_INPUT_item(nid)%allow_missing ) then
                    if ( abs( var(nnn2,nnn3,nnn1) - UNDEF ) < EPS ) then
-                      LOG_INFO("FILE_EXTERNAL_INPUT_put_ref_3D",*) 'missing value is found in ', &
+                      LOG_WARN("FILE_EXTERNAL_INPUT_put_ref_3D",*) 'missing value is found in ', &
+#ifdef _OPENACC
+                           FILE_EXTERNAL_INPUT_item(nid)%varname, ' at (',nnn2,',',nnn3,',',nnn1,')'
+#else
                            trim(FILE_EXTERNAL_INPUT_item(nid)%varname), ' at (',nnn2,',',nnn3,',',nnn1,')'
+#endif
                       error = .true.
                    end if
                 end if
@@ -1756,26 +1846,41 @@ contains
              enddo
           enddo
        enddo
+       !$acc end kernels
     else
        ! (z,x,y)->(z,x,y)
        !$omp parallel do private(nn1,nn2,nn3,nnn1,nnn2,nnn3)
+       !$acc kernels copyin(var) present(FILE_EXTERNAL_INPUT_item(nid))
+       !$acc loop collapse(3) reduction(.or.:error) independent
        do n3 = 1, FILE_EXTERNAL_INPUT_item(nid)%dim_max(3)
+#ifndef _OPENACC
           if ( error ) cycle
           nn3  = n3 + FILE_EXTERNAL_INPUT_item(nid)%dim_start(3) - 1
           nnn3 = n3 + FILE_EXTERNAL_INPUT_item(nid)%var_start(3) - 1
-
+#endif
           do n2 = 1, FILE_EXTERNAL_INPUT_item(nid)%dim_max(2)
+#ifndef _OPENACC
              if ( error ) exit
              nn2  = n2 + FILE_EXTERNAL_INPUT_item(nid)%dim_start(2) - 1
              nnn2 = n2 + FILE_EXTERNAL_INPUT_item(nid)%var_start(2) - 1
-
+#endif
              do n1 = 1, FILE_EXTERNAL_INPUT_item(nid)%dim_max(1)
+#ifdef _OPENACC
+                nn3  = n3 + FILE_EXTERNAL_INPUT_item(nid)%dim_start(3) - 1
+                nnn3 = n3 + FILE_EXTERNAL_INPUT_item(nid)%var_start(3) - 1
+                nn2  = n2 + FILE_EXTERNAL_INPUT_item(nid)%dim_start(2) - 1
+                nnn2 = n2 + FILE_EXTERNAL_INPUT_item(nid)%var_start(2) - 1
+#endif
                 nn1  = n1 + FILE_EXTERNAL_INPUT_item(nid)%dim_start(1) - 1
                 nnn1 = n1 + FILE_EXTERNAL_INPUT_item(nid)%var_start(1) - 1
                 if ( .not. FILE_EXTERNAL_INPUT_item(nid)%allow_missing ) then
                    if ( abs( var(nnn1,nnn2,nnn3) - UNDEF ) < EPS ) then
-                      LOG_INFO("FILE_EXTERNAL_INPUT_put_ref_3D",*) 'missing value is found in ', &
+                      LOG_WARN("FILE_EXTERNAL_INPUT_put_ref_3D",*) 'missing value is found in ', &
+#ifdef _OPENACC
+                           FILE_EXTERNAL_INPUT_item(nid)%varname, ' at (',nnn1,',',nnn2,',',nnn3,')'
+#else
                            trim(FILE_EXTERNAL_INPUT_item(nid)%varname), ' at (',nnn1,',',nnn2,',',nnn3,')'
+#endif
                       error = .true.
                    end if
                 end if
@@ -1783,6 +1888,7 @@ contains
              enddo
           enddo
        enddo
+       !$acc end kernels
     endif
 
     return
@@ -1822,7 +1928,9 @@ contains
     error = .false.
 
     !$omp workshare
+    !$acc kernels present(FILE_EXTERNAL_INPUT_item(nid))
     var(:) = FILE_EXTERNAL_INPUT_item(nid)%value(:,1,1,i_step_)
+    !$acc end kernels
     !$omp end workshare
 
     return
@@ -1860,7 +1968,9 @@ contains
     error = .false.
 
     !$omp workshare
+    !$acc kernels present(FILE_EXTERNAL_INPUT_item(nid))
     var(:,:) = FILE_EXTERNAL_INPUT_item(nid)%value(:,:,1,i_step_)
+    !$acc end kernels
     !$omp end workshare
 
     return
@@ -1900,7 +2010,9 @@ contains
     error = .false.
 
     !$omp workshare
+    !$acc kernels present(FILE_EXTERNAL_INPUT_item(nid))
     var(:,:,:) = FILE_EXTERNAL_INPUT_item(nid)%value(:,:,:,i_step_)
+    !$acc end kernels
     !$omp end workshare
 
     return

@@ -60,6 +60,7 @@ module scale_urban_dyn_kusaka01
                                               ! DTS_MAX * dt
   integer , private :: BOUND      =    1      ! Boundary Condition for Roof, Wall, Ground Layer Temp
                                               !       [1: Zero-Flux, 2: T = Constant]
+  !$acc declare create(DTS_MAX,BOUND)
 
   ! urban parameters
   real(RP), private :: ZR         =   10.0_RP ! roof level (building height) [m]
@@ -92,8 +93,7 @@ module scale_urban_dyn_kusaka01
   real(RP), private :: TRLEND     = 293.00_RP ! lower boundary condition of roof temperature [K]
   real(RP), private :: TBLEND     = 293.00_RP ! lower boundary condition of wall temperature [K]
   real(RP), private :: TGLEND     = 293.00_RP ! lower boundary condition of ground temperature [K]
-
-  real(RP), private :: ahdiurnal(1:24)        ! AH diurnal profile
+  !$acc declare create(ZR,BETR_CONST,BETB_CONST,BETG_CONST,STRGR,STRGB,STRGG,CAPR,CAPB,CAPG,AKSR,AKSB,AKSG,ALBR,ALBB,ALBG,EPSR,EPSB,EPSG,Z0R,TRLEND,TBLEND,TGLEND)
 
   ! calculated in subroutine urban_param_set
   real(RP), private :: R                       ! Normalized roof wight (eq. building coverage ratio)
@@ -106,6 +106,7 @@ module scale_urban_dyn_kusaka01
   real(RP), private :: Z0HC_TBL                ! Roughness length above canyon for heat [m]
   real(RP), private :: ZDC_TBL                 ! Displacement height [m]
   real(RP), private :: SVF                     ! Sky view factor [-]
+  !$acc declare create(R,RW,HGT,Z0HR,Z0HB,Z0HG,SVF)
 
   ! history
   integer, private :: I_SHR, I_SHB, I_SHG
@@ -169,12 +170,17 @@ contains
     real(RP) :: rtime
     integer  :: itime
 
+    real(RP) :: ahdiurnal(1:24)        ! AH diurnal profile
+
     integer  :: i, j, k
     integer  :: ierr
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
     LOG_INFO("URBAN_DYN_kusaka01_setup",*) 'Setup'
+
+    !$acc data copyin(fact_urban) &
+    !$acc      copyout(Z0M, Z0H, Z0E, ZD, AH_URB, AHL_URB)
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -204,7 +210,7 @@ contains
     rtime = modulo(BASE_LON, 360.0_RP) / 15.0_RP
     itime = nint(rtime)
     AH_TOFFSET = rtime - itime                 ! currently not used: difference of time from domain center
-    ahdiurnal(:) = cshift(ahdiurnal, -1*itime) ! convert from LT to UTC
+    ahdiurnal(:) = cshift(ahdiurnal(:), -1*itime) ! convert from LT to UTC
 
     do j = UJS, UJE
     do i = UIS, UIE
@@ -221,12 +227,12 @@ contains
 
     !-- replace gridded Z0M data if there is a file
     if( URBAN_DYN_KUSAKA01_GRIDDED_Z0M_IN_FILENAME /= '' ) then
-     udata = 0.0_RP
+     udata(:,:) = 0.0_RP
      call read_urban_gridded_data_2D(                   &
             UIA, UJA,                                   &
             URBAN_DYN_KUSAKA01_GRIDDED_Z0M_IN_FILENAME, &
             URBAN_DYN_KUSAKA01_GRIDDED_Z0M_IN_VARNAME,  &
-            udata                                       )
+            udata(:,:)                                  )
 
       ! replace to gridded data
       do j = UJS, UJE
@@ -353,6 +359,13 @@ contains
     call FILE_HISTORY_reg( 'URBAN_RNG',   'urban net radiation on road',         'W/m2', I_RNG  , ndims=2 )
     call FILE_HISTORY_reg( 'URBAN_RNgrd', 'urban grid average of net radiation', 'W/m2', I_RNgrd, ndims=2 )
 
+    !$acc update device(Z0M, Z0H, Z0E, ZD, AH_URB, AHL_URB)
+    !$acc end data
+
+    !$acc update device(DTS_MAX,BOUND)
+    !$acc update device(ZR,BETR_CONST,BETB_CONST,BETG_CONST,STRGR,STRGB,STRGG,CAPR,CAPB,CAPG,AKSR,AKSB,AKSG,ALBR,ALBB,ALBG,EPSR,EPSB,EPSG,Z0R,TRLEND,TBLEND,TGLEND)
+    !$acc update device(R,RW,HGT,Z0HR,Z0HB,Z0HG,SVF)
+
     return
   end subroutine URBAN_DYN_kusaka01_setup
 
@@ -386,6 +399,9 @@ contains
        Ustar, Tstar, Qstar, Wstar,      &
        RLmo,                            &
        U10, V10, T2, Q2                 )
+    use scale_prc, only: &
+       PRC_myrank, &
+       PRC_abort
     use scale_const, only: &
        EPS   => CONST_EPS,  &
        UNDEF => CONST_UNDEF, &
@@ -458,7 +474,6 @@ contains
     real(RP), intent(out) :: T2      (UIA,UJA)
     real(RP), intent(out) :: Q2      (UIA,UJA)
 
-
     ! parameter
     logical,  parameter :: LSOLAR = .false. ! [true=both, false=SSG only]
 
@@ -498,6 +513,8 @@ contains
     real(RP) :: DZB(UKA)     ! thickness of each building layer [m]
     real(RP) :: DZG(UKA)     ! thickness of each road layer [m]
 
+    real(RP) :: SWDt(2)
+    real(RP) :: LWDt(2)
 
     real(RP) :: Uabs  ! modified absolute velocity [m/s]
     real(RP) :: Ra    ! Aerodynamic resistance (=1/Ce) [1/s]
@@ -513,17 +530,44 @@ contains
     real(RP) :: MFLUX
     real(RP) :: w
 
+#ifdef _OPENACC
+    real(RP) :: TRLP(UKS:UKE,UIA,UJA)
+    real(RP) :: TBLP(UKS:UKE,UIA,UJA)
+    real(RP) :: TGLP(UKS:UKE,UIA,UJA)
+    real(RP) :: A(UKE,UIA,UJA)
+    real(RP) :: B(UKE,UIA,UJA)
+    real(RP) :: C(UKE,UIA,UJA)
+    real(RP) :: D(UKE,UIA,UJA)
+    real(RP) :: P(UKE,UIA,UJA)
+    real(RP) :: Q(UKE,UIA,UJA)
+#endif
+
+    logical :: converged
+
     integer :: k, i, j
     !---------------------------------------------------------------------------
 
     LOG_PROGRESS(*) 'urban / dynamics / Kusaka01'
 
+    !$acc data copyin(TMPA,PRSA,U1,V1,DENS,QA,LHV,Z1,PBL,RHOS,PRSS,LWD,SWD,RAIN,EFLX,Z0M,Z0H,Z0E,ZD,CDZ,TanSL_X,TanSL_Y,fact_urban) &
+    !$acc      copy(TR_URB,TB_URB,TG_URB,TC_URB,QC_URB,UC_URB,TRL_URB,TBL_URB,TGL_URB,RAINR_URB,RAINB_URB,RAING_URB) &
+    !$acc      copyout(ROFF_URB,SFC_TEMP,ALBEDO,MWFLX,MUFLX,MVFLX,SHFLX,LHFLX,GHFLX,Ustar,Tstar,Qstar,Wstar,RLmo,U10,V10,T2,Q2) &
+    !$acc      create(SHR,SHB,SHG,LHR,LHB,LHG,GHR,GHB,GHG,RNR,RNB,RNG,RNgrd,DZR,DZB,DZG,TRLP,TBLP,TGLP,A,B,C,D,P,Q)
+
+
+    !$acc kernels
     DZR(:) = CDZ(:)
     DZB(:) = CDZ(:)
     DZG(:) = CDZ(:)
+    !$acc end kernels
+
+    converged = .true.
 
     !$omp parallel do schedule(dynamic) collapse(2) &
-    !$omp private(w,Uabs,TR,TB,TG,TC,QC,UC,TRL,TBL,TGL,RAINR,RAINB,RAING,ALBD_LW,ALBD_SW,QVsat,Ra,FracU10,FracT2,FracQ2,MFLUX)
+    !$omp private(w,Uabs,TR,TB,TG,TC,QC,UC,TRL,TBL,TGL,RAINR,RAINB,RAING,ALBD_LW,ALBD_SW,QVsat,Ra,FracU10,FracT2,FracQ2,MFLUX,SWDt,LWDt)
+    !$acc kernels
+    !$acc loop collapse(2) reduction(.and.: converged) independent &
+    !$acc private(w,Uabs,TR,TB,TG,TC,QC,UC,TRL,TBL,TGL,RAINR,RAINB,RAING,ALBD_LW,ALBD_SW,QVsat,Ra,FracU10,FracT2,FracQ2,MFLUX,SWDt,LWDt)
     do j = UJS, UJE
     do i = UIS, UIE
 
@@ -552,6 +596,9 @@ contains
        RAINR = RAINR_URB(i,j)
        RAINB = RAINB_URB(i,j)
        RAING = RAING_URB(i,j)
+
+       SWDt(:) = SWD(i,j,:)
+       LWDt(:) = LWD(i,j,:)
 
        call SLC_main( UKA, UKS, UKE, UIA, UIS, UIE, UJA, UJS, UJE, &
                       TRL     (:),        & ! [INOUT]
@@ -601,8 +648,8 @@ contains
                       V1      (i,j),      & ! [IN]
                       LHV     (i,j),      & ! [IN]
                       Z1      (i,j),      & ! [IN]
-                      SWD     (i,j,:),    & ! [IN]
-                      LWD     (i,j,:),    & ! [IN]
+                      SWDt    (:),        & ! [IN]
+                      LWDt    (:),        & ! [IN]
                       RAIN    (i,j),      & ! [IN]
                       EFLX    (i,j),      & ! [IN]
                       DENS    (i,j),      & ! [IN]
@@ -611,7 +658,19 @@ contains
                       ZD      (i,j),      & ! [IN]
                       DZR(:), DZG(:), DZB(:), & ! [IN]
                       dt,                 & ! [IN]
-                      i, j                ) ! [IN]
+                      i, j,               & ! [IN]
+#ifdef _OPENACC
+                      TRLP(:,i,j),        &
+                      TBLP(:,i,j),        &
+                      TGLP(:,i,j),        &
+                      A(:,i,j),           &
+                      B(:,i,j),           &
+                      C(:,i,j),           &
+                      D(:,i,j),           &
+                      P(:,i,j),           &
+                      Q(:,i,j),           &
+#endif
+                      converged           ) ! [OUT]
 
        ! update
        TR_URB(i,j) = TR
@@ -697,6 +756,12 @@ contains
 
     end do
     end do
+    !$acc end kernels
+
+    if ( .not. converged ) then
+       LOG_ERROR("URBAN_DYN_kusaka01_SLC_main",*) "not converged"
+       call PRC_abort
+    end if
 
     call put_history( UIA, UJA, &
                       SHR(:,:), SHB(:,:), SHG(:,:), &
@@ -704,6 +769,8 @@ contains
                       GHR(:,:), GHB(:,:), GHG(:,:), &
                       RNR(:,:), RNB(:,:), RNG(:,:), &
                       RNgrd(:,:)                    )
+
+    !$acc end data
 
     return
   end subroutine URBAN_DYN_kusaka01
@@ -769,7 +836,13 @@ contains
         ZDC,          & ! (in)
         DZR, DZB, DZG, & ! (in)
         dt,           & ! (in)
-        i, j          ) ! (in)
+        i, j,         & ! (in)
+#ifdef _OPENACC
+        TRLP, TBLP, TGLP, &
+        A, B, C, D, P, Q, &
+#endif
+        converged     ) ! (out)
+    !$acc routine seq
     use scale_prc, only: &
        PRC_myrank, &
        PRC_abort
@@ -855,6 +928,23 @@ contains
     real(RP), intent(out)   :: LHR, LHB, LHG
     real(RP), intent(out)   :: GHR, GHB, GHG
     integer , intent(in)    :: i, j
+    logical,  intent(out)   :: converged
+
+#ifdef _OPENACC
+    real(RP), intent(out) :: TRLP(UKS:UKE)    ! Layer temperature at previous step  [K]
+    real(RP), intent(out) :: TBLP(UKS:UKE)    ! Layer temperature at previous step  [K]
+    real(RP), intent(out) :: TGLP(UKS:UKE)    ! Layer temperature at previous step  [K]
+    real(RP), intent(out) :: A(UKE)
+    real(RP), intent(out) :: B(UKE)
+    real(RP), intent(out) :: C(UKE)
+    real(RP), intent(out) :: D(UKE)
+    real(RP), intent(out) :: P(UKE)
+    real(RP), intent(out) :: Q(UKE)
+#else
+    real(RP) :: TRLP(UKS:UKE)    ! Layer temperature at previous step  [K]
+    real(RP) :: TBLP(UKS:UKE)    ! Layer temperature at previous step  [K]
+    real(RP) :: TGLP(UKS:UKE)    ! Layer temperature at previous step  [K]
+#endif
 
     !-- parameters
 !    real(RP), parameter     :: SRATIO    = 0.75_RP     ! ratio between direct/total solar [-]
@@ -885,9 +975,6 @@ contains
     real(RP) :: TGP              ! TGP: at previous time step [K]
     real(RP) :: TCP              ! TCP: at previous time step [K]
     real(RP) :: QCP              ! QCP: at previous time step [kg/kg]
-    real(RP) :: TRLP(UKS:UKE)    ! Layer temperature at previous step  [K]
-    real(RP) :: TBLP(UKS:UKE)    ! Layer temperature at previous step  [K]
-    real(RP) :: TGLP(UKS:UKE)    ! Layer temperature at previous step  [K]
     !
     real(RP) :: RAINRP ! at previous step, rain amount in storage on roof     [kg/m2]
     real(RP) :: RAINBP ! at previous step, rain amount in storage on building [kg/m2]
@@ -952,6 +1039,8 @@ contains
 
     integer  :: iteration
 
+    integer :: k
+
     !-----------------------------------------------------------
     ! Set parameters
     !-----------------------------------------------------------
@@ -969,20 +1058,29 @@ contains
     TCP = TC
     QCP = QC
     !
-    TRLP = TRL
-    TBLP = TBL
-    TGLP = TGL
+    do k = UKS, UKE
+       TRLP(k) = TRL(k)
+       TBLP(k) = TBL(k)
+       TGLP(k) = TGL(k)
+    end do
     !
 
 
     !--- limiter for surface temp change
     DTS_MAX_onestep = DTS_MAX * dt_RP
 
+    ! "2.0m" has no special meaning, but it is related with BB formulation from Inoue (1963).
+    ! Please see subroutine "canopy_wind".
+    ! The canopy model is modeled under an assumption that urban canopy lies
+    ! below the lowest level of atmospheric model.
     if ( ZDC + Z0C + 2.0_RP >= ZA ) then
        LOG_ERROR("URBAN_DYN_kusaka01_SLC_main",*) 'ZDC + Z0C + 2m must be less than the 1st level! STOP.'
+#ifdef _OPENACC
+       converged = .false.
+       return
+#else
        call PRC_abort
-       ! "2.0m" has no special meaning, but it is related with BB formulation from Inoue (1963). Please see subroutine "canopy_wind".
-       ! The canopy model is modeled under an assumption that urban canopy lies below the lowest level of atmospheric model.
+#endif
     endif
 
     W    = 2.0_RP * 1.0_RP * HGT
@@ -1065,6 +1163,7 @@ contains
      XXXR = 0.0_RP
      resi1p = 0.0_RP
      fact1 = 1.0_RP
+     !$acc loop seq
      do iteration = 1, 100
 
       THS   = TR / EXN ! potential temp
@@ -1099,9 +1198,15 @@ contains
     !! 1st layer's cap, aks are replaced.
     !! call multi_layer2(UKE,BOUND,G0R,CAPR,AKSR,TRL,DZR,dt_RP,TRLEND,CAPL1,AKSL1)
 
-      TRL = TRLP
-      call multi_layer(UKE,BOUND,G0R,CAPR,AKSR,TRL,DZR,dt_RP,TRLEND)
-      resi1 = TRL(1) - TR
+      do k = UKS, UKE
+         TRL(k) = TRLP(k)
+      end do
+      call multi_layer(UKE,BOUND, &
+#ifdef _OPENACC
+           A, B, C, D, P, Q, &
+#endif
+           G0R,CAPR,AKSR,TRL,DZR,dt_RP,TRLEND)
+      resi1  = TRL(1) - TR
 
      ! LOG_INFO("URBAN_DYN_kusaka01_SLC_main",'(a3,i5,f8.3,6f15.5)') "TR,",iteration,TR,G0R,SR,RR,HR,ELER,resi1
 
@@ -1135,34 +1240,39 @@ contains
      ! output for debug
      if ( iteration > 100 ) then
        LOG_WARN("URBAN_DYN_kusaka01_SLC_main",*) 'iteration for TR was not converged',PRC_myrank,i,j
-       LOG_INFO_CONT(*) '---------------------------------------------------------------------------------'
-       LOG_INFO_CONT(*) 'DEBUG Message --- Residual                                          [K] :', resi1
-       LOG_NEWLINE
-       LOG_INFO_CONT(*) 'DEBUG Message --- TRP : Initial TR                                  [K] :', TRP
-       LOG_INFO_CONT(*) 'DEBUG Message --- TRLP: Initial TRL                                 [K] :', TRLP
-       LOG_NEWLINE
-       LOG_INFO_CONT(*) 'DEBUG Message --- rflux_SW  : Shortwave radiation                      [W/m2] :', rflux_SW
-       LOG_INFO_CONT(*) 'DEBUG Message --- rflux_LW  : Longwave radiation                       [W/m2] :', rflux_LW
-       LOG_INFO_CONT(*) 'DEBUG Message --- PRSS: Surface pressure                           [Pa] :', PRSS
-       LOG_INFO_CONT(*) 'DEBUG Message --- PRSA: Pressure at 1st atmos layer                 [m] :', PRSA
-       LOG_INFO_CONT(*) 'DEBUG Message --- RHOO: Air density                             [kg/m3] :', RHOO
-       LOG_INFO_CONT(*) 'DEBUG Message --- ZA  : Height at 1st atmos layer                   [m] :', ZA
-       LOG_INFO_CONT(*) 'DEBUG Message --- TA  : Temperature at 1st atmos layer              [K] :', TA
-       LOG_INFO_CONT(*) 'DEBUG Message --- UA  : Wind speed at 1st atmos layer             [m/s] :', UA
-       LOG_INFO_CONT(*) 'DEBUG Message --- QA  : Specific humidity at 1st atmos layer    [kg/kg] :', QA
-       LOG_INFO_CONT(*) 'DEBUG Message --- DZR : Depth of surface layer                      [m] :', DZR
-       LOG_NEWLINE
-       LOG_INFO_CONT(*) 'DEBUG Message --- R, W, RW : Normalized height and road width       [-] :', R, W,RW
-       LOG_INFO_CONT(*) 'DEBUG Message --- SVF : Sky View Factors                            [-] :', SVF
-       LOG_INFO_CONT(*) 'DEBUG Message --- BETR: Evaporation efficiency                      [-] :', BETR
-       LOG_INFO_CONT(*) 'DEBUG Message --- EPSR: Surface emissivity of roof                  [-] :', EPSR
-       LOG_INFO_CONT(*) 'DEBUG Message --- CAPR: Heat capacity of roof                 [J m-3 K] :', CAPR
-       LOG_INFO_CONT(*) 'DEBUG Message --- AKSR: Thermal conductivity of roof          [W m-1 K] :', AKSR
-       LOG_INFO_CONT(*) 'DEBUG Message --- QS0R: Surface specific humidity               [kg/kg] :', QS0R
-       LOG_INFO_CONT(*) 'DEBUG Message --- ZDC : Desplacement height of canopy               [m] :', ZDC
-       LOG_INFO_CONT(*) 'DEBUG Message --- Z0R : Momentum roughness length of roof           [m] :', Z0R
-       LOG_INFO_CONT(*) 'DEBUG Message --- Z0HR: Thermal roughness length of roof            [m] :', Z0HR
-       LOG_INFO_CONT(*) '---------------------------------------------------------------------------------'
+       LOG_WARN_CONT(*) '---------------------------------------------------------------------------------'
+       LOG_WARN_CONT(*) 'DEBUG Message --- Residual                                          [K] :', resi1
+       LOG_WARN_CONT(*) 'DEBUG Message --- TRP : Initial TR                                  [K] :', TRP
+#ifdef _OPENACC
+       LOG_WARN_CONT(*) 'DEBUG Message --- TRLP: Initial TRL                                 [K] :', TRLP(UKS)
+#else
+       LOG_WARN_CONT(*) 'DEBUG Message --- TRLP: Initial TRL                                 [K] :', TRLP(:)
+#endif
+       LOG_WARN_CONT(*) 'DEBUG Message --- rflux_SW  : Shortwave radiation                      [W/m2] :', rflux_SW
+       LOG_WARN_CONT(*) 'DEBUG Message --- rflux_LW  : Longwave radiation                       [W/m2] :', rflux_LW
+       LOG_WARN_CONT(*) 'DEBUG Message --- PRSS: Surface pressure                           [Pa] :', PRSS
+       LOG_WARN_CONT(*) 'DEBUG Message --- PRSA: Pressure at 1st atmos layer                 [m] :', PRSA
+       LOG_WARN_CONT(*) 'DEBUG Message --- RHOO: Air density                             [kg/m3] :', RHOO
+       LOG_WARN_CONT(*) 'DEBUG Message --- ZA  : Height at 1st atmos layer                   [m] :', ZA
+       LOG_WARN_CONT(*) 'DEBUG Message --- TA  : Temperature at 1st atmos layer              [K] :', TA
+       LOG_WARN_CONT(*) 'DEBUG Message --- UA  : Wind speed at 1st atmos layer             [m/s] :', UA
+       LOG_WARN_CONT(*) 'DEBUG Message --- QA  : Specific humidity at 1st atmos layer    [kg/kg] :', QA
+#ifdef _OPENACC
+       LOG_WARN_CONT(*) 'DEBUG Message --- DZR : Depth of surface layer                      [m] :', DZR(1)
+#else
+       LOG_WARN_CONT(*) 'DEBUG Message --- DZR : Depth of surface layer                      [m] :', DZR(:)
+#endif
+       LOG_WARN_CONT(*) 'DEBUG Message --- R, W, RW : Normalized height and road width       [-] :', R, W,RW
+       LOG_WARN_CONT(*) 'DEBUG Message --- SVF : Sky View Factors                            [-] :', SVF
+       LOG_WARN_CONT(*) 'DEBUG Message --- BETR: Evaporation efficiency                      [-] :', BETR
+       LOG_WARN_CONT(*) 'DEBUG Message --- EPSR: Surface emissivity of roof                  [-] :', EPSR
+       LOG_WARN_CONT(*) 'DEBUG Message --- CAPR: Heat capacity of roof                 [J m-3 K] :', CAPR
+       LOG_WARN_CONT(*) 'DEBUG Message --- AKSR: Thermal conductivity of roof          [W m-1 K] :', AKSR
+       LOG_WARN_CONT(*) 'DEBUG Message --- QS0R: Surface specific humidity               [kg/kg] :', QS0R
+       LOG_WARN_CONT(*) 'DEBUG Message --- ZDC : Desplacement height of canopy               [m] :', ZDC
+       LOG_WARN_CONT(*) 'DEBUG Message --- Z0R : Momentum roughness length of roof           [m] :', Z0R
+       LOG_WARN_CONT(*) 'DEBUG Message --- Z0HR: Thermal roughness length of roof            [m] :', Z0HR
+       LOG_WARN_CONT(*) '---------------------------------------------------------------------------------'
      endif
 
     !--- update only fluxes ----
@@ -1186,19 +1296,30 @@ contains
      G0R     = SR + RR - HR - ELER
      RAINR   = max( RAINRP - EVPR * dt_RP, 0.0_RP )
 
-     TRL   = TRLP
-     call multi_layer(UKE,BOUND,G0R,CAPR,AKSR,TRL,DZR,dt_RP,TRLEND)
-     resi1 = TRL(1) - TR
-     TR    = TRL(1)
+     do k = UKS, UKE
+        TRL(k)  = TRLP(k)
+     end do
+     call multi_layer(UKE,BOUND, &
+#ifdef _OPENACC
+          A, B, C, D, P, Q, &
+#endif
+          G0R,CAPR,AKSR,TRL,DZR,dt_RP,TRLEND)
+     resi1   = TRL(1) - TR
+     TR      = TRL(1)
 
      if ( abs(resi1) > DTS_MAX_onestep ) then
        if ( abs(resi1) > DTS_MAX_onestep*10.0_RP ) then
          LOG_ERROR("URBAN_DYN_Kusaka01_main",*) 'tendency of TR exceeded a limit! STOP.'
          LOG_ERROR_CONT(*) 'previous TR and updated TR(TRL(1)) is ',TR-resi1, TR
+#ifdef _OPENACC
+         converged = .false.
+         return
+#else
          call PRC_abort
+#endif
        endif
        LOG_WARN("URBAN_DYN_Kusaka01_main",*) 'tendency of TR exceeded a limit'
-       LOG_INFO_CONT(*) 'previous TR and updated TR(TRL(1)) is ', TR-resi1, TR
+       LOG_WARN_CONT(*) 'previous TR and updated TR(TRL(1)) is ', TR-resi1, TR
      endif
 
     !--------------------------------------------------
@@ -1222,6 +1343,7 @@ contains
      resi2p = 0.0_RP
      fact1 = 1.0_RP
      fact2 = 1.0_RP
+     !$acc loop seq
      do iteration = 1, 200
 
       THS1   = TB / EXN
@@ -1287,12 +1409,24 @@ contains
 !      G0G   = SG + RG - HG - ELEG + EFLX
       G0G   = SG + RG - HG - ELEG
 
-      TBL = TBLP
-      call multi_layer(UKE,BOUND,G0B,CAPB,AKSB,TBL,DZB,dt_RP,TBLEND)
-      resi1 = TBL(1) - TB
+      do k = UKS, UKE
+         TBL(k) = TBLP(k)
+      end do
+      call multi_layer(UKE,BOUND, &
+#ifdef _OPENACC
+           A, B, C, D, P, Q, &
+#endif
+           G0B,CAPB,AKSB,TBL,DZB,dt_RP,TBLEND)
+      resi1  = TBL(1) - TB
 
-      TGL = TGLP
-      call multi_layer(UKE,BOUND,G0G,CAPG,AKSG,TGL,DZG,dt_RP,TGLEND)
+      do k = UKS, UKE
+         TGL(k) = TGLP(k)
+      end do
+      call multi_layer(UKE,BOUND, &
+#ifdef _OPENACC
+           A, B, C, D, P, Q, &
+#endif
+           G0G,CAPG,AKSG,TGL,DZG,dt_RP,TGLEND)
       resi2 = TGL(1) - TG
 
       !-----------
@@ -1353,57 +1487,67 @@ contains
     enddo
 
 !    if( .NOT. (resi1 < sqrt(EPS) .AND. resi2 < sqrt(EPS) ) ) then
-!       LOG_INFO("SLC_main",*) 'Warning not converged for TG, TB in URBAN SLC', &
+!       LOG_WARN("SLC_main",*) 'not converged for TG, TB in URBAN SLC', &
 !            PRC_myrank, i,j, &
 !            resi1, resi2, TB, TG, TC, G0BP, G0GP, RB, HB, RG, HG, QC, &
 !            CHC, CDC, BHC, ALPHAC
-!       LOG_INFO_CONT(*) TBP, TGP, TCP, &
+!       LOG_WARN_CONT(*) TBP, TGP, TCP, &
 !                  PRSS, THA, UA, QA, RHOO, UC, QCP, &
 !                  ZA, ZDC, Z0C, Z0HC, &
 !                  CHG, CHB, &
 !                  W, RW, ALPHAG, ALPHAB, BETG, BETB, &
 !                  rflux_LW, VFGS, VFGW, VFWG, VFWW, VFWS, STB, &
 !                  SB, SG, LHV, TBLP, TGLP
-!       LOG_INFO_CONT(*) "6",VFGS, VFGW, VFWG, VFWW, VFWS
+!       LOG_WARN_CONT(*) "6",VFGS, VFGW, VFWG, VFWW, VFWS
 !    end if
 
      ! output for debug
      if ( iteration > 200 ) then
        LOG_WARN("URBAN_DYN_Kusaka01_main",*) 'iteration for TB/TG was not converged',PRC_myrank,i,j
-       LOG_INFO_CONT(*) '---------------------------------------------------------------------------------'
-       LOG_INFO_CONT(*) 'DEBUG Message --- Residual                                       [K] :', resi1,resi2
-       LOG_NEWLINE
-       LOG_INFO_CONT(*) 'DEBUG Message --- TBP : Initial TB                               [K] :', TBP
-       LOG_INFO_CONT(*) 'DEBUG Message --- TBLP: Initial TBL                              [K] :', TBLP
-       LOG_INFO_CONT(*) 'DEBUG Message --- TGP : Initial TG                               [K] :', TGP
-       LOG_INFO_CONT(*) 'DEBUG Message --- TGLP: Initial TGL                              [K] :', TGLP
-       LOG_INFO_CONT(*) 'DEBUG Message --- TCP : Initial TC                               [K] :', TCP
-       LOG_INFO_CONT(*) 'DEBUG Message --- QCP : Initial QC                               [K] :', QCP
-       LOG_NEWLINE
-       LOG_INFO_CONT(*) 'DEBUG Message --- UC  : Canopy wind                            [m/s] :', UC
-       LOG_INFO_CONT(*) 'DEBUG Message --- rflux_SW  : Shortwave radiation                   [W/m2] :', rflux_SW
-       LOG_INFO_CONT(*) 'DEBUG Message --- rflux_LW  : Longwave radiation                    [W/m2] :', rflux_LW
-       LOG_INFO_CONT(*) 'DEBUG Message --- PRSS: Surface pressure                        [Pa] :', PRSS
-       LOG_INFO_CONT(*) 'DEBUG Message --- PRSA: Pressure at 1st atmos layer              [m] :', PRSA
-       LOG_INFO_CONT(*) 'DEBUG Message --- RHOO: Air density                          [kg/m3] :', RHOO
-       LOG_INFO_CONT(*) 'DEBUG Message --- ZA  : Height at 1st atmos layer                [m] :', ZA
-       LOG_INFO_CONT(*) 'DEBUG Message --- TA  : Temperature at 1st atmos layer           [K] :', TA
-       LOG_INFO_CONT(*) 'DEBUG Message --- UA  : Wind speed at 1st atmos layer          [m/s] :', UA
-       LOG_INFO_CONT(*) 'DEBUG Message --- QA  : Specific humidity at 1st atmos layer [kg/kg] :', QA
-       LOG_INFO_CONT(*) 'DEBUG Message --- DZB : Depth of surface layer                   [m] :', DZB
-       LOG_INFO_CONT(*) 'DEBUG Message --- DZG : Depth of surface layer                   [m] :', DZG
-       LOG_NEWLINE
-       LOG_INFO_CONT(*) 'DEBUG Message --- R, W, RW  : Normalized height and road width    [-] :', R, W,RW
-       LOG_INFO_CONT(*) 'DEBUG Message --- SVF       : Sky View Factors                    [-] :', SVF
-       LOG_INFO_CONT(*) 'DEBUG Message --- BETB,BETG : Evaporation efficiency              [-] :', BETB,BETG
-       LOG_INFO_CONT(*) 'DEBUG Message --- EPSB,EPSG : Surface emissivity                  [-] :', EPSB,EPSG
-       LOG_INFO_CONT(*) 'DEBUG Message --- CAPB,CAPG : Heat capacity                 [J m-3 K] :', CAPB,CAPG
-       LOG_INFO_CONT(*) 'DEBUG Message --- AKSB,AKSG : Thermal conductivity          [W m-1 K] :', AKSB,AKSB
-       LOG_INFO_CONT(*) 'DEBUG Message --- QS0B,QS0G : Surface specific humidity       [kg/kg] :', QS0B,QS0G
-       LOG_INFO_CONT(*) 'DEBUG Message --- ZDC       : Desplacement height of canopy       [m] :', ZDC
-       LOG_INFO_CONT(*) 'DEBUG Message --- Z0M       : Momentum roughness length of canopy [m] :', Z0C
-       LOG_INFO_CONT(*) 'DEBUG Message --- Z0H/Z0E   : Thermal roughness length of canopy  [m] :', Z0HC
-       LOG_INFO_CONT(*) '---------------------------------------------------------------------------------'
+       LOG_WARN_CONT(*) '---------------------------------------------------------------------------------'
+       LOG_WARN_CONT(*) 'DEBUG Message --- Residual                                       [K] :', resi1,resi2
+       LOG_WARN_CONT(*) 'DEBUG Message --- TBP : Initial TB                               [K] :', TBP
+#ifdef _OPENACC
+       LOG_WARN_CONT(*) 'DEBUG Message --- TBLP: Initial TBL                              [K] :', TBLP(UKS)
+#else
+       LOG_WARN_CONT(*) 'DEBUG Message --- TBLP: Initial TBL                              [K] :', TBLP(:)
+#endif
+       LOG_WARN_CONT(*) 'DEBUG Message --- TGP : Initial TG                               [K] :', TGP
+#ifdef _OPENACC
+       LOG_WARN_CONT(*) 'DEBUG Message --- TGLP: Initial TGL                              [K] :', TGLP(UKS)
+#else
+       LOG_WARN_CONT(*) 'DEBUG Message --- TGLP: Initial TGL                              [K] :', TGLP(:)
+#endif
+       LOG_WARN_CONT(*) 'DEBUG Message --- TCP : Initial TC                               [K] :', TCP
+       LOG_WARN_CONT(*) 'DEBUG Message --- QCP : Initial QC                               [K] :', QCP
+       LOG_WARN_CONT(*) 'DEBUG Message --- UC  : Canopy wind                            [m/s] :', UC
+       LOG_WARN_CONT(*) 'DEBUG Message --- rflux_SW  : Shortwave radiation                   [W/m2] :', rflux_SW
+       LOG_WARN_CONT(*) 'DEBUG Message --- rflux_LW  : Longwave radiation                    [W/m2] :', rflux_LW
+       LOG_WARN_CONT(*) 'DEBUG Message --- PRSS: Surface pressure                        [Pa] :', PRSS
+       LOG_WARN_CONT(*) 'DEBUG Message --- PRSA: Pressure at 1st atmos layer              [m] :', PRSA
+       LOG_WARN_CONT(*) 'DEBUG Message --- RHOO: Air density                          [kg/m3] :', RHOO
+       LOG_WARN_CONT(*) 'DEBUG Message --- ZA  : Height at 1st atmos layer                [m] :', ZA
+       LOG_WARN_CONT(*) 'DEBUG Message --- TA  : Temperature at 1st atmos layer           [K] :', TA
+       LOG_WARN_CONT(*) 'DEBUG Message --- UA  : Wind speed at 1st atmos layer          [m/s] :', UA
+       LOG_WARN_CONT(*) 'DEBUG Message --- QA  : Specific humidity at 1st atmos layer [kg/kg] :', QA
+#ifdef _OPENACC
+       LOG_WARN_CONT(*) 'DEBUG Message --- DZB : Depth of surface layer                   [m] :', DZB(1)
+       LOG_WARN_CONT(*) 'DEBUG Message --- DZG : Depth of surface layer                   [m] :', DZG(1)
+#else
+       LOG_WARN_CONT(*) 'DEBUG Message --- DZB : Depth of surface layer                   [m] :', DZB(:)
+       LOG_WARN_CONT(*) 'DEBUG Message --- DZG : Depth of surface layer                   [m] :', DZG(:)
+#endif
+       LOG_WARN_CONT(*) 'DEBUG Message --- R, W, RW  : Normalized height and road width    [-] :', R, W,RW
+       LOG_WARN_CONT(*) 'DEBUG Message --- SVF       : Sky View Factors                    [-] :', SVF
+       LOG_WARN_CONT(*) 'DEBUG Message --- BETB,BETG : Evaporation efficiency              [-] :', BETB,BETG
+       LOG_WARN_CONT(*) 'DEBUG Message --- EPSB,EPSG : Surface emissivity                  [-] :', EPSB,EPSG
+       LOG_WARN_CONT(*) 'DEBUG Message --- CAPB,CAPG : Heat capacity                 [J m-3 K] :', CAPB,CAPG
+       LOG_WARN_CONT(*) 'DEBUG Message --- AKSB,AKSG : Thermal conductivity          [W m-1 K] :', AKSB,AKSB
+       LOG_WARN_CONT(*) 'DEBUG Message --- QS0B,QS0G : Surface specific humidity       [kg/kg] :', QS0B,QS0G
+       LOG_WARN_CONT(*) 'DEBUG Message --- ZDC       : Desplacement height of canopy       [m] :', ZDC
+       LOG_WARN_CONT(*) 'DEBUG Message --- Z0M       : Momentum roughness length of canopy [m] :', Z0C
+       LOG_WARN_CONT(*) 'DEBUG Message --- Z0H/Z0E   : Thermal roughness length of canopy  [m] :', Z0HC
+       LOG_WARN_CONT(*) '---------------------------------------------------------------------------------'
      endif
 
      !--- update only fluxes ----
@@ -1456,34 +1600,56 @@ contains
      G0G   = SG + RG - HG - ELEG
      RAING = max( RAINGP - EVPG * dt_RP, 0.0_RP )
 
-     TBL   = TBLP
-     call multi_layer(UKE,BOUND,G0B,CAPB,AKSB,TBL,DZB,dt_RP,TBLEND)
-     resi1 = TBL(1) - TB
-     TB    = TBL(1)
+     do k = UKS, UKE
+        TBL(k) = TBLP(k)
+     end do
+     call multi_layer(UKE,BOUND, &
+#ifdef _OPENACC
+          A, B, C, D, P, Q, &
+#endif
+          G0B,CAPB,AKSB,TBL,DZB,dt_RP,TBLEND)
+     resi1  = TBL(1) - TB
+     TB     = TBL(1)
 
-     TGL   = TGLP
-     call multi_layer(UKE,BOUND,G0G,CAPG,AKSG,TGL,DZG,dt_RP,TGLEND)
-     resi2 = TGL(1) - TG
-     TG    = TGL(1)
+     do k = UKS, UKE
+        TGL(k) = TGLP(k)
+     end do
+     call multi_layer(UKE,BOUND, &
+#ifdef _OPENACC
+          A, B, C, D, P, Q, &
+#endif
+          G0G,CAPG,AKSG,TGL,DZG,dt_RP,TGLEND)
+     resi2  = TGL(1) - TG
+     TG     = TGL(1)
 
      if ( abs(resi1) > DTS_MAX_onestep ) then
         if ( abs(resi1) > DTS_MAX_onestep*10.0_RP ) then
            LOG_ERROR("URBAN_DYN_Kusaka01_main",*) 'tendency of TB exceeded a limit! STOP.'
            LOG_ERROR_CONT(*) 'previous TB and updated TB(TBL(1)) is ', TB-resi1,TB
+#ifdef _OPENACC
+           converged = .false.
+           return
+#else
            call PRC_abort
+#endif
         endif
         LOG_WARN("URBAN_DYN_Kusaka01_main",*) 'tendency of TB exceeded a limit'
-        LOG_INFO_CONT(*) 'previous TB and updated TB(TBL(1)) is ', TB-resi1, TB
+        LOG_WARN_CONT(*) 'previous TB and updated TB(TBL(1)) is ', TB-resi1, TB
      endif
 
      if ( abs(resi2) > DTS_MAX_onestep ) then
         if ( abs(resi2) > DTS_MAX_onestep*10.0_RP ) then
            LOG_ERROR("URBAN_DYN_Kusaka01_main",*) 'tendency of TG exceeded a limit! STOP.'
            LOG_ERROR_CONT(*) 'previous TG and updated TG(TGL(1)) is ', TG-resi2, TG, resi2
+#ifdef _OPENACC
+           converged = .false.
+           return
+#else
            call PRC_abort
+#endif
         endif
         LOG_WARN("URBAN_DYN_Kusaka01_main",*) 'tendency of TG exceeded a limit'
-        LOG_INFO_CONT(*) 'previous TG and updated TG(TGL(1)) is ', TG-resi2, TG
+        LOG_WARN_CONT(*) 'previous TG and updated TG(TGL(1)) is ', TG-resi2, TG
      endif
 
     !-----------------------------------------------------------
@@ -1601,6 +1767,7 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine canopy_wind(ZA, UA, Z0C, ZDC, UC)
+    !$acc routine
     implicit none
 
     real(RP), intent(in)  :: ZA   ! height at 1st atmospheric level [m]
@@ -1631,6 +1798,7 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine cal_beta(BET, BET_CONST, WATER, STRG)
+   !$acc routine
     implicit none
 
     real(RP), intent(out) :: BET       ! evapolation efficiency [-]
@@ -1652,6 +1820,7 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine cal_psi(zeta,psim,psih)
+    !$acc routine
     use scale_const, only: &
        PI     => CONST_PI
     implicit none
@@ -1683,6 +1852,7 @@ contains
   !  PSIH:  = PSIT of LSM
 !OCL SERIAL
   subroutine mos(XXX,CH,CD,B1,RIB,Z,Z0,UA,TA,TSF,RHO)
+    !$acc routine
     use scale_const, only: &
        EPS   => CONST_EPS, &
        CPdry => CONST_CPdry ! CPP : heat capacity of dry air [J/K/kg]
@@ -1777,25 +1947,33 @@ contains
 
   !-------------------------------------------------------------------
 !OCL SERIAL
-  subroutine multi_layer(KM,BOUND,G0,CAP,AKS,TSL,DZ,DELT,TSLEND)
+  subroutine multi_layer( &
+       KM,BOUND, &
+#ifdef _OPENACC
+       A, B, C, D, P, Q, &
+#endif
+       G0,CAP,AKS,TSL,DZ,DELT,TSLEND)
   !
   !  calculate temperature in roof/building/road
   !  multi-layer heat equation model
   !  Solving Heat Equation by Tri Diagonal Matrix Algorithm
   !-------------------------------------------------------------------
-
+    !$acc routine seq
     implicit none
-
+    integer,  intent(in)    :: KM
+    integer,  intent(in)    :: BOUND
     real(RP), intent(in)    :: G0
     real(RP), intent(in)    :: CAP
     real(RP), intent(in)    :: AKS
+    real(RP), intent(inout) :: TSL(KM)
+    real(RP), intent(in)    :: DZ(KM)
     real(RP), intent(in)    :: DELT      ! Tim setep [ s ]
     real(RP), intent(in)    :: TSLEND
-    integer,  intent(in)    :: KM
-    integer,  intent(in)    :: BOUND
-    real(RP), intent(in)    :: DZ(KM)
-    real(RP), intent(inout) :: TSL(KM)
+#ifdef _OPENACC
+    real(RP), intent(out)   :: A(KM), B(KM), C(KM), D(KM), P(KM), Q(KM)
+#else
     real(RP)                :: A(KM), B(KM), C(KM), D(KM), P(KM), Q(KM)
+#endif
     real(RP)                :: DZEND
     integer                 :: K
 
@@ -1830,6 +2008,7 @@ contains
     P(1) = -C(1) / B(1)
     Q(1) =  D(1) / B(1)
 
+    !$acc loop seq
     do K = 2, KM
       P(K) = -C(K) / ( A(K) * P(K-1) + B(K) )
       Q(K) = ( -A(K) * Q(K-1) + D(K) ) / ( A(K) * P(K-1) + B(K) )
@@ -1837,6 +2016,7 @@ contains
 
     TSL(KM) = Q(KM)
 
+    !$acc loop seq
     do K = KM-1, 1, -1
       TSL(K) = P(K) * TSL(K+1) + Q(K)
     end do
@@ -1901,6 +2081,7 @@ contains
     P(1) = -C(1) / B(1)
     Q(1) =  D(1) / B(1)
 
+    !$acc loop seq
     do K = 2, KM
       P(K) = -C(K) / ( A(K) * P(K-1) + B(K) )
       Q(K) = ( -A(K) * Q(K-1) + D(K) ) / ( A(K) * P(K-1) + B(K) )
@@ -1908,6 +2089,7 @@ contains
 
     X(KM) = Q(KM)
 
+    !$acc loop seq
     do K = KM-1, 1, -1
       X(K) = P(K) * X(K+1) + Q(K)
     end do

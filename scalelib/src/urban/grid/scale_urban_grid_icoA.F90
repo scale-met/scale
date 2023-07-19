@@ -27,6 +27,7 @@ module scale_urban_grid_icoA
   !++ Public procedure
   !
   public :: URBAN_GRID_ICOA_setup
+  public :: URBAN_GRID_ICOA_finalize
 
   !-----------------------------------------------------------------------------
   !
@@ -98,6 +99,7 @@ contains
     allocate( URBAN_GRID_ICOA_CZ (UKS  :UKE) )
     allocate( URBAN_GRID_ICOA_FZ (UKS-1:UKE) )
     allocate( URBAN_GRID_ICOA_CDZ(UKS  :UKE) )
+    !$acc enter data create(URBAN_GRID_ICOA_CZ,URBAN_GRID_ICOA_FZ,URBAN_GRID_ICOA_CDZ)
 
     LOG_NEWLINE
     LOG_INFO("URBAN_GRID_ICOA_setup",*) 'Urban grid information '
@@ -130,8 +132,20 @@ contains
        LOG_INFO_CONT('(1x,A)')                  '|=================================|'
     endif
 
+    !$acc update device(URBAN_GRID_ICOA_CZ,URBAN_GRID_ICOA_FZ,URBAN_GRID_ICOA_CDZ)
+
     return
   end subroutine URBAN_GRID_ICOA_setup
+
+  subroutine URBAN_GRID_ICOA_finalize
+
+    !$acc exit data delete(URBAN_GRID_ICOA_CZ,URBAN_GRID_ICOA_FZ,URBAN_GRID_ICOA_CDZ)
+    deallocate( URBAN_GRID_ICOA_CZ  )
+    deallocate( URBAN_GRID_ICOA_FZ  )
+    deallocate( URBAN_GRID_ICOA_CDZ )
+
+    return
+  end subroutine URBAN_GRID_ICOA_finalize
 
   !-----------------------------------------------------------------------------
   !> Read urban grid

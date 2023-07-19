@@ -14,11 +14,18 @@ MODDIROPT = -module
 FFLAGS_FAST  = -Mpreprocess -m64 -fast                \
                -Mbyteswapio                           \
                -Mflushz -Mfprelaxed -Mfpapprox -Kieee \
-               -Mvect=assoc
+               -Mvect=assoc \
+	       -DVECTLEN=${VECTLEN}
+#FFLAGS_FAST  = -Mpreprocess -m64                      \
+#	       -O1 -Mlre -Mcache_align                \
+#	       -Mbyteswapio                           \
+#	       -Mflushz -Mfprelaxed -Mfpapprox -Kieee \
+#	       -DVECTLEN=${VECTLEN}
 
-FFLAGS_AGGRESSIVE = -Mipa
+FFLAGS_AGGRESSIVE = -gpu=safecache
 
-FFLAGS_QUICKDEBUG = -Ktrap=fp -Mbounds -gopt
+#FFLAGS_QUICKDEBUG = -Ktrap=fp -Mbounds -gopt -g -traceback
+FFLAGS_QUICKDEBUG = -Mbounds -gopt -g -traceback
 
 FFLAGS_DYN   = $(FFLAGS)
 
@@ -40,12 +47,24 @@ CFLAGS_FAST  = -fast
 CFLAGS_DEBUG = -O0
 
 
+##### Vector length
+ifeq ($SCALE_ENABLE_OPENACC),T)
+  VECTLEN = 32
+  ifeq ($SCALE_USE_SINGLEFP),T)
+    CHACHELINESIZE = 128
+  else
+    CHACHELINESIZE = 256
+  endif
+else
+  VECTLEN = 1
+  CHACHELINESIZE = 128
+endif
 
 ##### Special setting
 
 FFLAGS_OPENMP = -mp
 
-FFLAGS_OPENACC = -acc -Mcuda -Minfo=accel
+FFLAGS_OPENACC = -acc -cuda -Minfo=accel -cudalib=cusparse -DUSE_CUDALIB
 #FFLAGS_OPENACC = -acc -ta=tesla,cuda8.0,cc60 -Mcuda -Minfo=accel
 
 FFLAGS_SYSDEPEND = -DNVIDIA

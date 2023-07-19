@@ -577,6 +577,8 @@ contains
     integer :: k
     !---------------------------------------------------------------------------
 
+    !$acc data copyout(rhodz,pres,presh,temp,temph,gas,cfc,aerosol_conc,aerosol_radi,cldfrac)
+
     if ( ATMOS_PHY_RD_PROFILE_use_climatology ) then
 
        if ( SOLARINS_fixedlatlon ) then
@@ -679,6 +681,10 @@ contains
        LOG_INFO_CONT('(1x,A)') '|=====================================================================================|'
 
     endif
+
+    !$acc update device(rhodz,pres,presh,temp,temph,gas,cfc,aerosol_conc,aerosol_radi,cldfrac)
+
+    !$acc end data
 
     return
   end subroutine ATMOS_PHY_RD_PROFILE_read

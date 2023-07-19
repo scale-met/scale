@@ -249,24 +249,44 @@ contains
 
     !########## calculate tendency ##########
     ! reset tendencies
+    !$omp parallel workshare
+    !$acc kernels
 !OCL XFILL
     DENS_tp(:,:,:)   = 0.0_RP
+    !$acc end kernels
+    !$acc kernels
 !OCL XFILL
     MOMZ_tp(:,:,:)   = 0.0_RP
+    !$acc end kernels
+    !$acc kernels
 !OCL XFILL
     RHOU_tp(:,:,:)   = 0.0_RP
+    !$acc end kernels
+    !$acc kernels
 !OCL XFILL
     RHOV_tp(:,:,:)   = 0.0_RP
+    !$acc end kernels
+    !$acc kernels
 !OCL XFILL
     RHOT_tp(:,:,:)   = 0.0_RP
+    !$acc end kernels
+    !$acc kernels
 !OCL XFILL
     RHOH_p (:,:,:)   = 0.0_RP
+    !$acc end kernels
+    !$acc kernels
 !OCL XFILL
     RHOQ_tp(:,:,:,:) = 0.0_RP
+    !$acc end kernels
+    !$acc kernels
 !OCL XFILL
     MOMX_tp(:,:,:)   = 0.0_RP
+    !$acc end kernels
+    !$acc kernels
 !OCL XFILL
     MOMY_tp(:,:,:)   = 0.0_RP
+    !$acc end kernels
+    !$omp end parallel workshare
 
     ! Microphysics
     if ( ATMOS_sw_phy_mp ) then
@@ -381,7 +401,6 @@ contains
        do_phy_mp => TIME_DOATMOS_PHY_MP, &
        do_phy_ae => TIME_DOATMOS_PHY_AE
     use scale_atmos_refstate, only: &
-       ATMOS_REFSTATE_UPDATE_FLAG, &
        ATMOS_REFSTATE_update
     use mod_atmos_vars, only: &
        ATMOS_vars_calc_diagnostics,&
@@ -484,15 +503,13 @@ contains
 
 
     !########## Reference State ###########
-    if ( ATMOS_REFSTATE_UPDATE_FLAG ) then
-       call PROF_rapstart('ATM_Refstate', 2)
-       call ATMOS_REFSTATE_update( KA, KS, KE, IA, IS, IE, ISB, IEB, JA, JS, JE, JSB, JEB, &
-                                   DENS(:,:,:), POTT(:,:,:), TEMP(:,:,:), PRES(:,:,:), QV(:,:,:), & ! [IN]
-                                   CZ(:), FZ(:), FDZ(:), RCDZ(:),                                 & ! [IN]
-                                   REAL_CZ(:,:,:), REAL_FZ(:,:,:), REAL_PHI(:,:,:), AREA(:,:),    & ! [IN]
-                                   TIME_NOWDAYSEC                                                 ) ! [IN]
-       call PROF_rapend  ('ATM_Refstate', 2)
-    endif
+    call PROF_rapstart('ATM_Refstate', 2)
+    call ATMOS_REFSTATE_update( KA, KS, KE, IA, IS, IE, ISB, IEB, JA, JS, JE, JSB, JEB, &
+                                DENS(:,:,:), POTT(:,:,:), TEMP(:,:,:), PRES(:,:,:), QV(:,:,:), & ! [IN]
+                                CZ(:), FZ(:), FDZ(:), RCDZ(:),                                 & ! [IN]
+                                REAL_CZ(:,:,:), REAL_FZ(:,:,:), REAL_PHI(:,:,:), AREA(:,:),    & ! [IN]
+                                TIME_NOWDAYSEC                                                 ) ! [IN]
+    call PROF_rapend  ('ATM_Refstate', 2)
 
     return
   end subroutine ATMOS_driver_update
@@ -652,6 +669,14 @@ contains
     real(RP) :: SFC_DENS(IA,JA)
     real(RP) :: SFC_PRES(IA,JA)
 
+    real(RP) :: TEMP1(IA,JA)
+    real(RP) :: PRES1(IA,JA)
+    real(RP) :: W1   (IA,JA)
+    real(RP) :: U1   (IA,JA)
+    real(RP) :: V1   (IA,JA)
+    real(RP) :: DENS1(IA,JA)
+    real(RP) :: QV1  (IA,JA)
+
     integer  :: i,j
     !---------------------------------------------------------------------------
 
@@ -659,14 +684,18 @@ contains
 
     ! sum of rainfall from mp and cp
     !$omp parallel do private(i,j) OMP_SCHEDULE_
+    !$acc kernels
     do j = JS, JE
     do i = IS, IE
        PREC     (i,j) = SFLX_rain_MP(i,j) + SFLX_rain_CP(i,j) + SFLX_snow_MP(i,j) + SFLX_snow_CP(i,j)
        PREC_ENGI(i,j) = SFLX_ENGI_MP(i,j) + SFLX_ENGI_CP(i,j)
     enddo
     enddo
+    !$acc end kernels
 
     if ( CPL_sw ) then
+
+       !$acc data create(SFC_DENS,SFC_PRES,TEMP1,PRES1,W1,U1,V1,DENS1,QV1)
 
        ! planetary boundary layer
        call BOTTOM_estimate( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
@@ -675,13 +704,28 @@ contains
                              REAL_FZ(:,:,:),                      & ! [IN]
                              SFC_DENS(:,:), SFC_PRES(:,:)         ) ! [OUT]
 
-       call CPL_putATM( TEMP       (KS,:,:),  & ! [IN]
-                        PRES       (KS,:,:),  & ! [IN]
-                        W          (KS,:,:),  & ! [IN]
-                        U          (KS,:,:),  & ! [IN]
-                        V          (KS,:,:),  & ! [IN]
-                        DENS       (KS,:,:),  & ! [IN]
-                        QV         (KS,:,:),  & ! [IN]
+       !$omp parallel do
+       !$acc kernels
+       do j = JS, JE
+       do i = IS, IE
+          TEMP1(i,j) = TEMP(KS,i,j)
+          PRES1(i,j) = PRES(KS,i,j)
+          W1   (i,j) = W   (KS,i,j)
+          U1   (i,j) = U   (KS,i,j)
+          V1   (i,j) = V   (KS,i,j)
+          DENS1(i,j) = DENS(KS,i,j)
+          QV1  (i,j) = QV  (KS,i,j)
+       end do
+       end do
+       !$acc end kernels
+
+       call CPL_putATM( TEMP1      (:,:),     & ! [IN]
+                        PRES1      (:,:),     & ! [IN]
+                        W1         (:,:),     & ! [IN]
+                        U1         (:,:),     & ! [IN]
+                        V1         (:,:),     & ! [IN]
+                        DENS1      (:,:),     & ! [IN]
+                        QV1        (:,:),     & ! [IN]
                         ATM_PBL    (:,:),     & ! [IN]
                         SFC_DENS   (:,:),     & ! [IN]
                         SFC_PRES   (:,:),     & ! [IN]
@@ -690,6 +734,9 @@ contains
                         PREC       (:,:),     & ! [IN]
                         PREC_ENGI  (:,:),     & ! [IN]
                         countup               ) ! [IN]
+
+       !$acc end data
+
     endif
 
     call PROF_rapend  ('ATM_SfcExch', 2)

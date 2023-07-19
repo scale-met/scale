@@ -219,12 +219,14 @@ contains
     if ( dim_size >= 2 ) then
        allocate( MONITOR_dims(n)%area(IA,JA) )
        MONITOR_dims(n)%area(:,:) = area(:,:)
+       !$acc enter data copyin(MONITOR_dims(n)%area)
        MONITOR_dims(n)%total_area = total_area
     end if
 
     if ( dim_size >= 3 ) then
        allocate( MONITOR_dims(n)%volume(KA,IA,JA) )
        MONITOR_dims(n)%volume(:,:,:) = volume(:,:,:)
+       !$acc enter data copyin(MONITOR_dims(n)%volume)
        MONITOR_dims(n)%total_volume = total_volume
     end if
 
@@ -637,8 +639,14 @@ contains
     endif
 
     do n = 1, MONITOR_ndims
-       if ( MONITOR_dims(n)%dim_size >= 2 ) deallocate( MONITOR_dims(n)%area )
-       if ( MONITOR_dims(n)%dim_size >= 3 ) deallocate( MONITOR_dims(n)%volume )
+       if ( MONITOR_dims(n)%dim_size >= 2 ) then
+          !$acc exit data delete(MONITOR_dims(n)%area)
+          deallocate( MONITOR_dims(n)%area )
+       end if
+       if ( MONITOR_dims(n)%dim_size >= 3 ) then
+          !$acc exit data delete(MONITOR_dims(n)%volume)
+          deallocate( MONITOR_dims(n)%volume )
+       end if
     end do
     MONITOR_ndims = 0
 

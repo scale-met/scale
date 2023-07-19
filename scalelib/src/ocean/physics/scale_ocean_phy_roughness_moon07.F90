@@ -112,6 +112,7 @@ contains
     integer  :: ite
     integer  :: i, j
     !---------------------------------------------------------------------------
+    !$acc data copyin(Uabs,Z1,mask) copyout(Z0H,Z0E) copy(Z0M)
 
     !$omp parallel do default(none) OMP_SCHEDULE_ &
     !$omp shared(OJS,OJE,OIS,OIE, &
@@ -120,12 +121,15 @@ contains
     !$omp        OCEAN_PHY_ROUGHNESS_Ustar_min,OCEAN_PHY_ROUGHNESS_visck,OCEAN_PHY_ROUGHNESS_moon07_itelim, &
     !$omp        Z0M,Z0H,Z0E,Uabs,Z1,mask) &
     !$omp private(i,j,ite,U10M,Ustar)
+    !$acc kernels
     do j = OJS, OJE
+    !$acc loop private(ite,U10M,Ustar)
     do i = OIS, OIE
        if ( mask(i,j) ) then
 
           Z0M(i,j) = max( Z0M(i,j), OCEAN_PHY_ROUGHNESS_Z0M_min )
 
+          !$acc loop seq
           do ite = 1, OCEAN_PHY_ROUGHNESS_moon07_itelim
              Ustar = max( KARMAN * Uabs(i,j) / log( Z1(i,j)/Z0M(i,j) ), OCEAN_PHY_ROUGHNESS_Ustar_min )
              U10M = Ustar / KARMAN * log( 10.0_RP/Z0M(i,j) )
@@ -155,7 +159,9 @@ contains
        end if
     enddo
     enddo
+    !$acc end kernels
 
+    !$acc end data
     return
   end subroutine OCEAN_PHY_ROUGHNESS_moon07
 

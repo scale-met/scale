@@ -263,6 +263,7 @@ contains
     real(RP), parameter :: BETA_MAX = 1.0_RP
 
     ! works
+    real(RP) :: LAND_TEMP1(LIA,LJA)
     real(RP) :: SNOW_QVEF (LIA,LJA)
     real(RP) :: LAND_WSTR (LIA,LJA)
     real(RP) :: LAND_QVEF (LIA,LJA)
@@ -308,12 +309,15 @@ contains
 
     call PROF_rapstart('LND_CalcTend', 1)
 
+    !$acc data create(LAND_TEMP1,LAND_WSTR,LAND_QVEF,LAND_TC_dZ,SFLX_QV,SFLX_ENGI,LH,ATMOS_W)
+
     !########## Get Surface Boundary from coupler ##########
     call LAND_SURFACE_GET
 
     !########## reset tendencies ##########
 !OCL XFILL
     !$omp parallel do collapse(2)
+    !$acc kernels
     do j = LJS, LJE
     do i = LIS, LIE
     do k = LKS, LKE
@@ -323,9 +327,11 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
 
 !OCL XFILL
     !$omp parallel do collapse(2)
+    !$acc kernels
     do iq = 1, QA
     do j  = LJS, LJE
     do i  = LIS, LIE
@@ -333,17 +339,23 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
 
     !$omp parallel do
+    !$acc kernels
     do j = LJS, LJE
     do i = LIS, LIE
        ATMOS_W(i,j) = ATMOS_U(i,j) * TanSL_X(i,j) + ATMOS_V(i,j) * TanSL_Y(i,j)
     end do
     end do
+    !$acc end kernels
 
     if ( SNOW_flag ) then
        !------------------------------------------------------------------------
        !> snow area
+
+       !$acc update host(LAND_SFC_TEMP)
+       !$acc update host(ATMOS_SFLX_water,ATMOS_SFLX_ENGI,ATMOS_PRES,ATMOS_TEMP,ATMOS_QV,ATMOS_W,ATMOS_U,ATMOS_V,ATMOS_DENS,ATMOS_PBL,ATMOS_SFC_DENS,ATMOS_SFC_PRES,ATMOS_SFLX_rad_dn,exists_land,SFLX_ENGI)
 
 !OCL XFILL
        !$omp parallel do
@@ -463,6 +475,7 @@ contains
 !OCL XFILL
     !$omp parallel do schedule(dynamic) &
     !$omp private(total)
+    !$acc kernels
     do j = LJS, LJE
     do i = LIS, LIE
     if ( exists_land(i,j) ) then
@@ -486,6 +499,7 @@ contains
     end if
     end do
     end do
+    !$acc end kernels
 
 
     !------------------------------------------------------------------------
@@ -493,6 +507,7 @@ contains
 
 
     !$omp parallel do schedule(dynamic)
+    !$acc kernels
     do j = LJS, LJE
     do i = LIS, LIE
     if ( exists_land(i,j) ) then
@@ -504,15 +519,19 @@ contains
     end if
     end do
     end do
+    !$acc end kernels
 
 
     select case ( LAND_SFC_TYPE )
     case ( 'SKIN' )
 !OCL XFILL
        !$omp parallel do schedule(dynamic)
+       !$acc kernels
        do j = LJS, LJE
        do i = LIS, LIE
        if ( exists_land(i,j) ) then
+          LAND_TEMP1(i,j) = LAND_TEMP(LKS,i,j)
+
           LAND_SFC_albedo(i,j,I_R_direct ,I_R_IR ) = LAND_PROPERTY(i,j,I_ALBLW)
           LAND_SFC_albedo(i,j,I_R_diffuse,I_R_IR ) = LAND_PROPERTY(i,j,I_ALBLW)
           LAND_SFC_albedo(i,j,I_R_direct ,I_R_NIR) = LAND_PROPERTY(i,j,I_ALBSW)
@@ -522,6 +541,7 @@ contains
        end if
        end do
        end do
+       !$acc end kernels
 
        call CPL_PHY_SFC_skin( LIA, LIS, LIE, LJA, LJS, LJE, &
                               ATMOS_TEMP(:,:), ATMOS_PRES(:,:),                        & ! [IN]
@@ -530,7 +550,7 @@ contains
                               LH(:,:), REAL_Z1(:,:), ATMOS_PBL(:,:),                   & ! [IN]
                               ATMOS_SFC_DENS(:,:), ATMOS_SFC_PRES(:,:),                & ! [IN]
                               ATMOS_SFLX_rad_dn(:,:,:,:),                              & ! [IN]
-                              LAND_TEMP(LKS,:,:), LAND_WSTR(:,:), LAND_QVEF(:,:),      & ! [IN]
+                              LAND_TEMP1(:,:), LAND_WSTR(:,:), LAND_QVEF(:,:),         & ! [IN]
                               LAND_SFC_albedo(:,:,:,:),                                & ! [IN]
                               LAND_PROPERTY(:,:,I_StomataResist),                      & ! [IN]
                               LAND_TC_dZ(:,:),                                         & ! [IN]
@@ -551,6 +571,7 @@ contains
     case ( 'FIXED-TEMP' )
 !OCL XFILL
        !$omp parallel do schedule(dynamic)
+       !$acc kernels
        do j = LJS, LJE
        do i = LIS, LIE
        if ( exists_land(i,j) ) then
@@ -558,8 +579,10 @@ contains
        end if
        end do
        end do
+       !$acc end kernels
 !OCL XFILL
        !$omp parallel do schedule(dynamic)
+       !$acc kernels
        do j = LJS, LJE
        do i = LIS, LIE
        if ( exists_land(i,j) ) then
@@ -572,6 +595,7 @@ contains
        end if
        end do
        end do
+       !$acc end kernels
 
        call CPL_PHY_SFC_fixed_temp( LIA, LIS, LIE, LJA, LJS, LJE, &
                                     ATMOS_TEMP(:,:), ATMOS_PRES(:,:),                        & ! [IN]
@@ -598,6 +622,7 @@ contains
     end select
 
     !$omp parallel do schedule(dynamic)
+    !$acc kernels
     do j = LJS, LJE
     do i = LIS, LIE
     if ( exists_land(i,j) ) then
@@ -609,10 +634,12 @@ contains
     end if
     end do
     end do
+    !$acc end kernels
 
     ! LAND_SFLX_* are positive for downward
 !OCL XFILL
     !$omp parallel do schedule(dynamic)
+    !$acc kernels
     do j = LJS, LJE
     do i = LIS, LIE
     if ( exists_land(i,j) ) then
@@ -622,6 +649,7 @@ contains
     end if
     end do
     end do
+    !$acc end kernels
 
     if ( SNOW_flag ) then
 
@@ -652,6 +680,7 @@ contains
              LAND_SFC_albedo(i,j,idir,I_R_VIS) = (        SNOW_frac(i,j) ) * SNOW_albedo    (i,j,I_SW)         &
                                                + ( 1.0_RP-SNOW_frac(i,j) ) * LAND_SFC_albedo(i,j,idir,I_R_VIS)
           enddo
+
 
           ! flux to the soil
           LAND_SFLX_GH   (i,j) = (        SNOW_frac(i,j) ) * SNOW_LAND_SFLX_GH   (i,j) &
@@ -686,6 +715,8 @@ contains
        enddo
        enddo
 
+       !$acc update device(LAND_SFC_TEMP,LAND_SFC_albedo,LAND_SFLX_GH,LAND_SFLX_water,LAND_SFLX_ENGI,LAND_SFLX_MW,LAND_SFLX_MU,LAND_SFLX_MV,LAND_SFLX_SH,LAND_SFLX_LH,SFLX_QV,LAND_U10,LAND_V10,LAND_T2,LAND_Q2)
+
        call BULKFLUX_diagnose_scales( LIA, LIS, LIE, LJA, LJS, LJE, &
                                       LAND_SFLX_MW(:,:), LAND_SFLX_MU(:,:), LAND_SFLX_MV(:,:), & ! [IN]
                                       LAND_SFLX_SH(:,:), SFLX_QV(:,:),                         & ! [IN]
@@ -698,6 +729,7 @@ contains
 
     if ( .NOT. ATMOS_HYDROMETEOR_dry ) then
        !$omp parallel do schedule(dynamic)
+       !$acc kernels
        do j = LJS, LJE
        do i = LIS, LIE
        if ( exists_land(i,j) ) then
@@ -705,18 +737,23 @@ contains
        end if
        enddo
        enddo
+       !$acc end kernels
     end if
 
 
     ! Surface flux for chemical tracers
     if ( ATMOS_sw_phy_ch ) then
+       !$acc update host(LAND_SFLX_QTRC)
        call ATMOS_PHY_CH_driver_LAND_flux( LAND_SFLX_QTRC(:,:,:) ) ! [INOUT]
+       !$acc update device(LAND_SFLX_QTRC)
     endif
-
-    call PROF_rapend  ('LND_CalcTend', 1)
 
     !########## Set Surface Boundary to coupler ##########
     call LAND_SURFACE_SET( countup=.true. )
+
+    !$acc end data
+
+    call PROF_rapend  ('LND_CalcTend', 1)
 
     return
   end subroutine LAND_driver_calc_tendency
@@ -791,6 +828,7 @@ contains
 
     !########## Negative Fixer ##########
     !$omp parallel do schedule(dynamic)
+    !$acc kernels
     do j = LJS, LJE
     do i = LIS, LIE
        if ( exists_land(i,j) ) then
@@ -801,6 +839,7 @@ contains
        end if
     enddo
     enddo
+    !$acc end kernels
 
     call LAND_vars_check
 

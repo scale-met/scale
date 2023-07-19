@@ -146,6 +146,7 @@ contains
     logical  :: error
     integer  :: i, j
     !---------------------------------------------------------------------------
+    !$acc data copyin(calc_flag) copy(OCEAN_TEMP) create(OCEAN_TEMP_ref)
 
     LOG_PROGRESS(*) 'ocean / dynamics / offline'
 
@@ -156,6 +157,7 @@ contains
        call PRC_abort
     endif
 
+    !$acc kernels
     do j = OJS, OJE
     do i = OIS, OIE
        if ( calc_flag(i,j) ) then
@@ -163,7 +165,9 @@ contains
        endif
     enddo
     enddo
+    !$acc end kernels
 
+    !$acc end data
     return
   end subroutine OCEAN_DYN_OFFLINE
 

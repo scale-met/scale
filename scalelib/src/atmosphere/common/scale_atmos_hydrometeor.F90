@@ -94,6 +94,7 @@ module scale_atmos_hydrometeor
        (/ "NC", "NR", "NI", "NS", "NG", "NH" /)
 
   real(RP), public :: HYD_DENS(N_HYD)
+  !$acc declare create(HYD_DENS)
 
   logical, public :: ATMOS_HYDROMETEOR_dry = .true.
 
@@ -123,10 +124,12 @@ module scale_atmos_hydrometeor
   integer, public            :: QIA =  0
   integer, public            :: QIS = -1
   integer, public            :: QIE = -2
+  !$acc declare create(QHA, QHS, QHE, QLA, QLS, QLE, QIA, QIS, QIE)
 
   real(RP), public           :: LHV       !< latent heat of vaporization for use [J/kg]
   real(RP), public           :: LHS       !< latent heat of sublimation  for use [J/kg]
   real(RP), public           :: LHF       !< latent heat of fusion       for use [J/kg]
+  !$acc declare create(LHV, LHS, LHF)
 
   real(RP), public           :: CV_VAPOR !< CV for vapor [J/kg/K]
   real(RP), public           :: CP_VAPOR !< CP for vapor [J/kg/K]
@@ -134,6 +137,7 @@ module scale_atmos_hydrometeor
   real(RP), public           :: CP_WATER !< CP for water [J/kg/K]
   real(RP), public           :: CV_ICE   !< CV for ice   [J/kg/K]
   real(RP), public           :: CP_ICE   !< CP for ice   [J/kg/K]
+  !$acc declare create(CV_VAPOR,CP_VAPOR,CV_WATER,CP_WATER,CV_ICE,CP_ICE)
 
   !-----------------------------------------------------------------------------
   !
@@ -144,10 +148,12 @@ module scale_atmos_hydrometeor
   !++ Private parameters & variables
   !
   real(RP), private :: THERMODYN_EMASK = 1.0_RP
+  !$acc declare create(THERMODYN_EMASK)
 
   logical,  private :: initialized = .false.
 
   !-----------------------------------------------------------------------------
+
 contains
   !-----------------------------------------------------------------------------
   !> Setup
@@ -219,6 +225,11 @@ contains
                      DICE,  & ! HS
                      DICE,  & ! HG
                      DICE  /) ! HH
+
+    !$acc update device(HYD_DENS)
+    !$acc update device(LHV, LHS, LHF)
+    !$acc update device(CV_VAPOR,CP_VAPOR,CV_WATER,CP_WATER,CV_ICE,CP_ICE)
+    !$acc update device(THERMODYN_EMASK)
 
     return
   end subroutine ATMOS_HYDROMETEOR_setup
@@ -354,6 +365,8 @@ contains
 
     ATMOS_HYDROMETEOR_ice_phase = QIA > 0
 
+    !$acc update device(QHA, QHS, QHE, QLA, QLS, QLE, QIA, QIS, QIE)
+
     return
   end subroutine ATMOS_HYDROMETEOR_regist
 
@@ -361,6 +374,7 @@ contains
   subroutine ATMOS_HYDROMETEOR_LHV_0D( &
        temp, &
        lhv   )
+    !$acc routine
     use scale_const, only: &
        TEM00 => CONST_TEM00, &
        LHV0  => CONST_LHV0
@@ -380,6 +394,7 @@ contains
        KA, KS, KE, &
        temp, &
        lhv   )
+    !$acc routine vector
     implicit none
     integer,  intent(in)  :: KA, KS, KE
 
@@ -413,11 +428,13 @@ contains
     !---------------------------------------------------------------------------
 
     !$omp parallel do OMP_SCHEDULE_ collapse(2)
+    !$acc kernels copyin(temp) copyout(lhv)
     do j = JS, JE
     do i = IS, IE
        call ATMOS_HYDROMETEOR_LHV_0D( temp(i,j), lhv(i,j) )
     enddo
     enddo
+    !$acc end kernels
 
     return
   end subroutine ATMOS_HYDROMETEOR_LHV_2D
@@ -440,6 +457,7 @@ contains
     integer :: k, i, j
     !---------------------------------------------------------------------------
 
+    !$acc kernels copyin(temp) copyout(lhv)
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -447,6 +465,7 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
 
     return
   end subroutine ATMOS_HYDROMETEOR_LHV_3D
@@ -455,6 +474,7 @@ contains
   subroutine ATMOS_HYDROMETEOR_LHS_0D( &
        temp, &
        lhs   )
+    !$acc routine
     use scale_const, only: &
        TEM00 => CONST_TEM00, &
        LHS0  => CONST_LHS0
@@ -474,6 +494,7 @@ contains
        KA, KS, KE, &
        temp, &
        lhs   )
+    !$acc routine vector
     implicit none
     integer, intent(in) :: KA, KS, KE
 
@@ -507,11 +528,13 @@ contains
     !---------------------------------------------------------------------------
 
     !$omp parallel do OMP_SCHEDULE_ collapse(2)
+    !$acc kernels copyin(temp) copyout(lhs)
     do j = JS, JE
     do i = IS, IE
        call ATMOS_HYDROMETEOR_LHS( temp(i,j), lhs(i,j) )
     enddo
     enddo
+    !$acc end kernels
 
     return
   end subroutine ATMOS_HYDROMETEOR_LHS_2D
@@ -534,6 +557,7 @@ contains
     !---------------------------------------------------------------------------
 
     !$omp parallel do OMP_SCHEDULE_ collapse(2)
+    !$acc kernels copyin(temp) copyout(lhs)
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -541,6 +565,7 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
 
     return
   end subroutine ATMOS_HYDROMETEOR_LHS_3D
@@ -549,6 +574,7 @@ contains
   subroutine ATMOS_HYDROMETEOR_LHF_0D( &
        temp, &
        lhf   )
+    !$acc routine
     use scale_const, only: &
        TEM00 => CONST_TEM00, &
        LHF0  => CONST_LHF0
@@ -568,6 +594,7 @@ contains
        KA, KS, KE, &
        temp, &
        lhf   )
+    !$acc routine vector
     implicit none
     integer, intent(in) :: KA, KS, KE
 
@@ -600,11 +627,13 @@ contains
     !---------------------------------------------------------------------------
 
     !$omp parallel do OMP_SCHEDULE_ collapse(2)
+    !$acc kernels copyin(temp) copyout(lhf)
     do j = JS, JE
     do i = IS, IE
        call ATMOS_HYDROMETEOR_LHF( temp(i,j), lhf(i,j) )
     enddo
     enddo
+    !$acc end kernels
 
     return
   end subroutine ATMOS_HYDROMETEOR_LHF_2D
@@ -628,6 +657,7 @@ contains
     !---------------------------------------------------------------------------
 
     !$omp parallel do OMP_SCHEDULE_ collapse(2)
+    !$acc kernels copyin(temp) copyout(lhf)
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -635,6 +665,7 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
 
     return
   end subroutine ATMOS_HYDROMETEOR_LHF_3D
@@ -646,6 +677,7 @@ contains
        QV, QI, Qdry, &
        Rtot, CPtot,  &
        entr          )
+    !$acc routine
     use scale_const, only: &
        PRE00 => CONST_PRE00, &
        TEM00 => CONST_TEM00, &
@@ -706,6 +738,7 @@ contains
     !---------------------------------------------------------------------------
 
     !$omp parallel do OMP_SCHEDULE_ collapse(2)
+    !$acc kernels copyin(temp,pres,qv,qi,qdry,rtot,cptot) copyout(entr)
     do j = JS, JE
     do i = IS, IE
        call ATMOS_HYDROMETEOR_entr_0D( &
@@ -715,6 +748,7 @@ contains
             entr(i,j)                    ) ! [OUT]
     enddo
     enddo
+    !$acc end kernels
 
     return
   end subroutine ATMOS_HYDROMETEOR_entr_2D
@@ -745,6 +779,7 @@ contains
     !---------------------------------------------------------------------------
 
     !$omp parallel do OMP_SCHEDULE_ collapse(2)
+    !$acc kernels copyin(temp,pres,qv,qi,qdry,rtot,cptot) copyout(entr)
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -756,6 +791,7 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
 
     return
   end subroutine ATMOS_HYDROMETEOR_entr_3D
@@ -767,6 +803,7 @@ contains
        qv, qi, qdry, &
        Rtot, CPtot,    &
        temp            )
+    !$acc routine
     use scale_const, only: &
        PRE00 => CONST_PRE00, &
        TEM00 => CONST_TEM00, &

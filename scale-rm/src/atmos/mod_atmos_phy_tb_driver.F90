@@ -130,12 +130,14 @@ contains
 
     ! initialize
     !$omp parallel do
+    !$acc kernels copy(MOMZ_t_TB)
     do j = JS, JE
     do i = IS, IE
        MOMZ_t_TB(KS-1,i,j) = 0.0_RP
        MOMZ_t_TB(KE  ,i,j) = 0.0_RP
     enddo
     enddo
+    !$acc end kernels
 
     ! setup library component
     select case( ATMOS_PHY_TB_TYPE )
@@ -305,7 +307,14 @@ contains
     integer  :: k, i, j, iq
     !---------------------------------------------------------------------------
 
+    !$acc data create(QFLX_RHOQ)
+
+
     if ( update_flag ) then
+
+       !$acc data copyin(GSQRT, J13G, J23G, MAPF) &
+       !$acc      create(QFLX_MOMZ, QFLX_MOMX, QFLX_MOMY, QFLX_RHOT, &
+       !$acc             Nu, Ri, Pr, N2, tend)
 
        call ATMOS_vars_get_diagnostic( "N2", N2 )
 
@@ -321,10 +330,13 @@ contains
                                  GSQRT, J13G, J23G, J33G, MAPF,           & ! [IN]
                                  dt_TB                                    ) ! [IN]
        case( 'D1980' )
+          !$acc kernels
           MOMZ_t_TB(:,:,:)   = 0.0_RP
           MOMX_t_TB(:,:,:)   = 0.0_RP
           MOMY_t_TB(:,:,:)   = 0.0_RP
           RHOT_t_TB(:,:,:)   = 0.0_RP
+          !$acc end kernels
+          !$acc update host(MOMZ,MOMX,MOMY,RHOT,DENS,QTRC,N2,SFLX_MW,SFLX_MU,SFLX_MV,SFLX_SH,SFLX_Q)
           call ATMOS_PHY_TB_d1980( QFLX_MOMZ, QFLX_MOMX, QFLX_MOMY,        & ! [OUT]
                                    QFLX_RHOT, QFLX_RHOQ,                   & ! [OUT]
                                    RHOQ_t_TB,                              & ! [OUT]
@@ -334,11 +346,15 @@ contains
                                    SFLX_SH, SFLX_Q,                        & ! [IN]
                                    GSQRT, J13G, J23G, J33G, MAPF,          & ! [IN]
                                    dt_TB                                   ) ! [IN]
+          !$acc update device(QFLX_MOMZ,QFLX_MOMX,QFLX_MOMY,QFLX_RHOT,QFLX_RHOQ,RHOQ_t_TB,Nu,Ri,Pr)
        case( 'DNS' )
+          !$acc kernels
           MOMZ_t_TB(:,:,:)   = 0.0_RP
           MOMX_t_TB(:,:,:)   = 0.0_RP
           MOMY_t_TB(:,:,:)   = 0.0_RP
           RHOT_t_TB(:,:,:)   = 0.0_RP
+          !$acc end kernels
+          !$acc update host(MOMZ,MOMX,MOMY,RHOT,DENS,QTRC,N2,SFLX_MW,SFLX_MU,SFLX_MV,SFLX_SH,SFLX_Q)
           call ATMOS_PHY_TB_dns( QFLX_MOMZ, QFLX_MOMX, QFLX_MOMY,        & ! [OUT]
                                  QFLX_RHOT, QFLX_RHOQ,                   & ! [OUT]
                                  RHOQ_t_TB,                              & ! [OUT]
@@ -348,6 +364,7 @@ contains
                                  SFLX_SH, SFLX_Q,                        & ! [IN]
                                  GSQRT, J13G, J23G, J33G, MAPF,          & ! [IN]
                                  dt_TB                                   ) ! [IN]
+          !$acc update device(QFLX_MOMZ,QFLX_MOMX,QFLX_MOMY,QFLX_RHOT,QFLX_RHOQ,RHOQ_t_TB,Nu,Ri,Pr)
        end select
 
 
@@ -361,6 +378,7 @@ contains
                                GSQRT, J13G, J23G, J33G, MAPF, & ! (in)
                                IIS, IIE, JJS, JJE ) ! (in)
           !$omp parallel do
+          !$acc kernels
           do j = JJS, JJE
           do i = IIS, IIE
           do k = KS, KE-1
@@ -368,12 +386,14 @@ contains
           end do
           end do
           end do
+          !$acc end kernels
 
           call calc_tend_momx( tend(:,:,:), & ! (out)
                                QFLX_MOMX,   & ! (in)
                                GSQRT, J13G, J23G, J33G, MAPF, & ! (in)
                                IIS, IIE, JJS, JJE ) ! (in)
           !$omp parallel do
+          !$acc kernels
           do j = JJS, JJE
           do i = IIS, IIE
           do k = KS, KE
@@ -381,12 +401,14 @@ contains
           end do
           end do
           end do
+          !$acc end kernels
 
           call calc_tend_momy( tend(:,:,:), & ! (out)
                                QFLX_MOMY,   & ! (in)
                                GSQRT, J13G, J23G, J33G, MAPF, & ! (in)
                                IIS, IIE, JJS, JJE ) ! (in)
           !$omp parallel do
+          !$acc kernels
           do j = JJS, JJE
           do i = IIS, IIE
           do k = KS, KE
@@ -394,12 +416,14 @@ contains
           end do
           end do
           end do
+          !$acc end kernels
 
           call calc_tend_phi ( tend(:,:,:), & ! (out)
                                QFLX_RHOT,   & ! (in)
                                GSQRT, J13G, J23G, J33G, MAPF, & ! (in)
                                IIS, IIE, JJS, JJE ) ! (in)
           !$omp parallel do
+          !$acc kernels
           do j = JJS, JJE
           do i = IIS, IIE
           do k = KS, KE
@@ -407,6 +431,7 @@ contains
           end do
           end do
           end do
+          !$acc end kernels
 
           do iq = 1, QA
              if ( iq == I_TKE .or. .not. TRACER_ADVC(iq) ) cycle
@@ -417,6 +442,7 @@ contains
                                  IIS, IIE, JJS, JJE ) ! (in)
 
              !$omp parallel do
+             !$acc kernels
              do j = JJS, JJE
              do i = IIS, IIE
              do k = KS, KE
@@ -424,6 +450,7 @@ contains
              end do
              end do
              end do
+             !$acc end kernels
 
           end do
 
@@ -489,6 +516,7 @@ contains
        end do
 
        if ( STATISTICS_checktotal ) then
+          !$acc data copyin(ATMOS_GRID_CARTESC_REAL_VOLWXY, ATMOS_GRID_CARTESC_REAL_VOLZUY, ATMOS_GRID_CARTESC_REAL_VOLZXV, ATMOS_GRID_CARTESC_REAL_VOL)
           call STATISTICS_total( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
                                  MOMZ_t_TB(:,:,:), 'MOMZ_t_TB',         &
                                  ATMOS_GRID_CARTESC_REAL_VOLWXY(:,:,:), &
@@ -524,12 +552,16 @@ contains
                                     ATMOS_GRID_CARTESC_REAL_VOL(:,:,:),                  &
                                     ATMOS_GRID_CARTESC_REAL_TOTVOL                       )
           enddo
+          !$acc end data
        endif
+
+       !$acc end data
 
     endif
 
     !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
     !$omp shared(JS,JE,IS,IE,KS,KE,MOMZ_t,MOMZ_t_TB,MOMX_t,MOMX_t_TB,MOMY_t,MOMY_t_TB,RHOT_t,RHOT_t_TB)
+    !$acc kernels
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -540,82 +572,113 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
 
     do iq = 1, QA
 
        if ( .not. ( iq == I_TKE .or. TRACER_ADVC(iq) ) ) cycle
 
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+!       !$acc kernels async(iq)
+       !$acc kernels
        do j  = JS, JE
        do i  = IS, IE
        do k  = KS, KE
           RHOQ_t(k,i,j,iq) = RHOQ_t(k,i,j,iq) + RHOQ_t_TB(k,i,j,iq)
        enddo
        enddo
-      enddo
+       enddo
+       !$acc end kernels
 
     enddo
 
+    !$acc data create(qflx_x, qflx_y)
+
     if ( monit_west > 0 ) then
+       !$acc kernels
        qflx_x(:,:) = 0.0_RP
+       !$acc end kernels
        if ( .not. PRC_HAS_W ) then
           do iq = 1, QA
              if ( TRACER_ADVC(iq) .and. TRACER_MASS(iq) == 1.0_RP ) then
+                !$acc kernels
                 do j = JS, JE
                 do k = KS, KE
                    qflx_x(k,j) = qflx_x(k,j) + QFLX_RHOQ(k,IS-1,j,XDIR,iq)
                 end do
                 end do
+                !$acc end kernels
              end if
           end do
        end if
+!$acc update host(qflx_x)
        call MONITOR_put( monit_west, qflx_x(:,:) )
     end if
     if ( monit_east > 0 ) then
+       !$acc kernels
        qflx_x(:,:) = 0.0_RP
+       !$acc end kernels
        if ( .not. PRC_HAS_E ) then
           do iq = 1, QA
              if ( TRACER_ADVC(iq) .and. TRACER_MASS(iq) == 1.0_RP ) then
+                !$acc kernels
                 do j = JS, JE
                 do k = KS, KE
                    qflx_x(k,j) = qflx_x(k,j) + QFLX_RHOQ(k,IE,j,XDIR,iq)
                 end do
                 end do
+                !$acc end kernels
              end if
           end do
        end if
+!$acc update host(qflx_x)
        call MONITOR_put( monit_east, qflx_x(:,:) )
     end if
     if ( monit_south > 0 ) then
+       !$acc kernels
        qflx_y(:,:) = 0.0_RP
+       !$acc end kernels
        if ( .not. PRC_HAS_S ) then
           do iq = 1, QA
              if ( TRACER_ADVC(iq) .and. TRACER_MASS(iq) == 1.0_RP ) then
+                !$acc kernels
                 do i = IS, IE
                 do k = KS, KE
                    qflx_y(k,i) = qflx_y(k,i) + QFLX_RHOQ(k,i,JS-1,YDIR,iq)
                 end do
                 end do
+                !$acc end kernels
              end if
           end do
        end if
+!$acc update host(qflx_y)
        call MONITOR_put( monit_south, qflx_y(:,:) )
     end if
     if ( monit_north > 0 ) then
+       !$acc kernels
        qflx_y(:,:) = 0.0_RP
+       !$acc end kernels
        if ( .not. PRC_HAS_N ) then
           do iq = 1, QA
              if ( TRACER_ADVC(iq) .and. TRACER_MASS(iq) == 1.0_RP ) then
+                !$acc kernels
                 do i = IS, IE
                 do k = KS, KE
                    qflx_y(k,i) = qflx_y(k,i) + QFLX_RHOQ(k,i,JE,YDIR,iq)
                 end do
                 end do
+                !$acc end kernels
              end if
           end do
        end if
+!$acc update host(qflx_y)
        call MONITOR_put( monit_north, qflx_y(:,:) )
     end if
+
+!    !$acc wait
+
+    !$acc end data
+    !$acc end data
 
     return
   end subroutine ATMOS_PHY_TB_driver_calc_tendency

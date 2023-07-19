@@ -26,6 +26,9 @@ module scale_file
   use scale_prc, only: &
      PRC_abort
   use iso_c_binding
+#ifdef _OPENACC
+  use openacc
+#endif
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -632,6 +635,8 @@ contains
     integer :: error
     intrinsic size
 
+    !$acc update host(val) if(acc_is_present(val))
+
     if ( .not. FILE_opened(fid) ) then
        LOG_ERROR("FILE_put_axis_real",*) 'File is not opened. fid = ', fid
        call PRC_abort
@@ -715,6 +720,8 @@ contains
        call PRC_abort
     end if
 
+    !$acc update host(val) if(acc_is_present(val))
+
     if ( present(start) ) then
        error = file_write_axis_c( FILE_files(fid)%fid, cstr(name),         & ! (in)
 #if defined(__GFORTRAN__) && __GNUC__ < 7
@@ -781,6 +788,8 @@ contains
        cptr(i) = cstr(dim_names(i))
        dim_names_(i) = c_loc(cptr(i))
     end do
+
+    !$acc update host(val) if(acc_is_present(val))
 
 #ifdef NVIDIA
     block
@@ -916,6 +925,8 @@ contains
           count_(i) = size(val, <%=n%>-i+1)
        end do
     end if
+
+    !$acc update host(val) if(acc_is_present(val))
 
 #ifdef NVIDIA
     block
@@ -2546,6 +2557,8 @@ contains
        call PRC_abort
     end if
 
+    !$acc update device(var) if(acc_is_present(var))
+
     return
   end subroutine FILE_read_var_real<%=rp%>_<%=d%>D
 %   end
@@ -2629,6 +2642,9 @@ contains
        else
           start_(:) = 1
        end if
+
+       !$acc update host(var) if(acc_is_present(var))
+
 #ifdef NVIDIA
        block
        real(<%=rp%>), allocatable, target :: work(<%=idx%>)

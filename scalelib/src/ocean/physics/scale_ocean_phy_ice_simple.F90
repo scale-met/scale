@@ -173,7 +173,9 @@ contains
 
     integer :: i, j
     !---------------------------------------------------------------------------
+    !$acc data copyin(ICE_MASS) copyout(ICE_FRAC)
 
+    !$acc kernels
     do j = OJS, OJE
     do i = OIS, OIE
        ICE_FRAC(i,j) = ICE_MASS(i,j) / OCEAN_PHY_ICE_mass_critical
@@ -181,7 +183,9 @@ contains
        ICE_FRAC(i,j) = min( sqrt( max( ICE_FRAC(i,j), 0.0_RP ) ), OCEAN_PHY_ICE_fraction_limit )
     enddo
     enddo
+    !$acc end kernels
 
+    !$acc end data
     return
   end subroutine OCEAN_PHY_ICE_fraction
 
@@ -225,9 +229,13 @@ contains
 
     integer  :: i, j
     !---------------------------------------------------------------------------
+    !$acc data copy(OCEAN_TEMP,ICE_TEMP,ICE_MASS) &
+    !$acc      copyin(calc_flag) &
+    !$acc      copyout(MASS_FLUX,ENGI_FLUX,MASS_SUPL,ENGI_SUPL)
 
     C_w = CV_WATER * DWATR * OCEAN_DEPTH
 
+    !$acc kernels
     !$omp parallel do &
     !$omp private(ICE_MASS_frz,ICE_MASS_prev)
     do j = OJS, OJE
@@ -273,7 +281,9 @@ contains
        endif
     enddo
     enddo
+    !$acc end kernels
 
+    !$acc end data
     return
   end subroutine OCEAN_PHY_ICE_adjustment
 
@@ -335,11 +345,15 @@ contains
 
     integer  :: i, j
     !---------------------------------------------------------------------------
+    !$acc data copyin (iflx_water,iflx_hbalance,subsfc_temp, &
+    !$acc              TC_dz,ICE_TEMP,ICE_MASS,ICE_FRAC,calc_flag) &
+    !$acc      copyout(ICE_TEMP_t,ICE_MASS_t,SFLX_G,SFLX_water,SFLX_RHOE)
 
     LOG_PROGRESS(*) 'ocean / physics / seaice'
 
     dt_RP = real(dt,kind=RP)
 
+    !$acc kernels
     !$omp parallel do &
     !$omp private(mass_budget,heat_budget,dM,dE,G,M_mlt, &
     !$omp         ICE_TEMP_new,ICE_MASS_new)
@@ -398,7 +412,9 @@ contains
        endif
     enddo
     enddo
+    !$acc end kernels
 
+    !$acc end data
     return
   end subroutine OCEAN_PHY_ICE_simple
 

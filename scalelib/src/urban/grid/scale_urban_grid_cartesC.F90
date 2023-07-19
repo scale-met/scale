@@ -99,6 +99,7 @@ contains
     allocate( URBAN_GRID_CARTESC_CZ (UKS  :UKE) )
     allocate( URBAN_GRID_CARTESC_FZ (UKS-1:UKE) )
     allocate( URBAN_GRID_CARTESC_CDZ(UKS  :UKE) )
+    !$acc enter data create(URBAN_GRID_CARTESC_CZ,URBAN_GRID_CARTESC_FZ,URBAN_GRID_CARTESC_CDZ)
 
     LOG_NEWLINE
     LOG_INFO("URBAN_GRID_CARTESC_setup",*) 'Urban grid information '
@@ -131,6 +132,8 @@ contains
        LOG_INFO_CONT('(1x,A)')                  '|=================================|'
     endif
 
+    !$acc update device(URBAN_GRID_CARTESC_CZ,URBAN_GRID_CARTESC_FZ,URBAN_GRID_CARTESC_CDZ)
+
     return
   end subroutine URBAN_GRID_CARTESC_setup
 
@@ -143,6 +146,7 @@ contains
     LOG_NEWLINE
     LOG_INFO("URBAN_GRID_CARTESC_finalize",*) 'Finalize'
 
+    !$acc exit data delete(URBAN_GRID_CARTESC_CZ,URBAN_GRID_CARTESC_FZ,URBAN_GRID_CARTESC_CDZ)
     deallocate( URBAN_GRID_CARTESC_CZ  )
     deallocate( URBAN_GRID_CARTESC_FZ  )
     deallocate( URBAN_GRID_CARTESC_CDZ )

@@ -100,6 +100,7 @@ contains
        valW,             &
        mflx, val, GSQRT, &
        CDZ               )
+    !$acc routine vector
     implicit none
 
     real(RP), intent(out) :: valW (KA)
@@ -186,7 +187,10 @@ contains
     !$omp parallel default(none) private(i,j,k, vel)                    &
     !$omp shared(JJS,JJE,IIS,IIE,KS,KE,mflx,val,flux,GSQRT,num_diff,EPS)
     
+    !$acc data copy(flux) copyin(mflx, val, GSQRT, num_diff, CDZ)
+
     !$omp do OMP_SCHEDULE_ collapse(2)
+    !$acc kernels
     do j = JJS, JJE
     do i = IIS, IIE
     do k = KS+1, KE-2
@@ -212,12 +216,14 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
     !$omp end do nowait
 #ifdef DEBUG
     k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
 
     !$omp do OMP_SCHEDULE_ collapse(2)
+    !$acc kernels
     do j = JJS, JJE
     do i = IIS, IIE
 #ifdef DEBUG
@@ -252,8 +258,11 @@ contains
        flux(KE  ,i,j) = 0.0_RP
     enddo
     enddo
+    !$acc end kernels
     !$omp end do nowait
     
+    !$acc end data
+
     !$omp end parallel    
 #ifdef DEBUG
     k = IUNDEF; i = IUNDEF; j = IUNDEF
@@ -287,6 +296,7 @@ contains
     !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
     !$omp private(vel) &
     !$omp shared(JJS,JJE,IIS,IIE,KS,KE,mflx,val,flux,GSQRT,num_diff)
+    !$acc kernels
     do j = JJS, JJE
     do i = IIS-1, IIE
     do k = KS, KE
@@ -312,6 +322,7 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
 #ifdef DEBUG
     k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
@@ -344,6 +355,7 @@ contains
     !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
     !$omp private(vel) &
     !$omp shared(JJS,JJE,IIS,IIE,KS,KE,mflx,val,flux,GSQRT,num_diff)
+    !$acc kernels
     do j = JJS-1, JJE
     do i = IIS, IIE
     do k = KS, KE
@@ -369,6 +381,7 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
 #ifdef DEBUG
     k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
@@ -410,7 +423,10 @@ contains
     !$omp parallel default(none) private(i,j,k,vel)  &
     !$omp shared(JJS,JJE,IIS,IIE,KS,KE,mom,val,flux,J33G,GSQRT,num_diff,DENS,FDZ,dtrk)
 
+    !$acc data copy(flux) copyin(mom, val, DENS, GSQRT, num_diff, CDZ, FDZ)
+
     !$omp do OMP_SCHEDULE_ collapse(2)
+    !$acc kernels
     do j = JJS, JJE
     do i = IIS, IIE
     do k = KS+2, KE-1
@@ -439,12 +455,14 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
     !$omp end do nowait
 #ifdef DEBUG
     k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
 
     !$omp do OMP_SCHEDULE_ collapse(2)
+    !$acc kernels
     do j = JJS, JJE
     do i = IIS, IIE
 #ifdef DEBUG
@@ -477,8 +495,11 @@ contains
        flux(KE  ,i,j) = 0.0_RP ! k = KE+1
     enddo
     enddo
+    !$acc end kernels
     !$omp end do nowait
     
+    !$acc end data
+
     !$omp end parallel
 
     return
@@ -513,7 +534,10 @@ contains
     !$omp parallel default(none) private(i,j,k,vel) &
     !$omp shared(JJS,JJE,IIS,IIE,KS,KE,mom,val,DENS,flux,J13G,MAPF)
 
+    !$acc data copy(flux) copyin(mom, val, DENS, GSQRT, J13G, MAPF, CDZ)
+
     !$omp do OMP_SCHEDULE_ collapse(2)
+    !$acc kernels
     do j = JJS, JJE
     do i = IIS, IIE
     do k = KS+2, KE-1
@@ -530,9 +554,11 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
     !$omp end do nowait
     
     !$omp do OMP_SCHEDULE_ collapse(2)
+    !$acc kernels
     do j = JJS, JJE
     do i = IIS, IIE
        ! The boundary condition is qflx_hi + qflxJ13 + qfluxJ23 = 0 at KS.
@@ -557,8 +583,11 @@ contains
        flux(KE-1,i,j) = 0.0_RP
     enddo
     enddo
+    !$acc end kernels
     !$omp end do nowait
     
+    !$acc end data
+
     !$omp end parallel
 
     return
@@ -592,7 +621,10 @@ contains
     !$omp parallel default(none) private(i,j,k,vel) &
     !$omp shared(JJS,JJE,IIS,IIE,KS,KE,mom,val,DENS,flux,J23G,MAPF)
 
+    !$acc data copy(flux) copyin(mom, val, DENS, GSQRT, J23G, MAPF, CDZ)
+
     !$omp do OMP_SCHEDULE_ collapse(2)
+    !$acc kernels
     do j = JJS, JJE
     do i = IIS, IIE
     do k = KS+2, KE-1
@@ -609,9 +641,11 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
     !$omp end do nowait
     
     !$omp do OMP_SCHEDULE_ collapse(2)
+    !$acc kernels
     do j = JJS, JJE
     do i = IIS, IIE
        ! The boundary condition is qflx_hi + qflxJ13 + qfluxJ23 = 0 at KS.
@@ -636,8 +670,11 @@ contains
        flux(KE-1,i,j) = 0.0_RP
     enddo
     enddo
+    !$acc end kernels
     !$omp end do nowait
     
+    !$acc end data
+
     !$omp end parallel
 
     return
@@ -674,7 +711,10 @@ contains
     !$omp shared(JJS,JJE,IIS,IIE,KS,KE,mom,val,DENS,flux,GSQRT,MAPF,num_diff) &
     !$omp shared(CDZ)
 
+    !$acc data copy(flux) copyin(mom, val, DENS, GSQRT, MAPF, num_diff, CDZ)
+
     !$omp do OMP_SCHEDULE_ collapse(2)
+    !$acc kernels
     do j = JJS, JJE
     do i = IIS-1, IIE
     do k = KS, KE-1
@@ -708,19 +748,24 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
     !$omp end do nowait
 #ifdef DEBUG
     k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
 
     !$omp do OMP_SCHEDULE_ collapse(2)
+    !$acc kernels
     do j = JJS, JJE
     do i = IIS-1, IIE
        flux(KE,i,j) = 0.0_RP
     enddo
     enddo
+    !$acc end kernels
     !$omp end do nowait
     
+    !$acc end data
+
     !$omp end parallel
 #ifdef DEBUG
     k = IUNDEF; i = IUNDEF; j = IUNDEF
@@ -759,7 +804,10 @@ contains
     !$omp shared(JJS,JJE,IIS,IIE,KS,KE,mom,val,DENS,flux,GSQRT,MAPF,num_diff) &
     !$omp shared(CDZ)
 
+    !$acc data copy(flux) copyin(mom, val, DENS, GSQRT, MAPF, num_diff, CDZ)
+
     !$omp do OMP_SCHEDULE_ collapse(2)
+    !$acc kernels
     do j = JJS-1, JJE
     do i = IIS, IIE
     do k = KS, KE-1
@@ -793,19 +841,24 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
     !$omp end do nowait
 #ifdef DEBUG
     k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
 
     !$omp do OMP_SCHEDULE_ collapse(2)
+    !$acc kernels
     do j = JJS-1, JJE
     do i = IIS, IIE
        flux(KE,i,j) = 0.0_RP
     enddo
     enddo
+    !$acc end kernels
     !$omp end do nowait
     
+    !$acc end data
+
     !$omp end parallel
 #ifdef DEBUG
     k = IUNDEF; i = IUNDEF; j = IUNDEF
@@ -845,10 +898,13 @@ contains
     !$omp shared(JJS,JJE,IIS,IIE,KS,KE,mom,val,DENS,flux,J33G,GSQRT,num_diff) &
     !$omp shared(CDZ,TwoD)
 
+    !$acc data copy(flux) copyin(mom, val, DENS, GSQRT, num_diff, CDZ)
+
 
     if ( TwoD ) then
 
     !$omp do OMP_SCHEDULE_
+    !$acc kernels
     do j = JJS, JJE
     do k = KS+1, KE-2
        i = IIS
@@ -877,12 +933,14 @@ contains
                    + GSQRT(k,i,j) * num_diff(k,i,j)
     enddo
     enddo
+    !$acc end kernels
     !$omp end do nowait
 #ifdef DEBUG
     k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
 
     !$omp do OMP_SCHEDULE_
+    !$acc kernels
     do j = JJS, JJE
        i = IIS
 #ifdef DEBUG
@@ -924,12 +982,14 @@ contains
 
        flux(KE,i,j) = 0.0_RP
     enddo
+    !$acc end kernels
     !$omp end do nowait
 
     else
 
 
     !$omp do OMP_SCHEDULE_ collapse(2) 
+    !$acc kernels
     do j = JJS, JJE
     do i = IIS, IIE
     do k = KS+1, KE-2
@@ -960,12 +1020,14 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
     !$omp end do nowait
 #ifdef DEBUG
     k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
 
     !$omp do OMP_SCHEDULE_ collapse(2) 
+    !$acc kernels
     do j = JJS, JJE
     do i = IIS, IIE
 #ifdef DEBUG
@@ -1009,10 +1071,13 @@ contains
        flux(KE,i,j) = 0.0_RP
     enddo
     enddo
+    !$acc end kernels
     !$omp end do nowait
 
     end if    
 
+
+    !$acc end data
 
     !$omp end parallel
 #ifdef DEBUG
@@ -1051,9 +1116,12 @@ contains
     !$omp shared(JJS,JJE,IIS,IIE,KS,KE,mom,val,DENS,flux,J13G,MAPF) &
     !$omp shared(GSQRT,CDZ,TwoD)
   
+    !$acc data copy(flux) copyin(mom, val, DENS, GSQRT, J13G, MAPF, CDZ)
+
 
 
     !$omp do OMP_SCHEDULE_ collapse(2)
+    !$acc kernels
     do j = JJS, JJE
     do i = IIS, IIE
     do k = KS+1, KE-2
@@ -1076,9 +1144,11 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
     !$omp end do nowait
 
-    !$omp do OMP_SCHEDULE_ collapse(2) 
+    !$omp do OMP_SCHEDULE_ collapse(2)
+    !$acc kernels
     do j = JJS, JJE
     do i = IIS, IIE
        ! The boundary condition is qflx_hi + qflxJ13 + qfluxJ23 = 0 at KS-1.
@@ -1121,9 +1191,12 @@ contains
        flux(KE  ,i,j) = 0.0_RP
     enddo
     enddo
+    !$acc end kernels
     !$omp end do nowait
     
 
+
+    !$acc end data
 
     !$omp end parallel
     return
@@ -1158,10 +1231,13 @@ contains
     !$omp shared(JJS,JJE,IIS,IIE,KS,KE,mom,val,DENS,flux,J23G,MAPF) &
     !$omp shared(GSQRT,CDZ,TwoD)
   
+    !$acc data copy(flux) copyin(mom, val, DENS, GSQRT, J23G, MAPF, CDZ)
+
 
     if ( TwoD ) then
 
     !$omp do OMP_SCHEDULE_
+    !$acc kernels
     do j = JJS, JJE
     do k = KS+1, KE-2
        i = IIS
@@ -1182,9 +1258,11 @@ contains
                        * ( 0.5_RP - sign(0.5_RP,vel) ) )
     enddo
     enddo
+    !$acc end kernels
     !$omp end do nowait
 
     !$omp do OMP_SCHEDULE_
+    !$acc kernels
     do j = JJS, JJE
        i = IIS
        ! The boundary condition is qflx_hi + qflxJ13 + qfluxJ23 = 0 at KS-1.
@@ -1226,12 +1304,14 @@ contains
 
        flux(KE  ,i,j) = 0.0_RP
     enddo
+    !$acc end kernels
     !$omp end do nowait
 
     else
 
 
     !$omp do OMP_SCHEDULE_ collapse(2)
+    !$acc kernels
     do j = JJS, JJE
     do i = IIS, IIE
     do k = KS+1, KE-2
@@ -1254,9 +1334,11 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
     !$omp end do nowait
 
-    !$omp do OMP_SCHEDULE_ collapse(2) 
+    !$omp do OMP_SCHEDULE_ collapse(2)
+    !$acc kernels
     do j = JJS, JJE
     do i = IIS, IIE
        ! The boundary condition is qflx_hi + qflxJ13 + qfluxJ23 = 0 at KS-1.
@@ -1299,11 +1381,14 @@ contains
        flux(KE  ,i,j) = 0.0_RP
     enddo
     enddo
+    !$acc end kernels
     !$omp end do nowait
     
 
     end if
 
+
+    !$acc end data
 
     !$omp end parallel
     return
@@ -1342,6 +1427,7 @@ contains
     !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
     !$omp private(vel) &
     !$omp shared(JJS,JJE,IIS,IIE,KS,KE,mom,val,DENS,flux,GSQRT,MAPF,num_diff)
+    !$acc kernels
     do j = JJS, JJE
     do i = IIS, IIE+1
     do k = KS, KE
@@ -1369,6 +1455,7 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
 #ifdef DEBUG
     k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
@@ -1411,6 +1498,7 @@ contains
     !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ &
     !$omp private(vel) &
     !$omp shared(JJS,JJE,IIS,IIE,KS,KE,mom,val,DENS,flux,GSQRT,MAPF,num_diff,TwoD)
+    !$acc kernels
     do j = JJS-1, JJE
     do k = KS, KE
        i = IIS
@@ -1436,6 +1524,7 @@ contains
                    + GSQRT(k,i,j) * num_diff(k,i,j)
     enddo
     enddo
+    !$acc end kernels
 #ifdef DEBUG
     k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
@@ -1446,6 +1535,7 @@ contains
     !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
     !$omp private(vel) &
     !$omp shared(JJS,JJE,IIS,IIE,KS,KE,mom,val,DENS,flux,GSQRT,MAPF,num_diff)
+    !$acc kernels
     do j = JJS-1, JJE
     do i = IIS, IIE
     do k = KS, KE
@@ -1473,6 +1563,7 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
 #ifdef DEBUG
     k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
@@ -1516,8 +1607,11 @@ contains
     !$omp shared(JJS,JJE,IIS,IIE,KS,KE,mom,val,DENS,flux,J33G,GSQRT,num_diff) &
     !$omp shared(CDZ,TwoD)
 
+    !$acc data copy(flux) copyin(mom, val, DENS, GSQRT, num_diff, CDZ)
+
 
     !$omp do OMP_SCHEDULE_ collapse(2) 
+    !$acc kernels
     do j = JJS, JJE
     do i = IIS, IIE
     do k = KS+1, KE-2
@@ -1548,12 +1642,14 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
     !$omp end do nowait
 #ifdef DEBUG
     k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
 
     !$omp do OMP_SCHEDULE_ collapse(2) 
+    !$acc kernels
     do j = JJS, JJE
     do i = IIS, IIE
 #ifdef DEBUG
@@ -1597,8 +1693,11 @@ contains
        flux(KE,i,j) = 0.0_RP
     enddo
     enddo
+    !$acc end kernels
     !$omp end do nowait
 
+
+    !$acc end data
 
     !$omp end parallel
 #ifdef DEBUG
@@ -1637,9 +1736,12 @@ contains
     !$omp shared(JJS,JJE,IIS,IIE,KS,KE,mom,val,DENS,flux,J13G,MAPF) &
     !$omp shared(GSQRT,CDZ,TwoD)
   
+    !$acc data copy(flux) copyin(mom, val, DENS, GSQRT, J13G, MAPF, CDZ)
+
 
 
     !$omp do OMP_SCHEDULE_ collapse(2)
+    !$acc kernels
     do j = JJS, JJE
     do i = IIS, IIE
     do k = KS+1, KE-2
@@ -1662,9 +1764,11 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
     !$omp end do nowait
 
-    !$omp do OMP_SCHEDULE_ collapse(2) 
+    !$omp do OMP_SCHEDULE_ collapse(2)
+    !$acc kernels
     do j = JJS, JJE
     do i = IIS, IIE
        ! The boundary condition is qflx_hi + qflxJ13 + qfluxJ23 = 0 at KS-1.
@@ -1707,9 +1811,12 @@ contains
        flux(KE  ,i,j) = 0.0_RP
     enddo
     enddo
+    !$acc end kernels
     !$omp end do nowait
     
 
+
+    !$acc end data
 
     !$omp end parallel
     return
@@ -1744,9 +1851,12 @@ contains
     !$omp shared(JJS,JJE,IIS,IIE,KS,KE,mom,val,DENS,flux,J23G,MAPF) &
     !$omp shared(GSQRT,CDZ,TwoD)
   
+    !$acc data copy(flux) copyin(mom, val, DENS, GSQRT, J23G, MAPF, CDZ)
+
 
 
     !$omp do OMP_SCHEDULE_ collapse(2)
+    !$acc kernels
     do j = JJS, JJE
     do i = IIS, IIE
     do k = KS+1, KE-2
@@ -1769,9 +1879,11 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
     !$omp end do nowait
 
-    !$omp do OMP_SCHEDULE_ collapse(2) 
+    !$omp do OMP_SCHEDULE_ collapse(2)
+    !$acc kernels
     do j = JJS, JJE
     do i = IIS, IIE
        ! The boundary condition is qflx_hi + qflxJ13 + qfluxJ23 = 0 at KS-1.
@@ -1814,9 +1926,12 @@ contains
        flux(KE  ,i,j) = 0.0_RP
     enddo
     enddo
+    !$acc end kernels
     !$omp end do nowait
     
 
+
+    !$acc end data
 
     !$omp end parallel
     return
@@ -1853,6 +1968,7 @@ contains
     !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
     !$omp private(vel) &
     !$omp shared(JJS,JJE,IIS,IIE,KS,KE,mom,val,DENS,flux,GSQRT,MAPF,num_diff)
+    !$acc kernels
     do j = JJS, JJE
     do i = IIS-1, IIE
     do k = KS, KE
@@ -1880,6 +1996,7 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
 #ifdef DEBUG
     k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
@@ -1922,6 +2039,7 @@ contains
     !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
     !$omp private(vel) &
     !$omp shared(JJS,JJE,IIS,IIE,KS,KE,mom,val,DENS,flux,GSQRT,MAPF,num_diff)
+    !$acc kernels
     do j = JJS, JJE+1
     do i = IIS, IIE
     do k = KS, KE
@@ -1949,6 +2067,7 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
 #ifdef DEBUG
     k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
@@ -1967,12 +2086,13 @@ contains
   function phi(v1, v2, v3)
     use scale_const, only: &
        EPS => CONST_EPS
+    !$acc routine seq
     implicit none
 
     real(RP)              :: phi
-    real(RP), intent(in)  :: v1
-    real(RP), intent(in)  :: v2
-    real(RP), intent(in)  :: v3
+    real(RP), intent(in), value  :: v1
+    real(RP), intent(in), value  :: v2
+    real(RP), intent(in), value  :: v3
     
     real(RP) :: r2
     real(RP) :: zerosw1, zerosw2
