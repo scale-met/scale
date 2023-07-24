@@ -1778,7 +1778,6 @@ contains
     logical :: error
     !---------------------------------------------------------------------------
 
-    LOG_INFO("ATMOS_BOUNDARY_update_file",*) "Atmos Boundary: read from boundary file"
     call ATMOS_BOUNDARY_update( time )
 
     if ( ATMOS_BOUNDARY_DENS_ADJUST ) then
