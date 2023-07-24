@@ -155,7 +155,7 @@ contains
 
     namelist /ATMOS_DYN_TSTEP_LARGE_FVM_HEVE/ &
       EVAL_TYPE_NUMFILTER
-   
+
     integer :: ierr
     !---------------------------------------------------------------------------
 
@@ -170,7 +170,7 @@ contains
     endif
     LOG_NML(ATMOS_DYN_TSTEP_LARGE_FVM_HEVE)
 
-    select case( EVAL_TYPE_NUMFILTER ) 
+    select case( EVAL_TYPE_NUMFILTER )
     case( 'TENDENCY', 'FILTER' )
     case default
       LOG_ERROR("ATMOS_DYN_Tstep_large_fvm_heve_setup",*) 'The specfied value of EVAL_TYPE_NUMFILTER is not appropriate. Check!'
@@ -680,8 +680,8 @@ contains
     dts   = dtl / nstep                    ! dts is divisor of dtl and smaller or equal to dtss
 
     MONIT_lateral_flag(ZDIR) = .false.
-    MONIT_lateral_flag(XDIR) = MONIT_mflx_west > 0 .or. MONIT_mflx_east > 0 
-    MONIT_lateral_flag(YDIR) = MONIT_mflx_south > 0 .or. MONIT_mflx_north > 0 
+    MONIT_lateral_flag(XDIR) = MONIT_mflx_west > 0 .or. MONIT_mflx_east > 0
+    MONIT_lateral_flag(YDIR) = MONIT_mflx_south > 0 .or. MONIT_mflx_north > 0
 
 #ifdef DEBUG
     LOG_INFO("ATMOS_DYN_Tstep_large_fvm_heve",*)                         'Dynamics large time step'
@@ -746,11 +746,11 @@ contains
     end do
     !$acc end kernels
 
-    !- prepare some variables for pressure linearization 
+    !- prepare some variables for pressure linearization
     call ATMOS_DYN_prep_pres_linearization( &
        DPRES0, RT2P, REF_rhot,                            & ! (out)
        RHOT, QTRC, REF_pres, AQ_R, AQ_CV, AQ_CP, AQ_MASS  ) ! (in)
-   
+
     call PROF_rapend  ("DYN_Large_Preparation", 2)
 
     !###########################################################################
@@ -1538,7 +1538,7 @@ contains
                GSQRT, J13G, J23G, J33G, MAPF, & ! (in)
                TwoD,                          & ! (in)
                RCDZ, RCDX, RCDY, RFDZ, FDZ    ) ! (in)
-      
+
        else
 
           !$omp parallel workshare
@@ -1596,7 +1596,7 @@ contains
             RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,                & ! (in)
             TwoD, dts,                                         & ! (in)
             GSQRT, MAPF, REF_dens, REF_pott,                   & ! (in)
-            ND_COEF, ND_LAPLACIAN_NUM, ND_SFC_FACT, ND_USE_RS  ) ! (in)         
+            ND_COEF, ND_LAPLACIAN_NUM, ND_SFC_FACT, ND_USE_RS  ) ! (in)
        endif
 
        !$omp parallel do default(none) private(i,j,iv) OMP_SCHEDULE_ collapse(2) &
@@ -1884,7 +1884,7 @@ contains
          if ( do_put .or. MONIT_lateral_flag(iv) ) then
            call multiply_flux_by_metric_xyz( iv, mflx, GSQRT, MAPF )
            call FILE_HISTORY_put( HIST_mflx(iv), mflx(:,:,:,iv) )
-         end if   
+         end if
        end do
 
        do iv = 1, 3
@@ -1892,7 +1892,7 @@ contains
          if ( do_put ) then
            call multiply_flux_by_metric_xyz( iv, tflx, GSQRT, MAPF )
            call FILE_HISTORY_put( HIST_tflx(iv), tflx(:,:,:,iv) )
-         end if   
+         end if
        end do
 
        !- monitor mass budget ------------------------------------
@@ -1907,7 +1907,7 @@ contains
        call MONITOR_put( MONIT_damp_qtot, DENS_tq(:,:,:) )
        call MONITOR_put_lateral_flux( MONIT_qflx_west, BND_W, qflx_west, zero_x )
        call MONITOR_put_lateral_flux( MONIT_qflx_east, BND_E, qflx_east, zero_x )
-       call MONITOR_put_lateral_flux( MONIT_qflx_south, BND_S, qflx_south, zero_y )       
+       call MONITOR_put_lateral_flux( MONIT_qflx_south, BND_S, qflx_south, zero_y )
        call MONITOR_put_lateral_flux( MONIT_qflx_north, BND_N, qflx_north, zero_y )
     end if
 
@@ -1918,10 +1918,10 @@ contains
   end subroutine ATMOS_DYN_Tstep_large_fvm_heve
 
   !-- private subroutines --------------------------------------------
-  
+
   subroutine MONITOR_put_lateral_flux( MONIT_ID, BND_flag, flx, flx_zero )
     use scale_monitor, only: &
-      MONITOR_put   
+      MONITOR_put
     implicit none
 
     integer, intent(in) :: MONIT_ID
@@ -1964,7 +1964,7 @@ contains
       end do
       end do
       !$acc end kernels
-    end if 
+    end if
 
     if (I_DIR == XDIR) then
       !$omp parallel do
@@ -1977,7 +1977,7 @@ contains
       end do
       end do
       !$acc end kernels
-    end if 
+    end if
 
     if (I_DIR == YDIR) then
       !$omp parallel do
@@ -1990,7 +1990,7 @@ contains
       end do
       end do
       !$acc end kernels
-    end if 
+    end if
 
     !$acc end data
 
