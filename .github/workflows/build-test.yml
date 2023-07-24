@@ -30,7 +30,9 @@ jobs:
     steps:
     - uses: actions/checkout@v3
     - name: apt
-      run: sudo apt-get install -y -qq libopenmpi-dev gfortran libnetcdf-dev libnetcdff-dev
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y -qq libopenmpi-dev gfortran libnetcdf-dev libnetcdff-dev
     - name: make
       run: make -j 4
     - name: make single
@@ -74,7 +76,9 @@ jobs:
         files: doc/descriptions/**
     - name: apt
       if: ( steps.changed-files-ug-en.outputs.any_changed == 'true' || steps.changed-files-ug-jp.outputs.any_changed == 'true' || steps.changed-files-desc.outputs.any_changed == 'true' )
-      run: sudo apt-get install -y -qq texlive-latex-base texlive-lang-japanese texlive-latex-recommended texlive-latex-extra texlive-science
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y -qq texlive-latex-base texlive-lang-japanese texlive-latex-recommended texlive-latex-extra texlive-science
     - name: ug-en
       run: make
       if: steps.changed-files-ug-en.outputs.any_changed == 'true'
