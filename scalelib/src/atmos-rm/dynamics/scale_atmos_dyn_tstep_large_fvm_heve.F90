@@ -866,7 +866,6 @@ contains
 
           if ( Llast ) then
              if ( do_put ) call FILE_HISTORY_put( HIST_damp_QTRC(iq), damp_t_QTRC(:,:,:) )
-             call FILE_HISTORY_put( HIST_phys_QTRC(iq), RHOQ_tp(:,:,:,iq) )
           end if
 
           call ATMOS_DYN_fill_halo( RHOQ_t(:,:,:,iq), 0.0_RP, .false., .true. )
@@ -887,6 +886,10 @@ contains
           enddo
           !$acc end kernels
 
+       end if
+
+       if ( Llast ) then
+          call FILE_HISTORY_put( HIST_phys_QTRC(iq), RHOQ_tp(:,:,:,iq) )
        end if
 
     end do
@@ -1772,11 +1775,11 @@ contains
 
           if ( Llast ) then
              do iv = 1, 3
-              call FILE_HISTORY_query( HIST_qflx(iv,iq), do_put )
-              if ( do_put .or. MONIT_lateral_flag(iv) ) then
-               call multiply_flux_by_metric_xyz( iv, qflx, GSQRT, MAPF )               
-               call FILE_HISTORY_put( HIST_qflx(iv,iq), qflx(:,:,:,iv) )
-              end if 
+                call FILE_HISTORY_query( HIST_qflx(iv,iq), do_put )
+                if ( do_put .or. MONIT_lateral_flag(iv) ) then
+                   call multiply_flux_by_metric_xyz( iv, qflx, GSQRT, MAPF )
+                   call FILE_HISTORY_put( HIST_qflx(iv,iq), qflx(:,:,:,iv) )
+                end if
              end do
 
              if ( TRACER_MASS(iq) == 1.0_RP ) then
