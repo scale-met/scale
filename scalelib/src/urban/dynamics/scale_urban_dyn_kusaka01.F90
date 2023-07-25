@@ -407,9 +407,6 @@ contains
        UNDEF => CONST_UNDEF, &
        Rdry  => CONST_Rdry, &
        Rvap  => CONST_Rvap
-    use scale_atmos_saturation, only: &
-       qsat => ATMOS_SATURATION_dens2qsat_all
-!       qsat => ATMOS_SATURATION_pres2qsat_all
     use scale_bulkflux, only: &
        BULKFLUX
     implicit none
@@ -517,17 +514,8 @@ contains
     real(RP) :: LWDt(2)
 
     real(RP) :: Uabs  ! modified absolute velocity [m/s]
-    real(RP) :: Ra    ! Aerodynamic resistance (=1/Ce) [1/s]
 
-    real(RP) :: QVsat ! saturation water vapor mixing ratio at surface [kg/kg]
-    real(RP) :: Rtot  ! total gas constant
-    real(RP) :: qdry  ! dry air mass ratio [kg/kg]
-
-    real(RP) :: FracU10 ! calculation parameter for U10 [-]
-    real(RP) :: FracT2  ! calculation parameter for T2 [-]
-    real(RP) :: FracQ2  ! calculation parameter for Q2 [-]
-
-    real(RP) :: MFLUX
+    real(RP) :: MFLX
     real(RP) :: w
 
 #ifdef _OPENACC
@@ -564,17 +552,14 @@ contains
     converged = .true.
 
     !$omp parallel do schedule(dynamic) collapse(2) &
-    !$omp private(w,Uabs,TR,TB,TG,TC,QC,UC,TRL,TBL,TGL,RAINR,RAINB,RAING,ALBD_LW,ALBD_SW,QVsat,Ra,FracU10,FracT2,FracQ2,MFLUX,SWDt,LWDt)
+    !$omp private(w,Uabs,TR,TB,TG,TC,QC,UC,TRL,TBL,TGL,RAINR,RAINB,RAING,ALBD_LW,ALBD_SW,MFLX,SWDt,LWDt)
     !$acc kernels
     !$acc loop collapse(2) reduction(.and.: converged) independent &
-    !$acc private(w,Uabs,TR,TB,TG,TC,QC,UC,TRL,TBL,TGL,RAINR,RAINB,RAING,ALBD_LW,ALBD_SW,QVsat,Ra,FracU10,FracT2,FracQ2,MFLUX,SWDt,LWDt)
+    !$acc private(w,Uabs,TR,TB,TG,TC,QC,UC,TRL,TBL,TGL,RAINR,RAINB,RAING,ALBD_LW,ALBD_SW,MFLX,SWDt,LWDt)
     do j = UJS, UJE
     do i = UIS, UIE
 
     if( fact_urban(i,j) > 0.0_RP ) then
-
-!       qdry = 1.0_RP - QA(i,j)
-!       Rtot = qdry * Rdry + QA(i,j) * Rvap
 
        w = U1(i,j) * TanSL_X(i,j) + V1(i,j) * TanSL_Y(i,j)
        Uabs = sqrt( U1(i,j)**2 + V1(i,j)**2 + w**2 )
@@ -633,6 +618,10 @@ contains
                       SHFLX   (i,j),      & ! [OUT]
                       LHFLX   (i,j),      & ! [OUT]
                       GHFLX   (i,j),      & ! [OUT]
+                      MFLX,               & ! [OUT]
+                      Ustar   (i,j),      & ! [OUT]
+                      Tstar   (i,j),      & ! [OUT]
+                      Qstar   (i,j),      & ! [OUT]
                       U10     (i,j),      & ! [OUT]
                       V10     (i,j),      & ! [OUT]
                       T2      (i,j),      & ! [OUT]
@@ -695,30 +684,14 @@ contains
        ALBEDO(i,j,I_R_direct ,I_R_VIS) = ALBD_SW
        ALBEDO(i,j,I_R_diffuse,I_R_VIS) = ALBD_SW
 
-       ! saturation at the surface
-!       call qsat( SFC_TEMP(i,j), PRSS(i,j), qdry, & ! [IN]
-!                  QVsat                           ) ! [OUT]
-       call qsat( SFC_TEMP(i,j), RHOS(i,j), & ! [IN]
-                  QVsat                     ) ! [OUT]
-
-       call BULKFLUX( TMPA(i,j), SFC_TEMP(i,j),           & ! [IN]
-                      PRSA(i,j), PRSS    (i,j),           & ! [IN]
-                      QA  (i,j), QVsat,                   & ! [IN]
-                      Uabs, Z1(i,j), PBL(i,j),            & ! [IN]
-                      Z0M(i,j), Z0H(i,j), Z0E(i,j),       & ! [IN]
-                      Ustar(i,j), Tstar(i,j), Qstar(i,j), & ! [OUT]
-                      Wstar(i,j), RLmo(i,j), Ra,          & ! [OUT]
-                      FracU10, FracT2, FracQ2             ) ! [OUT]
-
        if ( Uabs < EPS ) then
           MWFLX(i,j) = 0.0_RP
           MUFLX(i,j) = 0.0_RP
           MVFLX(i,j) = 0.0_RP
        else
-          MFLUX = - min( RHOS(i,j) * Ustar(i,j)**2, Uabs * z1(i,j) * 2.0_RP / real(dt,RP) )
-          MWFLX(i,j) = MFLUX * w / Uabs
-          MUFLX(i,j) = MFLUX * U1(i,j) / Uabs
-          MVFLX(i,j) = MFLUX * V1(i,j) / Uabs
+          MWFLX(i,j) = MFLX * w / Uabs
+          MUFLX(i,j) = MFLX * U1(i,j) / Uabs
+          MVFLX(i,j) = MFLX * V1(i,j) / Uabs
        end if
 
     else
@@ -811,6 +784,10 @@ contains
         SH,           & ! (out)
         LH,           & ! (out)
         GHFLX,        & ! (out)
+        MFLX,         & ! (out)
+        Ustar,        & ! (out)
+        Tstar,        & ! (out)
+        Qstar,        & ! (out)
         U10,          & ! (out)
         V10,          & ! (out)
         T2,           & ! (out)
@@ -869,6 +846,42 @@ contains
     integer, intent(in) :: UIA, UIS, UIE
     integer, intent(in) :: UJA, UJS, UJE
 
+    !-- In/Out variables from/to Coupler to/from Urban
+    real(RP), intent(inout) :: TRL(UKS:UKE)  ! layer temperature [K]
+    real(RP), intent(inout) :: TBL(UKS:UKE)  ! layer temperature [K]
+    real(RP), intent(inout) :: TGL(UKS:UKE)  ! layer temperature [K]
+    real(RP), intent(inout) :: TR   ! roof temperature              [K]
+    real(RP), intent(inout) :: TB   ! building wall temperature     [K]
+    real(RP), intent(inout) :: TG   ! road temperature              [K]
+    real(RP), intent(inout) :: TC   ! urban-canopy air temperature  [K]
+    real(RP), intent(inout) :: QC   ! urban-canopy air specific humidity [kg/kg]
+    real(RP), intent(inout) :: UC   ! diagnostic canopy wind        [m/s]
+    real(RP), intent(inout) :: RAINR ! rain amount in storage on roof     [kg/m2]
+    real(RP), intent(inout) :: RAINB ! rain amount in storage on building [kg/m2]
+    real(RP), intent(inout) :: RAING ! rain amount in storage on road     [kg/m2]
+    real(RP), intent(out)   :: ROFF  ! runoff from urban           [kg/m2/s]
+
+    !-- Output variables from Urban to Coupler
+    real(RP), intent(out)   :: ALBD_SW_grid  ! grid mean of surface albedo for SW
+    real(RP), intent(out)   :: ALBD_LW_grid  ! grid mean of surface albedo for LW ( 1-emiss )
+    real(RP), intent(out)   :: SHR, SHB, SHG
+    real(RP), intent(out)   :: LHR, LHB, LHG
+    real(RP), intent(out)   :: GHR, GHB, GHG
+    real(RP), intent(out)   :: RNR, RNB, RNG
+    real(RP), intent(out)   :: RTS    ! radiative surface temperature    [K]
+    real(RP), intent(out)   :: RN     ! net radition                     [W/m/m]
+    real(RP), intent(out)   :: SH     ! sensible heat flux               [W/m/m]
+    real(RP), intent(out)   :: LH     ! latent heat flux                 [W/m/m]
+    real(RP), intent(out)   :: GHFLX  ! heat flux into the ground        [W/m/m]
+    real(RP), intent(out)   :: MFLX   ! momentum flux                    [kg/m/s2]
+    real(RP), intent(out)   :: Ustar  ! friction velocity                [m/s]
+    real(RP), intent(out)   :: Tstar  ! temperature scale                [K]
+    real(RP), intent(out)   :: Qstar  ! humidity scale                   [kg/kg]
+    real(RP), intent(out)   :: U10    ! U wind at 10m                    [m/s]
+    real(RP), intent(out)   :: V10    ! V wind at 10m                    [m/s]
+    real(RP), intent(out)   :: T2     ! air temperature at 2m            [K]
+    real(RP), intent(out)   :: Q2     ! specific humidity at 2m          [kg/kg]
+
     !-- configuration variables
     logical , intent(in)    :: LSOLAR ! logical   [true=both, false=SSG only]
 
@@ -896,37 +909,6 @@ contains
     real(RP), intent(in)    :: DZG(UKA)
     real(DP), intent(in)    :: dt
 
-    !-- In/Out variables from/to Coupler to/from Urban
-    real(RP), intent(inout) :: TRL(UKS:UKE)  ! layer temperature [K]
-    real(RP), intent(inout) :: TBL(UKS:UKE)  ! layer temperature [K]
-    real(RP), intent(inout) :: TGL(UKS:UKE)  ! layer temperature [K]
-    real(RP), intent(inout) :: TR   ! roof temperature              [K]
-    real(RP), intent(inout) :: TB   ! building wall temperature     [K]
-    real(RP), intent(inout) :: TG   ! road temperature              [K]
-    real(RP), intent(inout) :: TC   ! urban-canopy air temperature  [K]
-    real(RP), intent(inout) :: QC   ! urban-canopy air specific humidity [kg/kg]
-    real(RP), intent(inout) :: UC   ! diagnostic canopy wind        [m/s]
-    real(RP), intent(inout) :: RAINR ! rain amount in storage on roof     [kg/m2]
-    real(RP), intent(inout) :: RAINB ! rain amount in storage on building [kg/m2]
-    real(RP), intent(inout) :: RAING ! rain amount in storage on road     [kg/m2]
-    real(RP), intent(out)   :: ROFF  ! runoff from urban           [kg/m2/s]
-
-    !-- Output variables from Urban to Coupler
-    real(RP), intent(out)   :: ALBD_SW_grid  ! grid mean of surface albedo for SW
-    real(RP), intent(out)   :: ALBD_LW_grid  ! grid mean of surface albedo for LW ( 1-emiss )
-    real(RP), intent(out)   :: RTS    ! radiative surface temperature    [K]
-    real(RP), intent(out)   :: SH     ! sensible heat flux               [W/m/m]
-    real(RP), intent(out)   :: LH     ! latent heat flux                 [W/m/m]
-    real(RP), intent(out)   :: GHFLX  ! heat flux into the ground        [W/m/m]
-    real(RP), intent(out)   :: RN     ! net radition                     [W/m/m]
-    real(RP), intent(out)   :: U10    ! U wind at 10m                    [m/s]
-    real(RP), intent(out)   :: V10    ! V wind at 10m                    [m/s]
-    real(RP), intent(out)   :: T2     ! air temperature at 2m            [K]
-    real(RP), intent(out)   :: Q2     ! specific humidity at 2m          [kg/kg]
-    real(RP), intent(out)   :: RNR, RNB, RNG
-    real(RP), intent(out)   :: SHR, SHB, SHG
-    real(RP), intent(out)   :: LHR, LHB, LHG
-    real(RP), intent(out)   :: GHR, GHB, GHG
     integer , intent(in)    :: i, j
     logical,  intent(out)   :: converged
 
@@ -979,8 +961,6 @@ contains
     real(RP) :: RAINRP ! at previous step, rain amount in storage on roof     [kg/m2]
     real(RP) :: RAINBP ! at previous step, rain amount in storage on building [kg/m2]
     real(RP) :: RAINGP ! at previous step, rain amount in storage on road     [kg/m2]
-
-    !real(RP) :: UST, TST, QST
 
     real(RP) :: RAINT
     real(RP) :: ROFFR, ROFFB, ROFFG ! runoff [kg/m2]
@@ -1175,8 +1155,6 @@ contains
 
       call qsat( TR, RHOS, & ! [IN]
                  QS0R      ) ! [OUT]
-!      call qsat( TR, PRSS, qdry, & ! [IN]
-!                 QS0R            ) ! [OUT]
 
       call cal_beta(BETR, BETR_CONST, RAINR, STRGR)
 
@@ -1282,8 +1260,6 @@ contains
 
      call qsat( TR, RHOS, & ! [IN]
                 QS0R      ) ! [OUT]
-!     call qsat( TR, PRSS, qdry, & ! [IN]
-!                QS0R            ) ! [OUT]
 
      call cal_beta(BETR, BETR_CONST, RAINR, STRGR)
 
@@ -1358,8 +1334,6 @@ contains
 
       call qsat( TB, RHOS, QS0B )
       call qsat( TG, RHOS, QS0G )
-!      call qsat( TB, PRSS, qdry, QS0B )
-!      call qsat( TG, PRSS, qdry, QS0G )
 
       call cal_beta(BETG, BETG_CONST, RAING, STRGG)
       call cal_beta(BETB, BETB_CONST, RAINB, STRGB)
@@ -1555,8 +1529,6 @@ contains
      ! this is for TC, QC
      call qsat( TB, RHOS, QS0B )
      call qsat( TG, RHOS, QS0G )
-!     call qsat( TB, PRSS, qdry, QS0B )
-!     call qsat( TG, PRSS, qdry, QS0G )
 
      call cal_beta(BETB, BETB_CONST, RAINB, STRGB)
      call cal_beta(BETG, BETG_CONST, RAING, STRGG)
@@ -1657,8 +1629,9 @@ contains
     !-----------------------------------------------------------
 
     FLXUV = ( R*CDR + RW*CDC ) * UA * UA
-    SH    = ( R*HR   + W*HB   + RW*HG )              ! Sensible heat flux   [W/m/m]
-    LH    = ( R*ELER + W*ELEB + RW*ELEG )            ! Latent heat flux     [W/m/m]
+    MFLX  = - RHOO * FLXUV                ! Momentum flux      [kg/m/s2]
+    SH    = ( R*HR   + W*HB   + RW*HG )   ! Sensible heat flux [W/m/m]
+    LH    = ( R*ELER + W*ELEB + RW*ELEG ) ! Latent heat flux   [W/m/m]
     GHFLX = R*G0R + W*G0B + RW*G0G
     LNET  = R*RR + W*RB + RW*RG
 
@@ -1733,9 +1706,9 @@ contains
     !  diagnostic grid average U10, V10, T2, Q2 from urban
     !  Below method would be better to be improved. This is tentative method.
     !-----------------------------------------------------------
-    !UST = sqrt( FLXUV )             ! u* [m/s]
-    !TST = -SH / RHOO / CPdry / UST  ! T* [K]
-    !QST = -LH / RHOO / LHV   / UST    ! q* [-]
+    Ustar = sqrt( FLXUV )              ! u* [m/s]
+    Tstar = -SH / RHOO / CPdry / Ustar ! T* [K]
+    Qstar = -LH / RHOO / LHV   / Ustar ! q* [-]
     !Z = ZA - ZDC
     !XXX = 0.4*9.81*Z*TST/TA/UST/UST
 
