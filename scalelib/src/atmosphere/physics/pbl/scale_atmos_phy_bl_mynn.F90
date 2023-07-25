@@ -651,7 +651,7 @@ contains
           end if
        end do
 
-       if ( ATMOS_PHY_BL_MYNN_similarity ) then
+       if ( ATMOS_PHY_BL_MYNN_similarity .or. initialize ) then
 
           zeta = z(KS) * RLmo(i,j)
 
@@ -1372,7 +1372,7 @@ contains
              prod(k,i,j) = lq(k) * ( ( sm25(k) + smp(k) ) * dudz2(k,i,j) &
                                    - ( sh25(k) * n2_new(k) - shpgh(k) ) )
           end do
-          if ( ATMOS_PHY_BL_MYNN_similarity ) then
+          if ( ATMOS_PHY_BL_MYNN_similarity .or. it < nit ) then
              prod(KS,i,j) = us3 / ( KARMAN * z(KS) ) * ( phi_m - zeta )
           end if
 
@@ -1386,28 +1386,48 @@ contains
              prod(k,i,j) = 0.0_RP
           end do
 
-          do k = KS, KE_PBL-1
-             d(k) = tke_p(k) * DENS(k,i,j) / RHO(k) + dt * ( - ( flx(k) - flx(k-1) ) / ( CDZ(k) * RHO(k) ) + prod(k,i,j) )
-          end do
+          if ( it < nit ) then
+             do k = KS, KE_PBL-1
+                d(k) = dt * ( - ( flx(k) - flx(k-1) ) / ( CDZ(k) * RHO(k) ) + prod(k,i,j) )
+             end do
+          else
+             do k = KS, KE_PBL-1
+                d(k) = tke_p(k) * DENS(k,i,j) / RHO(k) + dt * ( - ( flx(k) - flx(k-1) ) / ( CDZ(k) * RHO(k) ) + prod(k,i,j) )
+             end do
+          end if
           d(KE_PBL) = 0.0_RP
 
           c(KS) = 0.0_RP
           do k = KS, KE_PBL-1
              ap = - dt * ATMOS_PHY_BL_MYNN_Sq_fact * RHONu(k) / FDZ(k)
              a(k) = ap / ( RHO(k) * CDZ(k) )
+             if ( it < nit ) then
 #ifdef _OPENACC
-             if ( k==KS ) then
-                b(k) = - a(k) + 1.0_RP - diss(k,i,j) * dt
-             else
-                b(k) = - a(k) + dt * ATMOS_PHY_BL_MYNN_Sq_fact * RHONu(k-1) / ( FDZ(k-1) * RHO(k) * CDZ(k) ) + 1.0_RP - diss(k,i,j) * dt
-             end if
+                if ( k==KS ) then
+                   b(k) = - a(k) - diss(k,i,j) * dt
+                else
+                   b(k) = - a(k) + dt * ATMOS_PHY_BL_MYNN_Sq_fact * RHONu(k-1) / ( FDZ(k-1) * RHO(k) * CDZ(k) ) - diss(k,i,j) * dt
+                end if
 #else
-             b(k) = - a(k) - c(k) + 1.0_RP - diss(k,i,j) * dt
+                b(k) = - a(k) - c(k) - diss(k,i,j) * dt
 #endif
+             else
+#ifdef _OPENACC
+                if ( k==KS ) then
+                   b(k) = - a(k) + 1.0_RP - diss(k,i,j) * dt
+                else
+                   b(k) = - a(k) + dt * ATMOS_PHY_BL_MYNN_Sq_fact * RHONu(k-1) / ( FDZ(k-1) * RHO(k) * CDZ(k) ) + 1.0_RP - diss(k,i,j) * dt
+                end if
+#else
+                b(k) = - a(k) - c(k) + 1.0_RP - diss(k,i,j) * dt
+#endif
+             end if
              c(k+1) = ap / ( RHO(k+1) * CDZ(k+1) )
           end do
           a(KE_PBL) = 0.0_RP
-          b(KE_PBL) = - c(KE_PBL) + 1.0_RP - diss(KE_PBL,i,j) * dt
+          if ( it < nit ) then
+             b(KE_PBL) = - c(KE_PBL) - diss(KE_PBL,i,j) * dt
+          end if
 
           call MATRIX_SOLVER_tridiagonal( &
                KA, KS, KE_PBL, &
@@ -1445,27 +1465,49 @@ contains
           do k = KS, KE_PBL
              diss_p(k) = dt * 2.0_RP * q(k) / ( B2 * l(k,i,j) )
           end do
-          do k = KS, KE_PBL-1
-             d(k) = tsq(k) * DENS(k,i,j) / RHO(k) + dt * prod_t(k)
-          end do
+          if ( it < nit ) then
+             do k = KS, KE_PBL-1
+                d(k) = dt * prod_t(k)
+             end do
+          else
+             do k = KS, KE_PBL-1
+                d(k) = tsq(k) * DENS(k,i,j) / RHO(k) + dt * prod_t(k)
+             end do
+          end if
           d(KE_PBL) = 0.0_RP
           c(KS) = 0.0_RP
           do k = KS, KE_PBL-1
              ap = - dt * RHONu(k) / FDZ(k)
              a(k) = ap / ( RHO(k) * CDZ(k) )
+             if ( it < nit ) then
 #ifdef _OPENACC
-             if ( k==KS ) then
-                b(k) = - a(k) + 1.0_RP + diss_p(k)
-             else
-                b(k) = - a(k) + dt * RHONu(k-1) / ( FDZ(k-1) * RHO(k) * CDZ(k) ) + 1.0_RP + diss_p(k)
-             end if
+                if ( k==KS ) then
+                   b(k) = - a(k) + diss_p(k)
+                else
+                   b(k) = - a(k) + dt * RHONu(k-1) / ( FDZ(k-1) * RHO(k) * CDZ(k) ) + diss_p(k)
+                end if
 #else
-             b(k) = - a(k) - c(k) + 1.0_RP + diss_p(k)
+                b(k) = - a(k) - c(k) + 1.0_RP + diss_p(k)
 #endif
+             else
+#ifdef _OPENACC
+                if ( k==KS ) then
+                   b(k) = - a(k) + diss_p(k)
+                else
+                   b(k) = - a(k) + dt * RHONu(k-1) / ( FDZ(k-1) * RHO(k) * CDZ(k) ) + diss_p(k)
+                end if
+#else
+                b(k) = - a(k) - c(k) + 1.0_RP + diss_p(k)
+#endif
+             end if
              c(k+1) = ap / ( RHO(k+1) * CDZ(k+1) )
           end do
           a(KE_PBL) = 0.0_RP
-          b(KE_PBL) = - c(KE_PBL) + 1.0_RP + diss_p(KE_PBL)
+          if ( initialize .and. it<nit ) then
+             b(KE_PBL) = - c(KE_PBL) + diss_p(KE_PBL)
+          else
+             b(KE_PBL) = - c(KE_PBL) + 1.0_RP + diss_p(KE_PBL)
+          end if
 
           call MATRIX_SOLVER_tridiagonal( &
                KA, KS, KE_PBL, &
@@ -1492,9 +1534,15 @@ contains
 
           ! dens * qsq
 
-          do k = KS, KE_PBL-1
-             d(k) = qsq(k) * DENS(k,i,j) / RHO(k) + dt * prod_q(k)
-          end do
+          if ( initialize .and. it<nit ) then
+             do k = KS, KE_PBL-1
+                d(k) = dt * prod_q(k)
+             end do
+          else
+             do k = KS, KE_PBL-1
+                d(k) = qsq(k) * DENS(k,i,j) / RHO(k) + dt * prod_q(k)
+             end do
+          end if
           d(KE_PBL) = 0.0_RP
           ! a, b, c are same as those for tsq
 
@@ -1523,9 +1571,15 @@ contains
 
           ! dens * cov
 
-          do k = KS, KE_PBL-1
-             d(k) = cov(k) * DENS(k,i,j) / RHO(k) + dt * prod_c(k)
-          end do
+          if ( initialize .and. it<nit ) then
+             do k = KS, KE_PBL-1
+                d(k) = dt * prod_c(k)
+             end do
+          else
+             do k = KS, KE_PBL-1
+                d(k) = cov(k) * DENS(k,i,j) / RHO(k) + dt * prod_c(k)
+             end do
+          end if
           d(KE_PBL) = 0.0_RP
           ! a, b, c are same as those for tsq
 
@@ -1654,7 +1708,6 @@ contains
 
     real(RP), parameter :: zeta_min = -5.0_RP
     real(RP), parameter :: zeta_max =  2.0_RP
-    real(RP), parameter :: ls_fact_max = 2.0_RP
 
     real(RP) :: ls     !> L_S
     real(RP) :: lb     !> L_B
@@ -1710,13 +1763,13 @@ contains
     end if
 
     do k = KS, KE_PBL
-       zeta = min( max( z(k) * RLmo, zeta_min ), zeta_max )
+       zeta = min( max( z(k) * RLmo, zeta_min), zeta_max )
 
        ! LS
        sw = sign(0.5_RP, zeta) + 0.5_RP ! 1 for zeta >= 0, 0 for zeta < 0
        ls = KARMAN * z(k) &
           * ( sw / (1.0_RP + ATMOS_PHY_BL_MYNN_cns*zeta*sw ) &
-            + min( ( (1.0_RP - ATMOS_PHY_BL_MYNN_alpha4*zeta)*(1.0_RP-sw) )**0.2_RP, ls_fact_max) )
+            + ( (1.0_RP - ATMOS_PHY_BL_MYNN_alpha4*zeta)*(1.0_RP-sw) )**0.2_RP )
 
        ! LB
        sw  = sign(0.5_RP, n2(k)-EPS) + 0.5_RP ! 1 for dptdz >0, 0 for dptdz <= 0
