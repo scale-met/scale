@@ -3475,9 +3475,9 @@ contains
     use scale_atmos_saturation, only :&
          ATMOS_SATURATION_psat_liq
     implicit none
-    real(RP), intent(in)    :: P, QFRZ
+    real(RP), intent(in)  :: P, QFRZ
 !    real(RP), intent(inout) :: TU, THTEU, QU, QICE
-    real(RP), intent(out) :: TU, QU, QICE
+    real(RP), intent(in)  :: TU, QU, QICE
     real(RP), intent(out) :: TUnew, THTEU, QUnew, QICEnew
 
     real(RP) :: RLS,RLF,CPP,A,DTFRZ,ES,QS,DQEVAP,PII
