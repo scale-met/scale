@@ -1360,6 +1360,7 @@ contains
 
   !-----------------------------------------------------------------------------
   !> DTRN v3.2
+!OCL SERIAL
   subroutine RD_MSTRN_DTRN3( &
        rd_kmax, IA, IS, IE, JA, JS, JE, &
 #ifndef _OPENACC
