@@ -395,7 +395,7 @@ contains
     real(RP) :: work3(KA,IA,JA)
 #endif
 
-    logical  :: converged
+    logical  :: converged, flag
     integer  :: k, i, j
     !---------------------------------------------------------------------------
 
@@ -407,9 +407,9 @@ contains
     converged = .true.
 
     !--- from surface to lowermost atmosphere
-    !$omp parallel do OMP_SCHEDULE_ collapse(2) reduction(.and.:converged)
+    !$omp parallel do OMP_SCHEDULE_ collapse(2) private(flag) reduction(.and.:converged)
     !$acc kernels
-    !$acc loop collapse(2) reduction(.and.: converged)
+    !$acc loop collapse(2) private(flag) reduction(.and.: converged)
     do j = JS, JE
     do i = IS, IE
        call ATMOS_HYDROSTATIC_buildrho_1D( KA, KS, KE, &
@@ -421,7 +421,8 @@ contains
 #endif
                                            dens(:,i,j), temp(:,i,j), pres(:,i,j),                  & ! [OUT]
                                            temp_sfc(i,j),                                          & ! [OUT]
-                                           converged                                               ) ! [OUT]
+                                           flag                                                    ) ! [OUT]
+       converged = converged .and. flag
     end do
     end do
     !$acc end kernels
@@ -1008,24 +1009,24 @@ contains
     real(RP), intent(out) :: temp_L2(IA,JA) !< temperature           at layer 2 [K]
     real(RP), intent(out) :: pres_L2(IA,JA) !< pressure              at layer 2 [Pa]
 
-    logical :: converged
+    logical :: converged, flag
     integer :: i, j
     !---------------------------------------------------------------------------
 
     converged = .true.
 
-    !$omp parallel do OMP_SCHEDULE_ collapse(2) reduction(.and.:converged)
+    !$omp parallel do OMP_SCHEDULE_ collapse(2) private(flag) reduction(.and.:converged)
     !$acc kernels copyin(pott_L2, qv_l2, qc_l2, dens_l1, pott_L1, qv_L1, qc_L1, dz) copyout(dens_L2, temp_L2, pres_L2)
-    !$acc loop reduction(.and.: converged)
+    !$acc loop collapse(2) private(flag) reduction(.and.: converged)
     do j = JS, JE
-    !$acc loop reduction(.and.: converged)
     do i = IS, IE
        call ATMOS_HYDROSTATIC_buildrho_atmos_0D( &
             pott_L2(i,j), qv_L2(i,j), qc_L2(i,j),               & ! [IN]
             dens_L1(i,j), pott_L1(i,j), qv_L1(i,j), qc_L1(i,j), & ! [IN]
             dz(i,j), k,                                         & ! [IN]
             dens_L2(i,j), temp_L2(i,j), pres_L2(i,j),           & ! [OUT]
-            converged                                           ) ! [OUT]
+            flag                                                ) ! [OUT]
+       converged = converged .and. flag
     enddo
     enddo
     !$acc end kernels
@@ -1066,24 +1067,24 @@ contains
     real(RP), intent(out) :: temp_L1(IA,JA) !< temperature           at layer 1 [K]
     real(RP), intent(out) :: pres_L1(IA,JA) !< pressure              at layer 1 [Pa]
 
-    logical :: converged
+    logical :: converged, flag
     integer :: i, j
     !---------------------------------------------------------------------------
 
     converged = .true.
 
-    !$omp parallel do OMP_SCHEDULE_ collapse(2) reduction(.and.:converged)
+    !$omp parallel do OMP_SCHEDULE_ collapse(2) private(flag) reduction(.and.:converged)
     !$acc kernels copyin(pott_L1, qv_L1, qc_L1, dens_L2, pott_L2, qv_L2, qc_L2, dz) copyout(dens_L1, temp_L1, pres_L1)
-    !$acc loop reduction(.and.: converged)
+    !$acc loop collapse(2) private(flag) reduction(.and.: converged)
     do j = JS, JE
-    !$acc loop reduction(.and.: converged)
     do i = IS, IE
        call ATMOS_HYDROSTATIC_buildrho_atmos_0D( &
             pott_L1(i,j), qv_L1(i,j), qc_L1(i,j),               & ! [IN]
             dens_L2(i,j), pott_L2(i,j), qv_L2(i,j), qc_L2(i,j), & ! [IN]
             -dz(i,j), k,                                        & ! [IN]
             dens_L1(i,j), temp_L1(i,j), pres_L1(i,j),           & ! [OUT]
-            converged                                           ) ! [OUT]
+            flag                                                ) ! [OUT]
+       converged = converged .and. flag
     enddo
     enddo
     !$acc end kernels
@@ -1131,7 +1132,7 @@ contains
     real(RP) :: work2(KA,IA,JA)
 #endif
 
-    logical :: converged
+    logical :: converged, flag
     integer :: i, j
     !---------------------------------------------------------------------------
 
@@ -1152,21 +1153,23 @@ contains
 
     converged = .true.
 
-    !$omp parallel do OMP_SCHEDULE_ collapse(2) reduction(.and.:converged)
+    !$omp parallel do OMP_SCHEDULE_ collapse(2) private(flag) reduction(.and.:converged)
     !$acc kernels copyin(pott, qv, qc, dz, kref_) copy(dens) copyout(temp, pres)
-    !$acc loop reduction(.and.: converged)
+    !$acc loop collapse(2) private(flag) reduction(.and.: converged)
     do j = JS, JE
-    !$acc loop reduction(.and.: converged)
     do i = IS, IE
-       call ATMOS_HYDROSTATIC_buildrho_atmos_1D( KA, kref_(i,j), KE, &
-                                                 pott(:,i,j), qv(:,i,j), qc(:,i,j), & ! [IN]
-                                                 dz(:,i,j),                         & ! [IN]
+       if ( kref_(i,j) < KE ) then
+          call ATMOS_HYDROSTATIC_buildrho_atmos_1D( KA, kref_(i,j), KE, &
+                                                    pott(:,i,j), qv(:,i,j), qc(:,i,j), & ! [IN]
+                                                    dz(:,i,j),                         & ! [IN]
 #ifdef _OPENACC
-                                                 work1(:,i,j), work2(:,i,j),        & ! [WORK]
+                                                    work1(:,i,j), work2(:,i,j),        & ! [WORK]
 #endif
-                                                 dens(:,i,j),                       & ! [INOUT]
-                                                 temp(:,i,j), pres(:,i,j),          & ! [OUT]
-                                                 converged                          ) ! [OUT]
+                                                    dens(:,i,j),                       & ! [INOUT]
+                                                    temp(:,i,j), pres(:,i,j),          & ! [OUT]
+                                                    flag                               ) ! [OUT]
+          converged = converged .and. flag
+       end if
     enddo
     enddo
     !$acc end kernels
@@ -1210,7 +1213,7 @@ contains
     integer,  intent(in), optional, target :: kref(IA,JA)
 
     integer, pointer :: kref_(:,:)
-    logical :: converged
+    logical :: converged, flag
     integer :: i, j
 #ifdef _OPENACC
     real(RP) :: work1(KA,IA,JA)
@@ -1223,31 +1226,32 @@ contains
     if ( present(kref) ) then
        kref_ => kref
 
-       !$omp parallel do OMP_SCHEDULE_ collapse(2) reduction(.and.:converged)
+       !$omp parallel do OMP_SCHEDULE_ collapse(2) private(flag) reduction(.and.:converged)
        !$acc kernels copyin(pott, qv, qc, dz, kref_) copy(dens) copyout(temp, pres)
-       !$acc loop reduction(.and.: converged)
+       !$acc loop collapse(2) private(flag) reduction(.and.: converged)
        do j = JS, JE
-       !$acc loop reduction(.and.: converged)
        do i = IS, IE
-          call ATMOS_HYDROSTATIC_buildrho_atmos_rev_1D( KA, KS, kref_(i,j), &
-                                                        pott(:,i,j), qv(:,i,j), qc(:,i,j), & ! [IN]
-                                                        dz(:,i,j),                         & ! [IN]
+          if ( kref_(i,j) > KS ) then
+             call ATMOS_HYDROSTATIC_buildrho_atmos_rev_1D( KA, KS, kref_(i,j), &
+                                                           pott(:,i,j), qv(:,i,j), qc(:,i,j), & ! [IN]
+                                                           dz(:,i,j),                         & ! [IN]
 #ifdef _OPENACC
-                                                        work1(:,i,j), work2(:,i,j),        & ! [WORK]
+                                                           work1(:,i,j), work2(:,i,j),        & ! [WORK]
 #endif
-                                                        dens(:,i,j),                       & ! [INOUT]
-                                                        temp(:,i,j), pres(:,i,j),          & ! [OUT]
-                                                        converged                          ) ! [OUT]
+                                                           dens(:,i,j),                       & ! [INOUT]
+                                                           temp(:,i,j), pres(:,i,j),          & ! [OUT]
+                                                           flag                               ) ! [OUT]
+             converged = converged .and. flag
+          end if
        enddo
        enddo
        !$acc end kernels
 
     else
-       !$omp parallel do OMP_SCHEDULE_ collapse(2) reduction(.and.:converged)
+       !$omp parallel do OMP_SCHEDULE_ collapse(2) private(flag) reduction(.and.:converged)
        !$acc kernels copyin(pott, qv, qc, dz) copy(dens) copyout(temp, pres)
-       !$acc loop reduction(.and.: converged)
+       !$acc loop collapse(2) private(flag) reduction(.and.: converged)
        do j = JS, JE
-       !$acc loop reduction(.and.: converged)
        do i = IS, IE
           call ATMOS_HYDROSTATIC_buildrho_atmos_rev_1D( KA, KS, KE,                        &
                                                         pott(:,i,j), qv(:,i,j), qc(:,i,j), & ! [IN]
@@ -1257,7 +1261,8 @@ contains
 #endif
                                                         dens(:,i,j),                       & ! [INOUT]
                                                         temp(:,i,j), pres(:,i,j),          & ! [OUT]
-                                                        converged                          ) ! [OUT]
+                                                        flag                               ) ! [OUT]
+          converged = converged .and. flag
        enddo
        enddo
        !$acc end kernels
@@ -1445,7 +1450,7 @@ contains
     real(RP), intent(out) :: pres(KA,IA,JA)  !< pressure              [Pa]
     real(RP), intent(out) :: pott_sfc(IA,JA) !< surface potential temperature [K]
 
-    logical :: converged
+    logical :: converged, flag
 
 #ifdef _OPENACC
     real(RP) :: work1(KA,IA,JA)
@@ -1460,11 +1465,10 @@ contains
     converged = .true.
 
     !--- from surface to lowermost atmosphere
-    !$omp parallel do OMP_SCHEDULE_ collapse(2) reduction(.and.:converged)
+    !$omp parallel do OMP_SCHEDULE_ collapse(2) private(flag) reduction(.and.:converged)
     !$acc kernels copyin(temp, qv, qc, pres_sfc, temp_sfc, qv_sfc, qc_sfc, cz, fz) copyout(dens, pott, pres, pott_sfc)
-    !$acc loop reduction(.and.: converged)
+    !$acc loop collapse(2) private(flag) reduction(.and.: converged)
     do j = JS, JE
-    !$acc loop reduction(.and.: converged)
     do i = IS, IE
        call ATMOS_HYDROSTATIC_buildrho_bytemp_1D( KA, KS, KE, &
                                                   temp(:,i,j), qv(:,i,j), qc(:,i,j),                      & ! [IN]
@@ -1475,7 +1479,8 @@ contains
 #endif
                                                   dens(:,i,j), pott(:,i,j), pres(:,i,j),                  & ! [OUT]
                                                   pott_sfc(i,j),                                          & ! [OUT]
-                                                  converged                                               ) ! [OUT]
+                                                  flag                                                    ) ! [OUT]
+       converged = converged .and. flag
     enddo
     enddo
     !$acc end kernels
@@ -1742,7 +1747,7 @@ contains
     real(RP), intent(out)   :: pott(KA,IA,JA) !< potential temperature [K]
     real(RP), intent(out)   :: pres(KA,IA,JA) !< pressure              [Pa]
 
-    logical :: converged
+    logical :: converged, flag
 
 #ifdef _OPENACC
     real(RP) :: work1(KA,IA,JA)
@@ -1754,11 +1759,10 @@ contains
 
     converged = .true.
 
-    !$omp parallel do OMP_SCHEDULE_ collapse(2) reduction(.and.:converged)
+    !$omp parallel do OMP_SCHEDULE_ collapse(2) private(flag) reduction(.and.:converged)
     !$acc kernels copyin(temp, qv, qc, dz) copy(dens) copyout(pott, pres)
-    !$acc loop reduction(.and.: converged)
+    !$acc loop collapse(2) private(flag) reduction(.and.: converged)
     do j = JS, JE
-    !$acc loop reduction(.and.: converged)
     do i = IS, IE
        call ATMOS_HYDROSTATIC_buildrho_bytemp_atmos_1D( KA, KS, KE, &
                                                         temp(:,i,j), qv(:,i,j), qc(:,i,j), & ! [IN]
@@ -1768,7 +1772,8 @@ contains
 #endif
                                                         dens(:,i,j),                       & ! [INOUT]
                                                         pott(:,i,j), pres(:,i,j),          & ! [OUT]
-                                                        converged                          ) ! [OUT]
+                                                        flag                               ) ! [OUT]
+       converged = converged .and. flag
     enddo
     enddo
     !$acc end kernels
