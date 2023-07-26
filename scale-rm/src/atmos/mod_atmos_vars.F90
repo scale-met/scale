@@ -890,35 +890,37 @@ contains
     FILL_BND_ = .false.
     if ( present(FILL_BND) ) FILL_BND_ = FILL_BND
 
-!!$    !$omp parallel do private(i,j) OMP_SCHEDULE_ collapse(2)
-!!$    !$acc kernels
-!!$    do j  = JSB, JEB
-!!$    do i  = ISB, IEB
-!!$       DENS(   1:KS-1,i,j) = DENS(KS,i,j)
-!!$       MOMZ(   1:KS-2,i,j) = MOMZ(KS-1,i,j)
-!!$       MOMX(   1:KS-1,i,j) = MOMX(KS,i,j)
-!!$       MOMY(   1:KS-1,i,j) = MOMY(KS,i,j)
-!!$       RHOT(   1:KS-1,i,j) = RHOT(KS,i,j)
-!!$       DENS(KE+1:KA,  i,j) = DENS(KE,i,j)
-!!$       MOMZ(KE+1:KA,  i,j) = MOMZ(KE,i,j)
-!!$       MOMX(KE+1:KA,  i,j) = MOMX(KE,i,j)
-!!$       MOMY(KE+1:KA,  i,j) = MOMY(KE,i,j)
-!!$       RHOT(KE+1:KA,  i,j) = RHOT(KE,i,j)
-!!$    enddo
-!!$    enddo
-!!$    !$acc end kernels
+#ifdef QUICKDEBUG
+    !$omp parallel do private(i,j) OMP_SCHEDULE_ collapse(2)
+    !$acc kernels
+    do j  = JSB, JEB
+    do i  = ISB, IEB
+       DENS(   1:KS-1,i,j) = DENS(KS,i,j)
+       MOMZ(   1:KS-2,i,j) = MOMZ(KS-1,i,j)
+       MOMX(   1:KS-1,i,j) = MOMX(KS,i,j)
+       MOMY(   1:KS-1,i,j) = MOMY(KS,i,j)
+       RHOT(   1:KS-1,i,j) = RHOT(KS,i,j)
+       DENS(KE+1:KA,  i,j) = DENS(KE,i,j)
+       MOMZ(KE+1:KA,  i,j) = MOMZ(KE,i,j)
+       MOMX(KE+1:KA,  i,j) = MOMX(KE,i,j)
+       MOMY(KE+1:KA,  i,j) = MOMY(KE,i,j)
+       RHOT(KE+1:KA,  i,j) = RHOT(KE,i,j)
+    enddo
+    enddo
+    !$acc end kernels
 
-!!$    !$omp parallel do private(i,j,iq) OMP_SCHEDULE_ collapse(3)
-!!$    !$acc kernels
-!!$    do iq = 1, QA
-!!$    do j  = JSB, JEB
-!!$    do i  = ISB, IEB
-!!$       QTRC(   1:KS-1,i,j,iq) = QTRC(KS,i,j,iq)
-!!$       QTRC(KE+1:KA,  i,j,iq) = QTRC(KE,i,j,iq)
-!!$    enddo
-!!$    enddo
-!!$    enddo
-!!$    !$acc end kernels
+    !$omp parallel do private(i,j,iq) OMP_SCHEDULE_ collapse(3)
+    !$acc kernels
+    do iq = 1, QA
+    do j  = JSB, JEB
+    do i  = ISB, IEB
+       QTRC(   1:KS-1,i,j,iq) = QTRC(KS,i,j,iq)
+       QTRC(KE+1:KA,  i,j,iq) = QTRC(KE,i,j,iq)
+    enddo
+    enddo
+    enddo
+    !$acc end kernels
+#endif
 
     call COMM_vars8( DENS(:,:,:), 1 )
     call COMM_vars8( MOMZ(:,:,:), 2 )
@@ -1133,27 +1135,29 @@ contains
        if ( FILE_get_AGGREGATE(restart_fid) ) then
           call FILE_CARTESC_flush( restart_fid ) ! X/Y halos have been read from file
           !$acc update device(DENS, MOMZ, MOMX, MOMY, RHOT, QTRC)
-!!$          ! fill k halos
-!!$          !$acc kernels
-!!$          do j  = 1, JA
-!!$          do i  = 1, IA
-!!$             DENS(   1:KS-1,i,j) = DENS(KS,i,j)
-!!$             MOMZ(   1:KS-2,i,j) = MOMZ(KS-1,i,j)
-!!$             MOMX(   1:KS-1,i,j) = MOMX(KS,i,j)
-!!$             MOMY(   1:KS-1,i,j) = MOMY(KS,i,j)
-!!$             RHOT(   1:KS-1,i,j) = RHOT(KS,i,j)
-!!$             DENS(KE+1:KA,  i,j) = DENS(KE,i,j)
-!!$             MOMZ(KE+1:KA,  i,j) = MOMZ(KE,i,j)
-!!$             MOMX(KE+1:KA,  i,j) = MOMX(KE,i,j)
-!!$             MOMY(KE+1:KA,  i,j) = MOMY(KE,i,j)
-!!$             RHOT(KE+1:KA,  i,j) = RHOT(KE,i,j)
-!!$             do iq = 1, QA
-!!$                QTRC(   1:KS-1,i,j,iq) = QTRC(KS,i,j,iq)
-!!$                QTRC(KE+1:KA  ,i,j,iq) = QTRC(KE,i,j,iq)
-!!$             end do
-!!$          enddo
-!!$          enddo
-!!$          !$acc end kernels
+#ifdef QUICKDEBUG
+          ! fill k halos
+          !$acc kernels
+          do j  = 1, JA
+          do i  = 1, IA
+             DENS(   1:KS-1,i,j) = DENS(KS,i,j)
+             MOMZ(   1:KS-2,i,j) = MOMZ(KS-1,i,j)
+             MOMX(   1:KS-1,i,j) = MOMX(KS,i,j)
+             MOMY(   1:KS-1,i,j) = MOMY(KS,i,j)
+             RHOT(   1:KS-1,i,j) = RHOT(KS,i,j)
+             DENS(KE+1:KA,  i,j) = DENS(KE,i,j)
+             MOMZ(KE+1:KA,  i,j) = MOMZ(KE,i,j)
+             MOMX(KE+1:KA,  i,j) = MOMX(KE,i,j)
+             MOMY(KE+1:KA,  i,j) = MOMY(KE,i,j)
+             RHOT(KE+1:KA,  i,j) = RHOT(KE,i,j)
+             do iq = 1, QA
+                QTRC(   1:KS-1,i,j,iq) = QTRC(KS,i,j,iq)
+                QTRC(KE+1:KA  ,i,j,iq) = QTRC(KE,i,j,iq)
+             end do
+          enddo
+          enddo
+          !$acc end kernels
+#endif
        else
           call ATMOS_vars_fillhalo
        end if

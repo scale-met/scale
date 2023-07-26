@@ -1643,6 +1643,16 @@ contains
           end do
           end do
           end do
+#ifdef QUICKDEBUG
+          !$omp parallel do collapse(2)
+          do j = 1, JA_org
+          do i = 1, IA_org
+          do k = 1, k0-1
+             qv_org(k,i,j) = UNDEF
+          end do
+          end do
+          end do
+#endif
        end if
 
 
@@ -1950,6 +1960,7 @@ contains
        call COMM_bcast( KA_org, IA_org, JA_org,     PT_org   )
        call COMM_bcast( KA_org, IA_org, JA_org,     DENS_org )
        call COMM_bcast( KA_org, IA_org, JA_org, QA, QTRC_org )
+       call COMM_bcast( uvmet )
     endif
 
     call PROF_rapend  ('___AtmosBcast',3)

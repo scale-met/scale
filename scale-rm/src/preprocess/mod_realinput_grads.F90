@@ -110,6 +110,9 @@ contains
     call FILE_GrADS_open( basename_org, & ! (in)
                           file_id_atm   ) ! (out)
 
+#ifdef QUICKDEBUG
+    qtrc_flag(:) = .false.
+#endif
     do iq = 1, QA
        if ( iq >= QS_MP .and. iq <= QE_MP ) cycle
        call FILE_GrADS_varid( file_id_atm, TRACER_NAME(iq), var_id )
@@ -424,6 +427,16 @@ contains
           enddo
           enddo
        end if
+#ifdef QUICKDEBUG
+       !$omp parallel do collapse(2)
+       do j = 1, JA_org
+       do i = 1, IA_org
+       do k = 1, 2
+          qhyd_org(k,i,j,iq) = UNDEF
+       enddo
+       enddo
+       enddo
+#endif
     end do
     
     ! QTRC
