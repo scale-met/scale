@@ -49,6 +49,14 @@ ifeq ($(SCALE_ENABLE_OPENACC),T)
 endif
 
 
+ifeq ($(SCALE_ENABLE_OPENACC),T)
+  FFLAGS += -DLSIZE=1
+else
+  ifneq ($(origin LSIZE),undefined)
+    FFLAGS += -DLSIZE=$(LSIZE)
+  endif
+endif
+
 ifeq ($(origin BINDIR),undefined)
    BINDIR = $(INST_DIR)/bin
 endif
