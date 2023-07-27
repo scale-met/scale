@@ -7,7 +7,7 @@
 ifeq ($(origin SYSDEP_DIR), undefined)
    SYSDEP_DIR = $(TOPDIR)/sysdep
 else
-   ifeq ( "$(shell find -name $(SYSDEP_DIR)/Makedef.$(SCALE_SYS))", "")
+   ifeq ( "$(shell ls $(SYSDEP_DIR) | grep Makedef.$(SCALE_SYS))", "")
       SYSDEP_DIR=$(TOPDIR)/sysdep
    else
       USELOCALBIN = T
@@ -90,7 +90,7 @@ $(BUILD_DIR)/%.F90: $(CODE_DIR)/%.F90
 	cp -f $< $@
 
 build: $(patsubst %,$(BUILD_DIR)/%,$(ORG_SRCS))
-	@echo -e "$(msg1)"
+	@echo -e $(msg1)
 	BUILD_DIR=$(BUILD_DIR) $(MAKE) -C $(SCALERMDIR)/src SYSDEP_DIR=$(SYSDEP_DIR) \
                                 BINDIR=$(BINDIR)
 
