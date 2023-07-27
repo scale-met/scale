@@ -1692,7 +1692,7 @@ contains
        end if
 
        CFLMAX = -999e10_RP
-       !$omp parallel do collapse(4) reduction(max:CFLMAX)
+       !$omp parallel do collapse(3) reduction(max:CFLMAX)
        !$acc kernels loop reduction(max:CFLMAX)
        do iq = 1, 3
        do j = 1, JA
@@ -1707,9 +1707,9 @@ contains
 
        if ( ATMOS_VARS_CHECKCFL_HARD > 0.0_RP .AND. CFLMAX > ATMOS_VARS_CHECKCFL_HARD ) then
           LOG_INFO("ATMOS_vars_check",*) "Courant number =", CFLMAX, " exceeded the hard limit =", ATMOS_VARS_CHECKCFL_HARD
-          LOG_ERROR("ATMOS_vars_check",*)                     "Courant number =", CFLMAX, " exceeded the hard limit =", ATMOS_VARS_CHECKCFL_HARD
-          LOG_ERROR_CONT(*)                     "Rank =", PRC_myrank
-          LOG_ERROR_CONT(*)                     "Please set ATMOS_VARS_CHECKCFL_HARD in the namelist PARAM_ATMOS_VARS when you want to change the limit."
+          LOG_ERROR("ATMOS_vars_check",*)"Courant number =", CFLMAX, " exceeded the hard limit =", ATMOS_VARS_CHECKCFL_HARD
+          LOG_ERROR_CONT(*)              "Rank =", PRC_myrank
+          LOG_ERROR_CONT(*)              "Please set ATMOS_VARS_CHECKCFL_HARD in the namelist PARAM_ATMOS_VARS when you want to change the limit."
 
           WNAME(1) = "Courant num. Z"
           WNAME(2) = "Courant num. X"
