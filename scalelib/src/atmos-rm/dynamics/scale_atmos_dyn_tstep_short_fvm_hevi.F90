@@ -636,6 +636,7 @@ contains
           !$omp shared(MAPF,GSQRT,I_XY,I_XYW)
           !$acc kernels
           do j = JJS, JJE
+!OCL NORECURRENCE
           do k = KS, KE-1
 #ifdef DEBUG
              call CHECK( __LINE__, qflx_hi (k  ,IS,j  ,ZDIR) )
@@ -681,6 +682,7 @@ contains
           !$acc kernels
           do j = JJS, JJE
           do i = IIS, IIE
+!OCL NORECURRENCE
           do k = KS, KE-1
 #ifdef DEBUG
              call CHECK( __LINE__, qflx_hi (k  ,i  ,j  ,ZDIR) )
@@ -951,6 +953,7 @@ contains
              if ( i > IIE ) exit
 #endif
 
+!OCL NORECURRENCE
              do k = KS, KE-1
 #ifdef DEBUG_HEVI2HEVE
                 ! for debug (change to explicit integration)
@@ -990,6 +993,7 @@ contains
 #ifdef HIST_TEND
              if ( lhist ) advcv_t(KS,i,j,I_RHOT) = advcv
 #endif
+!OCL NORECURRENCE
              do k = KS+1, KE-1
                 advcv = - ( Co(k,l)         - Co(k-1,l) ) &
                       * J33G * RCDZ(k) / GSQRT(k,i,j,I_XYZ)
@@ -1097,6 +1101,7 @@ contains
           !$omp shared(dtrk,CORIOLI)
           !$acc kernels
           do j = JJS, JJE
+!OCL NORECURRENCE
           do k = KS, KE
 #ifdef DEBUG
              call CHECK( __LINE__, qflx_hi(k  ,IS,j  ,ZDIR) )
@@ -1143,6 +1148,7 @@ contains
           !$acc kernels
           do j = JJS, JJE
           do i = IIS, iee
+!OCL NORECURRENCE
           do k = KS, KE
 #ifdef DEBUG
              call CHECK( __LINE__, qflx_hi(k  ,i  ,j  ,ZDIR) )
@@ -1268,6 +1274,7 @@ contains
           !$omp shared(dtrk,CORIOLI,divdmp_coef)
           !$acc kernels
           do j = JJS, min(JJE,JEH)
+!OCL NORECURRENCE
           do k = KS, KE
 #ifdef DEBUG
              call CHECK( __LINE__, qflx_hi(k  ,IS,j  ,ZDIR) )
@@ -1333,6 +1340,7 @@ contains
           !$acc kernels
           do j = JJS, min(JJE,JEH)
           do i = IIS, IIE
+!OCL NORECURRENCE
           do k = KS, KE
 #ifdef DEBUG
              call CHECK( __LINE__, qflx_hi(k  ,i  ,j  ,ZDIR) )

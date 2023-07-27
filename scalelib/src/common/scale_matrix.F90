@@ -556,6 +556,7 @@ contains
        d(l,KS) = iv(KS,l) / md(KS,l)
     end do
     do k = KS+1, KE-1
+!OCL NOFULLUNROLL_PRE_SIMD
        do l = 1, LSIZE
           rdenom = 1.0_RP / ( md(k,l) - ld(k,l) * c(l,k-1) )
           c(l,k) =            ud(k,l)              * rdenom
@@ -568,6 +569,7 @@ contains
        work(l,KE) = ( iv(KE,l) - ld(KE,l) * d(l,KE-1) ) / ( md(KE,l) - ld(KE,l) * c(l,KE-1) )
     end do
     do k = KE-1, KS, -1
+!OCL NOFULLUNROLL_PRE_SIMD
        do l = 1, LSIZE
           work(l,k) = d(l,k) - c(l,k) * work(l,k+1)
        end do
@@ -612,6 +614,7 @@ contains
        d(l,KS) = iv(l,KS) / md(l,KS)
     end do
     do k = KS+1, KE-1
+!OCL NOFULLUNROLL_PRE_SIMD
        do l = 1, LSIZE
           rdenom = 1.0_RP / ( md(l,k) - ld(l,k) * c(l,k-1) )
           c(l,k) =             ud(l,k)              * rdenom
@@ -624,6 +627,7 @@ contains
        ov(l,KE) = ( iv(l,KE) - ld(l,KE) * d(l,KE-1) ) / ( md(l,KE) - ld(l,KE) * c(l,KE-1) )
     end do
     do k = KE-1, KS, -1
+!OCL NOFULLUNROLL_PRE_SIMD
        do l = 1, LSIZE
           ov(l,k) = d(l,k) - c(l,k) * ov(l,k+1)
        end do
@@ -794,6 +798,7 @@ contains
                 idx(len) = i
                 if ( len == LSIZE ) then
                    do k = KS, KE
+!OCL NOFULLUNROLL_PRE_SIMD
                    do l = 1, LSIZE
                       udl(l,k) = ud(k,idx(l),j)
                       mdl(l,k) = md(k,idx(l),j)
@@ -805,6 +810,7 @@ contains
                                                             udl(:,:), mdl(:,:), ldl(:,:),   & ! (in)
                                                             ivl(:,:),                       & ! (in)
                                                             ovl(:,:)                        ) ! (out)
+!OCL NORECURRENCE
                    do l = 1, LSIZE
                    do k = KS, KE
                       ov(k,idx(l),j) = ovl(l,k)
@@ -816,6 +822,7 @@ contains
           end do
           if ( len > 0 ) then
              do k = KS, KE
+!OCL NOFULLUNROLL_PRE_SIMD
              do l = 1, len
                 udl(l,k) = ud(k,idx(l),j)
                 mdl(l,k) = md(k,idx(l),j)
@@ -835,6 +842,7 @@ contains
                                                       udl(:,:), mdl(:,:), ldl(:,:),   & ! (in)
                                                       ivl(:,:),                       & ! (in)
                                                       ovl(:,:)                        ) ! (out)
+!OCL NORECURRENCE
              do l = 1, len
              do k = KS, KE
                 ov(k,idx(l),j) = ovl(l,k)
