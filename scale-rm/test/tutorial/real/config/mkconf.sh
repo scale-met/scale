@@ -117,6 +117,13 @@ if [ ${NUM_DOMAIN} -ne ${#BUFFER_DX[*]} ]; then echo "Error: Wrong array size (B
 if [ ${NUM_DOMAIN} -ne ${#BUFFER_DY[*]} ]; then echo "Error: Wrong array size (BUFFER_DY)."; exit 1; fi
 
 if [[ $NUM_DOMAIN -gt 1 ]]; then
+  if [[ ${#MAPPROJECTION_BASEPOINT_LON[@]} -eq 1 ]]; then MAPPROJECTION_BASEPOINT_LON=( $(replicate "$NUM_DOMAIN" "$MAPPROJECTION_BASEPOINT_LON") ); fi
+  if [[ ${#MAPPROJECTION_BASEPOINT_LAT[@]} -eq 1 ]]; then MAPPROJECTION_BASEPOINT_LAT=( $(replicate "$NUM_DOMAIN" "$MAPPROJECTION_BASEPOINT_LAT") ); fi
+fi
+if [ ${NUM_DOMAIN} -ne ${#MAPPROJECTION_BASEPOINT_LON[*]} ]; then echo "Error: Wrong array size (MAPPROJECTION_BASEPOINT_LON)."; exit 1; fi
+if [ ${NUM_DOMAIN} -ne ${#MAPPROJECTION_BASEPOINT_LAT[*]} ]; then echo "Error: Wrong array size (MAPPROJECTION_BASEPOINT_LAT)."; exit 1; fi
+
+if [[ $NUM_DOMAIN -gt 1 ]]; then
   if [[ ${#ATMOS_DYN_TYPE[@]} -eq 1 ]];    then ATMOS_DYN_TYPE=( $(replicate "$NUM_DOMAIN" "$ATMOS_DYN_TYPE") );       fi
   if [[ ${#ATMOS_PHY_CP_TYPE[@]} -eq 1 ]]; then ATMOS_PHY_CP_TYPE=( $(replicate "$NUM_DOMAIN" "$ATMOS_PHY_CP_TYPE") ); fi
   if [[ ${#ATMOS_PHY_MP_TYPE[@]} -eq 1 ]]; then ATMOS_PHY_MP_TYPE=( $(replicate "$NUM_DOMAIN" "$ATMOS_PHY_MP_TYPE") ); fi
