@@ -418,7 +418,7 @@ contains
 
        ! monitor
        if ( MP_do_negative_fixer ) then
-          call FILE_HISTORY_reg( "RHOH_MP_NF",   "sensible heat by the negative fixer",          "J/m3/s", & ! [IN]
+          call FILE_HISTORY_reg( "RHOH_MP_NF",   "latent heat by the negative fixer",            "J/m3/s",  & ! [IN]
                                  hist_nf_rhoh_id                                                            ) ! [OUT]
           call FILE_HISTORY_reg( "DENS_t_MP_NF", "vapor supply by the negative fixer",           "kg/m3/s", & ! [IN]
                                  hist_nf_dens_id                                                            ) ! [OUT]
