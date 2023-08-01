@@ -5,15 +5,19 @@
 #include "scale_openmp.h"
 
 #ifdef _OPENACC
-  #define LSIZE 1
+
+#define LSIZE 1
+
 #else
-  #ifndef LSIZE
-    #ifdef SINGLE
-      #define LSIZE 16
-    #else
-      #define LSIZE 8
-    #endif
-  #endif
+
+#ifndef LSIZE
+#ifdef SINGLE
+#define LSIZE 16
+#else
+#define LSIZE 8
+#endif
+#endif
+
 #endif
 
 #endif
