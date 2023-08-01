@@ -168,17 +168,6 @@ cat << EOF > param.physics.conf
 
 EOF
 
-if [ ${ATMOS_PHY_BL_TYPE[$D]} = "MYNN" ]; then
-if [ ${ATMOS_PHY_TB_TYPE[$D]} = "SMAGORINSKY" ]; then
-  cat <<EOF >> param.physics.conf
-&PARAM_ATMOS_PHY_TB_SMG
- ATMOS_PHY_TB_SMG_horizontal = .true.,
-/
-
-EOF
-fi
-fi
-
 cat <<EOF >> param.physics.conf
 #################################################
 #
