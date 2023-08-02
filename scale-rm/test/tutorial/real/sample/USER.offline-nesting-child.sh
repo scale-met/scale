@@ -11,6 +11,7 @@
 #################################################
 
 NUM_DOMAIN=1 # set number of domains
+DOM_NUMBER=2
 
 RUN_DATE_YEAR=2007
 RUN_DATE_MON=7
