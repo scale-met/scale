@@ -104,38 +104,39 @@ module scale_atmos_phy_bl_mynn
   real(RP) :: pw(max_plume)
 
   ! history
-  integer,  private            :: HIST_Ri
-  integer,  private            :: HIST_Pr
-  integer,  private            :: HIST_TKE_pr
-  integer,  private            :: HIST_TKE_di
-  integer,  private            :: HIST_dudz2
-  integer,  private            :: HIST_Lmix
-  integer,  private            :: HIST_flxU
-  integer,  private            :: HIST_flxV
-  integer,  private            :: HIST_flxT
-  integer,  private            :: HIST_flxQ
-  integer,  private            :: HIST_flxU2
-  integer,  private            :: HIST_flxV2
-  integer,  private            :: HIST_flxT2
-  integer,  private            :: HIST_flxQ2
+  integer,  private :: HIST_Ri
+  integer,  private :: HIST_Pr
+  integer,  private :: HIST_TKE_pr
+  integer,  private :: HIST_TKE_di
+  integer,  private :: HIST_dudz2
+  integer,  private :: HIST_Lmix
+  integer,  private :: HIST_flxU
+  integer,  private :: HIST_flxV
+  integer,  private :: HIST_flxT
+  integer,  private :: HIST_flxQ
+  integer,  private :: HIST_flxU2
+  integer,  private :: HIST_flxV2
+  integer,  private :: HIST_flxT2
+  integer,  private :: HIST_flxQ2
 
   ! namelist
-  logical, private            :: ATMOS_PHY_BL_MYNN_K2010      = .false.   !> Kitamura (2010)
-  logical, private            :: ATMOS_PHY_BL_MYNN_O2019      = .false.   !> Olson et al. (2019)
-  real(RP), private            :: ATMOS_PHY_BL_MYNN_PBL_MAX    = 1.E+30_RP !> maximum height of the PBL
-  real(RP), private            :: ATMOS_PHY_BL_MYNN_TKE_MIN    =  1.E-20_RP
-  real(RP), private            :: ATMOS_PHY_BL_MYNN_N2_MAX     =  1.E1_RP
-  real(RP), private            :: ATMOS_PHY_BL_MYNN_NU_MIN     = -1.E1_RP
-  real(RP), private            :: ATMOS_PHY_BL_MYNN_NU_MAX     =  1.E4_RP
-  real(RP), private            :: ATMOS_PHY_BL_MYNN_KH_MIN     = -1.E1_RP
-  real(RP), private            :: ATMOS_PHY_BL_MYNN_KH_MAX     =  1.E4_RP
-  real(RP), private            :: ATMOS_PHY_BL_MYNN_Lt_MAX     =  2000.0_RP
-  real(RP), private            :: ATMOS_PHY_BL_MYNN_Sq_fact    = 3.0_RP
-  real(RP), private            :: ATMOS_PHY_BL_MYNN_cns        = -1.0_RP ! N01: 3.5,   O19: 10.0
-  real(RP), private            :: ATMOS_PHY_BL_MYNN_alpha2     = -1.0_RP ! N01: 1.0,   O19: 0.3
-  real(RP), private            :: ATMOS_PHY_BL_MYNN_alpha4     = -1.0_RP ! N01: 100.0, O19: 10.0
-  logical,  private            :: ATMOS_PHY_BL_MYNN_init_TKE   = .false.
-  logical,  private            :: ATMOS_PHY_BL_MYNN_similarity = .true.
+  logical, private  :: ATMOS_PHY_BL_MYNN_K2010      = .false.   !> Kitamura (2010)
+  logical, private  :: ATMOS_PHY_BL_MYNN_O2019      = .false.   !> Olson et al. (2019)
+  real(RP), private :: ATMOS_PHY_BL_MYNN_PBL_MAX    = 1.E+30_RP !> maximum height of the PBL
+  real(RP), private :: ATMOS_PHY_BL_MYNN_TKE_MIN    =  1.E-20_RP
+  real(RP), private :: ATMOS_PHY_BL_MYNN_N2_MAX     =  1.E1_RP
+  real(RP), private :: ATMOS_PHY_BL_MYNN_NU_MIN     = -1.E1_RP
+  real(RP), private :: ATMOS_PHY_BL_MYNN_NU_MAX     =  1.E4_RP
+  real(RP), private :: ATMOS_PHY_BL_MYNN_KH_MIN     = -1.E1_RP
+  real(RP), private :: ATMOS_PHY_BL_MYNN_KH_MAX     =  1.E4_RP
+  real(RP), private :: ATMOS_PHY_BL_MYNN_Lt_MAX     =  2000.0_RP
+  real(RP), private :: ATMOS_PHY_BL_MYNN_Sq_fact    = 3.0_RP
+  real(RP), private :: ATMOS_PHY_BL_MYNN_cns        = -1.0_RP ! N01: 3.5,   O19: 10.0
+  real(RP), private :: ATMOS_PHY_BL_MYNN_alpha2     = -1.0_RP ! N01: 1.0,   O19: 0.3
+  real(RP), private :: ATMOS_PHY_BL_MYNN_alpha4     = -1.0_RP ! N01: 100.0, O19: 10.0
+  real(RP), private :: ATMOS_PHY_BL_MYNN_DUMP_coef  = 0.5_RP
+  logical,  private :: ATMOS_PHY_BL_MYNN_init_TKE   = .false.
+  logical,  private :: ATMOS_PHY_BL_MYNN_similarity = .true.
   !$acc declare create(ATMOS_PHY_BL_MYNN_Lt_MAX)
 
   character(len=H_SHORT), private  :: ATMOS_PHY_BL_MYNN_LEVEL = "2.5" ! "2.5" or "3"
@@ -155,6 +156,7 @@ module scale_atmos_phy_bl_mynn
        ATMOS_PHY_BL_MYNN_cns,      &
        ATMOS_PHY_BL_MYNN_alpha2,   &
        ATMOS_PHY_BL_MYNN_alpha4,   &
+       ATMOS_PHY_BL_MYNN_DUMP_coef,&
        ATMOS_PHY_BL_MYNN_init_TKE, &
        ATMOS_PHY_BL_MYNN_similarity
 
@@ -597,6 +599,7 @@ contains
     !$omp        ATMOS_PHY_BL_MYNN_NU_MIN,ATMOS_PHY_BL_MYNN_NU_MAX, &
     !$omp        ATMOS_PHY_BL_MYNN_KH_MIN,ATMOS_PHY_BL_MYNN_KH_MAX, &
     !$omp        ATMOS_PHY_BL_MYNN_Sq_fact,ATMOS_PHY_BL_MYNN_similarity, &
+    !$omp        ATMOS_PHY_BL_MYNN_DUMP_coef, &
     !$omp        ATMOS_PHY_BL_MYNN_PBL_MAX, &
     !$omp        ATMOS_PHY_BL_MYNN_K2010,ATMOS_PHY_BL_MYNN_O2019, &
     !$omp        RHOU_t,RHOV_t,RHOT_t,RHOQV_t,RPROG_t,Nu,Kh,Qlp,cldfrac,Zi,SFLX_BUOY, &
@@ -1449,7 +1452,7 @@ contains
                 RPROG_t(k,i,j,I_TKE) = ( tke_p(k) * RHO(k) - PROG(k,i,j,I_TKE) * DENS(k,i,j) ) / dt
              end do
              do k = KE_PBL+1, KE
-                RPROG_t(k,i,j,I_TKE) = 0.0_RP
+                RPROG_t(k,i,j,I_TKE) = - ATMOS_PHY_BL_MYNN_DUMP_COEF * PROG(k,i,j,I_TKE) * DENS(k,i,j) / dt
              end do
           else
              do k = KS, KE_PBL
@@ -1527,7 +1530,7 @@ contains
                 RPROG_t(k,i,j,I_TSQ) = ( tsq(k) * RHO(k) - PROG(k,i,j,I_TSQ) * DENS(k,i,j) ) / dt
              end do
              do k = KE_PBL+1, KE
-                RPROG_t(k,i,j,I_TSQ) = 0.0_RP
+                RPROG_t(k,i,j,I_TSQ) = - ATMOS_PHY_BL_MYNN_DUMP_COEF * PROG(k,i,j,I_TSQ) * DENS(k,i,j) / dt
              end do
           end if
 
@@ -1564,7 +1567,7 @@ contains
                 RPROG_t(k,i,j,I_QSQ) = ( qsq(k) * RHO(k) - PROG(k,i,j,I_QSQ) * DENS(k,i,j) ) / dt
              end do
              do k = KE_PBL+1, KE
-                RPROG_t(k,i,j,I_QSQ) = 0.0_RP
+                RPROG_t(k,i,j,I_QSQ) = - ATMOS_PHY_BL_MYNN_DUMP_COEF * PROG(k,i,j,I_QSQ) * DENS(k,i,j) / dt
              end do
           end if
 
@@ -1601,7 +1604,7 @@ contains
                 RPROG_t(k,i,j,I_COV) = ( cov(k) * RHO(k) - PROG(k,i,j,I_COV) * DENS(k,i,j) ) / dt
              end do
              do k = KE_PBL+1, KE
-                RPROG_t(k,i,j,I_COV) = 0.0_RP
+                RPROG_t(k,i,j,I_COV) = - ATMOS_PHY_BL_MYNN_DUMP_COEF * PROG(k,i,j,I_COV) * DENS(k,i,j) / dt
              end do
           end if
 
