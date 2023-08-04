@@ -102,8 +102,8 @@ BUFFER_DZ=( "0.0"      "0.0"      ) # required parameters for each domain
 BUFFER_DX=( "400000.0" "140000.0" ) # required parameters for each domain
 BUFFER_DY=( "400000.0" "140000.0" ) # required parameters for each domain
 
-MAPPROJECTION_BASEPOINT_LON="135.220404"
-MAPPROJECTION_BASEPOINT_LAT="34.653396"
+MAPPROJECTION_BASEPOINT_LON="135.220404" # can be given for each domain, if you like
+MAPPROJECTION_BASEPOINT_LAT="34.653396"  # can be given for each domain, if you like
 MAPPROJECTION_TYPE="LC"
 MAPPROJECTION_LC_LAT1="30.0"
 MAPPROJECTION_LC_LAT2="40.0"
