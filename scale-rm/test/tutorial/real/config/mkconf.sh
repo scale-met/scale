@@ -269,18 +269,16 @@ do
   LINE_Z="${DEF_Z[$D]}"
 
   # set output directory
-  if [ "${OUT_DIR}x" != "x" ]; then
-      OUT_DIR=${OUT_DIR%*/}/
-      OUT_DIR_SNO=${OUT_DIR%*/}/
-  else
-      OUT_DIR_SNO="."
-  fi
+  if [ -z "${OUT_DIR_PP}" ]; then OUT_DIR_PP="."; fi
+  if [ -z "${OUT_DIR_INIT}" ]; then OUT_DIR_INIT="."; fi
+  if [ -z "${OUT_DIR_RUN}" ]; then OUT_DIR_RUN="."; fi
+  if [ -z "${OUT_DIR_SNO}" ]; then OUT_DIR_SNO="."; fi
 
   # set filenames for each domain
   PP_IO_LOG_BASENAME="pp_LOG_d${FNUM}"
-  TOPOGRAPHY_OUT_BASENAME="${OUT_DIR}topo_d${FNUM}"
-  COPYTOPO_IN_BASENAME="${OUT_DIR}topo_d${PFNUM}"
-  LANDUSE_OUT_BASENAME="${OUT_DIR}landuse_d${FNUM}"
+  TOPOGRAPHY_OUT_BASENAME="${OUT_DIR_PP}/topo_d${FNUM}"
+  COPYTOPO_IN_BASENAME="${OUT_DIR_PP}/topo_d${PFNUM}"
+  LANDUSE_OUT_BASENAME="${OUT_DIR_PP}/landuse_d${FNUM}"
 
   TOPO_IN_DIR="${TOPODIR}/${TOPOTYPE[$D]}/Products"
   TOPO_IN_CATALOGUE="${TOPOTYPE[$D]}_catalogue.txt"
@@ -288,19 +286,19 @@ do
   LANDUSE_IN_DIR="${LANDUSEDIR}/${LANDUSETYPE[$D]}/Products"
   LANDUSE_IN_CATALOGUE="${LANDUSETYPE[$D]}_catalogue.txt"
 
-  INIT_TOPOGRAPHY_IN_BASENAME="${PPDIR}/${OUT_DIR}topo_d${FNUM}"
-  INIT_LANDUSE_IN_BASENAME="${PPDIR}/${OUT_DIR}landuse_d${FNUM}"
+  INIT_TOPOGRAPHY_IN_BASENAME="${PPDIR}/${OUT_DIR_PP}/topo_d${FNUM}"
+  INIT_LANDUSE_IN_BASENAME="${PPDIR}/${OUT_DIR_PP}/landuse_d${FNUM}"
   INIT_IO_LOG_BASENAME="init_LOG_d${FNUM}"
-  INIT_RESTART_OUT_BASENAME="${OUT_DIR}init_d${FNUM}"
-  BASENAME_BOUNDARY="${OUT_DIR}boundary_d${FNUM}"
+  INIT_RESTART_OUT_BASENAME="${OUT_DIR_INIT}/init_d${FNUM}"
+  BASENAME_BOUNDARY="${OUT_DIR_INIT}/boundary_d${FNUM}"
 
-  RUN_TOPOGRAPHY_IN_BASENAME="${PPDIR}/${OUT_DIR}topo_d${FNUM}"
-  RUN_LANDUSE_IN_BASENAME="${PPDIR}/${OUT_DIR}landuse_d${FNUM}"
+  RUN_TOPOGRAPHY_IN_BASENAME="${PPDIR}/${OUT_DIR_PP}/topo_d${FNUM}"
+  RUN_LANDUSE_IN_BASENAME="${PPDIR}/${OUT_DIR_PP}/landuse_d${FNUM}"
   RUN_IO_LOG_BASENAME="LOG_d${FNUM}"
-  RUN_RESTART_IN_BASENAME="${INITDIR}/${OUT_DIR}${INIT_BASENAME}_d${FNUM}_${INITTIME}"
+  RUN_RESTART_IN_BASENAME="${INITDIR}/${OUT_DIR_INIT}/${INIT_BASENAME}_d${FNUM}_${INITTIME}"
   ATMOS_BOUNDARY_IN_BASENAME="${INITDIR}/${BASENAME_BOUNDARY}"
-  RESTART_OUT_BASENAME="${OUT_DIR}restart_d${FNUM}"
-  FILE_HISTORY_DEFAULT_BASENAME="${OUT_DIR}history_d${FNUM}"
+  RESTART_OUT_BASENAME="${OUT_DIR_RUN}/restart_d${FNUM}"
+  FILE_HISTORY_DEFAULT_BASENAME="${OUT_DIR_RUN}/history_d${FNUM}"
 
   # set nesting parameters
   if [ $DNUM -lt $NUM_DOMAIN ]; then

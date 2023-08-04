@@ -13,7 +13,7 @@ cat << EOF > base.sno.vgridope.conf
 /
 
 &PARAM_SNO
- basename_in     = '${RUNDIR}/${OUT_DIR}/history_d${FNUM}',
+ basename_in     = '${RUNDIR}/${OUT_DIR_RUN}/history_d${FNUM}',
  dirpath_out     = '${OUT_DIR_SNO}',
  basename_out    = 'merged-p_history_d${FNUM}',
  nprocs_x_out    = ${PRC_NUM_X[$D]},
@@ -51,7 +51,7 @@ cat << EOF > base.sno.hgridope.conf
 /
 
 &PARAM_SNO
- basename_in     = 'merged-p_history_d${FNUM}',
+ basename_in     = '${OUT_DIR_SNO}/merged-p_history_d${FNUM}',
  dirpath_out     = '${OUT_DIR_SNO}',
  basename_out    = 'merged-h_history_d${FNUM}',
  nprocs_x_out    = 1,
