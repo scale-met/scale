@@ -232,15 +232,19 @@ IFS="," eval 'LIST_ODZ="${ODZ[*]}"'
 IFS="," eval 'LIST_LDZ="${LDZ[*]}"'
 IFS="," eval 'LIST_UDZ="${UDZ[*]}"'
 
+if [[ -z ${DOM_NUMBER+x} ]]; then DOM_NUMBER=1; fi
+
 DNUM=1
 TPROC=0
 while [ $DNUM -le $NUM_DOMAIN ]
 do
   D=`expr $DNUM - 1`
   PD=`expr $DNUM - 2`
-  PDNUM=$D
 
-  FNUM=`printf "%02d" $DNUM`
+  DN=`expr $DNUM + $DOM_NUMBER - 1`
+  PDNUM=`expr $DN - 1`
+
+  FNUM=`printf "%02d" $DN`
   PFNUM=`printf "%02d" $PDNUM`
 
   # set numbers of domain process
