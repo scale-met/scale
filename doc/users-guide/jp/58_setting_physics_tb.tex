@@ -11,7 +11,7 @@ Large-eddy シミュレーション(LES)において、サブグリッドスケ�
 
 \editboxtwo{
 \verb|&PARAM_ATMOS  | & \\
-\verb| ATMOS_PHY_TB_TYPE = "MYNN", | & ; 表\ref{tab:nml_atm_tb}より選択。\\
+\verb| ATMOS_PHY_TB_TYPE = "SMAGORINSKY", | & ; 表\ref{tab:nml_atm_tb}より選択。\\
 \verb|/             | & \\
 }
 \begin{table}[h]
@@ -28,23 +28,10 @@ Large-eddy シミュレーション(LES)において、サブグリッドスケ�
 \end{center}
 \end{table}
 
-%SMAGORINSKY および D1980 は、ラージエディーシミュレーション(LES)用のサブグリッドスケール乱流モデルである。
-%MYNN は、レイノルズ平均ナビエストークス方程式(RANS)計算用の境界層乱流パラメタリゼーションである。
-%HYBRID は、LES と RANS 両者の乱流モデルを併用するものであり、以下の2通りの用途に用いられる。
-%\begin{enumerate}
-%\item LES と RANS の中間的な解像度 (グレーゾーン) での計算\\
-%  各グリットの鉛直混合による時間変化率は、LES用乱流モデルとRANS用乱流パラメタリゼーションで得られた時間変化率を、実験解像度に応じた割合で線形的に足し合せることによって計算される。水平混合はLES用乱流モデルによって計算される。
-%\item RANS計算における水平渦粘性\\
-%  RANS計算における境界層乱流パラメタリゼーションは、鉛直にのみ混合を行い、水平方向には混合しない。HYBRID を指定し、以下の設定を追加することで、水平方向に渦粘性を導入することができる。この水平混合は、LES用の乱流モデルによって計算される。
-%\end{enumerate}
-\verb|SMAGORINSKY|スキームは、 RANS シミュレーションにおいて水平渦粘性としても使用できる。
+\verb|SMAGORINSKY|スキームは、 RANS計算での水平渦粘性としても使用できる。
 惑星境界層パラメタリゼーション(第\ref{sec:basic_usel_pbl}節)は、
-鉛直混合のみを取り扱うスキームである。
-RANS シミュレーションにおいて水平粘性を考慮したければ、水平混合のために
-サブグリッドスケール乱流モデルを使用されたい。
-その場合は、以下のように\namelist{PARAM_ATMOS_PHY_TB_SMG}内の\nmitem{ATMOS_PHY_TB_SMG_horizontal}を\verb|.true.|にしなければならない。
-\editboxtwo{
-\verb|&PARAM_ATMOS_PHY_TB_SMG  | \\
-\verb| ATMOS_PHY_TB_SMG_horizontal = .true., | \\
-\verb|/             | \\
-}
+鉛直混合のみを取り扱うスキームであり、
+RANS計算において水平粘性を考慮したい場合には、
+水平混合にサブグリッドスケール乱流モデルを利用することができる。
+サブグリッドスケール乱流モデルを惑星境界層パラメタリゼーションと併用する場合、
+\verb|SMAGORINSKY|スキームにおいては鉛直渦粘性は無効になる。
