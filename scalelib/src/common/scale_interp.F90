@@ -514,7 +514,7 @@ contains
     integer :: ii, jj
     integer :: i1, i2, i3, i4
     integer :: j1, j2, j3, j4
-    integer :: i, j
+    integer :: i, j, l
     integer :: ite, ite_max
 
     call PROF_rapstart('INTERP_fact',3)
@@ -695,18 +695,18 @@ contains
        if ( error ) exit
 #endif
 
-       do ii = 1, 4
-          workh(ii) = hfact(i,j,ii)
-          worki(ii) = idx_i(i,j,ii)
-          workj(ii) = idx_j(i,j,ii)
+       do l = 1, 4
+          workh(l) = hfact(i,j,l)
+          worki(l) = idx_i(i,j,l)
+          workj(l) = idx_j(i,j,l)
        end do
        call SORT_exec( 4,                                        & ! [IN]
                        workh(:), worki(:), workj(:),             & ! [INOUT]
                        reverse = .true.                          ) ! [IN]
-       do ii = 1, 4
-          hfact(i,j,ii) = workh(ii)
-          idx_i(i,j,ii) = worki(ii)
-          idx_j(i,j,ii) = workj(ii)
+       do l = 1, 4
+          hfact(i,j,l) = workh(l)
+          idx_i(i,j,l) = worki(l)
+          idx_j(i,j,l) = workj(l)
        end do
 
     end do

@@ -627,6 +627,8 @@ contains
        MAPF )
     use scale_prc_cartesC, only: &
        PRC_TwoD
+    use scale_const, &
+       UNDEF => CONST_UNDEF
     use scale_atmos_grid_cartesC, only: &
        ATMOS_GRID_CARTESC_CDX, &
        ATMOS_GRID_CARTESC_FDX, &
@@ -704,6 +706,24 @@ contains
        end do
     end if
 
+#ifdef QUICKDEBUG
+    ATMOS_GRID_CARTESC_REAL_AREA  (1:IS-1,:)  = UNDEF
+    ATMOS_GRID_CARTESC_REAL_AREA  (IE+1:IA,:) = UNDEF
+    ATMOS_GRID_CARTESC_REAL_AREA  (:,1:JS-1)  = UNDEF
+    ATMOS_GRID_CARTESC_REAL_AREA  (:,JE+1:JA) = UNDEF
+    ATMOS_GRID_CARTESC_REAL_AREAXV(1:IS-1,:)  = UNDEF
+    ATMOS_GRID_CARTESC_REAL_AREAXV(IE+1:IA,:) = UNDEF
+    ATMOS_GRID_CARTESC_REAL_AREAXV(:,1:JS-1)  = UNDEF
+    ATMOS_GRID_CARTESC_REAL_AREAXV(:,JE+1:JA) = UNDEF
+    ATMOS_GRID_CARTESC_REAL_AREAUY(1:IS-1,:)  = UNDEF
+    ATMOS_GRID_CARTESC_REAL_AREAUY(IE+1:IA,:) = UNDEF
+    ATMOS_GRID_CARTESC_REAL_AREAUY(:,1:JS-1)  = UNDEF
+    ATMOS_GRID_CARTESC_REAL_AREAUY(:,JE+1:JA) = UNDEF
+                            AREAUV(1:IS-1,:)  = UNDEF
+                            AREAUV(IE+1:IA,:) = UNDEF
+                            AREAUV(:,1:JS-1)  = UNDEF
+                            AREAUV(:,JE+1:JA) = UNDEF
+#endif
     call COMM_vars8( ATMOS_GRID_CARTESC_REAL_AREA  (:,:), 1 )
     call COMM_vars8( ATMOS_GRID_CARTESC_REAL_AREAXV(:,:), 2 )
     call COMM_vars8( ATMOS_GRID_CARTESC_REAL_AREAUY(:,:), 3 )

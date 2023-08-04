@@ -2090,9 +2090,15 @@ contains
     implicit none
 
     real(RP)              :: phi
-    real(RP), intent(in), value  :: v1
-    real(RP), intent(in), value  :: v2
-    real(RP), intent(in), value  :: v3
+#ifdef _OPENACC
+    real(RP), intent(in), value :: v1
+    real(RP), intent(in), value :: v2
+    real(RP), intent(in), value :: v3
+#else
+    real(RP), intent(in) :: v1
+    real(RP), intent(in) :: v2
+    real(RP), intent(in) :: v3
+#endif
     
     real(RP) :: r2
     real(RP) :: zerosw1, zerosw2

@@ -14,7 +14,7 @@ MODDIROPT = -M
 FFLAGS_FAST  = -Kfast,parallel,ocl,preex,array_private,noalias=s,mfunc=2 \
                -Nlst=i,lst=t -X03 -Ncompdisp -Koptmsg=1 -Cpp             \
                -x-                                                       \
-               -Ksimd                                                    \
+               -Ksimd,loop_fission                                       \
                -Kauto,threadsafe                                         \
                -Nfjomplib
 
@@ -41,11 +41,10 @@ CFLAGS_DEBUG = -O0
 
 #### Vector length
 ifeq ($(SCALE_USE_SINGLEFP),T)
-   VECTLEN = 16
+   LSIZE = 32
 else
-   VECTLEN = 8
+   LSIZE = 16
 endif
-CACHELINESIZE = 256
 
 
 ##### Special setting

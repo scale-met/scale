@@ -532,6 +532,12 @@ contains
 
     deallocate( LAND_PROPERTY_table )
 
+#ifdef QUICKDEBUG
+    LAND_PROPERTY(:LIS-1,:,:) = UNDEF
+    LAND_PROPERTY(LIE+1:,:,:) = UNDEF
+    LAND_PROPERTY(:,:LJS-1,:) = UNDEF
+    LAND_PROPERTY(:,LJE+1:,:) = UNDEF
+#endif
     do p = 1, LAND_PROPERTY_nmax
        call COMM_vars8( LAND_PROPERTY(:,:,p), p )
     enddo

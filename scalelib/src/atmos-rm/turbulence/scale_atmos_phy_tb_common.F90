@@ -421,6 +421,7 @@ contains
        ! (cell center; x,y,z)
        !$omp parallel do
        !$acc kernels
+!OCL LOOP_NOINTERCHANGE
        do j = JJS-1, JJE+1
        do i = IIS-1, IIE+1
        do k = KS+1, KE-1

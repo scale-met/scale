@@ -4,27 +4,20 @@
 #include "scale_log.h"
 #include "scale_openmp.h"
 
-#ifndef VECTLEN
 #ifdef _OPENACC
-#define VECTLEN 32
-#else
-#define VECTLEN 8
-#endif
-#endif
 
-#ifndef CACHELINESIZE
-#define CACHELINESIZE 128
-#endif
-
-#ifdef _OPENACC
 #define LSIZE 1
+
 #else
+
+#ifndef LSIZE
 #ifdef SINGLE
-#define LSIZE (CACHELINESIZE / 8)
+#define LSIZE 16
 #else
-#define LSIZE (CACHELINESIZE / 16)
+#define LSIZE 8
 #endif
 #endif
 
+#endif
 
 #endif
