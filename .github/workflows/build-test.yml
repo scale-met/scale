@@ -48,8 +48,6 @@ jobs:
       run: make allclean
     - name: make openmp
       run: make -j 4 SCALE_ENABLE_OPENMP=T
-    - name: make openmp single
-      run: make -j 4 SCALE_ENABLE_OPENMP=T SCALE_USE_SINGLEFP=T
       
   doc:
     runs-on: ubuntu-latest
