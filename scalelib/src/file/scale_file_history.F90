@@ -902,11 +902,17 @@ contains
           FILE_HISTORY_vars(id)%timesum    = 0.0_DP
           select case ( FILE_HISTORY_vars(id)%tstats_op )
           case ( I_MEAN )
+             !$omp workshare
              FILE_HISTORY_vars(id)%varsum(:)  = 0.0_DP
+             !$omp end workshare
           case ( I_MIN )
+             !$omp workshare
              FILE_HISTORY_vars(id)%varsum(:)  = HUGE
+             !$omp end workshare
           case ( I_MAX )
+             !$omp workshare
              FILE_HISTORY_vars(id)%varsum(:)  = - HUGE
+             !$omp end workshare
           end select
        endif
 
@@ -1046,11 +1052,17 @@ contains
           FILE_HISTORY_vars(id)%timesum    = 0.0_DP
           select case ( FILE_HISTORY_vars(id)%tstats_op )
           case ( I_MEAN )
+             !$omp workshare
              FILE_HISTORY_vars(id)%varsum(:)  = 0.0_DP
+             !$omp end workshare
           case ( I_MIN )
+             !$omp workshare
              FILE_HISTORY_vars(id)%varsum(:)  = HUGE
+             !$omp end workshare
           case ( I_MAX )
+             !$omp workshare
              FILE_HISTORY_vars(id)%varsum(:)  = - HUGE
+             !$omp end workshare
           end select
        endif
 
@@ -1222,11 +1234,17 @@ contains
           FILE_HISTORY_vars(id)%timesum    = 0.0_DP
           select case ( FILE_HISTORY_vars(id)%tstats_op )
           case ( I_MEAN )
+             !$omp workshare
              FILE_HISTORY_vars(id)%varsum(:)  = 0.0_DP
+             !$omp end workshare
           case ( I_MIN )
+             !$omp workshare
              FILE_HISTORY_vars(id)%varsum(:)  = HUGE
+             !$omp end workshare
           case ( I_MAX )
+             !$omp workshare
              FILE_HISTORY_vars(id)%varsum(:)  = - HUGE
+             !$omp end workshare
           end select
        endif
 
@@ -1398,11 +1416,17 @@ contains
           FILE_HISTORY_vars(id)%timesum    = 0.0_DP
           select case ( FILE_HISTORY_vars(id)%tstats_op )
           case ( I_MEAN )
+             !$omp workshare
              FILE_HISTORY_vars(id)%varsum(:)  = 0.0_DP
+             !$omp end workshare
           case ( I_MIN )
+             !$omp workshare
              FILE_HISTORY_vars(id)%varsum(:)  = HUGE
+             !$omp end workshare
           case ( I_MAX )
+             !$omp workshare
              FILE_HISTORY_vars(id)%varsum(:)  = - HUGE
+             !$omp end workshare
           end select
        endif
 
@@ -1574,11 +1598,17 @@ contains
           FILE_HISTORY_vars(id)%timesum    = 0.0_DP
           select case ( FILE_HISTORY_vars(id)%tstats_op )
           case ( I_MEAN )
+             !$omp workshare
              FILE_HISTORY_vars(id)%varsum(:)  = 0.0_DP
+             !$omp end workshare
           case ( I_MIN )
+             !$omp workshare
              FILE_HISTORY_vars(id)%varsum(:)  = HUGE
+             !$omp end workshare
           case ( I_MAX )
+             !$omp workshare
              FILE_HISTORY_vars(id)%varsum(:)  = - HUGE
+             !$omp end workshare
           end select
        endif
 
@@ -3104,6 +3134,7 @@ contains
 
     if ( FILE_HISTORY_vars(id)%flag_clear ) then
        if ( FILE_HISTORY_OUTPUT_STEP0 .AND. FILE_HISTORY_NOWSTEP == 1 ) then
+          !$omp parallel do
           do i = 1, FILE_HISTORY_vars(id)%size
              FILE_HISTORY_vars(id)%varsum(i) = RMISS
           end do
@@ -3121,10 +3152,18 @@ contains
           LOG_WARN("FILE_HISTORY_Write_OneVar",*) 'Output value is not updated in this step.', &
                                          ' NAME = ',     trim(FILE_HISTORY_vars(id)%name), &
                                          ', OUTNAME = ', trim(FILE_HISTORY_vars(id)%outname)
+          !$omp parallel do
+          do i = 1, FILE_HISTORY_vars(id)%size
+             FILE_HISTORY_vars(id)%varsum(i) = RMISS
+          end do
        endif
-    endif
-
-    if ( .NOT. FILE_HISTORY_vars(id)%flag_clear .AND. FILE_HISTORY_vars(id)%tstats_op == I_MEAN ) then
+    else if( FILE_HISTORY_OUTPUT_STEP0 .and. FILE_HISTORY_NOWSTEP == 1 .and. FILE_HISTORY_vars(id)%tstats_op .ne. I_NONE ) then
+       !$omp parallel do
+       do i = 1, FILE_HISTORY_vars(id)%size
+          FILE_HISTORY_vars(id)%varsum(i) = RMISS
+       end do
+    else if ( FILE_HISTORY_vars(id)%tstats_op == I_MEAN ) then
+       !$omp parallel do
        do i = 1, FILE_HISTORY_vars(id)%size
           if ( FILE_HISTORY_vars(id)%varsum(i) /= RMISS ) then
              FILE_HISTORY_vars(id)%varsum(i) = FILE_HISTORY_vars(id)%varsum(i) / FILE_HISTORY_vars(id)%timesum
