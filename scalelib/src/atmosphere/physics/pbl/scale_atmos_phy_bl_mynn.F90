@@ -130,12 +130,14 @@ module scale_atmos_phy_bl_mynn
   real(RP), private :: ATMOS_PHY_BL_MYNN_KH_MIN     = -1.E1_RP
   real(RP), private :: ATMOS_PHY_BL_MYNN_KH_MAX     =  1.E4_RP
   real(RP), private :: ATMOS_PHY_BL_MYNN_Lt_MAX     =  2000.0_RP
+  real(RP), private :: ATMOS_PHY_BL_MYNN_zeta_lim   =  10.0_RP
   real(RP), private :: ATMOS_PHY_BL_MYNN_Sq_fact    = 3.0_RP
   real(RP), private :: ATMOS_PHY_BL_MYNN_cns        = -1.0_RP ! N01: 3.5,   O19: 10.0
   real(RP), private :: ATMOS_PHY_BL_MYNN_alpha2     = -1.0_RP ! N01: 1.0,   O19: 0.3
   real(RP), private :: ATMOS_PHY_BL_MYNN_alpha4     = -1.0_RP ! N01: 100.0, O19: 10.0
   real(RP), private :: ATMOS_PHY_BL_MYNN_DUMP_coef  = 0.5_RP
   logical,  private :: ATMOS_PHY_BL_MYNN_init_TKE   = .false.
+  logical,  private :: ATMOS_PHY_BL_MYNN_dz_sim     = .true.
   logical,  private :: ATMOS_PHY_BL_MYNN_similarity = .true.
   !$acc declare create(ATMOS_PHY_BL_MYNN_Lt_MAX)
 
@@ -151,6 +153,7 @@ module scale_atmos_phy_bl_mynn
        ATMOS_PHY_BL_MYNN_KH_MIN,   &
        ATMOS_PHY_BL_MYNN_KH_MAX,   &
        ATMOS_PHY_BL_MYNN_Lt_MAX,   &
+       ATMOS_PHY_BL_MYNN_zeta_lim, &
        ATMOS_PHY_BL_MYNN_LEVEL,    &
        ATMOS_PHY_BL_MYNN_Sq_fact,  &
        ATMOS_PHY_BL_MYNN_cns,      &
@@ -158,6 +161,7 @@ module scale_atmos_phy_bl_mynn
        ATMOS_PHY_BL_MYNN_alpha4,   &
        ATMOS_PHY_BL_MYNN_DUMP_coef,&
        ATMOS_PHY_BL_MYNN_init_TKE, &
+       ATMOS_PHY_BL_MYNN_dz_sim,   &
        ATMOS_PHY_BL_MYNN_similarity
 
   !-----------------------------------------------------------------------------
@@ -598,7 +602,8 @@ contains
     !$omp        ATMOS_PHY_BL_MYNN_N2_MAX,ATMOS_PHY_BL_MYNN_TKE_MIN, &
     !$omp        ATMOS_PHY_BL_MYNN_NU_MIN,ATMOS_PHY_BL_MYNN_NU_MAX, &
     !$omp        ATMOS_PHY_BL_MYNN_KH_MIN,ATMOS_PHY_BL_MYNN_KH_MAX, &
-    !$omp        ATMOS_PHY_BL_MYNN_Sq_fact,ATMOS_PHY_BL_MYNN_similarity, &
+    !$omp        ATMOS_PHY_BL_MYNN_Sq_fact, ATMOS_PHY_BL_MYNN_zeta_lim, &
+    !$omp        ATMOS_PHY_BL_MYNN_similarity,ATMOS_PHY_BL_MYNN_dz_sim, &
     !$omp        ATMOS_PHY_BL_MYNN_DUMP_coef, &
     !$omp        ATMOS_PHY_BL_MYNN_PBL_MAX, &
     !$omp        ATMOS_PHY_BL_MYNN_K2010,ATMOS_PHY_BL_MYNN_O2019, &
@@ -656,7 +661,7 @@ contains
 
        if ( ATMOS_PHY_BL_MYNN_similarity .or. initialize ) then
 
-          zeta = z(KS) * RLmo(i,j)
+          zeta = min( max( z(KS) * RLmo(i,j), -ATMOS_PHY_BL_MYNN_zeta_lim ), ATMOS_PHY_BL_MYNN_zeta_lim )
 
           select case ( I_B_TYPE )
           case ( I_B71 )
@@ -1709,8 +1714,7 @@ contains
 
     real(RP), intent(out) :: l(KA)
 
-    real(RP), parameter :: zeta_min = -5.0_RP
-    real(RP), parameter :: zeta_max =  2.0_RP
+    real(RP), parameter :: ls_fact_max = 2.0_RP
 
     real(RP) :: ls     !> L_S
     real(RP) :: lb     !> L_B
@@ -1766,7 +1770,7 @@ contains
     end if
 
     do k = KS, KE_PBL
-       zeta = min( max( z(k) * RLmo, zeta_min), zeta_max )
+       zeta = z(k) * RLmo
 
        ! LS
        sw = sign(0.5_RP, zeta) + 0.5_RP ! 1 for zeta >= 0, 0 for zeta < 0
@@ -2222,7 +2226,7 @@ contains
        Vh(k) = f2h(k,1) * V(k+1) + f2h(k,2) * V(k)
     end do
 
-    if ( ATMOS_PHY_BL_MYNN_similarity ) then
+    if ( ATMOS_PHY_BL_MYNN_dz_sim ) then
        dudz2(KS) = ( us * phi_m / ( KARMAN * z1 ) )**2
     else
        dudz2(KS) = ( ( Uh(KS) - U(KS) )**2 + ( Vh(KS) - V(KS) )**2 ) / ( CDZ(KS) * 0.5_RP )**2
@@ -2242,7 +2246,7 @@ contains
     do k = KS, KE
        qh(k) = f2h(k,1) * POTL(k+1) + f2h(k,2) * POTL(k)
     end do
-    if ( ATMOS_PHY_BL_MYNN_similarity ) then
+    if ( ATMOS_PHY_BL_MYNN_dz_sim ) then
        dtldz(KS) = ts * phi_h / ( KARMAN * z1 )
     else
        dtldz(KS) = ( qh(KS) - POTL(KS) ) / ( CDZ(KS) * 0.5_RP )
@@ -2261,7 +2265,7 @@ contains
 !       qh(k) = f2h(k,1) * Qw(k+1) + f2h(k,2) * Qw(k)
        qh(k) = f2h(k,1) * qw2(k+1) + f2h(k,2) * qw2(k)
     end do
-    if ( ATMOS_PHY_BL_MYNN_similarity ) then
+    if ( ATMOS_PHY_BL_MYNN_dz_sim ) then
        dqwdz(KS) = qs * phi_h / ( KARMAN * z1 )
     else
        dqwdz(KS) = ( qh(KS) - qw2(KS) ) / ( CDZ(KS) * 0.5_RP )
