@@ -1055,8 +1055,8 @@ contains
     ! below the lowest level of atmospheric model.
     if ( ZDC + Z0C + 2.0_RP >= ZA ) then
        LOG_ERROR("URBAN_DYN_kusaka01_SLC_main",*) 'ZDC + Z0C + 2m must be less than the 1st level! STOP.'
-#ifdef _OPENACC
        converged = .false.
+#ifdef _OPENACC
        return
 #else
        call PRC_abort
@@ -1287,8 +1287,8 @@ contains
        if ( abs(resi1) > DTS_MAX_onestep*10.0_RP ) then
          LOG_ERROR("URBAN_DYN_Kusaka01_main",*) 'tendency of TR exceeded a limit! STOP.'
          LOG_ERROR_CONT(*) 'previous TR and updated TR(TRL(1)) is ',TR-resi1, TR
-#ifdef _OPENACC
          converged = .false.
+#ifdef _OPENACC
          return
 #else
          call PRC_abort
@@ -1598,8 +1598,8 @@ contains
         if ( abs(resi1) > DTS_MAX_onestep*10.0_RP ) then
            LOG_ERROR("URBAN_DYN_Kusaka01_main",*) 'tendency of TB exceeded a limit! STOP.'
            LOG_ERROR_CONT(*) 'previous TB and updated TB(TBL(1)) is ', TB-resi1,TB
-#ifdef _OPENACC
            converged = .false.
+#ifdef _OPENACC
            return
 #else
            call PRC_abort
@@ -1613,8 +1613,8 @@ contains
         if ( abs(resi2) > DTS_MAX_onestep*10.0_RP ) then
            LOG_ERROR("URBAN_DYN_Kusaka01_main",*) 'tendency of TG exceeded a limit! STOP.'
            LOG_ERROR_CONT(*) 'previous TG and updated TG(TGL(1)) is ', TG-resi2, TG, resi2
-#ifdef _OPENACC
            converged = .false.
+#ifdef _OPENACC
            return
 #else
            call PRC_abort
