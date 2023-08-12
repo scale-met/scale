@@ -102,6 +102,7 @@ module scale_atmos_phy_bl_mynn
   integer :: nplume
   real(RP) :: dplume(max_plume)
   real(RP) :: pw(max_plume)
+  logical  :: ATMOS_PHY_BL_MYNN_MF
 
   ! history
   integer,  private :: HIST_Ri
@@ -269,30 +270,32 @@ contains
     LOG_NML(PARAM_ATMOS_PHY_BL_MYNN)
     !$acc update device(ATMOS_PHY_BL_MYNN_Lt_MAX)
 
+    ATMOS_PHY_BL_MYNN_MF = .false.
     if ( ATMOS_PHY_BL_MYNN_O2019 ) then
-       if ( ATMOS_PHY_BL_MYNN_LEVEL == "3" ) then
-          LOG_ERROR("ATMOS_PHY_BL_MYNN_setup",*) 'level must not be 3 with O2019'
-          call PRC_abort
-       end if
        if ( ATMOS_PHY_BL_MYNN_cns < 0.0_RP ) ATMOS_PHY_BL_MYNN_cns = 3.5_RP
        if ( ATMOS_PHY_BL_MYNN_alpha2 < 0.0_RP ) ATMOS_PHY_BL_MYNN_alpha2 = 0.3_RP
        if ( ATMOS_PHY_BL_MYNN_alpha4 < 0.0_RP ) ATMOS_PHY_BL_MYNN_alpha4 = 10.0_RP
        if ( C2 < 0.0_RP ) C2 = 0.729_RP
        if ( C3 < 0.0_RP ) C3 = 0.34_RP
        ATMOS_PHY_BL_MYNN_K2010 = .true.
+       if ( ATMOS_PHY_BL_MYNN_LEVEL .ne. "3" ) then
+          ATMOS_PHY_BL_MYNN_MF = .true.
+       end if
        if ( .not. present(dx) ) then
           LOG_ERROR("ATMOS_PHY_BL_MYNN_setup",*) 'dx must be set with O2019'
           call PRC_abort
        end if
-       nplume = max_plume
-       do n = 1, max_plume
-          dplume(n) = 100.0_RP * n
-          pw(n) = 0.1_RP + ( 0.5_RP - 0.1_RP ) * ( n - 1 ) / ( max_plume - 1 ) ! not described in O2019
-          if ( dplume(n) > dx ) then
-             nplume = n - 1
-             exit
-          end if
-       end do
+       if ( ATMOS_PHY_BL_MYNN_MF ) then
+          nplume = max_plume
+          do n = 1, max_plume
+             dplume(n) = 100.0_RP * n
+             pw(n) = 0.1_RP + ( 0.5_RP - 0.1_RP ) * ( n - 1 ) / ( max_plume - 1 ) ! not described in O2019
+             if ( dplume(n) > dx ) then
+                nplume = n - 1
+                exit
+             end if
+          end do
+       end if
 
     else
        if ( ATMOS_PHY_BL_MYNN_cns < 0.0_RP ) ATMOS_PHY_BL_MYNN_cns = 2.7_RP
@@ -562,7 +565,7 @@ contains
     logical :: do_put
 
     integer :: KE_PBL
-    integer :: k, k2, i, j, n
+    integer :: k, k2, i, j
     integer :: nit, it
 
 #ifdef _OPENACC
@@ -606,7 +609,7 @@ contains
     !$omp        ATMOS_PHY_BL_MYNN_similarity,ATMOS_PHY_BL_MYNN_dz_sim, &
     !$omp        ATMOS_PHY_BL_MYNN_DUMP_coef, &
     !$omp        ATMOS_PHY_BL_MYNN_PBL_MAX, &
-    !$omp        ATMOS_PHY_BL_MYNN_K2010,ATMOS_PHY_BL_MYNN_O2019, &
+    !$omp        ATMOS_PHY_BL_MYNN_K2010,ATMOS_PHY_BL_MYNN_O2019,ATMOS_PHY_BL_MYNN_MF, &
     !$omp        RHOU_t,RHOV_t,RHOT_t,RHOQV_t,RPROG_t,Nu,Kh,Qlp,cldfrac,Zi,SFLX_BUOY, &
     !$omp        DENS,PROG,U,V,W,POTT,PRES,QDRY,QV,Qw,POTV,POTL,EXNER,N2, &
     !$omp        SFC_DENS,SFLX_MU,SFLX_MV,SFLX_SH,SFLX_QV,us,ts,qs,RLmo, &
@@ -783,7 +786,7 @@ contains
 
           SFLX_BUOY(i,j) = - us3 * RLmo(i,j) / KARMAN
 
-          if ( ATMOS_PHY_BL_MYNN_O2019 ) then
+          if ( ATMOS_PHY_BL_MYNN_MF ) then
              call calc_mflux( &
                   KA, KS, KE_PBL, &
                   DENS(:,i,j), POTV(:,i,j), POTL(:,i,j), Qw(:,i,j), &
@@ -922,18 +925,20 @@ contains
              we = 0.5_RP * tanh( ( zit - 200.0_RP ) / 400.0_RP ) + 0.5_RP
              Zi(i,j) = zit * we + zie * ( 1.0_RP - we )
 
-             call calc_mflux( &
-                  KA, KS, KE_PBL, &
-                  DENS(:,i,j), POTV(:,i,j), POTL(:,i,j), Qw(:,i,j), &
-                  U(:,i,j), V(:,i,j), W(:,i,j), tke_p(:),           & ! (in)
-                  cldfrac(:,i,j),                                   & ! (in)
-                  EXNER(:,i,j),                                     & ! (in)
-                  SFLX_SH(i,j), SFLX_BUOY(i,j),                     & ! (in)
-                  SFLX_PT, SFLX_QV(i,j),                            & ! (in)
-                  SFC_DENS(i,j),                                    & ! (in)
-                  Zi(i,j), Z(:), CDZ(:), F2H(:,:,i,j),              & ! (in)
-                  mflux(:),                                         & ! (out)
-                  tflux(:), qflux(:), uflux(:), vflux(:), eflux(:)  ) ! (out)
+             if ( ATMOS_PHY_BL_MYNN_MF ) then
+                call calc_mflux( &
+                     KA, KS, KE_PBL, &
+                     DENS(:,i,j), POTV(:,i,j), POTL(:,i,j), Qw(:,i,j), &
+                     U(:,i,j), V(:,i,j), W(:,i,j), tke_p(:),           & ! (in)
+                     cldfrac(:,i,j),                                   & ! (in)
+                     EXNER(:,i,j),                                     & ! (in)
+                     SFLX_SH(i,j), SFLX_BUOY(i,j),                     & ! (in)
+                     SFLX_PT, SFLX_QV(i,j),                            & ! (in)
+                     SFC_DENS(i,j),                                    & ! (in)
+                     Zi(i,j), Z(:), CDZ(:), F2H(:,:,i,j),              & ! (in)
+                     mflux(:),                                         & ! (out)
+                     tflux(:), qflux(:), uflux(:), vflux(:), eflux(:)  ) ! (out)
+             end if
           end if
 
 
@@ -1030,16 +1035,16 @@ contains
                 prod_c(k) = - wtl * dqwdz(k) - wqw * dtldz(k)
              end do
 
-!!$          if ( ATMOS_PHY_BL_MYNN_similarity ) then
-!!$             tmp = 2.0_RP * us(i,j) * phi_h / ( KARMAN * z(KS) )
-!!$             tmp = tmp * ( zeta / ( z(KS) * RLmo(i,j) ) )**2 ! correspoindint to the limitter for zeta
-!!$             ! TSQ
-!!$             prod_t(KS) = tmp * ts(i,j)**2
-!!$             ! QSQ
-!!$             prod_q(KS) = tmp * ts(i,j) * qs(i,j)
-!!$             ! COV
-!!$             prod_c(KS) = tmp * qs(i,j)**2
-!!$          end if
+             if ( ATMOS_PHY_BL_MYNN_similarity ) then
+                tmp = 2.0_RP * us(i,j) * phi_h / ( KARMAN * z(KS) )
+                tmp = tmp * ( zeta / ( z(KS) * RLmo(i,j) ) )**2 ! correspoinding to the limitter for zeta
+                ! TSQ
+                prod_t(KS) = tmp * ts(i,j)**2
+                ! QSQ
+                prod_q(KS) = tmp * ts(i,j) * qs(i,j)
+                ! COV
+                prod_c(KS) = tmp * qs(i,j)**2
+             end if
 
              ! diffusion (explicit)
              flx(KS-1)   = 0.0_RP
@@ -1094,6 +1099,22 @@ contains
                 prod_c(k) = - wtl * dqwdz(k) - wqw * dtldz(k)
              end do
 
+             if ( ATMOS_PHY_BL_MYNN_similarity ) then
+                smp(KS)    = 0.0_RP
+                shpgh(KS)  = 0.0_RP
+                gammat(KS) = 0.0_RP
+                gammaq(KS) = 0.0_RP
+
+                tmp = 2.0_RP * us(i,j) * phi_h / ( KARMAN * z(KS) )
+                tmp = tmp * ( zeta / ( z(KS) * RLmo(i,j) ) )**2 ! correspoinding to the limitter for zeta
+                ! TSQ
+                prod_t(KS) = tmp * ts(i,j)**2
+                ! QSQ
+                prod_q(KS) = tmp * ts(i,j) * qs(i,j)
+                ! COV
+                prod_c(KS) = tmp * qs(i,j)**2
+             end if
+
           else
 
              do k = KS, KE_PBL
@@ -1117,7 +1138,7 @@ contains
 
              ! dens * u
 
-             if ( ATMOS_PHY_BL_MYNN_O2019 ) then
+             if ( ATMOS_PHY_BL_MYNN_MF ) then
                 do k = KS, KE_PBL-1
                    flx(k) = uflux(k)
                 end do
@@ -1183,7 +1204,7 @@ contains
 
              ! dens * v
 
-             if ( ATMOS_PHY_BL_MYNN_O2019 ) then
+             if ( ATMOS_PHY_BL_MYNN_MF ) then
                 do k = KS, KE_PBL-1
                    flx(k) = vflux(k)
                 end do
@@ -1231,7 +1252,7 @@ contains
 
              ! dens * pott
 
-             if ( ATMOS_PHY_BL_MYNN_O2019 ) then
+             if ( ATMOS_PHY_BL_MYNN_MF ) then
                 do k = KS, KE_PBL-1
                    flx(k) = tflux(k)
                 end do
@@ -1315,7 +1336,7 @@ contains
 
              ! dens * qv
 
-             if ( ATMOS_PHY_BL_MYNN_O2019 ) then
+             if ( ATMOS_PHY_BL_MYNN_MF ) then
                 do k = KS, KE_PBL-1
                    flx(k) = qflux(k)
                 end do
@@ -1365,7 +1386,7 @@ contains
 
           ! dens * TKE
 
-!!$          if ( ATMOS_PHY_BL_MYNN_O2019 ) then
+!!$          if ( ATMOS_PHY_BL_MYNN_MF ) then
 !!$             do k = KS, KE_PBL-1
 !!$                flx(k) = eflux(k)
 !!$             end do
