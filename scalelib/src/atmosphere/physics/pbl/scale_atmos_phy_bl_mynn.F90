@@ -123,7 +123,7 @@ module scale_atmos_phy_bl_mynn
   ! namelist
   logical, private  :: ATMOS_PHY_BL_MYNN_K2010      = .false.   !> Kitamura (2010)
   logical, private  :: ATMOS_PHY_BL_MYNN_O2019      = .false.   !> Olson et al. (2019)
-  real(RP), private :: ATMOS_PHY_BL_MYNN_PBL_MAX    = 1.E+30_RP !> maximum height of the PBL
+  real(RP), private :: ATMOS_PHY_BL_MYNN_PBL_MAX    = 3000.0_RP !> maximum height of the PBL
   real(RP), private :: ATMOS_PHY_BL_MYNN_TKE_MIN    =  1.E-20_RP
   real(RP), private :: ATMOS_PHY_BL_MYNN_N2_MAX     =  1.E1_RP
   real(RP), private :: ATMOS_PHY_BL_MYNN_NU_MIN     = -1.E1_RP
