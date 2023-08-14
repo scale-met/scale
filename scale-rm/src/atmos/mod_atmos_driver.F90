@@ -107,7 +107,7 @@ contains
 
   !-----------------------------------------------------------------------------
   !> Setup
-  subroutine ATMOS_driver_setup
+  subroutine ATMOS_driver_setup( init )
     use scale_time, only: &
        TIME_NOWDATE
     use scale_atmos_solarins, only: &
@@ -151,7 +151,12 @@ contains
        REAL_FZ  => ATMOS_GRID_CARTESC_REAL_FZ, &
        REAL_PHI => ATMOS_GRID_CARTESC_REAL_PHI
     implicit none
+    logical, intent(in), optional :: init
+    logical :: not_init
     !---------------------------------------------------------------------------
+
+    not_init = .true.
+    if ( present(init) ) not_init = .not. init
 
     LOG_NEWLINE
     LOG_INFO("ATMOS_driver_setup",*) 'Setup'
@@ -169,20 +174,20 @@ contains
     call PROF_rapend  ('ATM_Refstate', 2)
 
     call PROF_rapstart('ATM_Boundary', 2)
-    call ATMOS_BOUNDARY_driver_setup
+    if ( not_init ) call ATMOS_BOUNDARY_driver_setup
     call PROF_rapend  ('ATM_Boundary', 2)
 
     ! setup each components
-    call ATMOS_DYN_driver_setup
-    call ATMOS_PHY_LT_driver_setup
-    call ATMOS_PHY_MP_driver_setup
-    call ATMOS_PHY_AE_driver_setup
-    call ATMOS_PHY_CH_driver_setup
-    call ATMOS_PHY_RD_driver_setup
-    call ATMOS_PHY_SF_driver_setup
-    call ATMOS_PHY_TB_driver_setup
-    call ATMOS_PHY_BL_driver_setup
-    call ATMOS_PHY_CP_driver_setup
+    if ( not_init ) call ATMOS_DYN_driver_setup
+    if ( not_init ) call ATMOS_PHY_LT_driver_setup
+                    call ATMOS_PHY_MP_driver_setup
+    if ( not_init ) call ATMOS_PHY_AE_driver_setup
+    if ( not_init ) call ATMOS_PHY_CH_driver_setup
+    if ( not_init ) call ATMOS_PHY_RD_driver_setup
+    if ( not_init ) call ATMOS_PHY_SF_driver_setup
+    if ( not_init ) call ATMOS_PHY_TB_driver_setup
+                    call ATMOS_PHY_BL_driver_setup
+    if ( not_init ) call ATMOS_PHY_CP_driver_setup
 
     LOG_NEWLINE
     LOG_INFO("ATMOS_driver_setup",*) 'Finish setup of each atmospheric components.'

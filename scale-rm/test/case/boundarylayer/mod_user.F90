@@ -206,6 +206,9 @@ contains
        NOWDAYSEC => TIME_NOWDAYSEC
     use scale_atmos_hydrostatic, only: &
        buildrho => ATMOS_HYDROSTATIC_buildrho
+    use scale_atmos_grid_cartesC, only: &
+       CZ => ATMOS_GRID_CARTESC_CZ, &
+       FZ => ATMOS_GRID_CARTESC_FZ
     use mod_atmos_vars, only: &
        DENS, &
        MOMZ, &
@@ -219,9 +222,11 @@ contains
        ATMOS_PHY_SF_SFC_Z0M,    &
        ATMOS_PHY_SF_SFC_Z0H,    &
        ATMOS_PHY_SF_SFC_Z0E
-    use scale_atmos_grid_cartesC, only: &
-       CZ => ATMOS_GRID_CARTESC_CZ, &
-       FZ => ATMOS_GRID_CARTESC_FZ
+    use mod_atmos_phy_bl_vars, only: &
+       QS_BL => QS, &
+       QE_BL => QE
+    use mod_atmos_phy_bl_driver, only: &
+       atmos_phy_bl_driver_mkinit
     implicit none
 
     real(RP) :: RHO (KA)
@@ -235,7 +240,7 @@ contains
 
     logical :: converged
 
-    integer  :: k, i, j
+    integer  :: k, i, j, iq
     !---------------------------------------------------------------------------
 
     call interporate( PT(:), pt_ini )
@@ -267,7 +272,6 @@ contains
     end do
     end do
 
-    QTRC(:,:,:,:) = 0.0_RP
     if ( .not. dry ) then
        do j = 1, JA
        do i = 1, IA
@@ -277,6 +281,27 @@ contains
        end do
        end do
     end if
+    do iq = QS_BL, QE_BL
+       if ( (.not. dry) .and. iq == I_QV ) then
+          do j = 1, JA
+          do i = 1, IA
+          do k = 1, KA
+             QTRC(k,i,j,I_QV) = QV(k)
+          end do
+          end do
+          end do
+       else if ( iq < QS_BL .or. iq > QE_BL ) then
+          do j = 1, JA
+          do i = 1, IA
+          do k = 1, KA
+             QTRC(k,i,j,I_QV) = 0.0_RP
+          end do
+          end do
+          end do
+       end if
+    end do
+
+    call atmos_phy_bl_driver_mkinit( 0.0_RP )
 
     call set_tg( NOWDAYSEC, Ts )
 

@@ -385,8 +385,6 @@ contains
     use mod_atmos_phy_mp_vars, only: &
        QS_MP, &
        QE_MP
-    use mod_atmos_admin, only: &
-       ATMOS_PHY_MP_TYPE
     use mod_atmos_phy_mp_driver, only: &
        ATMOS_PHY_MP_driver_qhyd2qtrc
     implicit none
@@ -534,12 +532,6 @@ contains
          call PRC_abort
       endselect
 
-      call tke_setup
-
-      call AEROSOL_setup
-
-      call SBMAERO_setup( convert_qtrc ) ! [INOUT]
-
       ! water content
       if ( ( .not. ATMOS_HYDROMETEOR_dry ) .AND. convert_qtrc ) then
          !$acc kernels
@@ -554,8 +546,14 @@ contains
                                              QNUM=QNUM(:,:,:,:)        ) ! [IN]
       end if
 
+      call tke_setup
+
+      call AEROSOL_setup
+
+      call SBMAERO_setup( convert_qtrc ) ! [INOUT]
+
       ! passive tracer
-      call TRACER_inq_id( "PTracer", iq)
+      call TRACER_inq_id( "PTracer", iq )
       if ( iq > 0 ) QTRC(:,:,:,iq) = ptrc(:,:,:)
 
       !$omp parallel do collapse(3)
@@ -903,12 +901,11 @@ contains
   subroutine SBMAERO_setup( convert_qtrc )
     use scale_atmos_hydrometeor, only: &
        I_QV, &
-       QHS,  &
        QHE
     use mod_atmos_admin, only: &
        ATMOS_PHY_MP_TYPE
     use scale_atmos_phy_mp_suzuki10, only: &
-       nccn, nbin
+       nccn
     implicit none
 
     logical, intent(inout) :: convert_qtrc
@@ -1218,7 +1215,6 @@ contains
        URBAN_RAINR,      &
        URBAN_RAINB,      &
        URBAN_RAING,      &
-       URBAN_ROFF,       &
        URBAN_SFC_TEMP,   &
        URBAN_SFC_albedo
     implicit none
@@ -1315,9 +1311,9 @@ contains
     use mod_atmos_phy_tb_vars, only: &
        I_TKE
     use mod_atmos_phy_bl_vars, only: &
-       QS_BL => QS, &
-       QE_BL => QE, &
-       Zi    => ATMOS_PHY_BL_Zi
+       Zi => ATMOS_PHY_BL_Zi
+    use mod_atmos_phy_bl_driver, only: &
+       atmos_phy_bl_driver_mkinit
     implicit none
 
     real(RP) :: TKE_CONST
@@ -1327,7 +1323,7 @@ contains
        TKE_CONST, &
        Zi_CONST
 
-    integer :: k, i, j, iq
+    integer :: k, i, j
     integer :: ierr
     !---------------------------------------------------------------------------
 
@@ -1345,7 +1341,7 @@ contains
     endif
     LOG_NML(PARAM_MKINIT_TKE)
 
-    if ( I_TKE > 0 ) then
+    if ( I_TKE > 0 ) then ! TB
        !$omp parallel do collapse(2)
        !$acc kernels
        do j = 1, JA
@@ -1359,25 +1355,6 @@ contains
        enddo
        !$acc end kernels
     end if
-    if ( QS_BL > 0 ) then
-       !$omp parallel do collapse(2)
-       !$acc kernels
-       do j = 1, JA
-       do i = 1, IA
-       do k = 1, KA
-          if ( QTRC(k,i,j,QS_BL) == UNDEF ) then
-             QTRC(k,i,j,QS_BL) = TKE_CONST
-          end if
-          do iq = QS_BL+1, QE_BL
-             if ( QTRC(k,i,j,iq) == UNDEF ) then
-                QTRC(k,i,j,iq) = 0.0_RP
-             end if
-          end do
-       enddo
-       enddo
-       enddo
-       !$acc end kernels
-    end if
 
     !$acc kernels
     do j = 1, JA
@@ -1386,6 +1363,9 @@ contains
     end do
     end do
     !$acc end kernels
+
+    ! BL
+    call atmos_phy_bl_driver_mkinit( TKE_CONST )
 
     return
   end subroutine tke_setup
@@ -2662,9 +2642,6 @@ contains
     use scale_atmos_grid_cartesC, only: &
          y0  => ATMOS_GRID_CARTESC_DOMAIN_CENTER_Y, &
          FYG => ATMOS_GRID_CARTESC_FYG
-    use scale_atmos_hydrometeor, only: &
-         ATMOS_HYDROMETEOR_dry
-
     implicit none
 
     ! Parameters for global domain size
@@ -4663,8 +4640,6 @@ contains
   !-----------------------------------------------------------------------------
   !> Make initial state ( sea breeze )
   subroutine MKINIT_seabreeze
-    use scale_prc_cartesC, only: &
-       PRC_NUM_X
     use scale_landuse, only: &
        LANDUSE_frac_land, &
        LANDUSE_calc_fact, &

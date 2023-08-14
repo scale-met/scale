@@ -34,6 +34,7 @@ module scale_atmos_phy_bl_mynn
      CHECK
 #endif
   use scale_const, only: &
+     PI     => CONST_PI,    &
      UNDEF  => CONST_UNDEF, &
      IUNDEF => CONST_UNDEF2
   !-----------------------------------------------------------------------------
@@ -46,6 +47,7 @@ module scale_atmos_phy_bl_mynn
   public :: ATMOS_PHY_BL_mynn_tracer_setup
   public :: ATMOS_PHY_BL_mynn_setup
   public :: ATMOS_PHY_BL_mynn_finalize
+  public :: ATMOS_PHY_BL_mynn_mkinit
   public :: ATMOS_PHY_BL_mynn_tendency
 
   !-----------------------------------------------------------------------------
@@ -70,6 +72,10 @@ module scale_atmos_phy_bl_mynn
   integer,  private, parameter :: I_QSQ = 3
   integer,  private, parameter :: I_COV = 4
 
+  integer,  private, parameter :: I_B71    = 1
+  integer,  private, parameter :: I_B91    = 2
+  integer,  private, parameter :: I_B91W01 = 3
+
   real(RP), private, parameter :: OneOverThree = 1.0_RP / 3.0_RP
   real(RP), private, parameter :: LT_min       = 1.E-6_RP
   real(RP), private, parameter :: FLX_LIM_FACT = 0.5_RP
@@ -90,10 +96,9 @@ module scale_atmos_phy_bl_mynn
   real(RP), private, parameter :: PrN = 0.74_RP
   !$acc declare create(A1, A2, C1, G2, Rf1, Rf2, Rfc)
 
-  real(RP), private            :: SQRT_2PI
-  real(RP), private            :: RSQRT_2PI
-  real(RP), private            :: RSQRT_2
-  !$acc declare create(SQRT_2PI, RSQRT_2PI, RSQRT_2)
+  real(RP), private, parameter :: SQRT_2PI  = sqrt( 2.0_RP * PI )
+  real(RP), private, parameter :: RSQRT_2PI = 1.0_RP / SQRT_2PI
+  real(RP), private, parameter :: RSQRT_2   = 1.0_RP / sqrt( 2.0_RP )
 
   logical,  private            :: initialize
 
@@ -126,9 +131,7 @@ module scale_atmos_phy_bl_mynn
   real(RP), private :: ATMOS_PHY_BL_MYNN_PBL_MAX    = 3000.0_RP !> maximum height of the PBL
   real(RP), private :: ATMOS_PHY_BL_MYNN_TKE_MIN    =  1.E-20_RP
   real(RP), private :: ATMOS_PHY_BL_MYNN_N2_MAX     =  1.E1_RP
-  real(RP), private :: ATMOS_PHY_BL_MYNN_NU_MIN     = -1.E1_RP
   real(RP), private :: ATMOS_PHY_BL_MYNN_NU_MAX     =  1.E4_RP
-  real(RP), private :: ATMOS_PHY_BL_MYNN_KH_MIN     = -1.E1_RP
   real(RP), private :: ATMOS_PHY_BL_MYNN_KH_MAX     =  1.E4_RP
   real(RP), private :: ATMOS_PHY_BL_MYNN_Lt_MAX     =  2000.0_RP
   real(RP), private :: ATMOS_PHY_BL_MYNN_zeta_lim   =  10.0_RP
@@ -137,10 +140,9 @@ module scale_atmos_phy_bl_mynn
   real(RP), private :: ATMOS_PHY_BL_MYNN_alpha2     = -1.0_RP ! N01: 1.0,   O19: 0.3
   real(RP), private :: ATMOS_PHY_BL_MYNN_alpha4     = -1.0_RP ! N01: 100.0, O19: 10.0
   real(RP), private :: ATMOS_PHY_BL_MYNN_DUMP_coef  = 0.5_RP
-  logical,  private :: ATMOS_PHY_BL_MYNN_init_TKE   = .false.
   logical,  private :: ATMOS_PHY_BL_MYNN_dz_sim     = .true.
   logical,  private :: ATMOS_PHY_BL_MYNN_similarity = .true.
-  !$acc declare create(ATMOS_PHY_BL_MYNN_Lt_MAX)
+  !$acc declare create(ATMOS_PHY_BL_MYNN_K2010,ATMOS_PHY_BL_MYNN_O2019,ATMOS_PHY_BL_MYNN_PBL_MAX,ATMOS_PHY_BL_MYNN_TKE_MIN,ATMOS_PHY_BL_MYNN_NU_MAX,ATMOS_PHY_BL_MYNN_KH_MAX,ATMOS_PHY_BL_MYNN_Lt_MAX,ATMOS_PHY_BL_MYNN_zeta_lim,ATMOS_PHY_BL_MYNN_Sq_fact,ATMOS_PHY_BL_MYNN_cns,ATMOS_PHY_BL_MYNN_alpha2,ATMOS_PHY_BL_MYNN_alpha4,ATMOS_PHY_BL_MYNN_dz_sim,ATMOS_PHY_BL_MYNN_similarity)
 
   character(len=H_SHORT), private  :: ATMOS_PHY_BL_MYNN_LEVEL = "2.5" ! "2.5" or "3"
 
@@ -149,9 +151,7 @@ module scale_atmos_phy_bl_mynn
        ATMOS_PHY_BL_MYNN_O2019,    &
        ATMOS_PHY_BL_MYNN_PBL_MAX,  &
        ATMOS_PHY_BL_MYNN_N2_MAX,   &
-       ATMOS_PHY_BL_MYNN_NU_MIN,   &
        ATMOS_PHY_BL_MYNN_NU_MAX,   &
-       ATMOS_PHY_BL_MYNN_KH_MIN,   &
        ATMOS_PHY_BL_MYNN_KH_MAX,   &
        ATMOS_PHY_BL_MYNN_Lt_MAX,   &
        ATMOS_PHY_BL_MYNN_zeta_lim, &
@@ -161,7 +161,6 @@ module scale_atmos_phy_bl_mynn
        ATMOS_PHY_BL_MYNN_alpha2,   &
        ATMOS_PHY_BL_MYNN_alpha4,   &
        ATMOS_PHY_BL_MYNN_DUMP_coef,&
-       ATMOS_PHY_BL_MYNN_init_TKE, &
        ATMOS_PHY_BL_MYNN_dz_sim,   &
        ATMOS_PHY_BL_MYNN_similarity
 
@@ -225,7 +224,6 @@ contains
   !! Setup
   !<
   subroutine ATMOS_PHY_BL_MYNN_setup( &
-       KA, KS, KE, IA, IS, IE, JA, JS, JE, &
        BULKFLUX_type, &
        dx, &
        TKE_MIN, PBL_MAX )
@@ -236,11 +234,6 @@ contains
     use scale_file_history, only: &
        FILE_HISTORY_reg
     implicit none
-
-    integer,  intent(in) :: KA, KS, KE
-    integer,  intent(in) :: IA, IS, IE
-    integer,  intent(in) :: JA, JS, JE
-
     character(len=*), intent(in) :: BULKFLUX_type
 
     real(RP), intent(in), optional :: dx
@@ -248,7 +241,7 @@ contains
     real(RP), intent(in), optional :: PBL_MAX
 
     integer :: ierr
-    integer :: k, i, j, n
+    integer :: n
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
@@ -268,7 +261,7 @@ contains
        call PRC_abort
     endif
     LOG_NML(PARAM_ATMOS_PHY_BL_MYNN)
-    !$acc update device(ATMOS_PHY_BL_MYNN_Lt_MAX)
+    !$acc update device(ATMOS_PHY_BL_MYNN_K2010,ATMOS_PHY_BL_MYNN_O2019,ATMOS_PHY_BL_MYNN_PBL_MAX,ATMOS_PHY_BL_MYNN_TKE_MIN,ATMOS_PHY_BL_MYNN_NU_MAX,ATMOS_PHY_BL_MYNN_KH_MAX,ATMOS_PHY_BL_MYNN_Lt_MAX,ATMOS_PHY_BL_MYNN_zeta_lim,ATMOS_PHY_BL_MYNN_Sq_fact,ATMOS_PHY_BL_MYNN_cns,ATMOS_PHY_BL_MYNN_alpha2,ATMOS_PHY_BL_MYNN_alpha4,ATMOS_PHY_BL_MYNN_dz_sim,ATMOS_PHY_BL_MYNN_similarity)
 
     ATMOS_PHY_BL_MYNN_MF = .false.
     if ( ATMOS_PHY_BL_MYNN_O2019 ) then
@@ -306,23 +299,16 @@ contains
     end if
 
 
-    A1        = B1 * (1.0_RP - 3.0_RP * G1) / 6.0_RP
-    A2        = 1.0_RP / (3.0_RP * G1 * B1**(1.0_RP/3.0_RP) * PrN )
-    C1        = G1 - 1.0_RP / ( 3.0_RP * A1 * B1**(1.0_RP/3.0_RP) )
-    G2        = ( 2.0_RP * A1 * (3.0_RP - 2.0_RP * C2) + B2 * (1.0_RP - C3) ) / B1
-    F2        = B1 * (G1 + G2) - 3.0_RP * A1 * (1.0_RP - C2)
+    A1  = B1 * (1.0_RP - 3.0_RP * G1) / 6.0_RP
+    A2  = 1.0_RP / (3.0_RP * G1 * B1**(1.0_RP/3.0_RP) * PrN )
+    C1  = G1 - 1.0_RP / ( 3.0_RP * A1 * B1**(1.0_RP/3.0_RP) )
+    G2  = ( 2.0_RP * A1 * (3.0_RP - 2.0_RP * C2) + B2 * (1.0_RP - C3) ) / B1
+    F2  = B1 * (G1 + G2) - 3.0_RP * A1 * (1.0_RP - C2)
 
-    Rf2       = B1 * G1 / F2
-    Rfc       = G1 / (G1 + G2)
+    Rf2 = B1 * G1 / F2
+    Rfc = G1 / (G1 + G2)
 
     !$acc update device(A1, A2, C1, G2, Rf1, Rf2, Rfc)
-
-    SQRT_2PI  = sqrt( 2.0_RP * PI )
-    RSQRT_2PI = 1.0_RP / SQRT_2PI
-    RSQRT_2   = 1.0_RP / sqrt( 2.0_RP )
-    !$acc update device(SQRT_2PI, RSQRT_2PI, RSQRT_2)
-
-    initialize = ATMOS_PHY_BL_MYNN_init_TKE
 
     select case ( BULKFLUX_type )
     case ( "B91", "B91W01" )
@@ -364,6 +350,284 @@ contains
   end subroutine ATMOS_PHY_BL_MYNN_finalize
 
   !-----------------------------------------------------------------------------
+  !> ATMOS_PHY_BL_MYNN_mkinit
+  !! initialize TKE
+  !<
+  subroutine ATMOS_PHY_BL_MYNN_mkinit( &
+       KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+       PROG,                               &
+       DENS, U, V, W, POTT,                &
+       PRES, EXNER, N2,                    &
+       QDRY, QV, Qw, POTL, POTV, SFC_DENS, &
+       SFLX_MU, SFLX_MV, SFLX_SH, SFLX_QV, &
+       us, ts, qs, RLmo,                   &
+       frac_land,                          &
+       CZ, FZ, F2H,                        &
+       BULKFLUX_type                       )
+    use scale_const, only: &
+       CPdry   => CONST_CPdry
+    use scale_prc, only: &
+       PRC_abort
+    use scale_atmos_hydrometeor, only: &
+       HYDROMETEOR_LHV => ATMOS_HYDROMETEOR_LHV, &
+       CP_VAPOR
+    use scale_matrix, only: &
+       MATRIX_SOLVER_tridiagonal
+    use scale_file_history, only: &
+       FILE_HISTORY_query, &
+       FILE_HISTORY_put
+    implicit none
+
+    integer, intent(in) :: KA, KS, KE
+    integer, intent(in) :: IA, IS, IE
+    integer, intent(in) :: JA, JS, JE
+
+    real(RP), intent(out) :: PROG(KA,IA,JA,ATMOS_PHY_BL_MYNN_ntracer) !> prognostic variables (TKE, TSQ, QSQ, COV)
+
+    real(RP), intent(in) :: DENS    (KA,IA,JA) !> density
+    real(RP), intent(in) :: U       (KA,IA,JA) !> zonal wind
+    real(RP), intent(in) :: V       (KA,IA,JA) !> meridional wind
+    real(RP), intent(in) :: W       (KA,IA,JA) !> vertical wind
+    real(RP), intent(in) :: POTT    (KA,IA,JA) !> potential temperature
+    real(RP), intent(in) :: PRES    (KA,IA,JA) !> pressure
+    real(RP), intent(in) :: EXNER   (KA,IA,JA) !> Exner function
+    real(RP), intent(in) :: N2      (KA,IA,JA) !> squared Brunt-Vaisala frequency
+    real(RP), intent(in) :: QDRY    (KA,IA,JA) !> dry air
+    real(RP), intent(in) :: QV      (KA,IA,JA) !> vapor
+    real(RP), intent(in) :: Qw      (KA,IA,JA) !> total water content
+    real(RP), intent(in) :: POTL    (KA,IA,JA) !> liquid water potential temp.
+    real(RP), intent(in) :: POTV    (KA,IA,JA) !> virtual potential temp.
+    real(RP), intent(in) :: SFC_DENS(   IA,JA) !> surface density
+    real(RP), intent(in) :: SFLX_MU (   IA,JA) !> surface flux of zonal wind
+    real(RP), intent(in) :: SFLX_MV (   IA,JA) !> surface flux of meridional wind
+    real(RP), intent(in) :: SFLX_SH (   IA,JA) !> surface sensible heat flux
+    real(RP), intent(in) :: SFLX_QV (   IA,JA) !> surface sensible QV flux
+    real(RP), intent(in) :: us      (   IA,JA) !> friction velocity
+    real(RP), intent(in) :: ts      (   IA,JA) !> temperature scale
+    real(RP), intent(in) :: qs      (   IA,JA) !> moisture scale
+    real(RP), intent(in) :: RLmo    (   IA,JA) !> inverse of Monin-Obukhov length
+
+    real(RP), intent(in) :: frac_land(IA,JA)
+
+    real(RP), intent(in)  :: CZ(  KA,IA,JA)
+    real(RP), intent(in)  :: FZ(0:KA,IA,JA)
+    real(RP), intent(in)  :: F2H(KA,2,IA,JA)
+
+    character(len=*), intent(in) :: BULKFLUX_type
+
+    ! bulkflux
+    integer :: I_B_TYPE
+
+    real(RP) :: Nu     (KA) !> eddy viscosity coefficient @ half-level
+    real(RP) :: Kh     (KA) !> eddy diffusion coefficient @ half-level
+    real(RP) :: Qlp    (KA) !> liquid-water content in partial condensation
+    real(RP) :: cldfrac(KA) !> cloud fraction in partial condensation
+    real(RP) :: Zi          !> depth of the boundary layer (not exact)
+    real(RP) :: SFLX_BUOY   !> surface flux of buoyancy: g / \Theta_0 <w \theta_v> @ surface
+
+    real(RP) :: Ri   (KA) !> Richardson number
+    real(RP) :: Pr   (KA) !> Plandtle number
+    real(RP) :: prod (KA) !> TKE production term
+    real(RP) :: diss (KA) !> TKE dissipation term
+    real(RP) :: dudz2(KA) !> (du/dz)^2 + (dv/dz)^2
+    real(RP) :: l    (KA) !> length scale L
+    real(RP) :: rho_h(KA)       !> dens at the half level
+
+    real(RP) :: RHO   (KA) !> dens after updated
+    real(RP) :: RHONu (KA) !> dens * Nu at the half level for level 2.5
+    real(RP) :: RHOKh (KA) !> dens * Kh at the half level for level 2.5
+    real(RP) :: N2_new(KA) !> squared Brunt-Baisala frequency
+    real(RP) :: SFLX_PT    !> surface potential temperature flux * density
+    real(RP) :: sm25  (KA) !> stability function for velocity for level 2.5
+    real(RP) :: sh25  (KA) !> stability function for scalars for level 2.5
+    real(RP) :: q     (KA) !> q
+    real(RP) :: lq    (KA) !> L * q
+
+    real(RP) :: tke(KA)
+
+    ! for level 3
+    real(RP) :: tsq   (KA)
+    real(RP) :: qsq   (KA)
+    real(RP) :: cov   (KA)
+    real(RP) :: prod_t(KA)
+    real(RP) :: prod_q(KA)
+    real(RP) :: prod_c(KA)
+    real(RP) :: diss_p(KA)
+    real(RP) :: dtldz(KA)
+    real(RP) :: dqwdz(KA)
+    real(RP) :: smp    (KA) !> stability function for velocity for the countergradient
+    real(RP) :: shpgh(KA)   !> stability function for scalars for the countergradient
+    real(RP) :: gammat (KA)
+    real(RP) :: gammaq (KA)
+
+    real(RP) :: CPtot
+
+    real(RP) :: FDZ(KA)
+    real(RP) :: CDZ(KA)
+    real(RP) :: z  (KA)
+
+    logical :: mynn_level3
+
+    real(RP), parameter :: dt = 1.0_RP
+
+    ! for O2019
+    real(RP) :: tflux(0:KA)
+    real(RP) :: qflux(0:KA)
+    real(RP) :: uflux(0:KA)
+    real(RP) :: vflux(0:KA)
+    real(RP) :: eflux(0:KA)
+
+    integer :: KE_PBL
+    integer :: k, i, j
+
+    !---------------------------------------------------------------------------
+
+    mynn_level3 = ( ATMOS_PHY_BL_MYNN_LEVEL == "3" )
+
+    select case ( BULKFLUX_type )
+    case ( 'B71' )
+       I_B_TYPE = I_B71
+    case ( 'B91' )
+       I_B_TYPE = I_B91
+    case ( 'B91W01' )
+       I_B_TYPE = I_B91W01
+    case default
+       LOG_ERROR("ATMOS_PHY_BL_MYNN_init_TKE",*) "BULKFLUX_type is invalid: ", trim(BULKFLUX_type)
+       call PRC_abort
+    end select
+
+    !$acc data copyout(PROG) copyin(DENS,U,V,POTT,PRES,EXNER,N2,QDRY,QV,Qw,POTL,POTV,SFC_DENS,SFLX_MU,SFLX_MV,SFLX_SH,SFLX_QV,us,ts,qs,RLmo,CZ,FZ,F2H)
+
+
+!OCL INDEPENDENT
+    !$omp parallel do default(none) &
+    !$omp OMP_SCHEDULE_ collapse(2) &
+    !$omp shared(KA,KS,KE,IS,IE,JS,JE, &
+    !$omp        CPdry,CP_VAPOR,UNDEF, &
+    !$omp        ATMOS_PHY_BL_MYNN_N2_MAX,ATMOS_PHY_BL_MYNN_TKE_MIN, &
+    !$omp        ATMOS_PHY_BL_MYNN_NU_MAX,ATMOS_PHY_BL_MYNN_KH_MAX, &
+    !$omp        ATMOS_PHY_BL_MYNN_Sq_fact, ATMOS_PHY_BL_MYNN_zeta_lim, &
+    !$omp        ATMOS_PHY_BL_MYNN_similarity,ATMOS_PHY_BL_MYNN_dz_sim, &
+    !$omp        ATMOS_PHY_BL_MYNN_DUMP_coef, &
+    !$omp        ATMOS_PHY_BL_MYNN_PBL_MAX, &
+    !$omp        ATMOS_PHY_BL_MYNN_K2010,ATMOS_PHY_BL_MYNN_O2019,ATMOS_PHY_BL_MYNN_MF, &
+    !$omp        DENS,PROG,U,V,W,POTT,PRES,QDRY,QV,Qw,POTV,POTL,EXNER,N2, &
+    !$omp        SFC_DENS,SFLX_MU,SFLX_MV,SFLX_SH,SFLX_QV,us,ts,qs,RLmo, &
+    !$omp        mynn_level3,initialize, &
+    !$omp        frac_land, &
+    !$omp        CZ,FZ,F2H, &
+    !$omp        I_B_TYPE) &
+    !$omp private(N2_new,lq,sm25,sh25,q, &
+    !$omp         SFLX_PT,CPtot,RHO,RHONu,RHOKh, &
+    !$omp         Nu,Kh,Qlp,cldfrac,Zi,SFLX_BUOY, &
+    !$omp         Ri,Pr,prod,diss,dudz2,l, &
+    !$omp         smp,shpgh, &
+    !$omp         dtldz,dqwdz,gammat,gammaq, &
+    !$omp         rho_h,tke,CDZ,FDZ,z, &
+    !$omp         tsq,qsq,cov, &
+    !$omp         prod_t,prod_q,prod_c,diss_p, &
+    !$omp         tflux,qflux,uflux,vflux,eflux, &
+    !$omp         KE_PBL,k,i,j)
+    !$acc kernels
+    do j = JS, JE
+    !$acc loop &
+    !$acc private(N2_new,lq,sm25,sh25,q, &
+    !$acc         SFLX_PT,CPtot,RHO,RHONu,RHOKh, &
+    !$acc         Nu,Kh,Qlp,cldfrac,Zi,SFLX_BUOY, &
+    !$acc         Ri,Pr,prod,diss,dudz2,l, &
+    !$acc         smp,shpgh, &
+    !$acc         dtldz,dqwdz,gammat,gammaq, &
+    !$acc         rho_h,tke,CDZ,FDZ,z1, &
+    !$acc         tsq,qsq,cov, &
+    !$acc         prod_t,prod_q,prod_c,diss_p, &
+    !$acc         KE_PBL)
+    do i = IS, IE
+
+       do k = KS, KE-1
+          z(k) = CZ(k,i,j) - FZ(KS-1,i,j)
+       end do
+
+       KE_PBL = KS+1
+       !$acc loop seq
+       do k = KS+2, KE-1
+          if ( ATMOS_PHY_BL_MYNN_PBL_MAX >= z(k) ) then
+             KE_PBL = k
+          else
+             exit
+          end if
+       end do
+
+       do k = KS, KE_PBL+1
+          CDZ(k) = FZ(k,i,j) - FZ(k-1,i,j)
+       end do
+       do k = KS, KE_PBL
+          FDZ(k) = CZ(k+1,i,j) - CZ(k,i,j)
+       end do
+
+       do k = KS, KE_PBL
+          tke(k) = 0.01_RP
+       end do
+
+       CPtot = CPdry + SFLX_QV(i,j) * ( CP_VAPOR - CPdry )
+       SFLX_PT = SFLX_SH(i,j) / ( CPtot * EXNER(KS,i,j) )
+
+       call MYNN_main( KA, KS, KE_PBL, &
+                       i, j, &
+                       tke(:), tsq(:), qsq(:), cov(:),                     & ! (inout)
+                       q(:), l(:), lq(:),                                  & ! (out)
+                       Nu(:), RHONu(:), Kh(:), RHOKh(:), Pr(:),            & ! (out)
+                       prod(:), prod_t(:), prod_q(:), prod_c(:),           & ! (out)
+                       diss(:), diss_p(:),                                 & ! (out)
+                       sm25(:), smp(:), sh25(:), shpgh(:),                 & ! (out)
+                       gammat(:), gammaq(:),                               & ! (out)
+                       dudz2(:), n2_new(:), Ri(:),                         & ! (out)
+                       dtldz(:), dqwdz(:),                                 & ! (out)
+                       RHO(:), rho_h(:),                                   & ! (out)
+                       uflux(:), vflux(:), tflux(:), qflux(:), qflux(:),   & ! (out)
+                       Qlp(:), cldfrac(:), Zi, SFLX_BUOY,                  & ! (out)
+                       U(:,i,j), V(:,i,j), W(:,i,j),                       & ! (in)
+                       DENS(:,i,j), PRES(:,i,j),                           & ! (in)
+                       POTT(:,i,j), POTL(:,i,j), POTV(:,i,j),              & ! (in)
+                       Qw(:,i,j), N2(:,i,j),                               & ! (in)
+                       EXNER(:,i,j), QDRY(:,i,j),                          & ! (in)
+                       SFLX_PT, SFLX_SH(i,j), SFLX_QV(i,j), SFC_DENS(i,j), & ! (in)
+                       RLmo(i,j), us(i,j), ts(i,j), qs(i,j),               & ! (in)
+                       z(:), CDZ(:), FDZ(:), F2H(:,:,i,j),                 & ! (in)
+                       frac_land(i,j),                                     & ! (in)
+                       dt,                                                 & ! (in)
+                       I_B_TYPE,                                           & ! (in)
+                       mynn_level3, .true.                                 ) ! (in)
+
+       do k = KS, KE_PBL
+          PROG(k,i,j,I_TKE) = tke(k)
+       end do
+       do k = KE_PBL+1, KE
+          PROG(k,i,j,I_TKE) = 0.0_RP
+       end do
+
+       if ( mynn_level3 ) then
+          do k = KS, KE_PBL
+             PROG(k,i,j,I_TSQ) = tsq(k)
+             PROG(k,i,j,I_QSQ) = qsq(k)
+             PROG(k,i,j,I_COV) = cov(k)
+          end do
+          do k = KE_PBL+1, KE
+             PROG(k,i,j,I_TSQ) = 0.0_RP
+             PROG(k,i,j,I_QSQ) = 0.0_RP
+             PROG(k,i,j,I_COV) = 0.0_RP
+          end do
+       end if
+
+    end do
+    end do
+    !$acc end kernels
+
+    !$acc end data
+
+    return
+  end subroutine ATMOS_PHY_BL_MYNN_mkinit
+
+  !-----------------------------------------------------------------------------
   !> ATMOS_PHY_BL_MYNN_tendency
   !! calculate tendency by the vertical eddy viscosity
   !<
@@ -382,11 +646,7 @@ contains
        Nu, Kh, Qlp, cldfrac,               &
        Zi, SFLX_BUOY                       )
     use scale_const, only: &
-       EPS     => CONST_EPS,    &
-       GRAV    => CONST_GRAV,   &
-       KARMAN  => CONST_KARMAN, &
-       CPdry   => CONST_CPdry,  &
-       EPSTvap => CONST_EPSTvap
+       CPdry   => CONST_CPdry
     use scale_prc, only: &
        PRC_abort
     use scale_atmos_hydrometeor, only: &
@@ -449,9 +709,6 @@ contains
     real(RP), intent(out) :: SFLX_BUOY (IA,JA) !> surface flux of buoyancy: g / \Theta_0 <w \theta_v> @ surface
 
     ! bulkflux
-    integer, parameter :: I_B71    = 1
-    integer, parameter :: I_B91    = 2
-    integer, parameter :: I_B91W01 = 3
     integer :: I_B_TYPE
 
     real(RP) :: Ri   (KA,IA,JA) !> Richardson number
@@ -479,45 +736,25 @@ contains
     real(RP) :: SFLX_PT    !> surface potential temperature flux * density
     real(RP) :: sm25  (KA) !> stability function for velocity for level 2.5
     real(RP) :: sh25  (KA) !> stability function for scalars for level 2.5
-    real(RP) :: Nu_f  (KA) !> Nu at the full level
-    real(RP) :: Kh_f  (KA) !> Kh at the full level
     real(RP) :: q     (KA) !> q
-    real(RP) :: q2_2  (KA) !> q^2 for level 2
-    real(RP) :: ac    (KA) !> \alpha_c
     real(RP) :: lq    (KA) !> L * q
+
+    real(RP) :: tke(KA)
 
     ! for level 3
     real(RP) :: tsq   (KA)
     real(RP) :: qsq   (KA)
     real(RP) :: cov   (KA)
-    real(RP) :: dtsq  (KA)
-    real(RP) :: dqsq  (KA)
-    real(RP) :: dcov  (KA)
     real(RP) :: prod_t(KA)
     real(RP) :: prod_q(KA)
     real(RP) :: prod_c(KA)
     real(RP) :: diss_p(KA)
     real(RP) :: dtldz(KA)
     real(RP) :: dqwdz(KA)
-    real(RP) :: betat(KA)
-    real(RP) :: betaq(KA)
     real(RP) :: smp    (KA) !> stability function for velocity for the countergradient
-    real(RP) :: f_smp  (KA) !> stability function for velocity for the countergradient (factor)
     real(RP) :: shpgh(KA)   !> stability function for scalars for the countergradient
-    real(RP) :: f_shpgh(KA) !> stability function for scalars for the countergradient (factor)
-    real(RP) :: tltv
-    real(RP) :: qwtv
-    real(RP) :: tvsq
-    real(RP) :: tltv25 (KA)
-    real(RP) :: qwtv25 (KA)
-    real(RP) :: tvsq25 (KA)
-    real(RP) :: tvsq_up(KA) !> upper limit of <\theta_v^2> - <\theta_v^2>2.5
-    real(RP) :: tvsq_lo(KA) !> lower limit
-    real(RP) :: wtl
-    real(RP) :: wqw
     real(RP) :: gammat (KA)
     real(RP) :: gammaq (KA)
-    real(RP) :: f_gamma(KA) !> - E_H / q^2 * GRAV / Theta_0
     real(RP) :: rlqsm_h(KA) !> DENS * L * q * SM' @ half level
 
     real(RP) :: flx(0:KA)
@@ -527,15 +764,11 @@ contains
     real(RP) :: d(KA)
     real(RP) :: ap
     real(RP) :: phi_N(KA)
-    real(RP) :: tke_P(KA)
     real(RP) :: dummy(KA)
 
     real(RP) :: CPtot
 
     real(RP) :: sf_t
-    real(RP) :: us3
-    real(RP) :: zeta
-    real(RP) :: phi_m, phi_h
 
     real(RP) :: FDZ(KA)
     real(RP) :: CDZ(KA)
@@ -549,24 +782,18 @@ contains
     integer  :: kmin
 
     ! for O2019
-    real(RP) :: mflux(0:KA)
     real(RP) :: tflux(0:KA)
     real(RP) :: qflux(0:KA)
     real(RP) :: uflux(0:KA)
     real(RP) :: vflux(0:KA)
     real(RP) :: eflux(0:KA)
-    real(RP) :: zit, zie
-    real(RP) :: tke_min
-    real(RP) :: we
-    real(RP) :: dtv, tmin
 
-    real(RP) :: tmp, sw
+    real(RP) :: tmp
 
     logical :: do_put
 
     integer :: KE_PBL
     integer :: k, k2, i, j
-    integer :: nit, it
 
 #ifdef _OPENACC
     real(RP) :: work(KA,4)
@@ -601,10 +828,9 @@ contains
     !$omp parallel do default(none) &
     !$omp OMP_SCHEDULE_ collapse(2) &
     !$omp shared(KA,KS,KE,IS,IE,JS,JE, &
-    !$omp        EPS,GRAV,CPdry,CP_VAPOR,EPSTvap,UNDEF,RSQRT_2,SQRT_2PI,RSQRT_2PI, &
+    !$omp        CPdry,CP_VAPOR,UNDEF, &
     !$omp        ATMOS_PHY_BL_MYNN_N2_MAX,ATMOS_PHY_BL_MYNN_TKE_MIN, &
-    !$omp        ATMOS_PHY_BL_MYNN_NU_MIN,ATMOS_PHY_BL_MYNN_NU_MAX, &
-    !$omp        ATMOS_PHY_BL_MYNN_KH_MIN,ATMOS_PHY_BL_MYNN_KH_MAX, &
+    !$omp        ATMOS_PHY_BL_MYNN_NU_MAX,ATMOS_PHY_BL_MYNN_KH_MAX, &
     !$omp        ATMOS_PHY_BL_MYNN_Sq_fact, ATMOS_PHY_BL_MYNN_zeta_lim, &
     !$omp        ATMOS_PHY_BL_MYNN_similarity,ATMOS_PHY_BL_MYNN_dz_sim, &
     !$omp        ATMOS_PHY_BL_MYNN_DUMP_coef, &
@@ -613,38 +839,37 @@ contains
     !$omp        RHOU_t,RHOV_t,RHOT_t,RHOQV_t,RPROG_t,Nu,Kh,Qlp,cldfrac,Zi,SFLX_BUOY, &
     !$omp        DENS,PROG,U,V,W,POTT,PRES,QDRY,QV,Qw,POTV,POTL,EXNER,N2, &
     !$omp        SFC_DENS,SFLX_MU,SFLX_MV,SFLX_SH,SFLX_QV,us,ts,qs,RLmo, &
-    !$omp        mynn_level3,initialize, &
+    !$omp        mynn_level3, &
     !$omp        frac_land, &
     !$omp        CZ,FZ,F2H,dt, &
     !$omp        I_B_TYPE, &
     !$omp        Ri,Pr,prod,diss,dudz2,l,flxU,flxV,flxT,flxQ,flxU2,flxV2,flxT2,flxQ2) &
-    !$omp private(N2_new,lq,sm25,sh25,rlqsm_h,Nu_f,Kh_f,q,q2_2,ac, &
+    !$omp private(N2_new,lq,sm25,sh25,rlqsm_h,q, &
     !$omp         SFLX_PT,CPtot,RHO,RHONu,RHOKh, &
-    !$omp         smp,f_smp,shpgh,f_shpgh,tltv,qwtv,tvsq,tltv25,qwtv25,tvsq25,tvsq_up,tvsq_lo,wtl,wqw, &
-    !$omp         dtldz,dqwdz,betat,betaq,gammat,gammaq,f_gamma, &
-    !$omp         flx,a,b,c,d,ap,rho_h,phi_n,tke_P,sf_t,zeta,phi_m,phi_h,us3,CDZ,FDZ,z, &
+    !$omp         smp,shpgh, &
+    !$omp         dtldz,dqwdz,gammat,gammaq, &
+    !$omp         flx,a,b,c,d,ap,rho_h,phi_n,tke,sf_t,CDZ,FDZ,z, &
     !$omp         dummy, &
-    !$omp         tsq,qsq,cov,dtsq,dqsq,dcov, &
+    !$omp         tsq,qsq,cov, &
     !$omp         prod_t,prod_q,prod_c,diss_p, &
-    !$omp         fmin,kmin,we, &
-    !$omp         mflux,tflux,qflux,uflux,vflux,eflux, &
-    !$omp         zit,zie,tke_min,tmin,dtv, &
-    !$omp         sw,tmp, &
-    !$omp         KE_PBL,k,k2,i,j,it,nit)
+    !$omp         fmin,kmin, &
+    !$omp         tflux,qflux,uflux,vflux,eflux, &
+    !$omp         tmp, &
+    !$omp         KE_PBL,k,k2,i,j)
     !$acc kernels
     do j = JS, JE
     !$acc loop &
-    !$acc private(N2_new,lq,sm25,sh25,rlqsm_h,Nu_f,Kh_f,q,q2_2,ac, &
+    !$acc private(N2_new,lq,sm25,sh25,rlqsm_h,q, &
     !$acc         SFLX_PT,CPtot,RHO,RHONu,RHOKh, &
-    !$acc         smp,f_smp,shpgh,f_shpgh,tltv,qwtv,tvsq,tltv25,qwtv25,tvsq25,tvsq_up,tvsq_lo,wtl,wqw, &
-    !$acc         dtldz,dqwdz,betat,betaq,gammat,gammaq,f_gamma, &
-    !$acc         flx,a,b,c,d,ap,rho_h,phi_n,tke_P,sf_t,zeta,phi_m,phi_h,us3,CDZ,FDZ,z1, &
+    !$acc         smp,shpgh, &
+    !$acc         dtldz,dqwdz,gammat,gammaq, &
+    !$acc         flx,a,b,c,d,ap,rho_h,phi_n,tke,sf_t,CDZ,FDZ,z1, &
     !$acc         dummy, &
-    !$acc         tsq,qsq,cov,dtsq,dqsq,dcov, &
+    !$acc         tsq,qsq,cov, &
     !$acc         prod_t,prod_q,prod_c,diss_p, &
     !$acc         fmin,kmin, &
-    !$acc         sw,tmp, &
-    !$acc         KE_PBL,it,nit, &
+    !$acc         tmp, &
+    !$acc         KE_PBL, &
     !$acc         work)
     do i = IS, IE
 
@@ -655,888 +880,403 @@ contains
        KE_PBL = KS+1
        !$acc loop seq
        do k = KS+2, KE-1
-          if ( ATMOS_PHY_BL_MYNN_PBL_MAX >= Z(k) ) then
+          if ( ATMOS_PHY_BL_MYNN_PBL_MAX >= z(k) ) then
              KE_PBL = k
           else
              exit
           end if
        end do
 
-       if ( ATMOS_PHY_BL_MYNN_similarity .or. initialize ) then
-
-          zeta = min( max( z(KS) * RLmo(i,j), -ATMOS_PHY_BL_MYNN_zeta_lim ), ATMOS_PHY_BL_MYNN_zeta_lim )
-
-          select case ( I_B_TYPE )
-          case ( I_B71 )
-             ! Businger et al. (1971)
-             if ( zeta >= 0 ) then
-                phi_m = 4.7_RP * zeta + 1.0_RP
-                phi_h = 4.7_RP * zeta + 0.74_RP
-             else
-                phi_m = 1.0_RP / sqrt(sqrt( 1.0_RP - 15.0_RP * zeta ))
-                phi_h = 0.47_RP / sqrt( 1.0_RP - 9.0_RP * zeta )
-             end if
-          case ( I_B91, I_B91W01 )
-             ! Beljaars and Holtslag (1991)
-             if ( zeta >= 0 ) then
-                tmp = - 2.0_RP / 3.0_RP * ( 0.35_RP * zeta - 6.0_RP ) * exp(-0.35_RP*zeta) * zeta
-                phi_m = tmp + zeta + 1.0_RP
-                phi_h = tmp + zeta * sqrt( 1.0_RP + 2.0_RP * zeta / 3.0_RP ) + 1.0_RP
-             else
-                if ( I_B_TYPE == I_B91W01 ) then
-                   ! Wilson (2001)
-                   !tmp = (-zeta)**(2.0_RP/3.0_RP)
-                   tmp = abs(zeta)**(2.0_RP/3.0_RP)
-                   phi_m = 1.0_RP / sqrt( 1.0_RP + 3.6_RP * tmp )
-                   phi_h = 0.95_RP / sqrt( 1.0_RP + 7.9_RP * tmp )
-                else
-                   !                      tmp = sqrt( 1.0_RP - 16.0_RP * zeta )
-                   tmp = sqrt( 1.0_RP + 16.0_RP * abs(zeta) )
-                   phi_m = 1.0_RP / sqrt(tmp)
-                   phi_h = 1.0_RP / tmp
-                end if
-             end if
-          end select
-
-       end if
-
-       do k = KS, KE_PBL
-          FDZ(k) = CZ(k+1,i,j) - CZ(k  ,i,j)
-       end do
        do k = KS, KE_PBL+1
-          CDZ(k) = FZ(k  ,i,j) - FZ(k-1,i,j)
+          CDZ(k) = FZ(k,i,j) - FZ(k-1,i,j)
        end do
-
-       call calc_vertical_differece( KA, KS, KE_PBL, &
-                                     i, j, &
-                                     U(:,i,j), V(:,i,j), POTL(:,i,j), & ! (in)
-                                     Qw(:,i,j), QDRY(:,i,j),          & ! (in)
-                                     CDZ(:), FDZ(:), F2H(:,:,i,j),    & ! (in)
-#ifdef _OPENACC
-                                     work(:,:),                       & ! (work)
-#endif
-                                     us(i,j), ts(i,j), qs(i,j),       & ! (in)
-                                     phi_m, phi_h, z(KS),             & ! (in)
-                                     dudz2(:,i,j), dtldz(:), dqwdz(:) ) ! (out)
-
-       us3 = us(i,j)**3
-       CPtot = CPdry + SFLX_QV(i,j) * ( CP_VAPOR - CPdry )
-       SFLX_PT = SFLX_SH(i,j) / ( CPtot * EXNER(KS,i,j) )
-
-       if ( initialize ) then
-          do k = KS, KE_PBL
-             q(k) = 0.1_RP
-          end do
-       else
-          do k = KS, KE_PBL
-             q(k) = sqrt( max( PROG(k,i,j,I_TKE), ATMOS_PHY_BL_MYNN_TKE_MIN ) * 2.0_RP )
-          end do
-       end if
        do k = KS, KE_PBL
-          tke_p(k) = q(k)**2 * 0.5_RP
+          FDZ(k) = CZ(k+1,i,j) - CZ(k,i,j)
        end do
 
-       if ( ATMOS_PHY_BL_MYNN_O2019 ) then
-          tmin = 999e10_RP
-          do k = KS, KE_PBL
-             tmin = min( tmin, POTL(k,i,j) * ( 1.0_RP + EPSTvap * Qw(k,i,j) ) )
-             if ( z(k) > 200.0_RP ) then
-                k2 = k
-                exit
-             end if
-          end do
-          if ( frac_land(i,j) >= 0.5_RP ) then ! over land
-             dtv = 1.25_RP
-          else ! over water
-             dtv = 0.75_RP
-          end if
-          do k = k2+1, KE_PBL
-             if ( tmin + dtv <= POTL(k,i,j) * ( 1.0_RP + EPSTvap * Qw(k,i,j) ) ) then
-                zit = z(k)
-                exit
-             end if
-          end do
-          if ( initialize ) then
-             zie = 1000.0_RP
-          else
-             tke_min = max( tke_p(KS), 0.02_RP )
-             do k = KS+1, KE_PBL
-                if ( tke_p(k) <= tke_min * 0.05_RP ) then
-                   zie = z(k)
-                   exit
-                end if
-             end do
-          end if
-          we = 0.5_RP * tanh( ( zit - 200.0_RP ) / 400.0_RP ) + 0.5_RP
-          Zi(i,j) = zit * ( 1.0_RP - we ) + zie * we
-       end if
+       do k = KS, KE_PBL
+          tke(k) = max( PROG(k,i,j,I_TKE), ATMOS_PHY_BL_MYNN_TKE_MIN )
+       end do
 
-       if ( initialize .or. (.not. mynn_level3) ) then
-          ! estimate tsq, qsq, and cov
-
-          do k = KS, KE_PBL
-             n2_new(k) = min( max( N2(k,i,j), - ATMOS_PHY_BL_MYNN_N2_MAX ), ATMOS_PHY_BL_MYNN_N2_MAX )
-             Ri(k,i,j) = n2_new(k) / dudz2(k,i,j)
-          end do
-          if ( initialize ) then
-             dudz2(KS,i,j) = max( dudz2(KS,i,j), 1E-4_RP )
-             n2_new(KS) = min( n2_new(KS), 0.0_RP )
-             Ri(KS,i,j) = n2_new(KS) / dudz2(KS,i,j)
-          end if
-
-          SFLX_BUOY(i,j) = - us3 * RLmo(i,j) / KARMAN
-
-          if ( ATMOS_PHY_BL_MYNN_MF ) then
-             call calc_mflux( &
-                  KA, KS, KE_PBL, &
-                  DENS(:,i,j), POTV(:,i,j), POTL(:,i,j), Qw(:,i,j), &
-                  U(:,i,j), V(:,i,j), W(:,i,j), tke_p(:),           & ! (in)
-                  cldfrac(:,i,j),                                   & ! (in)
-                  EXNER(:,i,j),                                     & ! (in)
-                  SFLX_SH(i,j), SFLX_BUOY(i,j),                     & ! (in)
-                  SFLX_PT, SFLX_QV(i,j),                            & ! (in)
-                  SFC_DENS(i,j),                                    & ! (in)
-                  Zi(i,j), Z(:), CDZ(:), F2H(:,:,i,j),              & ! (in)
-                  mflux(:),                                         & ! (out)
-                  tflux(:), qflux(:), uflux(:), vflux(:), eflux(:)  ) ! (out)
-          end if
-
-          ! length
-          call get_length( &
-               KA, KS, KE_PBL, &
-               q(:), n2_new(:),           & ! (in)
-               POTV(:,i,j), DENS(:,i,j),  & ! (in)
-               mflux(:),                  & ! (in)
-               Zi(i,j),                   & ! (in)
-               SFLX_BUOY(i,j), RLmo(i,j), & ! (in)
-               z(:), CDZ(:), FDZ(:),      & ! (in)
-               initialize,                & ! (in)
-               l(:,i,j)                   ) ! (out)
-
-          call get_q2_level2( &
-               KA, KS, KE_PBL, &
-               dudz2(:,i,j), Ri(:,i,j), l(:,i,j), & ! (in)
-               q2_2(:)                            ) ! (out)
-
-          if ( initialize ) then
-             do k = KS, KE_PBL
-                q(k) = sqrt( q2_2(k) )
-             end do
-          end if
-
-          do k = KS, KE_PBL
-             ac(k) = min( q(k) / sqrt( q2_2(k) + 1e-20_RP ), 1.0_RP )
-          end do
-
-          call get_smsh( &
-               KA, KS, KE_PBL,            & ! (in)
-               i, j,                      & ! (in)
-               q(:), ac(:),               & ! (in)
-               l(:,i,j), n2_new(:),       & ! (in)
-               Ri(:,i,j),                 & ! (in)
-               POTV(:,i,j), dudz2(:,i,j), & ! (in)
-               dtldz(:), dqwdz(:),        & ! (in)
-               betat(:), betaq(:),        & ! (in) ! dummy
-               .false., .false.,          & ! (in)
-               tsq(:), qsq(:), cov(:),    & ! (inout)
-               sm25(:), f_smp(:),         & ! (out) ! dummy
-               sh25(:), f_shpgh(:),       & ! (out) ! dymmy
-               f_gamma(:),                & ! (out) ! dummy
-               tltv25(:), qwtv25(:),      & ! (out) ! dummy
-               tvsq25(:),                 & ! (out) ! dummy
-               tvsq_up(:), tvsq_lo(:)     ) ! (out) ! dummy
-
-       else
-
+       if ( mynn_level3 ) then
           do k = KS, KE_PBL
              tsq(k) = max( PROG(k,i,j,I_TSQ), 0.0_RP )
              qsq(k) = max( PROG(k,i,j,I_QSQ), 0.0_RP )
              cov(k) = PROG(k,i,j,I_COV)
              cov(k) = sign( min( abs(cov(k)), sqrt(tsq(k) * qsq(k))), cov(k) )
           end do
-
        end if
 
+       CPtot = CPdry + SFLX_QV(i,j) * ( CP_VAPOR - CPdry )
+       SFLX_PT = SFLX_SH(i,j) / ( CPtot * EXNER(KS,i,j) )
+
+       call MYNN_main( KA, KS, KE_PBL, &
+                       i, j, &
+                       tke(:), tsq(:), qsq(:), cov(:),                      & ! (inout)
+                       q(:), l(:,i,j), lq(:),                               & ! (out)
+                       Nu(:,i,j), RHONu(:), Kh(:,i,j), RHOKh(:), Pr(:,i,j), & ! (out)
+                       prod(:,i,j), prod_t(:), prod_q(:), prod_c(:),        & ! (out)
+                       diss(:,i,j), diss_p(:),                              & ! (out)
+                       sm25(:), smp(:), sh25(:), shpgh(:),                  & ! (out)
+                       gammat(:), gammaq(:),                                & ! (out)
+                       dudz2(:,i,j), n2_new(:), Ri(:,i,j),                  & ! (out)
+                       dtldz(:), dqwdz(:),                                  & ! (out)
+                       RHO(:), rho_h(:),                                    & ! (out)
+                       uflux(:), vflux(:), tflux(:), qflux(:), qflux(:),    & ! (out)
+                       Qlp(:,i,j), cldfrac(:,i,j), Zi(i,j), SFLX_BUOY(i,j), & ! (out)
+                       U(:,i,j), V(:,i,j), W(:,i,j),                        & ! (in)
+                       DENS(:,i,j), PRES(:,i,j),                            & ! (in)
+                       POTT(:,i,j), POTL(:,i,j), POTV(:,i,j),               & ! (in)
+                       Qw(:,i,j), N2(:,i,j),                                & ! (in)
+                       EXNER(:,i,j), QDRY(:,i,j),                           & ! (in)
+                       SFLX_PT, SFLX_SH(i,j), SFLX_QV(i,j), SFC_DENS(i,j),  & ! (in)
+                       RLmo(i,j), us(i,j), ts(i,j), qs(i,j),                & ! (in)
+                       z(:), CDZ(:), FDZ(:), F2H(:,:,i,j),                  & ! (in)
+                       frac_land(i,j),                                      & ! (in)
+                       dt,                                                  & ! (in)
+                       I_B_TYPE,                                            & ! (in)
+                       mynn_level3, .false.                                 ) ! (in)
+
+
+       ! time integration
 
        flx(KS-1  ) = 0.0_RP
        flx(KE_PBL) = 0.0_RP
 
-       if ( initialize ) then
-          nit = KE_PBL - 1
+       do k = KS, KE_PBL-1
+          rlqsm_h(k) = rho_h(k) * ( F2H(k,1,i,j) * lq(k+1) * smp(k+1) + F2H(k,2,i,j) * lq(k) * smp(k) )
+       end do
+
+       ! dens * u
+
+       if ( ATMOS_PHY_BL_MYNN_MF ) then
+          do k = KS, KE_PBL-1
+             flx(k) = uflux(k)
+          end do
        else
-          nit = 1
+          ! countergradient flux
+          do k = KS, KE_PBL-1
+             flx(k) = - rlqsm_h(k) * ( U(k+1,i,j) - U(k,i,j) ) / FDZ(k)
+          end do
        end if
 
-       !$acc loop seq
-       do it = 1, nit
-
-          call partial_condensation( KA, KS, KE_PBL, &
-                                     PRES(:,i,j), POTT(:,i,j),  & ! (in)
-                                     POTL(:,i,j), Qw(:,i,j),    & ! (in)
-                                     QDRY(:,i,j), EXNER(:,i,j), & ! (in)
-                                     tsq(:), qsq(:), cov(:),    & ! (in)
+       sf_t = SFLX_MU(i,j) / CDZ(KS)
+       d(KS) = ( U(KS,i,j) * DENS(KS,i,j) + dt * ( sf_t - flx(KS) / CDZ(KS) ) ) / RHO(KS)
+       do k = KS+1, KE_PBL
+          d(k) = U(k,i,j) - dt * ( flx(k) - flx(k-1) ) / ( CDZ(k) * RHO(k) )
+       end do
+       c(KS) = 0.0_RP
+       do k = KS, KE_PBL-1
+          ap = - dt * RHONu(k) / FDZ(k)
+          a(k) = ap / ( RHO(k) * CDZ(k) )
 #ifdef _OPENACC
-                                     work(:,:),                 & ! (work)
-#endif
-                                     betat(:), betaq(:),        & ! (out)
-                                     Qlp(:,i,j), cldfrac(:,i,j) ) ! (out)
-
-          ! update N2
-          do k = KS, KE_PBL
-             n2_new(k) = min(ATMOS_PHY_BL_MYNN_N2_MAX, &
-                             GRAV * ( dtldz(k) * betat(k) + dqwdz(k) * betaq(k) ) / POTV(k,i,j) )
-          end do
-
-          do k = KS, KE_PBL
-             Ri(k,i,j) = n2_new(k) / dudz2(k,i,j)
-          end do
-
-          SFLX_BUOY(i,j) = GRAV / POTV(KS,i,j) * ( betat(KS) * SFLX_PT + betaq(KS) * SFLX_QV(i,j) ) / SFC_DENS(i,j)
-
-
-          if ( ATMOS_PHY_BL_MYNN_O2019 ) then
-
-             tmin = 999e10_RP
-             do k = KS, KE_PBL
-                tmin = min( tmin, POTL(k,i,j) * betat(k) + Qw(k,i,j) * betaq(k) )
-                if ( z(k) > 200.0_RP ) then
-                   k2 = k
-                   exit
-                end if
-             end do
-             if ( frac_land(i,j) >= 0.5_RP ) then ! over land
-                dtv = 1.25_RP
-             else ! over water
-                dtv = 0.75_RP
-             end if
-             do k = k2+1, KE_PBL
-                if ( tmin + dtv <= POTL(k,i,j) * betat(k) + Qw(k,i,j) * betaq(k) ) then
-                   zit = z(k)
-                   exit
-                end if
-             end do
-             tke_min = max( tke_p(KS), 0.02_RP )
-             do k = KS+1, KE_PBL
-                if ( tke_p(k) <= tke_min * 0.05_RP ) then
-                   zie = z(k)
-                   exit
-                end if
-             end do
-             we = 0.5_RP * tanh( ( zit - 200.0_RP ) / 400.0_RP ) + 0.5_RP
-             Zi(i,j) = zit * we + zie * ( 1.0_RP - we )
-
-             if ( ATMOS_PHY_BL_MYNN_MF ) then
-                call calc_mflux( &
-                     KA, KS, KE_PBL, &
-                     DENS(:,i,j), POTV(:,i,j), POTL(:,i,j), Qw(:,i,j), &
-                     U(:,i,j), V(:,i,j), W(:,i,j), tke_p(:),           & ! (in)
-                     cldfrac(:,i,j),                                   & ! (in)
-                     EXNER(:,i,j),                                     & ! (in)
-                     SFLX_SH(i,j), SFLX_BUOY(i,j),                     & ! (in)
-                     SFLX_PT, SFLX_QV(i,j),                            & ! (in)
-                     SFC_DENS(i,j),                                    & ! (in)
-                     Zi(i,j), Z(:), CDZ(:), F2H(:,:,i,j),              & ! (in)
-                     mflux(:),                                         & ! (out)
-                     tflux(:), qflux(:), uflux(:), vflux(:), eflux(:)  ) ! (out)
-             end if
-          end if
-
-
-          ! length
-          call get_length( &
-               KA, KS, KE_PBL, &
-               q(:), n2_new(:),           & ! (in)
-               POTV(:,i,j), DENS(:,i,j),  & ! (in)
-               mflux(:),                  & ! (in)
-               Zi(i,j),                   & ! (in)
-               SFLX_BUOY(i,j), RLmo(i,j), & ! (in)
-               z(:), CDZ(:), FDZ(:),      & ! (in)
-               .false.,                   & ! (in)
-               l(:,i,j)                   ) ! (out)
-
-          call get_q2_level2( &
-               KA, KS, KE_PBL, &
-               dudz2(:,i,j), Ri(:,i,j), l(:,i,j), & ! (in)
-               q2_2(:)                            ) ! (out)
-
-          do k = KS, KE_PBL
-             ac(k) = min( q(k) / sqrt( q2_2(k) + 1e-20_RP ), 1.0_RP )
-          end do
-
-          call get_smsh( &
-               KA, KS, KE_PBL,            & ! (in)
-               i, j,                      & ! (in)
-               q(:), ac(:),               & ! (in)
-               l(:,i,j), n2_new(:),       & ! (in)
-               Ri(:,i,j),                 & ! (in)
-               POTV(:,i,j), dudz2(:,i,j), & ! (in)
-               dtldz(:), dqwdz(:),        & ! (in)
-               betat(:), betaq(:),        & ! (in)
-               mynn_level3,               & ! (in)
-               initialize .and. it==1,    & ! (in)
-               tsq(:), qsq(:), cov(:),    & ! (inout)
-               sm25(:), f_smp(:),         & ! (out)
-               sh25(:), f_shpgh(:),       & ! (out)
-               f_gamma(:),                & ! (out)
-               tltv25(:), qwtv25(:),      & ! (out)
-               tvsq25(:),                 & ! (out)
-               tvsq_up(:), tvsq_lo(:)     ) ! (out)
-
-          do k = KS, KE_PBL
-             lq(k) = l(k,i,j) * q(k)
-             Nu_f(k) = lq(k) * sm25(k)
-             Kh_f(k) = lq(k) * sh25(k)
-          end do
-          if ( ATMOS_PHY_BL_MYNN_similarity ) then
-             Nu_f(KS) = KARMAN * z(KS) * us(i,j) / phi_m
-             Kh_f(KS) = KARMAN * z(KS) * us(i,j) / phi_h
-          end if
-
-          do k = KS, KE_PBL-1
-             Nu(k,i,j) = min( F2H(k,1,i,j) * Nu_f(k+1) + F2H(k,2,i,j) * Nu_f(k), &
-                              ATMOS_PHY_BL_MYNN_NU_MAX )
-             Kh(k,i,j) = min( F2H(k,1,i,j) * Kh_f(k+1) + F2H(k,2,i,j) * Kh_f(k), &
-                              ATMOS_PHY_BL_MYNN_KH_MAX )
-          end do
-
-          do k = KS, KE_PBL-1
-             sw = 0.5_RP - sign(0.5_RP, abs(Kh(k,i,j)) - EPS)
-             Pr(k,i,j) = Nu(k,i,j) / ( Kh(k,i,j) + sw ) * ( 1.0_RP - sw ) &
-                       + 1.0_RP * sw
-          end do
-
-          RHO(KS) = DENS(KS,i,j) + dt * SFLX_QV(i,j) / CDZ(KS)
-          do k = KS+1, KE_PBL
-             RHO(k) = DENS(k,i,j)
-          end do
-
-          do k = KS, KE_PBL-1
-             rho_h(k) = F2H(k,1,i,j) * RHO(k+1) + F2H(k,2,i,j) * RHO(k)
-             RHONu(k) = Nu(k,i,j) * rho_h(k)
-             RHOKh(k) = Kh(k,i,j) * rho_h(k)
-!             RHONu(k) = F2H(k,1,i,j) * RHO(k+1) * Nu_f(k+1) + F2H(k,2,i,j) * RHO(k) * Nu_f(k)
-!             RHOKh(k) = F2H(k,1,i,j) * RHO(k+1) * Kh_f(k+1) + F2H(k,2,i,j) * RHO(k) * Kh_f(k)
-          end do
-
-
-          if ( mynn_level3 ) then
-
-             ! production term calculated by explicit scheme
-             do k = KS, KE_PBL
-                tltv = betat(k) * tsq(k) + betaq(k) * cov(k)
-                qwtv = betat(k) * cov(k) + betaq(k) * qsq(k)
-                gammat(k) = f_gamma(k) * ( tltv - tltv25(k) )
-                gammaq(k) = f_gamma(k) * ( qwtv - qwtv25(k) )
-
-                wtl = - lq(k) * ( sh25(k) * dtldz(k) + gammat(k) )
-                wqw = - lq(k) * ( sh25(k) * dqwdz(k) + gammaq(k) )
-                prod_t(k) = - 2.0_RP * wtl * dtldz(k)
-                prod_q(k) = - 2.0_RP * wqw * dqwdz(k)
-                prod_c(k) = - wtl * dqwdz(k) - wqw * dtldz(k)
-             end do
-
-             if ( ATMOS_PHY_BL_MYNN_similarity ) then
-                tmp = 2.0_RP * us(i,j) * phi_h / ( KARMAN * z(KS) )
-                tmp = tmp * ( zeta / ( z(KS) * RLmo(i,j) ) )**2 ! correspoinding to the limitter for zeta
-                ! TSQ
-                prod_t(KS) = tmp * ts(i,j)**2
-                ! QSQ
-                prod_q(KS) = tmp * ts(i,j) * qs(i,j)
-                ! COV
-                prod_c(KS) = tmp * qs(i,j)**2
-             end if
-
-             ! diffusion (explicit)
-             flx(KS-1)   = 0.0_RP
-             flx(KE_PBL) = 0.0_RP
-             do k = KS, KE_PBL-1
-                flx(k) = RHONu(k) * ( tsq(k+1) - tsq(k) ) / FDZ(k)
-             end do
-             do k = KS, KE_PBL
-                prod_t(k) = prod_t(k) + ( flx(k) - flx(k-1) ) / CDZ(k)
-             end do
-             do k = KS, KE_PBL-1
-                flx(k) = RHONu(k) * ( qsq(k+1) - qsq(k) ) / FDZ(k)
-             end do
-             do k = KS, KE_PBL
-                prod_q(k) = prod_q(k) + ( flx(k) - flx(k-1) ) / CDZ(k)
-             end do
-             do k = KS, KE_PBL-1
-                flx(k) = RHONu(k) * ( cov(k+1) - cov(k) ) / FDZ(k)
-             end do
-             do k = KS, KE_PBL
-                prod_c(k) = prod_c(k) + ( flx(k) - flx(k-1) ) / CDZ(k)
-             end do
-
-             call get_gamma_implicit( &
-                  KA, KS, KE_PBL, &
-                  i, j,       &
-                  tsq(:), qsq(:), cov(:),          & ! (in)
-                  dtldz(:), dqwdz(:), POTV(:,i,j), & ! (in)
-                  prod_t(:), prod_q(:), prod_c(:), & ! (in)
-                  betat(:), betaq(:),              & ! (in)
-                  f_gamma(:), l(:,i,j), q(:),      & ! (in)
-                  dt,                              & ! (in)
-                  dtsq(:), dqsq(:), dcov(:)        ) ! (out)
-
-             ! update
-             do k = KS, KE_PBL
-                tltv = betat(k) * ( tsq(k) + dtsq(k) ) + betaq(k) * ( cov(k) + dcov(k) )
-                qwtv = betat(k) * ( cov(k) + dcov(k) ) + betaq(k) * ( qsq(k) + dqsq(k) )
-                gammat(k) = f_gamma(k) * ( tltv - tltv25(k) )
-                gammaq(k) = f_gamma(k) * ( qwtv - qwtv25(k) )
-
-                tvsq = max( betat(k) * tltv + betaq(k) * qwtv, 0.0_RP )
-                tvsq = tvsq - tvsq25(k)
-                tvsq = min( max( tvsq, tvsq_lo(k) ), tvsq_up(k) )
-                smp  (k) = f_smp  (k) * tvsq
-                shpgh(k) = f_shpgh(k) * tvsq
-
-                wtl = - lq(k) * ( sh25(k) * dtldz(k) + gammat(k) )
-                wqw = - lq(k) * ( sh25(k) * dqwdz(k) + gammaq(k) )
-                prod_t(k) = - 2.0_RP * wtl * dtldz(k)
-                prod_q(k) = - 2.0_RP * wqw * dqwdz(k)
-                prod_c(k) = - wtl * dqwdz(k) - wqw * dtldz(k)
-             end do
-
-             if ( ATMOS_PHY_BL_MYNN_similarity ) then
-                smp(KS)    = 0.0_RP
-                shpgh(KS)  = 0.0_RP
-                gammat(KS) = 0.0_RP
-                gammaq(KS) = 0.0_RP
-
-                tmp = 2.0_RP * us(i,j) * phi_h / ( KARMAN * z(KS) )
-                tmp = tmp * ( zeta / ( z(KS) * RLmo(i,j) ) )**2 ! correspoinding to the limitter for zeta
-                ! TSQ
-                prod_t(KS) = tmp * ts(i,j)**2
-                ! QSQ
-                prod_q(KS) = tmp * ts(i,j) * qs(i,j)
-                ! COV
-                prod_c(KS) = tmp * qs(i,j)**2
-             end if
-
+          if ( k==KS ) then
+             b(k) = - a(k) + 1.0_RP
           else
-
-             do k = KS, KE_PBL
-                smp   (k) = 0.0_RP
-                shpgh (k) = 0.0_RP
-                gammat(k) = 0.0_RP
-                gammaq(k) = 0.0_RP
-             end do
-
+             b(k) = - a(k) + dt * RHONu(k-1) / ( FDZ(k-1) * RHO(k) * CDZ(k) ) + 1.0_RP
           end if
-
-
-
-          ! time integration
-
-          if ( it == nit ) then
-
-             do k = KS, KE_PBL-1
-                rlqsm_h(k) = rho_h(k) * ( F2H(k,1,i,j) * lq(k+1) * smp(k+1) + F2H(k,2,i,j) * lq(k) * smp(k) )
-             end do
-
-             ! dens * u
-
-             if ( ATMOS_PHY_BL_MYNN_MF ) then
-                do k = KS, KE_PBL-1
-                   flx(k) = uflux(k)
-                end do
-             else
-                ! countergradient flux
-                do k = KS, KE_PBL-1
-                   flx(k) = - rlqsm_h(k) * ( U(k+1,i,j) - U(k,i,j) ) / FDZ(k)
-                end do
-             end if
-
-             sf_t = SFLX_MU(i,j) / CDZ(KS)
-             d(KS) = ( U(KS,i,j) * DENS(KS,i,j) + dt * ( sf_t - flx(KS) / CDZ(KS) ) ) / RHO(KS)
-             do k = KS+1, KE_PBL
-                d(k) = U(k,i,j) - dt * ( flx(k) - flx(k-1) ) / ( CDZ(k) * RHO(k) )
-             end do
-             c(KS) = 0.0_RP
-             do k = KS, KE_PBL-1
-                ap = - dt * RHONu(k) / FDZ(k)
-                a(k) = ap / ( RHO(k) * CDZ(k) )
-#ifdef _OPENACC
-                if ( k==KS ) then
-                   b(k) = - a(k) + 1.0_RP
-                else
-                   b(k) = - a(k) + dt * RHONu(k-1) / ( FDZ(k-1) * RHO(k) * CDZ(k) ) + 1.0_RP
-                end if
 #else
-                b(k) = - a(k) - c(k) + 1.0_RP
+          b(k) = - a(k) - c(k) + 1.0_RP
 #endif
-                c(k+1) = ap / ( RHO(k+1) * CDZ(k+1) )
-             end do
-             a(KE_PBL) = 0.0_RP
-             b(KE_PBL) = - c(KE_PBL) + 1.0_RP
+          c(k+1) = ap / ( RHO(k+1) * CDZ(k+1) )
+       end do
+       a(KE_PBL) = 0.0_RP
+       b(KE_PBL) = - c(KE_PBL) + 1.0_RP
 
-             call MATRIX_SOLVER_tridiagonal( &
-                  KA, KS, KE_PBL, &
+       call MATRIX_SOLVER_tridiagonal( &
+            KA, KS, KE_PBL, &
 #ifdef _OPENACC
-                  work(:,:),              & ! (work)
+            work(:,:),              & ! (work)
 #endif
-                  a(:), b(:), c(:), d(:), & ! (in)
-                  dummy(:)                ) ! (out)
-!                  phi_n(:)                ) ! (out)
+            a(:), b(:), c(:), d(:), & ! (in)
+            dummy(:)                ) ! (out)
+!            phi_n(:)                ) ! (out)
 
-             phi_n(KS:KE_PBL) = dummy(KS:KE_PBL)
-             RHOU_t(KS,i,j) = ( phi_n(KS) * RHO(KS) - U(KS,i,j) * DENS(KS,i,j) ) / dt - sf_t
-             do k = KS+1, KE_PBL
-                RHOU_t(k,i,j) = ( phi_n(k) - U(k,i,j) ) * RHO(k) / dt
-             end do
-             do k = KE_PBL+1, KE
-                RHOU_t(k,i,j) = 0.0_RP
-             end do
-             flxU(KS-1,i,j) = 0.0_RP
-             flxU2(KS-1,i,j) = 0.0_RP
-             do k = KS, KE_PBL-1
-                flxU(k,i,j) = flx(k) &
-                            - RHONu(k) * ( phi_n(k+1) - phi_n(k) ) / FDZ(k)
-                flxU2(k,i,j) = flx(k)
-             end do
-             do k = KE_PBL, KE
-                flxU(k,i,j) = 0.0_RP
-                flxU2(k,i,j) = 0.0_RP
-             end do
-
-
-             ! dens * v
-
-             if ( ATMOS_PHY_BL_MYNN_MF ) then
-                do k = KS, KE_PBL-1
-                   flx(k) = vflux(k)
-                end do
-             else
-                ! countergradient flux
-                do k = KS, KE_PBL-1
-                   flx(k) = - rlqsm_h(k) * ( V(k+1,i,j) - V(k,i,j) ) / FDZ(k)
-                end do
-             end if
-
-             sf_t = SFLX_MV(i,j) / CDZ(KS)
-             d(KS) = ( V(KS,i,j) * DENS(KS,i,j) + dt * ( sf_t - flx(KS) / CDZ(KS) ) ) / RHO(KS)
-             do k = KS+1, KE_PBL
-                d(k) = V(k,i,j) - dt * ( flx(k) - flx(k-1) ) / ( CDZ(k) * RHO(k) )
-             end do
-             ! a,b,c is the same as those for the u
-
-             call MATRIX_SOLVER_tridiagonal( &
-                  KA, KS, KE_PBL, &
-#ifdef _OPENACC
-                  work(:,:),              & ! (work)
-#endif
-                  a(:), b(:), c(:), d(:), & ! (in)
-                  phi_n(:)                ) ! (out)
-
-             RHOV_t(KS,i,j) = ( phi_n(KS) * RHO(KS) - V(KS,i,j) * DENS(KS,i,j) ) / dt - sf_t
-             do k = KS+1, KE_PBL
-                RHOV_t(k,i,j) = ( phi_n(k) - V(k,i,j) ) * RHO(k) / dt
-             end do
-             do k = KE_PBL+1, KE
-                RHOV_t(k,i,j) = 0.0_RP
-             end do
-             flxV(KS-1,i,j) = 0.0_RP
-             flxV2(KS-1,i,j) = 0.0_RP
-             do k = KS, KE_PBL-1
-                flxV(k,i,j) = flx(k) &
-                            - RHONu(k) * ( phi_n(k+1) - phi_n(k) ) / FDZ(k)
-                flxV2(k,i,j) = flx(k)
-             end do
-             do k = KE_PBL, KE
-                flxV(k,i,j) = 0.0_RP
-                flxV2(k,i,j) = 0.0_RP
-             end do
+       phi_n(KS:KE_PBL) = dummy(KS:KE_PBL)
+       RHOU_t(KS,i,j) = ( phi_n(KS) * RHO(KS) - U(KS,i,j) * DENS(KS,i,j) ) / dt - sf_t
+       do k = KS+1, KE_PBL
+          RHOU_t(k,i,j) = ( phi_n(k) - U(k,i,j) ) * RHO(k) / dt
+       end do
+       do k = KE_PBL+1, KE
+          RHOU_t(k,i,j) = 0.0_RP
+       end do
+       flxU(KS-1,i,j) = 0.0_RP
+       flxU2(KS-1,i,j) = 0.0_RP
+       do k = KS, KE_PBL-1
+          flxU(k,i,j) = flx(k) &
+                      - RHONu(k) * ( phi_n(k+1) - phi_n(k) ) / FDZ(k)
+          flxU2(k,i,j) = flx(k)
+       end do
+       do k = KE_PBL, KE
+          flxU(k,i,j) = 0.0_RP
+          flxU2(k,i,j) = 0.0_RP
+       end do
 
 
-             ! dens * pott
+       ! dens * v
 
-             if ( ATMOS_PHY_BL_MYNN_MF ) then
-                do k = KS, KE_PBL-1
-                   flx(k) = tflux(k)
-                end do
-             else
-                ! countergradient flux
-                do k = KS, KE_PBL-1
-                   flx(k) = - ( F2H(k,1,i,j) * lq(k+1) * gammat(k+1) + F2H(k,2,i,j) * lq(k) * gammat(k) ) &
-                          * rho_h(k)
-                end do
-             end if
-
-             sf_t = SFLX_PT / CDZ(KS)
-             ! assume that induced vapor has the same PT
-             d(KS) = POTT(KS,i,j) + dt * ( sf_t - flx(KS) / CDZ(KS) ) / RHO(KS)
-             do k = KS+1, KE_PBL
-                d(k) = POTT(k,i,j) - dt * ( flx(k) - flx(k-1) ) / ( CDZ(k) * RHO(k) )
-             end do
-
-             c(KS) = 0.0_RP
-             do k = KS, KE_PBL-1
-                ap = - dt * RHOKh(k) / FDZ(k)
-                a(k) = ap / ( RHO(k) * CDZ(k) )
-#ifdef _OPENACC
-                if ( k==KS ) then
-                   b(k) = - a(k) + 1.0_RP
-                else
-                   b(k) = - a(k) + dt * RHOKh(k-1) / ( FDZ(k-1) * RHO(k) * CDZ(k) ) + 1.0_RP
-                end if
-#else
-                b(k) = - a(k) - c(k) + 1.0_RP
-#endif
-                c(k+1) = ap / ( RHO(k+1) * CDZ(k+1) )
-             end do
-             a(KE_PBL) = 0.0_RP
-             b(KE_PBL) = - c(KE_PBL) + 1.0_RP
-
-             call MATRIX_SOLVER_tridiagonal( &
-                  KA, KS, KE_PBL, &
-#ifdef _OPENACC
-                  work(:,:),              & ! (work)
-#endif
-                  a(:), b(:), c(:), d(:), & ! (in)
-                  phi_n(:)                ) ! (out)
-
-             RHOT_t(KS,i,j) = ( phi_n(KS) - POTT(KS,i,j) ) * RHO(KS) / dt - sf_t
-             do k = KS+1, KE_PBL
-                RHOT_t(k,i,j) = ( phi_n(k) - POTT(k,i,j) ) * RHO(k) / dt
-             end do
-             do k = KE_PBL+1, KE
-                RHOT_t(k,i,j) = 0.0_RP
-             end do
-             flxT(KS-1,i,j) = 0.0_RP
-             flxT2(KS-1,i,j) = 0.0_RP
-             do k = KS, KE_PBL-1
-                flxT(k,i,j) = flx(k) &
-                            - RHOKh(k) * ( phi_n(k+1) - phi_n(k) ) / FDZ(k)
-                flxT2(k,i,j) = flx(k)
-             end do
-             do k = KE_PBL, KE
-                flxT(k,i,j) = 0.0_RP
-                flxT2(k,i,j) = 0.0_RP
-             end do
-
-             if ( .not. ATMOS_PHY_BL_MYNN_O2019 ) then
-                kmin = KS-1
-                if ( flxT(KS,i,j) > 1E-4_RP ) then
-                   fmin = flxT(KS,i,j) / rho_h(KS)
-                   !$acc loop seq
-                   do k = KS+1, KE_PBL-2
-                      tmp = ( flxT(k-1,i,j) + flxT(k,i,j) + flxT(k+1,i,j) ) &
-                           / ( rho_h(k-1) + rho_h(k) + rho_h(k+1) ) ! running mean
-                      if ( fmin < 0.0_RP .and. tmp > fmin ) exit
-                      if ( tmp < fmin ) then
-                         fmin = tmp
-                         kmin = k
-                      end if
-                   end do
-                end if
-                Zi(i,j) = FZ(kmin,i,j) - FZ(KS-1,i,j)
-             end if
-
-             ! dens * qv
-
-             if ( ATMOS_PHY_BL_MYNN_MF ) then
-                do k = KS, KE_PBL-1
-                   flx(k) = qflux(k)
-                end do
-             else
-                ! countergradient flux
-                do k = KS, KE_PBL-1
-                   flx(k) = - ( F2H(k,1,i,j) * lq(k+1) * gammaq(k+1) + F2H(k,2,i,j) * lq(k) * gammaq(k) ) &
-                            * rho_h(k)
-                end do
-             end if
-
-             sf_t = SFLX_QV(i,j) / CDZ(KS)
-             d(KS) = ( QV(KS,i,j) * DENS(KS,i,j) + dt * ( sf_t - flx(KS) / CDZ(KS) ) ) / RHO(KS)
-             do k = KS+1, KE_PBL
-                d(k) = QV(k,i,j) - dt * ( flx(k) - flx(k-1) ) / ( CDZ(k) * RHO(k) )
-             end do
-
-             call MATRIX_SOLVER_tridiagonal( &
-                  KA, KS, KE_PBL, &
-#ifdef _OPENACC
-                  work(:,:),              & ! (work)
-#endif
-                  a(:), b(:), c(:), d(:), & ! (in)
-                  phi_n(:)                ) ! (out)
-
-             RHOQV_t(KS,i,j) = ( phi_n(KS) * RHO(KS) - QV(KS,i,j) * DENS(KS,i,j) ) / dt - sf_t
-             do k = KS+1, KE_PBL
-                RHOQV_t(k,i,j) = ( phi_n(k) - QV(k,i,j) ) * RHO(k) / dt
-             end do
-             do k = KE_PBL+1, KE
-                RHOQV_t(k,i,j) = 0.0_RP
-             end do
-             flxQ(KS-1,i,j) = 0.0_RP
-             flxQ2(KS-1,i,j) = 0.0_RP
-             do k = KS, KE_PBL-1
-                flxQ(k,i,j) = flx(k) &
-                            - RHOKh(k) * ( phi_n(k+1) - phi_n(k) ) / FDZ(k)
-                flxQ2(k,i,j) = flx(k)
-             end do
-             do k = KE_PBL, KE
-                flxQ(k,i,j) = 0.0_RP
-                flxQ2(k,i,j) = 0.0_RP
-             end do
-
-          end if
-
-
-          ! dens * TKE
-
-!!$          if ( ATMOS_PHY_BL_MYNN_MF ) then
-!!$             do k = KS, KE_PBL-1
-!!$                flx(k) = eflux(k)
-!!$             end do
-!!$          else
-             do k = KS, KE_PBL-1
-                flx(k) = 0.0_RP
-             end do
-!!$          end if
-
-          ! production
-          do k = KS, KE_PBL
-             prod(k,i,j) = lq(k) * ( ( sm25(k) + smp(k) ) * dudz2(k,i,j) &
-                                   - ( sh25(k) * n2_new(k) - shpgh(k) ) )
-          end do
-          if ( ATMOS_PHY_BL_MYNN_similarity .or. it < nit ) then
-             prod(KS,i,j) = us3 / ( KARMAN * z(KS) ) * ( phi_m - zeta )
-          end if
-
-          do k = KS, KE_PBL
-             diss(k,i,j) = - 2.0_RP * q(k) / ( B1 * l(k,i,j) )
-!             prod(k,i,j) = max( prod(k,i,j), - tke_p(k) / dt - diss(k,i,j) * tke_p(k) )
-          end do
-
-          do k = KE_PBL+1, KE
-             diss(k,i,j) = 0.0_RP
-             prod(k,i,j) = 0.0_RP
-          end do
-
-          if ( it < nit ) then
-             do k = KS, KE_PBL-1
-                d(k) = dt * ( - ( flx(k) - flx(k-1) ) / ( CDZ(k) * RHO(k) ) + prod(k,i,j) )
-             end do
-          else
-             do k = KS, KE_PBL-1
-                d(k) = tke_p(k) * DENS(k,i,j) / RHO(k) + dt * ( - ( flx(k) - flx(k-1) ) / ( CDZ(k) * RHO(k) ) + prod(k,i,j) )
-             end do
-          end if
-          d(KE_PBL) = 0.0_RP
-
-          c(KS) = 0.0_RP
+       if ( ATMOS_PHY_BL_MYNN_MF ) then
           do k = KS, KE_PBL-1
-             ap = - dt * ATMOS_PHY_BL_MYNN_Sq_fact * RHONu(k) / FDZ(k)
-             a(k) = ap / ( RHO(k) * CDZ(k) )
-             if ( it < nit ) then
-#ifdef _OPENACC
-                if ( k==KS ) then
-                   b(k) = - a(k) - diss(k,i,j) * dt
-                else
-                   b(k) = - a(k) + dt * ATMOS_PHY_BL_MYNN_Sq_fact * RHONu(k-1) / ( FDZ(k-1) * RHO(k) * CDZ(k) ) - diss(k,i,j) * dt
-                end if
-#else
-                b(k) = - a(k) - c(k) - diss(k,i,j) * dt
-#endif
-             else
-#ifdef _OPENACC
-                if ( k==KS ) then
-                   b(k) = - a(k) + 1.0_RP - diss(k,i,j) * dt
-                else
-                   b(k) = - a(k) + dt * ATMOS_PHY_BL_MYNN_Sq_fact * RHONu(k-1) / ( FDZ(k-1) * RHO(k) * CDZ(k) ) + 1.0_RP - diss(k,i,j) * dt
-                end if
-#else
-                b(k) = - a(k) - c(k) + 1.0_RP - diss(k,i,j) * dt
-#endif
-             end if
-             c(k+1) = ap / ( RHO(k+1) * CDZ(k+1) )
+             flx(k) = vflux(k)
           end do
-          a(KE_PBL) = 0.0_RP
-          if ( it < nit ) then
-             b(KE_PBL) = - c(KE_PBL) - diss(KE_PBL,i,j) * dt
-          end if
-
-          call MATRIX_SOLVER_tridiagonal( &
-               KA, KS, KE_PBL, &
-#ifdef _OPENACC
-               work(:,:),              & ! (work)
-#endif
-               a(:), b(:), c(:), d(:), & ! (in)
-               tke_p(:)                ) ! (out)
-
+       else
+          ! countergradient flux
           do k = KS, KE_PBL-1
-             tke_p(k) = max( tke_p(k), ATMOS_PHY_BL_MYNN_TKE_MIN )
+             flx(k) = - rlqsm_h(k) * ( V(k+1,i,j) - V(k,i,j) ) / FDZ(k)
           end do
-          tke_p(KE_PBL) = 0.0_RP
+       end if
+
+       sf_t = SFLX_MV(i,j) / CDZ(KS)
+       d(KS) = ( V(KS,i,j) * DENS(KS,i,j) + dt * ( sf_t - flx(KS) / CDZ(KS) ) ) / RHO(KS)
+       do k = KS+1, KE_PBL
+          d(k) = V(k,i,j) - dt * ( flx(k) - flx(k-1) ) / ( CDZ(k) * RHO(k) )
+       end do
+       ! a,b,c is the same as those for the u
+
+       call MATRIX_SOLVER_tridiagonal( &
+            KA, KS, KE_PBL, &
+#ifdef _OPENACC
+            work(:,:),              & ! (work)
+#endif
+            a(:), b(:), c(:), d(:), & ! (in)
+            phi_n(:)                ) ! (out)
+
+       RHOV_t(KS,i,j) = ( phi_n(KS) * RHO(KS) - V(KS,i,j) * DENS(KS,i,j) ) / dt - sf_t
+       do k = KS+1, KE_PBL
+          RHOV_t(k,i,j) = ( phi_n(k) - V(k,i,j) ) * RHO(k) / dt
+       end do
+       do k = KE_PBL+1, KE
+          RHOV_t(k,i,j) = 0.0_RP
+       end do
+       flxV(KS-1,i,j) = 0.0_RP
+       flxV2(KS-1,i,j) = 0.0_RP
+       do k = KS, KE_PBL-1
+          flxV(k,i,j) = flx(k) &
+                      - RHONu(k) * ( phi_n(k+1) - phi_n(k) ) / FDZ(k)
+          flxV2(k,i,j) = flx(k)
+       end do
+       do k = KE_PBL, KE
+          flxV(k,i,j) = 0.0_RP
+          flxV2(k,i,j) = 0.0_RP
+       end do
 
 
-          if ( it == nit ) then
-             do k = KS, KE_PBL
-                diss(k,i,j) = diss(k,i,j) * tke_p(k)
-                RPROG_t(k,i,j,I_TKE) = ( tke_p(k) * RHO(k) - PROG(k,i,j,I_TKE) * DENS(k,i,j) ) / dt
-             end do
-             do k = KE_PBL+1, KE
-                RPROG_t(k,i,j,I_TKE) = - ATMOS_PHY_BL_MYNN_DUMP_COEF * PROG(k,i,j,I_TKE) * DENS(k,i,j) / dt
-             end do
+       ! dens * pott
+
+       if ( ATMOS_PHY_BL_MYNN_MF ) then
+          do k = KS, KE_PBL-1
+             flx(k) = tflux(k)
+          end do
+       else
+          ! countergradient flux
+          do k = KS, KE_PBL-1
+             flx(k) = - ( F2H(k,1,i,j) * lq(k+1) * gammat(k+1) + F2H(k,2,i,j) * lq(k) * gammat(k) ) &
+                    * rho_h(k)
+          end do
+       end if
+
+       sf_t = SFLX_PT / CDZ(KS)
+       ! assume that induced vapor has the same PT
+       d(KS) = POTT(KS,i,j) + dt * ( sf_t - flx(KS) / CDZ(KS) ) / RHO(KS)
+       do k = KS+1, KE_PBL
+          d(k) = POTT(k,i,j) - dt * ( flx(k) - flx(k-1) ) / ( CDZ(k) * RHO(k) )
+       end do
+
+       c(KS) = 0.0_RP
+       do k = KS, KE_PBL-1
+          ap = - dt * RHOKh(k) / FDZ(k)
+          a(k) = ap / ( RHO(k) * CDZ(k) )
+#ifdef _OPENACC
+          if ( k==KS ) then
+             b(k) = - a(k) + 1.0_RP
           else
-             do k = KS, KE_PBL
-                q(k) = max( sqrt( tke_p(k) * 2.0_RP ), 1E-10_RP )
+             b(k) = - a(k) + dt * RHOKh(k-1) / ( FDZ(k-1) * RHO(k) * CDZ(k) ) + 1.0_RP
+          end if
+#else
+          b(k) = - a(k) - c(k) + 1.0_RP
+#endif
+          c(k+1) = ap / ( RHO(k+1) * CDZ(k+1) )
+       end do
+       a(KE_PBL) = 0.0_RP
+       b(KE_PBL) = - c(KE_PBL) + 1.0_RP
+
+       call MATRIX_SOLVER_tridiagonal( &
+            KA, KS, KE_PBL, &
+#ifdef _OPENACC
+            work(:,:),              & ! (work)
+#endif
+            a(:), b(:), c(:), d(:), & ! (in)
+            phi_n(:)                ) ! (out)
+
+       RHOT_t(KS,i,j) = ( phi_n(KS) - POTT(KS,i,j) ) * RHO(KS) / dt - sf_t
+       do k = KS+1, KE_PBL
+          RHOT_t(k,i,j) = ( phi_n(k) - POTT(k,i,j) ) * RHO(k) / dt
+       end do
+       do k = KE_PBL+1, KE
+          RHOT_t(k,i,j) = 0.0_RP
+       end do
+       flxT(KS-1,i,j) = 0.0_RP
+       flxT2(KS-1,i,j) = 0.0_RP
+       do k = KS, KE_PBL-1
+          flxT(k,i,j) = flx(k) &
+                      - RHOKh(k) * ( phi_n(k+1) - phi_n(k) ) / FDZ(k)
+          flxT2(k,i,j) = flx(k)
+       end do
+       do k = KE_PBL, KE
+          flxT(k,i,j) = 0.0_RP
+          flxT2(k,i,j) = 0.0_RP
+       end do
+
+       if ( .not. ATMOS_PHY_BL_MYNN_O2019 ) then
+          kmin = KS-1
+          if ( flxT(KS,i,j) > 1E-4_RP ) then
+             fmin = flxT(KS,i,j) / rho_h(KS)
+             !$acc loop seq
+             do k = KS+1, KE_PBL-2
+                tmp = ( flxT(k-1,i,j) + flxT(k,i,j) + flxT(k+1,i,j) ) &
+                     / ( rho_h(k-1) + rho_h(k) + rho_h(k+1) ) ! running mean
+                if ( fmin < 0.0_RP .and. tmp > fmin ) exit
+                if ( tmp < fmin ) then
+                   fmin = tmp
+                   kmin = k
+                end if
              end do
           end if
+          Zi(i,j) = FZ(kmin,i,j) - FZ(KS-1,i,j)
+       end if
+
+       ! dens * qv
+
+       if ( ATMOS_PHY_BL_MYNN_MF ) then
+          do k = KS, KE_PBL-1
+             flx(k) = qflux(k)
+          end do
+       else
+          ! countergradient flux
+          do k = KS, KE_PBL-1
+             flx(k) = - ( F2H(k,1,i,j) * lq(k+1) * gammaq(k+1) + F2H(k,2,i,j) * lq(k) * gammaq(k) ) &
+                    * rho_h(k)
+          end do
+       end if
+
+       sf_t = SFLX_QV(i,j) / CDZ(KS)
+       d(KS) = ( QV(KS,i,j) * DENS(KS,i,j) + dt * ( sf_t - flx(KS) / CDZ(KS) ) ) / RHO(KS)
+       do k = KS+1, KE_PBL
+          d(k) = QV(k,i,j) - dt * ( flx(k) - flx(k-1) ) / ( CDZ(k) * RHO(k) )
+       end do
+
+       call MATRIX_SOLVER_tridiagonal( &
+            KA, KS, KE_PBL, &
+#ifdef _OPENACC
+            work(:,:),              & ! (work)
+#endif
+            a(:), b(:), c(:), d(:), & ! (in)
+            phi_n(:)                ) ! (out)
+
+       RHOQV_t(KS,i,j) = ( phi_n(KS) * RHO(KS) - QV(KS,i,j) * DENS(KS,i,j) ) / dt - sf_t
+       do k = KS+1, KE_PBL
+          RHOQV_t(k,i,j) = ( phi_n(k) - QV(k,i,j) ) * RHO(k) / dt
+       end do
+       do k = KE_PBL+1, KE
+          RHOQV_t(k,i,j) = 0.0_RP
+       end do
+       flxQ(KS-1,i,j) = 0.0_RP
+       flxQ2(KS-1,i,j) = 0.0_RP
+       do k = KS, KE_PBL-1
+          flxQ(k,i,j) = flx(k) &
+                      - RHOKh(k) * ( phi_n(k+1) - phi_n(k) ) / FDZ(k)
+          flxQ2(k,i,j) = flx(k)
+       end do
+       do k = KE_PBL, KE
+          flxQ(k,i,j) = 0.0_RP
+          flxQ2(k,i,j) = 0.0_RP
+       end do
+
+       ! dens * TKE
+
+!!$    if ( ATMOS_PHY_BL_MYNN_MF ) then
+!!$       do k = KS, KE_PBL-1
+!!$          flx(k) = eflux(k)
+!!$       end do
+!!$    else
+       do k = KS, KE_PBL-1
+          flx(k) = 0.0_RP
+       end do
+!!$    end if
+
+       do k = KS, KE_PBL-1
+          d(k) = tke(k) * DENS(k,i,j) / RHO(k) + dt * ( - ( flx(k) - flx(k-1) ) / ( CDZ(k) * RHO(k) ) + prod(k,i,j) )
+       end do
+       d(KE_PBL) = 0.0_RP
+
+       c(KS) = 0.0_RP
+       do k = KS, KE_PBL-1
+          ap = - dt * ATMOS_PHY_BL_MYNN_Sq_fact * RHONu(k) / FDZ(k)
+          a(k) = ap / ( RHO(k) * CDZ(k) )
+#ifdef _OPENACC
+          if ( k==KS ) then
+             b(k) = - a(k) + 1.0_RP - diss(k,i,j) * dt
+          else
+             b(k) = - a(k) + dt * ATMOS_PHY_BL_MYNN_Sq_fact * RHONu(k-1) / ( FDZ(k-1) * RHO(k) * CDZ(k) ) + 1.0_RP - diss(k,i,j) * dt
+          end if
+#else
+          b(k) = - a(k) - c(k) + 1.0_RP - diss(k,i,j) * dt
+#endif
+          c(k+1) = ap / ( RHO(k+1) * CDZ(k+1) )
+       end do
+       a(KE_PBL) = 0.0_RP
+
+       call MATRIX_SOLVER_tridiagonal( &
+            KA, KS, KE_PBL, &
+#ifdef _OPENACC
+            work(:,:),              & ! (work)
+#endif
+            a(:), b(:), c(:), d(:), & ! (in)
+            phi_n(:)                ) ! (out)
+
+       do k = KS, KE_PBL
+          phi_n(k) = max( phi_n(k), ATMOS_PHY_BL_MYNN_TKE_MIN )
+       end do
+
+       do k = KS, KE_PBL
+          diss(k,i,j) = diss(k,i,j) * phi_n(k)
+          RPROG_t(k,i,j,I_TKE) = ( phi_n(k) * RHO(k) - PROG(k,i,j,I_TKE) * DENS(k,i,j) ) / dt
+       end do
+       do k = KE_PBL+1, KE
+          RPROG_t(k,i,j,I_TKE) = - ATMOS_PHY_BL_MYNN_DUMP_COEF * PROG(k,i,j,I_TKE) * DENS(k,i,j) / dt
+          diss(k,i,j) = 0.0_RP
+          prod(k,i,j) = 0.0_RP
+       end do
 
 
-          if ( .not. mynn_level3 ) cycle
+       if ( mynn_level3 ) then
 
           ! dens * tsq
 
           do k = KS, KE_PBL
              diss_p(k) = dt * 2.0_RP * q(k) / ( B2 * l(k,i,j) )
           end do
-          if ( it < nit ) then
-             do k = KS, KE_PBL-1
-                d(k) = dt * prod_t(k)
-             end do
-          else
-             do k = KS, KE_PBL-1
-                d(k) = tsq(k) * DENS(k,i,j) / RHO(k) + dt * prod_t(k)
-             end do
-          end if
+          do k = KS, KE_PBL-1
+             d(k) = tsq(k) * DENS(k,i,j) / RHO(k) + dt * prod_t(k)
+          end do
           d(KE_PBL) = 0.0_RP
           c(KS) = 0.0_RP
           do k = KS, KE_PBL-1
              ap = - dt * RHONu(k) / FDZ(k)
              a(k) = ap / ( RHO(k) * CDZ(k) )
-             if ( it < nit ) then
 #ifdef _OPENACC
-                if ( k==KS ) then
-                   b(k) = - a(k) + diss_p(k)
-                else
-                   b(k) = - a(k) + dt * RHONu(k-1) / ( FDZ(k-1) * RHO(k) * CDZ(k) ) + diss_p(k)
-                end if
-#else
-                b(k) = - a(k) - c(k) + 1.0_RP + diss_p(k)
-#endif
+             if ( k==KS ) then
+                b(k) = - a(k) + diss_p(k)
              else
-#ifdef _OPENACC
-                if ( k==KS ) then
-                   b(k) = - a(k) + diss_p(k)
-                else
-                   b(k) = - a(k) + dt * RHONu(k-1) / ( FDZ(k-1) * RHO(k) * CDZ(k) ) + diss_p(k)
-                end if
-#else
-                b(k) = - a(k) - c(k) + 1.0_RP + diss_p(k)
-#endif
+                b(k) = - a(k) + dt * RHONu(k-1) / ( FDZ(k-1) * RHO(k) * CDZ(k) ) + diss_p(k)
              end if
+#else
+             b(k) = - a(k) - c(k) + 1.0_RP + diss_p(k)
+#endif
              c(k+1) = ap / ( RHO(k+1) * CDZ(k+1) )
           end do
           a(KE_PBL) = 0.0_RP
-          if ( initialize .and. it<nit ) then
-             b(KE_PBL) = - c(KE_PBL) + diss_p(KE_PBL)
-          else
-             b(KE_PBL) = - c(KE_PBL) + 1.0_RP + diss_p(KE_PBL)
-          end if
+          b(KE_PBL) = - c(KE_PBL) + 1.0_RP + diss_p(KE_PBL)
 
           call MATRIX_SOLVER_tridiagonal( &
                KA, KS, KE_PBL, &
@@ -1546,33 +1286,23 @@ contains
                a(:), b(:), c(:), d(:), & ! (in)
                tsq(:)                  ) ! (out)
 
-          do k = KS, KE_PBL-1
+          do k = KS, KE_PBL
              tsq(k) = max( tsq(k), 0.0_RP )
           end do
-          tsq(KE_PBL) = 0.0_RP
 
-          if ( it == nit ) then
-             do k = KS, KE_PBL
-                RPROG_t(k,i,j,I_TSQ) = ( tsq(k) * RHO(k) - PROG(k,i,j,I_TSQ) * DENS(k,i,j) ) / dt
-             end do
-             do k = KE_PBL+1, KE
-                RPROG_t(k,i,j,I_TSQ) = - ATMOS_PHY_BL_MYNN_DUMP_COEF * PROG(k,i,j,I_TSQ) * DENS(k,i,j) / dt
-             end do
-          end if
+          do k = KS, KE_PBL
+             RPROG_t(k,i,j,I_TSQ) = ( tsq(k) * RHO(k) - PROG(k,i,j,I_TSQ) * DENS(k,i,j) ) / dt
+          end do
+          do k = KE_PBL+1, KE
+             RPROG_t(k,i,j,I_TSQ) = - ATMOS_PHY_BL_MYNN_DUMP_COEF * PROG(k,i,j,I_TSQ) * DENS(k,i,j) / dt
+          end do
 
 
           ! dens * qsq
 
-          if ( initialize .and. it<nit ) then
-             do k = KS, KE_PBL-1
-                d(k) = dt * prod_q(k)
-             end do
-          else
-             do k = KS, KE_PBL-1
-                d(k) = qsq(k) * DENS(k,i,j) / RHO(k) + dt * prod_q(k)
-             end do
-          end if
-          d(KE_PBL) = 0.0_RP
+          do k = KS, KE_PBL
+             d(k) = qsq(k) * DENS(k,i,j) / RHO(k) + dt * prod_q(k)
+          end do
           ! a, b, c are same as those for tsq
 
           call MATRIX_SOLVER_tridiagonal( &
@@ -1583,32 +1313,23 @@ contains
                a(:), b(:), c(:), d(:), & ! (in)
                qsq(:)                  ) ! (out)
 
-          do k = KS, KE_PBL-1
+          do k = KS, KE_PBL
              qsq(k) = max( qsq(k), 0.0_RP )
           end do
-          qsq(KE_PBL) = 0.0_RP
 
-          if ( it == nit ) then
-             do k = KS, KE_PBL
-                RPROG_t(k,i,j,I_QSQ) = ( qsq(k) * RHO(k) - PROG(k,i,j,I_QSQ) * DENS(k,i,j) ) / dt
-             end do
-             do k = KE_PBL+1, KE
-                RPROG_t(k,i,j,I_QSQ) = - ATMOS_PHY_BL_MYNN_DUMP_COEF * PROG(k,i,j,I_QSQ) * DENS(k,i,j) / dt
-             end do
-          end if
+          do k = KS, KE_PBL
+             RPROG_t(k,i,j,I_QSQ) = ( qsq(k) * RHO(k) - PROG(k,i,j,I_QSQ) * DENS(k,i,j) ) / dt
+          end do
+          do k = KE_PBL+1, KE
+             RPROG_t(k,i,j,I_QSQ) = - ATMOS_PHY_BL_MYNN_DUMP_COEF * PROG(k,i,j,I_QSQ) * DENS(k,i,j) / dt
+          end do
 
 
           ! dens * cov
 
-          if ( initialize .and. it<nit ) then
-             do k = KS, KE_PBL-1
-                d(k) = dt * prod_c(k)
-             end do
-          else
-             do k = KS, KE_PBL-1
-                d(k) = cov(k) * DENS(k,i,j) / RHO(k) + dt * prod_c(k)
-             end do
-          end if
+          do k = KS, KE_PBL-1
+             d(k) = cov(k) * DENS(k,i,j) / RHO(k) + dt * prod_c(k)
+          end do
           d(KE_PBL) = 0.0_RP
           ! a, b, c are same as those for tsq
 
@@ -1620,39 +1341,37 @@ contains
                a(:), b(:), c(:), d(:), & ! (in)
                cov(:)                  ) ! (out)
 
-          do k = KS, KE_PBL-1
+          do k = KS, KE_PBL
              cov(k) = sign( min( abs(cov(k)), sqrt(tsq(k)*qsq(k)) ), cov(k) )
           end do
-          cov(KE_PBL) = 0.0_RP
 
-          if ( it == nit ) then
-             do k = KS, KE_PBL
-                RPROG_t(k,i,j,I_COV) = ( cov(k) * RHO(k) - PROG(k,i,j,I_COV) * DENS(k,i,j) ) / dt
-             end do
-             do k = KE_PBL+1, KE
-                RPROG_t(k,i,j,I_COV) = - ATMOS_PHY_BL_MYNN_DUMP_COEF * PROG(k,i,j,I_COV) * DENS(k,i,j) / dt
-             end do
-          end if
+          do k = KS, KE_PBL
+             RPROG_t(k,i,j,I_COV) = ( cov(k) * RHO(k) - PROG(k,i,j,I_COV) * DENS(k,i,j) ) / dt
+          end do
+          do k = KE_PBL+1, KE
+             RPROG_t(k,i,j,I_COV) = - ATMOS_PHY_BL_MYNN_DUMP_COEF * PROG(k,i,j,I_COV) * DENS(k,i,j) / dt
+          end do
 
-       end do
+       end if
 
        Nu(KS-1,i,j) = 0.0_RP
        Kh(KS-1,i,j) = 0.0_RP
        do k = KE_PBL, KE
-          Nu   (k,i,j) = 0.0_RP
-          Kh   (k,i,j) = 0.0_RP
-          Pr   (k,i,j) = 1.0_RP
+          Nu  (k,i,j) = 0.0_RP
+          Kh  (k,i,j) = 0.0_RP
+          Pr  (k,i,j) = 1.0_RP
+          prod(k,i,j) = 0.0_RP
+          diss(k,i,j) = 0.0_RP
        end do
        !$acc loop independent
        do k = KE_PBL+1, KE
           Ri     (k,i,j) = UNDEF
-          prod   (k,i,j) = UNDEF
-          diss   (k,i,j) = UNDEF
           dudz2  (k,i,j) = UNDEF
           l      (k,i,j) = UNDEF
           Qlp    (k,i,j) = UNDEF
           cldfrac(k,i,j) = UNDEF
        end do
+
 
     end do
     end do
@@ -1692,14 +1411,692 @@ contains
 
     !$acc end data
 
-    initialize = .false.
-
     return
   end subroutine ATMOS_PHY_BL_MYNN_tendency
 
   !-----------------------------------------------------------------------------
   ! private routines
   !-----------------------------------------------------------------------------
+
+  subroutine MYNN_main( &
+       KA, KS, KE_PBL, &
+       i, j, &
+       tke, tsq, qsq, cov, &
+       q, l, lq, &
+       Nu, RHONu, Kh, RHOKh, Pr, &
+       prod, prod_t, prod_q, prod_c, &
+       diss, diss_p, &
+       sm25, smp, sh25, shpgh, &
+       gammat, gammaq, &
+       dudz2, n2_new, Ri, &
+       dtldz, dqwdz, &
+       RHO, RHO_h, &
+       uflux, vflux, tflux, qflux, eflux, &
+       Qlp, cldfrac, Zi, SFLX_BUOY, &
+       U, V, W, &
+       DENS, PRES, &
+       POTT, POTL, POTV, &
+       Qw, N2, &
+       EXNER, QDRY, &
+       SFLX_PT, SFLX_SH, SFLX_QV, SFC_DENS, &
+       RLmo, us, ts, qs, &
+       z, CDZ, FDZ, F2H, &
+       frac_land, &
+       dt, &
+       I_B_TYPE, &
+       mynn_level3, initialize )
+    !$acc routine vector
+    use scale_const, only: &
+       EPS     => CONST_EPS,    &
+       KARMAN  => CONST_KARMAN, &
+       GRAV    => CONST_GRAV,   &
+       EPSTvap => CONST_EPSTvap
+    use scale_matrix, only: &
+       MATRIX_SOLVER_tridiagonal
+    integer, intent(in) :: KA, KS, KE_PBL
+    integer, intent(in) :: i, j
+    real(RP), intent(inout) :: tke(KA)
+    real(RP), intent(inout) :: tsq(KA)
+    real(RP), intent(inout) :: qsq(KA)
+    real(RP), intent(inout) :: cov(KA)
+    real(RP), intent(out) :: q(KA)
+    real(RP), intent(out) :: l(KA)
+    real(RP), intent(out) :: lq(KA)
+    real(RP), intent(out) :: Nu(KA)
+    real(RP), intent(out) :: RHONu(KA)
+    real(RP), intent(out) :: Kh(KA)
+    real(RP), intent(out) :: RHOKh(KA)
+    real(RP), intent(out) :: Pr(KA)
+    real(RP), intent(out) :: prod(KA)
+    real(RP), intent(out) :: prod_t(KA)
+    real(RP), intent(out) :: prod_q(KA)
+    real(RP), intent(out) :: prod_c(KA)
+    real(RP), intent(out) :: diss(KA)
+    real(RP), intent(out) :: diss_p(KA)
+    real(RP), intent(out) :: sm25(KA)
+    real(RP), intent(out) :: smp(KA)
+    real(RP), intent(out) :: sh25(KA)
+    real(RP), intent(out) :: shpgh(KA)
+    real(RP), intent(out) :: gammat(KA)
+    real(RP), intent(out) :: gammaq(KA)
+    real(RP), intent(out) :: dudz2(KA)
+    real(RP), intent(out) :: n2_new(KA)
+    real(RP), intent(out) :: Ri(KA)
+    real(RP), intent(out) :: dtldz(KA)
+    real(RP), intent(out) :: dqwdz(KA)
+    real(RP), intent(out) :: RHO(KA)
+    real(RP), intent(out) :: RHO_h(KA)
+    real(RP), intent(out) :: uflux(KA)
+    real(RP), intent(out) :: vflux(KA)
+    real(RP), intent(out) :: tflux(KA)
+    real(RP), intent(out) :: qflux(KA)
+    real(RP), intent(out) :: eflux(KA)
+    real(RP), intent(out) :: Qlp(KA)
+    real(RP), intent(out) :: cldfrac(KA)
+    real(RP), intent(out) :: Zi
+    real(RP), intent(out) :: SFLX_BUOY
+    real(RP), intent(in) :: U(KA)
+    real(RP), intent(in) :: V(KA)
+    real(RP), intent(in) :: W(KA)
+    real(RP), intent(in) :: DENS(KA)
+    real(RP), intent(in) :: PRES(KA)
+    real(RP), intent(in) :: POTT(KA)
+    real(RP), intent(in) :: POTL(KA)
+    real(RP), intent(in) :: POTV(KA)
+    real(RP), intent(in) :: Qw(KA)
+    real(RP), intent(in) :: N2(KA)
+    real(RP), intent(in) :: EXNER(KA)
+    real(RP), intent(in) :: QDRY(KA)
+    real(RP), intent(in) :: SFLX_PT
+    real(RP), intent(in) :: SFLX_SH
+    real(RP), intent(in) :: SFLX_QV
+    real(RP), intent(in) :: SFC_DENS
+    real(RP), intent(in) :: RLmo
+    real(RP), intent(in) :: us
+    real(RP), intent(in) :: ts
+    real(RP), intent(in) :: qs
+    real(RP), intent(in) :: z(KA)
+    real(RP), intent(in) :: CDZ(KA)
+    real(RP), intent(in) :: FDZ(KA)
+    real(RP), intent(in) :: F2H(KA,2)
+    real(RP), intent(in) :: frac_land
+    real(RP), intent(in) :: dt
+    integer,  intent(in) :: I_B_TYPE
+    logical,  intent(in) :: mynn_level3
+    logical,  intent(in) :: initialize
+
+    real(RP) :: PTLV (KA)
+    real(RP) :: Nu_f  (KA) !> Nu at the full level
+    real(RP) :: Kh_f  (KA) !> Kh at the full level
+    real(RP) :: q2_2  (KA) !> q^2 for level 2
+    real(RP) :: ac    (KA) !> \alpha_c
+    real(RP) :: betat (KA) !> \beta_t
+    real(RP) :: betaq (KA) !> \beta_q
+
+    real(RP) :: flx(0:KA)
+    real(RP) :: a(KA)
+    real(RP) :: b(KA)
+    real(RP) :: c(KA)
+    real(RP) :: d(KA)
+    real(RP) :: ap
+
+    real(RP) :: zeta
+    real(RP) :: phi_m, phi_h
+    real(RP) :: us3
+
+    ! for level 3
+    real(RP) :: f_smp  (KA) !> stability function for velocity for the countergradient (factor)
+    real(RP) :: f_shpgh(KA) !> stability function for scalars for the countergradient (factor)
+    real(RP) :: f_gamma(KA) !> - E_H / q^2 * GRAV / Theta_0
+    real(RP) :: tltv25 (KA)
+    real(RP) :: qwtv25 (KA)
+    real(RP) :: tvsq25 (KA)
+    real(RP) :: tvsq_up(KA) !> upper limit of <\theta_v^2> - <\theta_v^2>2.5
+    real(RP) :: tvsq_lo(KA) !> lower limit
+    real(RP) :: dtsq   (KA)
+    real(RP) :: dqsq   (KA)
+    real(RP) :: dcov   (KA)
+    real(RP) :: tvsq
+    real(RP) :: tltv
+    real(RP) :: qwtv
+    real(RP) :: wtl
+    real(RP) :: wqw
+
+    ! for O2019
+    real(RP) :: mflux(0:KA)
+
+    ! work
+    real(RP) :: Uh(KA), Vh(KA)
+    real(RP) :: qw2(KA), qh(KA)
+    real(RP) :: TEML(KA), LHVL(KA), psat(KA)
+#ifdef _OPENACC
+    real(RP) :: work(KA,4)
+#endif
+
+    real(RP) :: sw, tmp
+
+    integer :: k, it, nit
+
+            
+    if ( ATMOS_PHY_BL_MYNN_similarity .or. initialize ) then
+       call get_phi( zeta, phi_m, phi_h, & ! (out)
+                     z(KS), RLmo, I_B_TYPE ) ! (in)
+    end if
+
+    call calc_vertical_differece( KA, KS, KE_PBL, &
+                                  i, j, &
+                                  dudz2(:), dtldz(:), dqwdz(:), & ! (out)
+                                  U(:), V(:), POTL(:),          & ! (in)
+                                  Qw(:), QDRY(:),               & ! (in)
+                                  CDZ(:), FDZ(:), F2H(:,:),     & ! (in)
+                                  us, ts, qs,                   & ! (in)
+                                  phi_m, phi_h, z(KS),          & ! (in)
+                                  Uh(:), Vh(:), qw2(:), qh(:)   ) ! (work)
+
+    us3 = us**3
+
+    do k = KS, KE_PBL
+       q(k) = sqrt( max( tke(k), ATMOS_PHY_BL_MYNN_TKE_MIN ) * 2.0_RP )
+    end do
+
+    if ( ATMOS_PHY_BL_MYNN_O2019 ) then
+
+       do k = KS, KE_PBL
+          PTLV(k) = POTL(k) * ( 1.0_RP + EPSTvap * Qw(k) )
+       end do
+       call calc_zi_o2019( KA, KS, KE_PBL, &
+                           Zi,              & ! (out)
+                           PTLV(:), tke(:), & ! (in)
+                           z(:), frac_land, & ! (in)
+                           initialize )
+    end if
+
+    if ( initialize .or. (.not. mynn_level3) ) then
+       ! estimate tsq, qsq, and cov
+
+       do k = KS, KE_PBL
+          n2_new(k) = min( max( N2(k), - ATMOS_PHY_BL_MYNN_N2_MAX ), ATMOS_PHY_BL_MYNN_N2_MAX )
+          Ri(k) = n2_new(k) / dudz2(k)
+       end do
+       if ( initialize ) then
+          dudz2(KS) = max( dudz2(KS), 1E-4_RP )
+          n2_new(KS) = min( n2_new(KS), 0.0_RP )
+          Ri(KS) = n2_new(KS) / dudz2(KS)
+       end if
+
+       SFLX_BUOY = - us3 * RLmo / KARMAN
+
+       if ( ATMOS_PHY_BL_MYNN_MF ) then
+          do k = KS, KE_PBL
+             cldfrac(k) = 0.0_RP
+          end do
+          call calc_mflux( &
+               KA, KS, KE_PBL, &
+               DENS(:), POTV(:), POTL(:), Qw(:), & ! (in)
+               U(:), V(:), W(:), tke(:),         & ! (in)
+               cldfrac(:),                       & ! (in)
+               EXNER(:),                         & ! (in)
+               SFLX_SH, SFLX_BUOY,               & ! (in)
+               SFLX_PT, SFLX_QV,                 & ! (in)
+               SFC_DENS,                         & ! (in)
+               Zi, Z(:), CDZ(:), F2H(:,:),       & ! (in)
+               mflux(:),                         & ! (out)
+               tflux(:), qflux(:),               & ! (out)
+               uflux(:), vflux(:), eflux(:)      ) ! (out)
+       end if
+
+       ! length
+       call get_length( &
+            KA, KS, KE_PBL, &
+            q(:), n2_new(:),      & ! (in)
+            POTV(:), DENS(:),     & ! (in)
+            mflux(:),             & ! (in)
+            Zi,                   & ! (in)
+            SFLX_BUOY, RLmo,      & ! (in)
+            z(:), CDZ(:), FDZ(:), & ! (in)
+            initialize,           & ! (in)
+            l(:)                  ) ! (out)
+
+       call get_q2_level2( &
+            KA, KS, KE_PBL, &
+            dudz2(:), Ri(:), l(:), & ! (in)
+            q2_2(:)                ) ! (out)
+
+       if ( initialize ) then
+          do k = KS, KE_PBL
+             q(k) = sqrt( q2_2(k) )
+          end do
+       end if
+
+       do k = KS, KE_PBL
+          ac(k) = min( q(k) / sqrt( q2_2(k) + 1e-20_RP ), 1.0_RP )
+       end do
+
+       call get_smsh( &
+            KA, KS, KE_PBL, &
+            i, j, &
+            q(:), ac(:),            & ! (in)
+            l(:), n2_new(:),        & ! (in)
+            Ri(:),                  & ! (in)
+            POTV(:), dudz2(:),      & ! (in)
+            dtldz(:), dqwdz(:),     & ! (in)
+            betat(:), betaq(:),     & ! (in) ! dummy
+            .false., .false.,       & ! (in)
+            tsq(:), qsq(:), cov(:), & ! (inout)
+            sm25(:), f_smp(:),      & ! (out) ! dummy
+            sh25(:), f_shpgh(:),    & ! (out) ! dymmy
+            f_gamma(:),             & ! (out) ! dummy
+            tltv25(:), qwtv25(:),   & ! (out) ! dummy
+            tvsq25(:),              & ! (out) ! dummy
+            tvsq_up(:), tvsq_lo(:)  ) ! (out) ! dummy
+
+    end if
+
+    flx(KS-1  ) = 0.0_RP
+    flx(KE_PBL) = 0.0_RP
+
+    if ( initialize ) then
+       nit = KE_PBL - 1
+    else
+       nit = 1
+    end if
+
+    !$acc loop seq
+    do it = 1, nit
+
+       call partial_condensation( KA, KS, KE_PBL, &
+                                  betat(:), betaq(:),       & ! (out)
+                                  Qlp(:), cldfrac(:),       & ! (out)
+                                  PRES(:), POTT(:),         & ! (in)
+                                  POTL(:), Qw(:),           & ! (in)
+                                  EXNER(:),                 & ! (in)
+                                  tsq(:), qsq(:), cov(:),   & ! (in)
+                                  TEML(:), LHVL(:), psat(:) ) ! (work)
+
+       ! update N2
+       do k = KS, KE_PBL
+          n2_new(k) = min(ATMOS_PHY_BL_MYNN_N2_MAX, &
+                          GRAV * ( dtldz(k) * betat(k) + dqwdz(k) * betaq(k) ) / POTV(k) )
+          Ri(k) = n2_new(k) / dudz2(k)
+       end do
+
+       SFLX_BUOY = GRAV / POTV(KS) * ( betat(KS) * SFLX_PT + betaq(KS) * SFLX_QV ) / SFC_DENS
+
+
+       if ( ATMOS_PHY_BL_MYNN_O2019 ) then
+
+          do k = KS, KE_PBL
+             PTLV(k) = POTL(k) * betat(k) + Qw(k) * betaq(k)
+          end do
+
+          call calc_zi_o2019( KA, KS, KE_PBL, &
+                              Zi,              & ! (out)
+                              PTLV(:), tke(:), & ! (in)
+                              z(:), frac_land, & ! (in)
+                              .false.          ) ! (in)
+
+          if ( ATMOS_PHY_BL_MYNN_MF ) then
+             call calc_mflux( &
+                  KA, KS, KE_PBL, &
+                  DENS(:), POTV(:), POTL(:), Qw(:), & ! (in)
+                  U(:), V(:), W(:), tke(:),         & ! (in)
+                  cldfrac(:),                       & ! (in)
+                  EXNER(:),                         & ! (in)
+                  SFLX_SH, SFLX_BUOY,               & ! (in)
+                  SFLX_PT, SFLX_QV,                 & ! (in)
+                  SFC_DENS,                         & ! (in)
+                  Zi, Z(:), CDZ(:), F2H(:,:),       & ! (in)
+                  mflux(:),                         & ! (out)
+                  tflux(:), qflux(:),               & ! (out)
+                  uflux(:), vflux(:), eflux(:)      ) ! (out)
+          end if
+
+       end if
+
+
+       ! length
+       call get_length( &
+            KA, KS, KE_PBL, &
+            q(:), n2_new(:),      & ! (in)
+            POTV(:), DENS(:),     & ! (in)
+            mflux(:),             & ! (in)
+            Zi,                   & ! (in)
+            SFLX_BUOY, RLmo,      & ! (in)
+            z(:), CDZ(:), FDZ(:), & ! (in)
+            .false.,              & ! (in)
+            l(:)                  ) ! (out)
+
+       call get_q2_level2( &
+            KA, KS, KE_PBL, &
+            dudz2(:), Ri(:), l(:), & ! (in)
+            q2_2(:)                ) ! (out)
+
+       do k = KS, KE_PBL
+          ac(k) = min( q(k) / sqrt( q2_2(k) + 1e-20_RP ), 1.0_RP )
+       end do
+
+       call get_smsh( &
+            KA, KS, KE_PBL, & 
+            i, j,                   & ! (in)
+            q(:), ac(:),            & ! (in)
+            l(:), n2_new(:),        & ! (in)
+            Ri(:),                  & ! (in)
+            POTV(:), dudz2(:),      & ! (in)
+            dtldz(:), dqwdz(:),     & ! (in)
+            betat(:), betaq(:),     & ! (in)
+            mynn_level3,            & ! (in)
+            initialize .and. it==1, & ! (in)
+            tsq(:), qsq(:), cov(:), & ! (inout)
+            sm25(:), f_smp(:),      & ! (out)
+            sh25(:), f_shpgh(:),    & ! (out)
+            f_gamma(:),             & ! (out)
+            tltv25(:), qwtv25(:),   & ! (out)
+            tvsq25(:),              & ! (out)
+            tvsq_up(:), tvsq_lo(:)  ) ! (out)
+
+       do k = KS, KE_PBL
+          lq(k) = l(k) * q(k)
+          Nu_f(k) = lq(k) * sm25(k)
+          Kh_f(k) = lq(k) * sh25(k)
+       end do
+       if ( ATMOS_PHY_BL_MYNN_similarity ) then
+          Nu_f(KS) = KARMAN * z(KS) * us / phi_m
+          Kh_f(KS) = KARMAN * z(KS) * us / phi_h
+       end if
+
+       do k = KS, KE_PBL-1
+          Nu(k) = min( F2H(k,1) * Nu_f(k+1) + F2H(k,2) * Nu_f(k), &
+                       ATMOS_PHY_BL_MYNN_NU_MAX )
+          Kh(k) = min( F2H(k,1) * Kh_f(k+1) + F2H(k,2) * Kh_f(k), &
+                        ATMOS_PHY_BL_MYNN_KH_MAX )
+       end do
+
+       do k = KS, KE_PBL-1
+          sw = 0.5_RP - sign(0.5_RP, abs(Kh(k)) - EPS)
+          Pr(k) = Nu(k) / ( Kh(k) + sw ) * ( 1.0_RP - sw ) &
+                + 1.0_RP * sw
+       end do
+
+       RHO(KS) = DENS(KS) + dt * SFLX_QV / CDZ(KS)
+       do k = KS+1, KE_PBL
+          RHO(k) = DENS(k)
+       end do
+
+       do k = KS, KE_PBL-1
+          rho_h(k) = F2H(k,1) * RHO(k+1) + F2H(k,2) * RHO(k)
+          RHONu(k) = Nu(k) * rho_h(k)
+          RHOKh(k) = Kh(k) * rho_h(k)
+!          RHONu(k) = F2H(k,1) * RHO(k+1) * Nu_f(k+1) + F2H(k,2) * RHO(k) * Nu_f(k)
+!          RHOKh(k) = F2H(k,1) * RHO(k+1) * Kh_f(k+1) + F2H(k,2) * RHO(k) * Kh_f(k)
+       end do
+
+
+       if ( mynn_level3 ) then
+
+          ! production term calculated by explicit scheme
+          do k = KS, KE_PBL
+             tltv = betat(k) * tsq(k) + betaq(k) * cov(k)
+             qwtv = betat(k) * cov(k) + betaq(k) * qsq(k)
+             gammat(k) = f_gamma(k) * ( tltv - tltv25(k) )
+             gammaq(k) = f_gamma(k) * ( qwtv - qwtv25(k) )
+
+             wtl = - lq(k) * ( sh25(k) * dtldz(k) + gammat(k) )
+             wqw = - lq(k) * ( sh25(k) * dqwdz(k) + gammaq(k) )
+             prod_t(k) = - 2.0_RP * wtl * dtldz(k)
+             prod_q(k) = - 2.0_RP * wqw * dqwdz(k)
+             prod_c(k) = - wtl * dqwdz(k) - wqw * dtldz(k)
+          end do
+
+          if ( ATMOS_PHY_BL_MYNN_similarity .or. initialize ) then
+             tmp = 2.0_RP * us * phi_h / ( KARMAN * z(KS) )
+             tmp = tmp * ( zeta / ( z(KS) * RLmo ) )**2 ! correspoinding to the limitter for zeta
+             ! TSQ
+             prod_t(KS) = tmp * ts**2
+             ! QSQ
+             prod_q(KS) = tmp * ts * qs
+             ! COV
+             prod_c(KS) = tmp * qs**2
+          end if
+
+          ! diffusion (explicit)
+          flx(KS-1)   = 0.0_RP
+          flx(KE_PBL) = 0.0_RP
+          do k = KS, KE_PBL-1
+             flx(k) = RHONu(k) * ( tsq(k+1) - tsq(k) ) / FDZ(k)
+          end do
+          do k = KS, KE_PBL
+             prod_t(k) = prod_t(k) + ( flx(k) - flx(k-1) ) / CDZ(k)
+          end do
+          do k = KS, KE_PBL-1
+             flx(k) = RHONu(k) * ( qsq(k+1) - qsq(k) ) / FDZ(k)
+          end do
+          do k = KS, KE_PBL
+             prod_q(k) = prod_q(k) + ( flx(k) - flx(k-1) ) / CDZ(k)
+          end do
+          do k = KS, KE_PBL-1
+             flx(k) = RHONu(k) * ( cov(k+1) - cov(k) ) / FDZ(k)
+          end do
+          do k = KS, KE_PBL
+             prod_c(k) = prod_c(k) + ( flx(k) - flx(k-1) ) / CDZ(k)
+          end do
+
+          call get_gamma_implicit( &
+               KA, KS, KE_PBL, &
+               i, j,       &
+               tsq(:), qsq(:), cov(:),          & ! (in)
+               dtldz(:), dqwdz(:), POTV(:),     & ! (in)
+               prod_t(:), prod_q(:), prod_c(:), & ! (in)
+               betat(:), betaq(:),              & ! (in)
+               f_gamma(:), l(:), q(:),          & ! (in)
+               dt,                              & ! (in)
+               dtsq(:), dqsq(:), dcov(:)        ) ! (out)
+
+          ! update
+          do k = KS, KE_PBL
+             tltv = betat(k) * ( tsq(k) + dtsq(k) ) + betaq(k) * ( cov(k) + dcov(k) )
+             qwtv = betat(k) * ( cov(k) + dcov(k) ) + betaq(k) * ( qsq(k) + dqsq(k) )
+             gammat(k) = f_gamma(k) * ( tltv - tltv25(k) )
+             gammaq(k) = f_gamma(k) * ( qwtv - qwtv25(k) )
+
+             tvsq = max( betat(k) * tltv + betaq(k) * qwtv, 0.0_RP )
+             tvsq = tvsq - tvsq25(k)
+             tvsq = min( max( tvsq, tvsq_lo(k) ), tvsq_up(k) )
+             smp  (k) = f_smp  (k) * tvsq
+             shpgh(k) = f_shpgh(k) * tvsq
+
+             wtl = - lq(k) * ( sh25(k) * dtldz(k) + gammat(k) )
+             wqw = - lq(k) * ( sh25(k) * dqwdz(k) + gammaq(k) )
+             prod_t(k) = - 2.0_RP * wtl * dtldz(k)
+             prod_q(k) = - 2.0_RP * wqw * dqwdz(k)
+             prod_c(k) = - wtl * dqwdz(k) - wqw * dtldz(k)
+          end do
+
+          if ( ATMOS_PHY_BL_MYNN_similarity .or. initialize ) then
+             smp(KS)    = 0.0_RP
+             shpgh(KS)  = 0.0_RP
+             gammat(KS) = 0.0_RP
+             gammaq(KS) = 0.0_RP
+
+             tmp = 2.0_RP * us * phi_h / ( KARMAN * z(KS) )
+             tmp = tmp * ( zeta / ( z(KS) * RLmo ) )**2 ! correspoinding to the limitter for zeta
+             ! TSQ
+             prod_t(KS) = tmp * ts**2
+             ! QSQ
+             prod_q(KS) = tmp * ts * qs
+             ! COV
+             prod_c(KS) = tmp * qs**2
+          end if
+
+       else
+
+          do k = KS, KE_PBL
+             smp   (k) = 0.0_RP
+             shpgh (k) = 0.0_RP
+             gammat(k) = 0.0_RP
+             gammaq(k) = 0.0_RP
+          end do
+
+       end if
+
+
+       ! production of TKE
+       do k = KS, KE_PBL
+          prod(k) = lq(k) * ( ( sm25(k) + smp(k) ) * dudz2(k) &
+                            - ( sh25(k) * n2_new(k) - shpgh(k) ) )
+       end do
+       if ( ATMOS_PHY_BL_MYNN_similarity .or. initialize ) then
+          prod(KS) = us3 / ( KARMAN * z(KS) ) * ( phi_m - zeta )
+       end if
+
+       do k = KS, KE_PBL
+          diss(k) = - 2.0_RP * q(k) / ( B1 * l(k) )
+!          prod(k) = max( prod(k), - tke(k) / dt - diss(k) * tke(k) )
+          diss_p(k) = dt * 2.0_RP * q(k) / ( B2 * l(k) )
+       end do
+
+
+       if ( .not. initialize ) exit
+
+       ! dens * TKE
+
+!!$    if ( ATMOS_PHY_BL_MYNN_MF ) then
+!!$       do k = KS, KE_PBL-1
+!!$          flx(k) = eflux(k)
+!!$       end do
+!!$    else
+       do k = KS, KE_PBL-1
+          flx(k) = 0.0_RP
+       end do
+!!$    end if
+
+       do k = KS, KE_PBL-1
+          d(k) = dt * ( - ( flx(k) - flx(k-1) ) / ( CDZ(k) * RHO(k) ) + prod(k) )
+       end do
+       d(KE_PBL) = 0.0_RP
+
+       c(KS) = 0.0_RP
+       do k = KS, KE_PBL-1
+          ap = - dt * ATMOS_PHY_BL_MYNN_Sq_fact * RHONu(k) / FDZ(k)
+          a(k) = ap / ( RHO(k) * CDZ(k) )
+#ifdef _OPENACC
+          if ( k==KS ) then
+             b(k) = - a(k) - diss(k) * dt
+          else
+             b(k) = - a(k) + dt * ATMOS_PHY_BL_MYNN_Sq_fact * RHONu(k-1) / ( FDZ(k-1) * RHO(k) * CDZ(k) ) - diss(k) * dt
+          end if
+#else
+          b(k) = - a(k) - c(k) - diss(k) * dt
+#endif
+          c(k+1) = ap / ( RHO(k+1) * CDZ(k+1) )
+       end do
+       a(KE_PBL) = 0.0_RP
+       b(KE_PBL) = - c(KE_PBL) - diss(KE_PBL) * dt
+
+       call MATRIX_SOLVER_tridiagonal( &
+            KA, KS, KE_PBL, &
+#ifdef _OPENACC
+            work(:,:),              & ! (work)
+#endif
+            a(:), b(:), c(:), d(:), & ! (in)
+            tke(:)                ) ! (out)
+
+       do k = KS, KE_PBL-1
+          tke(k) = max( tke(k), ATMOS_PHY_BL_MYNN_TKE_MIN )
+       end do
+       tke(KE_PBL) = 0.0_RP
+
+       do k = KS, KE_PBL
+          q(k) = sqrt( tke(k) * 2.0_RP )
+       end do
+
+
+       if ( .not. mynn_level3 ) cycle
+
+       ! dens * tsq
+
+       do k = KS, KE_PBL-1
+          d(k) = dt * prod_t(k)
+       end do
+       d(KE_PBL) = 0.0_RP
+       c(KS) = 0.0_RP
+       do k = KS, KE_PBL-1
+          ap = - dt * RHONu(k) / FDZ(k)
+          a(k) = ap / ( RHO(k) * CDZ(k) )
+#ifdef _OPENACC
+          if ( k==KS ) then
+             b(k) = - a(k) + diss_p(k)
+          else
+             b(k) = - a(k) + dt * RHONu(k-1) / ( FDZ(k-1) * RHO(k) * CDZ(k) ) + diss_p(k)
+          end if
+#else
+          b(k) = - a(k) - c(k) + 1.0_RP + diss_p(k)
+#endif
+          c(k+1) = ap / ( RHO(k+1) * CDZ(k+1) )
+       end do
+       a(KE_PBL) = 0.0_RP
+       b(KE_PBL) = - c(KE_PBL) + diss_p(KE_PBL)
+
+       call MATRIX_SOLVER_tridiagonal( &
+            KA, KS, KE_PBL, &
+#ifdef _OPENACC
+            work(:,:),              & ! (work)
+#endif
+            a(:), b(:), c(:), d(:), & ! (in)
+            tsq(:)                  ) ! (out)
+
+       do k = KS, KE_PBL-1
+          tsq(k) = max( tsq(k), 0.0_RP )
+       end do
+       tsq(KE_PBL) = 0.0_RP
+
+
+       ! dens * qsq
+
+       do k = KS, KE_PBL-1
+          d(k) = dt * prod_q(k)
+       end do
+       d(KE_PBL) = 0.0_RP
+       ! a, b, c are same as those for tsq
+
+       call MATRIX_SOLVER_tridiagonal( &
+            KA, KS, KE_PBL, &
+#ifdef _OPENACC
+            work(:,:),              & ! (work)
+#endif
+            a(:), b(:), c(:), d(:), & ! (in)
+            qsq(:)                  ) ! (out)
+
+       do k = KS, KE_PBL-1
+          qsq(k) = max( qsq(k), 0.0_RP )
+       end do
+       qsq(KE_PBL) = 0.0_RP
+
+
+       ! dens * cov
+
+       do k = KS, KE_PBL-1
+          d(k) = dt * prod_c(k)
+       end do
+       d(KE_PBL) = 0.0_RP
+       ! a, b, c are same as those for tsq
+
+       call MATRIX_SOLVER_tridiagonal( &
+            KA, KS, KE_PBL, &
+#ifdef _OPENACC
+            work(:,:),              & ! (work)
+#endif
+            a(:), b(:), c(:), d(:), & ! (in)
+            cov(:)                  ) ! (out)
+
+       do k = KS, KE_PBL-1
+          cov(k) = sign( min( abs(cov(k)), sqrt(tsq(k)*qsq(k)) ), cov(k) )
+       end do
+       cov(KE_PBL) = 0.0_RP
+
+    end do
+
+    return
+  end subroutine MYNN_main
 
 !OCL SERIAL
   subroutine get_length( &
@@ -1714,7 +2111,7 @@ contains
        l                )
     !$acc routine vector
     use scale_const, only: &
-       GRAV   => CONST_GRAV, &
+!       GRAV   => CONST_GRAV, &
        KARMAN => CONST_KARMAN, &
        EPS    => CONST_EPS
     implicit none
@@ -1751,13 +2148,12 @@ contains
     real(RP) :: qdz
 
     ! for Olson et al. (2019)
-    real(RP) :: lbl, lup, ldown
+!    real(RP) :: lbl, lup, ldown
     real(RP) :: tau
-    real(RP) :: w, qtmp
 
     real(RP) :: sw
     integer :: kmax
-    integer :: k, kk
+    integer :: k
 
     if ( ATMOS_PHY_BL_MYNN_O2019 ) then
        kmax = KE_PBL
@@ -2195,20 +2591,22 @@ contains
   subroutine calc_vertical_differece( &
        KA, KS, KE, &
        i, j,       &
+       dudz2, dtldz, dqwdz,  &
        U, V, POTL, Qw, QDRY, &
        CDZ, FDZ, F2H,        &
-#ifdef _OPENACC
-       work,                 &
-#endif
        us, ts, qs,           &
        phi_m, phi_h, z1,     &
-       dudz2, dtldz, dqwdz   )
+       Uh, Vh, qw2, qh       )
     !$acc routine vector
     use scale_const, only: &
-       EPS => CONST_EPS, &
        KARMAN => CONST_KARMAN
     integer,  intent(in), value  :: KA, KS, KE
     integer,  intent(in), value  :: i, j  ! for debug
+
+    real(RP), intent(out) :: dudz2(KA)
+    real(RP), intent(out) :: dtldz(KA)
+    real(RP), intent(out) :: dqwdz(KA)
+
     real(RP), intent(in) :: U   (KA)
     real(RP), intent(in) :: V   (KA)
     real(RP), intent(in) :: POTL(KA)
@@ -2224,21 +2622,10 @@ contains
     real(RP), intent(in) :: phi_h
     real(RP), intent(in) :: z1
 
-    real(RP), intent(out) :: dudz2(KA)
-    real(RP), intent(out) :: dtldz(KA)
-    real(RP), intent(out) :: dqwdz(KA)
-
-#ifdef _OPENACC
-    real(RP), intent(out) :: work(KA,4)
-#define Uh(k)  work(k,1)
-#define Vh(k)  work(k,2)
-#define qw2(k) work(k,3)
-#define qh(k)  work(k,4)
-#else
-    real(RP) :: Uh(KA), Vh(KA)
-    real(RP) :: qw2(KA)
-    real(RP) :: qh(KA)
-#endif
+    real(RP), intent(out) :: Uh(KA) ! work
+    real(RP), intent(out) :: Vh(KA) ! work
+    real(RP), intent(out) :: qw2(KA) ! work
+    real(RP), intent(out) :: qh(KA) ! work
 
     integer :: k
 
@@ -2305,12 +2692,10 @@ contains
 !OCL SERIAL
   subroutine partial_condensation( &
        KA, KS, KE, &
-       PRES, POTT, POTL, Qw, Qdry, EXNER, &
+       betat, betaq, Qlp, cldfrac,        &
+       PRES, POTT, POTL, Qw, EXNER, &
        tsq, qsq, cov,                     &
-#ifdef _OPENACC
-       work,                              &
-#endif
-       betat, betaq, Qlp, cldfrac         )
+       TEML, LHVL, psat                   )
     use scale_const, only: &
        CPdry   => CONST_CPdry,  &
        Rvap    => CONST_Rvap,   &
@@ -2322,15 +2707,12 @@ contains
 !       ATMOS_SATURATION_pres2qsat => ATMOS_SATURATION_pres2qsat_liq
     use scale_atmos_hydrometeor, only: &
        HYDROMETEOR_LHV => ATMOS_HYDROMETEOR_LHV, &
-       LHV,      &
-       CP_VAPOR, &
-       CP_WATER
+       CP_VAPOR
     integer,  intent(in), value  :: KA, KS, KE
     real(RP), intent(in)  :: PRES (KA)
     real(RP), intent(in)  :: POTT (KA)
     real(RP), intent(in)  :: POTL (KA)
     real(RP), intent(in)  :: Qw   (KA)
-    real(RP), intent(in)  :: Qdry (KA)
     real(RP), intent(in)  :: EXNER(KA)
     real(RP), intent(in)  :: tsq  (KA)
     real(RP), intent(in)  :: qsq  (KA)
@@ -2341,16 +2723,9 @@ contains
     real(RP), intent(out) :: Qlp    (KA)
     real(RP), intent(out) :: cldfrac(KA)
 
-#ifdef _OPENACC
-    real(RP), intent(out) :: work(KA,3)
-#define TEML(k) work(k,1)
-#define LHVL(k) work(k,2)
-#define psat(k) work(k,3)
-#else
-    real(RP) :: TEML(KA)
-    real(RP) :: LHVL(KA)
-    real(RP) :: psat(KA)
-#endif
+    real(RP), intent(out) :: TEML(KA)
+    real(RP), intent(out) :: LHVL(KA)
+    real(RP), intent(out) :: psat(KA)
 
     real(RP) :: Qsl
     real(RP) :: dQsl
@@ -2366,10 +2741,6 @@ contains
        TEML(k) = POTL(k) * EXNER(k)
     end do
 
-!!$    call ATMOS_SATURATION_pres2qsat( &
-!!$         KA, KS, KE, &
-!!$         TEML(:), PRES(:), Qdry(:), & ! (in)
-!!$         Qsl(:)                     ) ! (out)
     call ATMOS_SATURATION_psat( &
          KA, KS, KE, &
          TEML(:), & ! (in)
@@ -2416,6 +2787,115 @@ contains
 
     return
   end subroutine partial_condensation
+
+  subroutine get_phi( &
+       zeta, phi_m, phi_h, &
+       z1, RLmo, I_B_TYPE )
+    !$acc routine seq
+    real(RP), intent(out) :: zeta
+    real(RP), intent(out) :: phi_m
+    real(RP), intent(out) :: phi_h
+    real(RP), intent(in)  :: z1
+    real(RP), intent(in)  :: RLmo
+    integer,  intent(in)  :: I_B_TYPE
+
+    real(RP) :: tmp
+
+    zeta = min( max( z1 * RLmo, -ATMOS_PHY_BL_MYNN_zeta_lim ), ATMOS_PHY_BL_MYNN_zeta_lim )
+
+    select case ( I_B_TYPE )
+    case ( I_B71 )
+       ! Businger et al. (1971)
+       if ( zeta >= 0 ) then
+          phi_m = 4.7_RP * zeta + 1.0_RP
+          phi_h = 4.7_RP * zeta + 0.74_RP
+       else
+          phi_m = 1.0_RP / sqrt(sqrt( 1.0_RP - 15.0_RP * zeta ))
+          phi_h = 0.47_RP / sqrt( 1.0_RP - 9.0_RP * zeta )
+       end if
+    case ( I_B91, I_B91W01 )
+       ! Beljaars and Holtslag (1991)
+       if ( zeta >= 0 ) then
+          tmp = - 2.0_RP / 3.0_RP * ( 0.35_RP * zeta - 6.0_RP ) * exp(-0.35_RP*zeta) * zeta
+          phi_m = tmp + zeta + 1.0_RP
+          phi_h = tmp + zeta * sqrt( 1.0_RP + 2.0_RP * zeta / 3.0_RP ) + 1.0_RP
+       else
+          if ( I_B_TYPE == I_B91W01 ) then
+             ! Wilson (2001)
+             !tmp = (-zeta)**(2.0_RP/3.0_RP)
+             tmp = abs(zeta)**(2.0_RP/3.0_RP)
+             phi_m = 1.0_RP / sqrt( 1.0_RP + 3.6_RP * tmp )
+             phi_h = 0.95_RP / sqrt( 1.0_RP + 7.9_RP * tmp )
+          else
+             !                      tmp = sqrt( 1.0_RP - 16.0_RP * zeta )
+             tmp = sqrt( 1.0_RP + 16.0_RP * abs(zeta) )
+             phi_m = 1.0_RP / sqrt(tmp)
+             phi_h = 1.0_RP / tmp
+          end if
+       end if
+    end select
+
+    return
+  end subroutine get_phi
+
+!OCL SERIAL
+  subroutine calc_zi_o2019( &
+       KA, KS, KE, &
+       Zi, &
+       PTLV, &
+       tke, &
+       z, frac_land, &
+       initialize )
+    !$acc routine seq
+    integer, intent(in) :: KA, KS, KE
+    real(RP), intent(out) :: Zi
+    real(RP), intent(in)  :: PTLV(KA)
+    real(RP), intent(in)  :: tke(KA)
+    real(RP), intent(in)  :: z(KA)
+    real(RP), intent(in)  :: frac_land
+    logical,  intent(in)  :: initialize
+
+    real(RP) :: zit, zie
+    real(RP) :: tmin, dtv
+    real(RP) :: tke_min
+    real(RP) :: we
+    integer :: k, k2
+
+    tmin = 999e10_RP
+    do k = KS, KE
+       tmin = min( tmin, PTLV(k) )
+       if ( z(k) > 200.0_RP ) then
+          k2 = k
+          exit
+       end if
+    end do
+    if ( frac_land >= 0.5_RP ) then ! over land
+       dtv = 1.25_RP
+    else ! over water
+       dtv = 0.75_RP
+    end if
+    do k = k2+1, KE
+       if ( tmin + dtv <= PTLV(k) ) then
+          zit = z(k)
+          exit
+       end if
+    end do
+    if ( initialize ) then
+       zie = 1000.0_RP
+    else
+       tke_min = max( tke(KS), 0.02_RP )
+       do k = KS+1, KE
+          if ( tke(k) <= tke_min * 0.05_RP ) then
+             zie = z(k)
+             exit
+          end if
+       end do
+    end if
+    we = 0.5_RP * tanh( ( zit - 200.0_RP ) / 400.0_RP ) + 0.5_RP
+    Zi = zit * ( 1.0_RP - we ) + zie * we
+
+    return
+  end subroutine calc_zi_o2019
 
 !OCL SERIAL
   subroutine calc_mflux( &
@@ -2505,7 +2985,7 @@ contains
     real(RP) :: tmp, fact
     logical  :: converged
     integer :: np
-    integer :: k, n, m
+    integer :: k, n
 
     do k = KS-1, KE
        mflux(k) = 0.0_RP
