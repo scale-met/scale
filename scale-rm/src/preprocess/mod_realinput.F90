@@ -348,7 +348,11 @@ contains
        endif
 
        LOG_NEWLINE
-       LOG_INFO("REALINPUT_atmos",*) 'read external data from : ', trim(basename_org)//trim(basename_num)
+       if ( basename_num == "" ) then
+          LOG_INFO("REALINPUT_atmos",*) 'read external data from : ', trim(basename_org)
+       else
+          LOG_INFO("REALINPUT_atmos",*) 'read external data from : ', trim(basename_org), ' (', trim(basename_num), ')'
+       end if
 
        call ParentAtmosOpen( FILETYPE_ORG, basename_org, basename_num ) ![IN]
 
