@@ -791,7 +791,7 @@ contains
         RAINR,        & ! (inout)
         RAINB,        & ! (inout)
         RAING,        & ! (inout)
-        ROFF,         & ! (inout)
+        ROFF,         & ! (out)
         ALBD_LW_grid, & ! (out)
         ALBD_SW_grid, & ! (out)
         SHR,          & ! (out)
@@ -1717,7 +1717,7 @@ contains
     ROFFB = max( RAINB - STRGB, 0.0_RP )
     ROFFG = max( RAING - STRGG, 0.0_RP )
 
-    ROFF = ROFF + R * ROFFR + RW * ( ROFFB + ROFFG )
+    ROFF = R * ROFFR + RW * ( ROFFB + ROFFG )
 
     RAINR = max( RAINR - ROFFR, 0.0_RP )
     RAINB = max( RAINB - ROFFB, 0.0_RP )

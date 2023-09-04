@@ -1432,10 +1432,10 @@ contains
     real(RP), intent(in)  :: fact_ocean  (IA,JA)
     real(RP), intent(in)  :: fact_land   (IA,JA)
     real(RP), intent(in)  :: fact_urban  (IA,JA)
-    real(RP), intent(out) :: rflux       (rd_kmax+1,IA,JA,2,2,MSTRN_ncloud)
-    real(RP), intent(out) :: rflux_sfc_dn(IA,JA,N_RAD_DIR,N_RAD_RGN)        ! surface downward radiation flux (direct/diffuse,IR/NIR/VIS)
-    real(RP), intent(out) :: tauCLD_067u (rd_kmax,IA,JA)                    ! 0.67 micron cloud optical depth
-    real(RP), intent(out) :: emisCLD_105u(rd_kmax,IA,JA)                    ! 10.5 micron cloud emissivity
+    real(RP), intent(inout) :: rflux       (rd_kmax+1,IA,JA,2,2,MSTRN_ncloud)
+    real(RP), intent(inout) :: rflux_sfc_dn(IA,JA,N_RAD_DIR,N_RAD_RGN)        ! surface downward radiation flux (direct/diffuse,IR/NIR/VIS)
+    real(RP), intent(inout) :: tauCLD_067u (rd_kmax,IA,JA)                    ! 0.67 micron cloud optical depth
+    real(RP), intent(inout) :: emisCLD_105u(rd_kmax,IA,JA)                    ! 10.5 micron cloud emissivity
 
 #ifdef _OPENACC
 #define LOOP_INNER do j=JS,JE; do i=IS,IE

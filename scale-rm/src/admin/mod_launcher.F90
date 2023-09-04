@@ -69,6 +69,7 @@ contains
 
     integer               :: NUM_BULKJOB                  = 1       ! number of bulk job
     integer               :: NUM_BULKJOB_ONCE             = 1       ! number of bulk job for one iteration
+    logical               :: BULKJOB                      = .false.
     integer               :: NUM_ITERATION_BULK           = 1       ! number of iteration for bulk job
     integer               :: BULKJOB_START_DIRNUM         = 0       ! start number of directory for bulk job
     logical               :: ADD_BULKJOB_PATH             = .false. ! add path of the bulk job to files
@@ -86,6 +87,7 @@ contains
 !         EXECUTE_PREPROCESS, &
 !         EXECUTE_MODEL,      &
          NUM_BULKJOB,          &
+         BULKJOB,              &
          NUM_ITERATION_BULK,   &
          BULKJOB_START_DIRNUM, &
          ADD_BULKJOB_PATH,     &
@@ -177,8 +179,10 @@ contains
 
     !--- split for bulk jobs
 
+    BULKJOB = BULKJOB .or. ( NUM_BULKJOB > 1 )
+
     global_nprocs = universal_nprocs
-    if ( NUM_BULKJOB > 1 ) then
+    if ( BULKJOB ) then
 
        if ( NUM_BULKJOB == 1 ) NUM_ITERATION_BULK = 1
        NUM_BULKJOB_ONCE = ceiling( real(NUM_BULKJOB) / NUM_ITERATION_BULK )
@@ -290,7 +294,7 @@ contains
                                   ID_BULKJOB,       & ! [IN]
                                   ID_DOMAIN         ) ! [IN]
 
-       if ( NUM_BULKJOB > 1 ) then
+       if ( BULKJOB ) then
           write(path,'(I4.4,A)') ID_BULKJOB + BULKJOB_START_DIRNUM, "/"
        else
           path = ""
