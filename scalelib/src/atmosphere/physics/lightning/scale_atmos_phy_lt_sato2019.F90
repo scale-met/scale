@@ -592,7 +592,7 @@ contains
     B_F2013(:,:) = 0.0_RP
     !$acc end kernels
 
-    !$omp parallel do
+    !$omp parallel do private(tmp_qcrg)
     !$acc kernels
     !$acc loop collapse(2)
     do j = JS, JE
@@ -1408,7 +1408,7 @@ contains
     call COMM_vars8( E_pot_N, 1 )
 
 
-    !$omp parallel do private(i,j,k)
+    !$omp parallel do private(i,j,k,eps_air)
     !$acc kernels
     do j = JS, JE
     do i = IS, IE

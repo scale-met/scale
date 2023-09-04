@@ -416,6 +416,7 @@ contains
        !$omp MASS_total, MASS_water, MASS_ice,         &
        !$omp TEMP2, WATER2, ICE2, ENGI,                &
        !$omp F1, F2, F3, V, flux, kappa,               &
+       !$omp ro_sum, roe_sum,                          &
        !$omp CS, CL, ro, rw, ri, sw )
        !$acc kernels
        do j = LJS, LJE
