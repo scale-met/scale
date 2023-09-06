@@ -2743,7 +2743,7 @@ contains
 
     error = .false.
 
-    !$omp parallel do reduction(.or.:error)
+    !$omp parallel do private(y,yphase,geopot_hvari,del_eta,itr,ln_eta,temp_vfunc) reduction(.or.:error)
     !$acc kernels
     !$acc loop collapse(2) reduction(.or.:error)
     do j = JSB, JEB

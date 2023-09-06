@@ -256,7 +256,7 @@ contains
     real(RP) :: TRL(UKA,UIA,UJA), TBL(UKA,UIA,UJA), TGL(UKA,UIA,UJA)
     real(RP) :: TR(UIA,UJA), TB(UIA,UJA), TG(UIA,UJA)
     real(RP) :: TC(UIA,UJA), QC(UIA,UJA), UC(UIA,UJA)
-    real(RP) :: RAINR(UIA,UJA), RAINB(UIA,UJA), RAING(UIA,UJA), ROFF(UIA,UJA)
+    real(RP) :: RAINR(UIA,UJA), RAINB(UIA,UJA), RAING(UIA,UJA)
 
     real(RP) :: LHV(UIA,UJA)        ! latent heat of vaporization [J/kg]
 
@@ -270,7 +270,7 @@ contains
 
     call PROF_rapstart('URB_CalcTend', 1)
 
-    !$acc data create(TRL,TBL,TGL,TR,TB,TG,TC,QC,UC,RAINR,RAINB,RAING,ROFF,LHV)
+    !$acc data create(TRL,TBL,TGL,TR,TB,TG,TC,QC,UC,RAINR,RAINB,RAING,LHV)
 
     !########## Get Surface Boundary from coupler ##########
     call URBAN_SURFACE_GET
@@ -497,7 +497,6 @@ contains
     call FILE_HISTORY_in( URBAN_RAINR_t(:,:), 'URBAN_RAINR_t', 'tendency of URBAN_RAINR', 'kg/m2/s', dim_type='XY' )
     call FILE_HISTORY_in( URBAN_RAINB_t(:,:), 'URBAN_RAINB_t', 'tendency of URBAN_RAINB', 'kg/m2/s', dim_type='XY' )
     call FILE_HISTORY_in( URBAN_RAING_t(:,:), 'URBAN_RAING_t', 'tendency of URBAN_RAING', 'kg/m2/s', dim_type='XY' )
-    call FILE_HISTORY_in( URBAN_ROFF   (:,:), 'URBAN_ROFF',    'urban runoff water',      'kg/m2/s', dim_type='XY' )
 
     if ( STATISTICS_checktotal ) then
 

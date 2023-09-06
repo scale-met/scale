@@ -333,11 +333,11 @@ contains
     if ( use_fpm ) then
        call SIGVARS_Get_all( master )
        call signal( SIGINT,  PRC_abort )
-       call signal( SIGQUIT, PRC_abort )
-       call signal( SIGABRT, PRC_abort )
-       call signal( SIGFPE,  PRC_abort )
-       call signal( SIGSEGV, PRC_abort )
-       call signal( SIGTERM, PRC_abort )
+!       call signal( SIGQUIT, PRC_abort )
+!       call signal( SIGABRT, PRC_abort )
+!       call signal( SIGFPE,  PRC_abort )
+!       call signal( SIGSEGV, PRC_abort )
+!       call signal( SIGTERM, PRC_abort )
     endif
 
     return
