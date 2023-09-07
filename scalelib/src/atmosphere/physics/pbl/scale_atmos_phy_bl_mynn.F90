@@ -583,7 +583,7 @@ contains
                        dudz2(:), n2_new(:), Ri(:),                         & ! (out)
                        dtldz(:), dqwdz(:),                                 & ! (out)
                        RHO(:), rho_h(:),                                   & ! (out)
-                       uflux(:), vflux(:), tflux(:), qflux(:), qflux(:),   & ! (out)
+                       uflux(:), vflux(:), tflux(:), qflux(:), eflux(:),   & ! (out)
                        Qlp(:), cldfrac(:), Zi, SFLX_BUOY,                  & ! (out)
                        U(:,i,j), V(:,i,j), W(:,i,j),                       & ! (in)
                        DENS(:,i,j), PRES(:,i,j),                           & ! (in)
@@ -922,7 +922,7 @@ contains
                        dudz2(:,i,j), n2_new(:), Ri(:,i,j),                  & ! (out)
                        dtldz(:), dqwdz(:),                                  & ! (out)
                        RHO(:), rho_h(:),                                    & ! (out)
-                       uflux(:), vflux(:), tflux(:), qflux(:), qflux(:),    & ! (out)
+                       uflux(:), vflux(:), tflux(:), qflux(:), eflux(:),    & ! (out)
                        Qlp(:,i,j), cldfrac(:,i,j), Zi(i,j), SFLX_BUOY(i,j), & ! (out)
                        U(:,i,j), V(:,i,j), W(:,i,j),                        & ! (in)
                        DENS(:,i,j), PRES(:,i,j),                            & ! (in)
@@ -1824,8 +1824,8 @@ contains
 
        do k = KS, KE_PBL-1
           rho_h(k) = F2H(k,1) * RHO(k+1) + F2H(k,2) * RHO(k)
-          RHONu(k) = Nu(k) * rho_h(k)
-          RHOKh(k) = Kh(k) * rho_h(k)
+          RHONu(k) = max( Nu(k) * rho_h(k), 1e-20_RP )
+          RHOKh(k) = max( Kh(k) * rho_h(k), 1e-20_RP )
 !          RHONu(k) = F2H(k,1) * RHO(k+1) * Nu_f(k+1) + F2H(k,2) * RHO(k) * Nu_f(k)
 !          RHOKh(k) = F2H(k,1) * RHO(k+1) * Kh_f(k+1) + F2H(k,2) * RHO(k) * Kh_f(k)
        end do
@@ -2001,12 +2001,13 @@ contains
             tke(:)                ) ! (out)
 
        do k = KS, KE_PBL-1
-          tke(k) = max( tke(k), ATMOS_PHY_BL_MYNN_TKE_MIN )
+          tke(k) = min( max( tke(k), ATMOS_PHY_BL_MYNN_TKE_MIN ), 100.0_RP )
        end do
        tke(KE_PBL) = 0.0_RP
 
+
        do k = KS, KE_PBL
-          q(k) = sqrt( tke(k) * 2.0_RP )
+          q(k) = ( q(k) + sqrt( tke(k) * 2.0_RP ) ) * 0.5_RP ! to avoid oscillation
        end do
 
 
@@ -2133,6 +2134,7 @@ contains
     real(RP), intent(out) :: l(KA)
 
     real(RP), parameter :: ls_fact_max = 2.0_RP
+    real(RP), parameter :: sqrt05 = sqrt( 0.5_RP )
 
     real(RP) :: ls     !> L_S
     real(RP) :: lb     !> L_B
@@ -2222,7 +2224,7 @@ contains
 !!$          we = 0.5_RP * tanh( ( z(k) - zi * 1.3_RP ) /  ( zi * 0.15_RP ) ) + 0.5_RP
 !!$          lb = lb * ( 1.0_RP - we ) + lbl * we
           lb = ATMOS_PHY_BL_MYNN_alpha2 * max( q(k), ( mflux(k)+mflux(k-1))/DENS(k) ) * rn2sr * sw &
-             + tau * sqrt( q(k)**2 * 0.5_RP ) * (1.0_RP-sw)
+             + tau * q(k) * sqrt05 * (1.0_RP-sw)
        else
           lb = ATMOS_PHY_BL_MYNN_alpha2 * (1.0_RP + 5.0_RP * sqrt(qc*rn2sr*rlt)) * q(k) * rn2sr * sw & ! qc=0 when RLmo > 0
              + 1.E10_RP * (1.0_RP-sw)
@@ -2439,10 +2441,11 @@ contains
              tvsq25(k) = max(betat(k) * tltv25(k) + betaq(k) * qwtv25(k), 0.0_RP)
              cw25 = p1q2 * ( p2q2 + 3.0_RP * C1 * p5q2 ) * rd25q2 / ( 3.0_RP * q2 )
 
-             rdpq2  = q2 / max( p2q2 * ( f4 * ghq2 + q2 ) + p5q2 * ( f3 * ghq2 + q2 ), 1e-20_RP )
-
              l2q2 = l2 / q2
-!             l2q2 = min( l2q2, 1.0_RP / max(n2(k), EPS) )
+             l2q2 = min( l2q2, 1.0_RP / max(n2(k), EPS) )
+             q2 = l2 / l2q2
+
+             rdpq2  = q2 / max( p2q2 * ( f4 * ghq2 + q2 ) + p5q2 * ( f3 * ghq2 + q2 ), 1e-20_RP )
 
              tltv = betat(k) * tsq(k) + betaq(k) * cov(k)
              qwtv = betat(k) * cov(k) + betaq(k) * qsq(k)
