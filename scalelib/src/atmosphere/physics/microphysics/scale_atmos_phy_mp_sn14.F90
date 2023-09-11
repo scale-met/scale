@@ -5007,7 +5007,7 @@ contains
 !    real(RP) :: coef_emelt
 !    real(RP) :: w1
 
-    real(RP) :: sw, sw1, sw2
+    real(RP) :: sw, sw1, sw2, tmp
     real(RP) :: alpha_lt
     !
     integer  :: k, iqw
@@ -5019,27 +5019,30 @@ contains
     !
     ! work for binary collision
     !
-    real(RP) :: lambdac, lambdar, lambdai, lambdas, lambdag
-    real(RP) :: A_dsdc, A_dsdr, A_dsdi, A_dsds , A_dsdg
+    ! work for Gauss-Legendre quadrature
+    integer, parameter :: ngmax=4
+
+    real(RP) :: lambdac(KA), lambdar(KA), lambdai(KA), lambdas(KA), lambdag(KA)
+    real(RP) :: A_dsdc(KA), A_dsdr(KA), A_dsdi(KA), A_dsds(KA), A_dsdg(KA)
     real(RP) :: dNdx
     real(RP) :: dxdd
     real(RP) :: dNdD
-    real(RP) :: dNc_glx, dNr_glx, dNi_glx, dNs_glx, dNg_glx
-    real(RP) :: dNc_gly, dNr_gly, dNi_gly, dNs_gly, dNg_gly
+    real(RP) :: dNc_glx(KA,ngmax), dNr_glx(KA,ngmax), dNi_glx(KA,ngmax), dNs_glx(KA,ngmax), dNg_glx(KA,ngmax)
+    real(RP) :: dNc_gly, dNr_gly(KA,ngmax), dNi_gly(KA,ngmax), dNs_gly(KA,ngmax), dNg_gly(KA,ngmax)
     !
     real(RP) :: dc_glx, dr_glx, di_glx, ds_glx, dg_glx
     real(RP) :: dc_gly, dr_gly, di_gly, ds_gly, dg_gly
-    real(RP) :: xc_glx, xr_glx, xi_glx, xs_glx, xg_glx
-    real(RP) :: xc_gly, xr_gly, xi_gly, xs_gly, xg_gly
+    real(RP) :: xc_glx(KA,ngmax), xr_glx(KA,ngmax), xi_glx(KA,ngmax), xs_glx(KA,ngmax), xg_glx(KA,ngmax)
+    real(RP) :: xc_gly, xr_gly(KA,ngmax), xi_gly, xs_gly, xg_gly
 
-    real(RP) :: vtc_glx, vtr_glx, vti_glx, vts_glx, vtg_glx
-    real(RP) :: vtc_gly, vtr_gly, vti_gly, vts_gly, vtg_gly
-    real(RP) :: dac_glx, dar_glx, dai_glx, das_glx, dag_glx
-    real(RP) :: dac_gly, dar_gly, dai_gly, das_gly, dag_gly
+    real(RP) :: vtc_glx(KA,ngmax), vtr_glx(KA,ngmax), vti_glx(KA,ngmax), vts_glx(KA,ngmax), vtg_glx(KA,ngmax)
+    real(RP) :: vtc_gly, vtr_gly(KA,ngmax), vti_gly(KA,ngmax), vts_gly(KA,ngmax), vtg_gly(KA,ngmax)
+    real(RP) :: dac_glx(KA,ngmax), dar_glx(KA,ngmax), dai_glx(KA,ngmax), das_glx(KA,ngmax), dag_glx(KA,ngmax)
+    real(RP) :: dac_gly, dar_gly(KA,ngmax), dai_gly(KA,ngmax), das_gly(KA,ngmax), dag_gly(KA,ngmax)
     !
     integer :: ngx, ngy
     !
-    real(RP) :: E_ic, E_sc, E_gc
+    real(RP) :: E_ic(KA), E_sc(KA), E_gc(KA)
     !
     ! Parameters to calculate terminal velocity formulated by Mitchell (1996)
     !
@@ -5049,10 +5052,10 @@ contains
     real(RP), parameter :: bs = 2.4490_RP
     real(RP), parameter :: gs = 0.131488_RP
     real(RP), parameter :: ss = 1.880000_RP
-    real(RP), save :: ag = 19.5072514_RP !0.049d0*1.d-3*(100.0d0**2.8d0)
-    real(RP), save :: bg = 2.8_RP
-    real(RP), save :: gg = 0.5_RP
-    real(RP), save :: sg = 2.0_RP
+    real(RP), parameter :: ag = 19.5072514_RP !0.049d0*1.d-3*(100.0d0**2.8d0)
+    real(RP), parameter :: bg = 2.8_RP
+    real(RP), parameter :: gg = 0.5_RP
+    real(RP), parameter :: sg = 2.0_RP
     real(RP) :: num_Besti_glx, num_Bests_glx, num_Bestg_glx
     real(RP) :: num_Besti_gly, num_Bests_gly, num_Bestg_gly
     real(RP) :: num_Rei_glx, num_Res_glx, num_Reg_glx
@@ -5060,7 +5063,7 @@ contains
     real(RP), parameter :: c0=0.6_RP  ! Bohm (1989)
     real(RP), parameter :: d0=5.83_RP ! Bohm (1989)
     !
-    real(RP) :: mua, nua
+    real(RP) :: mua(KA), nua(KA)
     !--- Dynamic viscosity
     real(RP), parameter :: mua0 = 1.718e-5_RP
     !<--- Kg/m/s : 0C/1atm
@@ -5076,10 +5079,7 @@ contains
     real(RP) :: kernel_sg, kernel_ss
     real(RP) :: kernel_gg
     real(RP) :: kernel_sg_reb
-    real(RP) :: beta_work(KA), dqcrg_work(KA)
     !
-    ! work for Gauss-Legendre quadrature
-    integer, parameter :: ngmax=4
     !--------------------------
     !
     ! accurate for PSDs with optimization
@@ -5144,13 +5144,6 @@ contains
     !---------------------------------------------------------------------------
     !
     !
-    if( flg_lt ) then
-       beta_work(:) = beta_crg(:)
-       dqcrg_work(:) = dqcrg(:)
-    else
-       beta_work(:) = 0.0_RP
-       dqcrg_work(:) = 0.0_RP
-    endif
 
     do k = KS, KE
        tem(k) = max( wtem(k), tem_min ) ! 11/08/30 T.Mitsui
@@ -5183,14 +5176,6 @@ contains
           E_stick(k) = exp(0.09_RP*temc_m)
        end do
     end if
-
-    do k = KS, KE
-       ! averaged diameter using SB06(82)
-       ave_dc = coef_d(I_mp_QC)*xq(k,I_mp_QC)**b_m(I_mp_QC)
-       !------------------------------------------------------------------------
-       ! coellection efficiency are given as follows
-       E_c = max(0.0_RP, min(1.0_RP, (ave_dc-dc0)/(dc1-dc0) ))
-    end do
 
     !------------------------------------------------------------------------
 
@@ -5262,263 +5247,366 @@ contains
           E_stick(k) = exp(0.09_RP*temc_m)*esi_rat(k)
        enddo
     endif
+
     !
     ! Integration Start
     !
+
+    do k = KS, KE
+       mua(k) = mua0 + dmua_dT*(tem(k)-273.15_RP)
+       nua(k) = mua(k)/rho(k)        ! [m2/s]
+    end do
+    do k = KS, KE
+       lambdac(k) = xq(k,I_mp_QC)**(-mu(I_mp_QC))*coef_lambda(I_mp_QC)
+       A_dsdc(k) = rhoq(k,I_NC)*coef_A(I_mp_QC)*lambdac(k)**((nu(I_mp_QC)+1.0_RP)/mu(I_mp_QC))
+    end do
+    do k = KS, KE
+       lambdar(k) = xq(k,I_mp_QR)**(-mu(I_mp_QR))*coef_lambda(I_mp_QR)
+       A_dsdr(k) = rhoq(k,I_NR)*coef_A(I_mp_QR)*lambdar(k)**((nu(I_mp_QR)+1.0_RP)/mu(I_mp_QR))
+    end do
+    do k = KS, KE
+       lambdai(k) = xq(k,I_mp_QI)**(-mu(I_mp_QI))*coef_lambda(I_mp_QI)
+       A_dsdi(k) = rhoq(k,I_NI)*coef_A(I_mp_QI)*lambdai(k)**((nu(I_mp_QI)+1.0_RP)/mu(I_mp_QI))
+    end do
+    do k = KS, KE
+       lambdas(k) = xq(k,I_mp_QS)**(-mu(I_mp_QS))*coef_lambda(I_mp_QS)
+       A_dsds(k) = rhoq(k,I_NS)*coef_A(I_mp_QS)*lambdas(k)**((nu(I_mp_QS)+1.0_RP)/mu(I_mp_QS))
+    end do
+    do k = KS, KE
+       lambdag(k) = xq(k,I_mp_QG)**(-mu(I_mp_QG))*coef_lambda(I_mp_QG)
+       A_dsdg(k) = rhoq(k,I_NG)*coef_A(I_mp_QG)*lambdag(k)**((nu(I_mp_QG)+1.0_RP)/mu(I_mp_QG))
+    end do
+
+    !
+    ! Particle X
+    !
+    do ngx=1, ngmax ! X < Y
+!OCL LOOP_FISSION_TARGET(LS)
+       do k = KS, KE
+          dc_glx         = dq_xave(k,I_mp_QC)*coefc_d_gl(ngx)
+          xc_glx (k,ngx) = ( (dc_glx/a_m(I_mp_QC)) )**(1.0_RP/b_m(I_mp_QC))
+          dNc_glx(k,ngx) = a_dsdc(k)*(xc_glx(k,ngx)**nu(I_mp_QC)) * exp(-lambdac(k)*xc_glx(k,ngx)**mu(I_mp_QC))&
+               *(xc_glx(k,ngx)/(b_m(I_mp_QC)*dc_glx))*dc_glx*wc_gl(ngx) ! dNdlogD*weight
+          !
+          dr_glx         = dq_xave(k,I_mp_QR)*coefr_d_gl(ngx)
+          xr_glx (k,ngx) = ( (dr_glx/a_m(I_mp_QR)) )**(1.0_RP/b_m(I_mp_QR))
+          dNr_glx(k,ngx) = a_dsdr(k)*(xr_glx(k,ngx)**nu(I_mp_QR)) * exp(-lambdar(k)*xr_glx(k,ngx)**mu(I_mp_QR))&
+               *(xr_glx(k,ngx)/(b_m(I_mp_QR)*dr_glx))*dr_glx*wr_gl(ngx) ! dNdlogD*weight
+          !
+          di_glx         = dq_xave(k,I_mp_QI)*coef_d_gl(ngx)
+          xi_glx (k,ngx) = ( (di_glx/a_m(I_mp_QI)) )**(1.0_RP/b_m(I_mp_QI))
+          dNi_glx(k,ngx) = a_dsdi(k)*(xi_glx(k,ngx)**nu(I_mp_QI)) * exp(-lambdai(k)*xi_glx(k,ngx)**mu(I_mp_QI))&
+               *(xi_glx(k,ngx)/(b_m(I_mp_QI)*di_glx))*di_glx*w_gl(ngx) ! dNdlogD*weight
+          !
+          ds_glx         = dq_xave(k,I_mp_QS)*coef_d_gl(ngx)
+          xs_glx (k,ngx) = ( (ds_glx/a_m(I_mp_QS)) )**(1.0_RP/b_m(I_mp_QS))
+          dNs_glx(k,ngx) = a_dsds(k)*(xs_glx(k,ngx)**nu(I_mp_QS)) * exp(-lambdas(k)*xs_glx(k,ngx)**mu(I_mp_QS))&
+               *(xs_glx(k,ngx)/(b_m(I_mp_QS)*ds_glx))*ds_glx*w_gl(ngx)! dNdlogD*weight
+          !
+          dg_glx         = dq_xave(k,I_mp_QG)*coef_d_gl(ngx)
+          xg_glx (k,ngx) = ( (dg_glx/a_m(I_mp_QG)) )**(1.0_RP/b_m(I_mp_QG))
+          dNg_glx(k,ngx) = a_dsdg(k)*(xg_glx(k,ngx)**nu(I_mp_QG)) * exp(-lambdag(k)*xg_glx(k,ngx)**mu(I_mp_QG))&
+               *(xg_glx(k,ngx)/(b_m(I_mp_QG)*dg_glx))*dg_glx*w_gl(ngx)! dNdlogD*weight
+          !
+          ! Hexagonal Columns
+!!$          if( di_glx <= 100.e-6_RP )then
+!!$             acx = 0.1677_RP*1.e-3_RP*(100.0_RP**2.91_RP)
+!!$             bcx = 2.91_RP
+!!$             gcx = (0.684_RP*1.e-4_RP)*10.0_RP**(2.0_RP*2.0_RP)
+!!$             scx = 2.0_RP
+!!$          else
+!!$             acx = 0.00166_RP*1.e-3_RP*(100.0_RP**1.91_RP)
+!!$             bcx = 1.91_RP
+!!$             gcx = (0.0696_RP*1.e-4_RP)*10.0_RP**(2.0_RP*1.5_RP)
+!!$             scx = 1.5_RP
+!!$          end if
+          sw = 0.5_RP + sign(0.5_RP, di_glx - 100.E-6_RP )
+          acx = ( 0.1677_RP*(1.0_RP-sw) + 0.00166_RP*sw ) * 1.e-3_RP * 100.0_RP**( 2.91_RP*(1.0_RP-sw) + 1.91_RP*sw )
+          bcx = 2.91_RP*(1.0_RP-sw) + 1.91_RP*sw
+          gcx = (0.684_RP*(1.0_RP-sw) + 0.0696_RP*sw ) * 1.e-4_RP * 10.0_RP**( 4.0_RP*(1.0_RP-sw) + 3.0_RP*sw )
+          scx = 2.0_RP*(1.0_RP-sw) + 1.5_RP*sw
+          num_Besti_glx = 2.0_RP*acx*GRAV*rho(k)*di_glx**(bcx+2.0_RP-scx)/(gcx*mua(k)**2)
+          num_Bests_glx = 2.0_RP*as *GRAV*rho(k)*ds_glx**(bs +2.0_RP-ss )/(gs *mua(k)**2)
+          num_Bestg_glx = 2.0_RP*ag *GRAV*rho(k)*dg_glx**(bg +2.0_RP-sg )/(gg *mua(k)**2)
+          num_Rei_glx   = 0.25_RP*d0*d0*( sqrt(1.0_RP+4.0_RP*sqrt(num_Besti_glx)/(d0*d0*sqrt(c0)))-1.0_RP )**2
+          num_Res_glx   = 0.25_RP*d0*d0*( sqrt(1.0_RP+4.0_RP*sqrt(num_Bests_glx)/(d0*d0*sqrt(c0)))-1.0_RP )**2
+          num_Reg_glx   = 0.25_RP*d0*d0*( sqrt(1.0_RP+4.0_RP*sqrt(num_Bestg_glx)/(d0*d0*sqrt(c0)))-1.0_RP )**2
+          !
+          vtc_glx(k,ngx) = coef_vtr_ar2*dc_glx*(1.0_RP-exp(-coef_vtr_br2*dc_glx))
+          !
+!!$          if( dr_glx < d_vtr_branch )then
+!!$             vtr_glx = coef_vtr_ar2*dr_glx*(1.0_RP-exp(-coef_vtr_br2*dr_glx))
+!!$          else
+!!$             vtr_glx = coef_vtr_ar1-coef_vtr_br1*exp(-coef_vtr_cr1*dr_glx)
+!!$          end if
+          sw = 0.5_RP + sign( 0.5_RP, dr_glx - d_vtr_branch )
+          tmp = exp( - ( coef_vtr_br2*(1.0_RP-sw) + coef_vtr_cr1*sw ) * dr_glx )
+          vtr_glx(k,ngx) = coef_vtr_ar2 * dr_glx * ( 1.0_RP - tmp ) * (1.0_RP-sw) &
+                         + ( coef_vtr_ar1 - coef_vtr_br1 * tmp ) * sw
+          !
+          vti_glx(k,ngx) = num_Rei_glx*nua(k)/di_glx
+          vts_glx(k,ngx) = num_Res_glx*nua(k)/ds_glx
+          vtg_glx(k,ngx) = num_Reg_glx*nua(k)/dg_glx
+          ! equivalent area diameter
+          dac_glx(k,ngx) = dc_glx
+          dar_glx(k,ngx) = dr_glx
+          dai_glx(k,ngx) = 2.0_RP*sqrt( (gcx*di_glx**scx)/pi )
+          das_glx(k,ngx) = 2.0_RP*sqrt( (gs *ds_glx**ss )/pi )
+          dag_glx(k,ngx) = 2.0_RP*sqrt( (gg *dg_glx**sg )/pi )
+       end do
+    end do
+
+    !
+    ! Particle Y
+    !
+    do ngy=1, ngmax
+!OCL LOOP_FISSION_TARGET(LS)
+       do k = KS, KE
+          dr_gly         = dq_xave(k,I_mp_QR)*coefr_d_gl(ngy)
+          xr_gly (k,ngy) = ( (dr_gly/a_m(I_mp_QR)) )**(1.0_RP/b_m(I_mp_QR))
+          dNr_gly(k,ngy) = a_dsdr(k)*(xr_gly(k,ngy)**nu(I_mp_QR)) * exp(-lambdar(k)*xr_gly(k,ngy)**mu(I_mp_QR))&
+               *(xr_gly(k,ngy)/(b_m(I_mp_QR)*dr_gly))*dr_gly*wr_gl(ngy) ! dNdlogD*weight
+          !
+          di_gly         = dq_xave(k,I_mp_QI)*coef_d_gl(ngy)
+          xi_gly         = ( (di_gly/a_m(I_mp_QI)) )**(1.0_RP/b_m(I_mp_QI))
+          dNi_gly(k,ngy) = a_dsdi(k)*(xi_gly**nu(I_mp_QI)) * exp(-lambdai(k)*xi_gly**mu(I_mp_QI))&
+               *(xi_gly/(b_m(I_mp_QI)*di_gly))*di_gly*w_gl(ngy) ! dNdlogD*weight
+          !
+          ds_gly         = dq_xave(k,I_mp_QS)*coef_d_gl(ngy)
+          xs_gly         = ( (ds_gly/a_m(I_mp_QS)) )**(1.0_RP/b_m(I_mp_QS))
+          dNs_gly(k,ngy) = a_dsds(k)*(xs_gly**nu(I_mp_QS)) * exp(-lambdas(k)*xs_gly**mu(I_mp_QS))&
+               *(xs_gly/(b_m(I_mp_QS)*ds_gly))*ds_gly*w_gl(ngy)! dNdlogD*weight
+          !
+          dg_gly         = dq_xave(k,I_mp_QG)*coef_d_gl(ngy)
+          xg_gly         = ( (dg_gly/a_m(I_mp_QG)) )**(1.0_RP/b_m(I_mp_QG))
+          dNg_gly(k,ngy) = a_dsdg(k)*(xg_gly**nu(I_mp_QG)) * exp(-lambdag(k)*xg_gly**mu(I_mp_QG))&
+               *(xg_gly/(b_m(I_mp_QG)*dg_gly))*dg_gly*w_gl(ngy)! dNdlogD*weight
+          !
+          ! Hexagonal Columns
+!!$          if( di_gly <= 100.e-6_RP )then
+!!$             acy = 0.1677_RP*1.d-3*(100.0_RP**2.91_RP)
+!!$             bcy = 2.91_RP
+!!$             gcy = (0.684_RP*1.e-4_RP)*10.0_RP**(2.0_RP*2.0_RP)
+!!$             scy = 2.0_RP
+!!$          else
+!!$             acy = 0.00166_RP*1.e-3_RP*(100.0_RP**1.91_RP)
+!!$             bcy = 1.91_RP
+!!$             gcy = (0.0696_RP*1.e-4_RP)*10.0_RP**(2.0_RP*1.5_RP)
+!!$             scy = 1.5_RP
+!!$          end if
+          sw = 0.5_RP + sign( 0.5_RP, di_gly - 100.e-6_RP )
+          acy = ( 0.1677_RP*(1.0_RP-sw) + 0.00166_RP*sw ) * 1.e-3_RP * 100.0_RP**( 2.91_RP*(1.0_RP-sw) + 1.91_RP*sw )
+          bcy = 2.91_RP*(1.0_RP-sw) + 1.91_RP*sw
+          gcy = ( 0.684_RP*(1.0_RP-sw) + 0.0696_RP*sw ) * 1.e-4_RP * 10.0_RP**( 4.0_RP*(1.0_RP-sw) + 3.0_RP*sw )
+          scy = 2.0_RP*(1.0_RP-sw) + 1.5_RP*sw
+          num_Besti_gly = 2.0_RP*acy*GRAV*rho(k)*di_gly**(bcy+2.0_RP-scy)/(gcy*mua(k)**2)
+          num_Bests_gly = 2.0_RP*as *GRAV*rho(k)*ds_gly**(bs +2.0_RP-ss )/(gs *mua(k)**2)
+          num_Bestg_gly = 2.0_RP*ag *GRAV*rho(k)*dg_gly**(bg +2.0_RP-sg )/(gg *mua(k)**2)
+          num_Rei_gly   = 0.25_RP*d0*d0*( sqrt(1.0_RP+4.0_RP*sqrt(num_Besti_gly)/(d0*d0*sqrt(c0)))-1.0_RP )**2
+          num_Res_gly   = 0.25_RP*d0*d0*( sqrt(1.0_RP+4.0_RP*sqrt(num_Bests_gly)/(d0*d0*sqrt(c0)))-1.0_RP )**2
+          num_Reg_gly   = 0.25_RP*d0*d0*( sqrt(1.0_RP+4.0_RP*sqrt(num_Bestg_gly)/(d0*d0*sqrt(c0)))-1.0_RP )**2
+          !
+!!$          if( dr_gly < d_vtr_branch )then
+!!$             vtr_gly(k,ngy) = coef_vtr_ar2*dr_gly*(1.0_RP-exp(-coef_vtr_br2*dr_gly))
+!!$          else
+!!$             vtr_gly(k,ngy) = coef_vtr_ar1-coef_vtr_br1*exp(-coef_vtr_cr1*dr_gly)
+!!$          end if
+          sw = 0.5_RP + sign( 0.5_RP, dr_gly - d_vtr_branch )
+          tmp = exp( - ( coef_vtr_br2*(1.0_RP-sw) + coef_vtr_cr1*sw ) * dr_gly )
+          vtr_gly(k,ngy) = coef_vtr_ar2 * dr_gly * ( 1.0_RP - tmp ) * (1.0_RP-sw) &
+                         + ( coef_vtr_ar1 - coef_vtr_br1 * tmp ) * sw
+          !
+          vti_gly(k,ngy) = num_Rei_gly*nua(k)/di_gly
+          vts_gly(k,ngy) = num_Res_gly*nua(k)/ds_gly
+          vtg_gly(k,ngy) = num_Reg_gly*nua(k)/dg_gly
+          ! equivalent area diameter
+          dar_gly(k,ngy) = dr_gly
+          dai_gly(k,ngy) = 2.0_RP*sqrt( (gcy*di_gly**scy)/pi )
+          das_gly(k,ngy) = 2.0_RP*sqrt( (gs *ds_gly**ss )/pi )
+          dag_gly(k,ngy) = 2.0_RP*sqrt( (gg *dg_gly**sg )/pi )
+       end do
+    end do
+
+    !
+    ! BULK collection efficiency are given as follows
+    !
+    do k = KS, KE
+       E_c = max(0.0_RP, min(1.0_RP, (dq_xave(k,I_mp_QC)-dc0)/(dc1-dc0) ))
+       !
+!!$       if (dq_xave(k,I_mp_QI)>di0) then
+!!$          E_i = E_im
+!!$       else
+!!$          E_i = 0.0_RP
+!!$       endif
+       sw = 0.5_RP + sign( 0.5_RP, dq_xave(k,I_mp_QI)-di0 )
+       E_i = E_im * sw
+!!$       if (dq_xave(k,I_mp_QS)>ds0) then
+!!$          E_s = E_sm
+!!$       else
+!!$          E_s = 0.0_RP
+!!$       endif
+       sw = 0.5_RP + sign( 0.5_RP, dq_xave(k,I_mp_QS)-ds0 )
+       E_s = E_sm * sw
+!!$       if (dq_xave(k,I_mp_QG)>dg0) then
+!!$          E_g = E_gm
+!!$       else
+!!$          E_g = 0.0_RP
+!!$       endif
+       sw = 0.5_RP + sign( 0.5_RP, dq_xave(k,i_mp_QG)-dg0 )
+       E_g = E_gm * sw
+
+       E_ic(k) = E_i*E_c
+       E_sc(k) = E_s*E_c
+       E_gc(k) = E_g*E_c
+    end do
+
+
+    !=========================================================================================
+    ! collection equation
+    !=========================================================================================
     do ngx=1, ngmax ! X < Y
        do ngy=1, ngmax
-          !
-          do k= KS, KE
-             mua     = mua0 + dmua_dT*(tem(k)-273.15_RP)
-             nua     = mua/rho(k)        ! [m2/s]
-             lambdac = xq(k,I_mp_QC)**(-mu(I_mp_QC))*coef_lambda(I_mp_QC)
-             lambdar = xq(k,I_mp_QR)**(-mu(I_mp_QR))*coef_lambda(I_mp_QR)
-             lambdai = xq(k,I_mp_QI)**(-mu(I_mp_QI))*coef_lambda(I_mp_QI)
-             lambdas = xq(k,I_mp_QS)**(-mu(I_mp_QS))*coef_lambda(I_mp_QS)
-             lambdag = xq(k,I_mp_QG)**(-mu(I_mp_QG))*coef_lambda(I_mp_QG)
-             A_dsdc = rhoq(k,I_NC)*coef_A(I_mp_QC)*lambdac**((nu(I_mp_QC)+1.0_RP)/mu(I_mp_QC))
-             A_dsdr = rhoq(k,I_NR)*coef_A(I_mp_QR)*lambdar**((nu(I_mp_QR)+1.0_RP)/mu(I_mp_QR))
-             A_dsdi = rhoq(k,I_NI)*coef_A(I_mp_QI)*lambdai**((nu(I_mp_QI)+1.0_RP)/mu(I_mp_QI))
-             A_dsds = rhoq(k,I_NS)*coef_A(I_mp_QS)*lambdas**((nu(I_mp_QS)+1.0_RP)/mu(I_mp_QS))
-             A_dsdg = rhoq(k,I_NG)*coef_A(I_mp_QG)*lambdag**((nu(I_mp_QG)+1.0_RP)/mu(I_mp_QG))
-             !
-             ! Particle X
-             !
-             dc_glx        = dq_xave(k,I_mp_QC)*coefc_d_gl(ngx)
-             xc_glx        = ( (dc_glx/a_m(I_mp_QC)) )**(1.0_RP/b_m(I_mp_QC))
-             dNc_glx       = a_dsdc*(xc_glx**nu(I_mp_QC)) * exp(-lambdac*xc_glx**mu(I_mp_QC))&
-                  *(xc_glx/(b_m(I_mp_QC)*dc_glx))*dc_glx*wc_gl(ngx) ! dNdlogD*weight
-             !
-             dr_glx        = dq_xave(k,I_mp_QR)*coefr_d_gl(ngx)
-             xr_glx        = ( (dr_glx/a_m(I_mp_QR)) )**(1.0_RP/b_m(I_mp_QR))
-             dNr_glx       = a_dsdr*(xr_glx**nu(I_mp_QR)) * exp(-lambdar*xr_glx**mu(I_mp_QR))&
-                  *(xr_glx/(b_m(I_mp_QR)*dr_glx))*dr_glx*wr_gl(ngx) ! dNdlogD*weight
-             !
-             di_glx         = dq_xave(k,I_mp_QI)*coef_d_gl(ngx)
-             xi_glx         = ( (di_glx/a_m(I_mp_QI)) )**(1.0_RP/b_m(I_mp_QI))
-             dNi_glx       = a_dsdi*(xi_glx**nu(I_mp_QI)) * exp(-lambdai*xi_glx**mu(I_mp_QI))&
-                  *(xi_glx/(b_m(I_mp_QI)*di_glx))*di_glx*w_gl(ngx) ! dNdlogD*weight
-             !
-             ds_glx         = dq_xave(k,I_mp_QS)*coef_d_gl(ngx)
-             xs_glx         = ( (ds_glx/a_m(I_mp_QS)) )**(1.0_RP/b_m(I_mp_QS))
-             dNs_glx       = a_dsds*(xs_glx**nu(I_mp_QS)) * exp(-lambdas*xs_glx**mu(I_mp_QS))&
-                  *(xs_glx/(b_m(I_mp_QS)*ds_glx))*ds_glx*w_gl(ngx)! dNdlogD*weight
-             !
-             dg_glx         = dq_xave(k,I_mp_QG)*coef_d_gl(ngx)
-             xg_glx         = ( (dg_glx/a_m(I_mp_QG)) )**(1.0_RP/b_m(I_mp_QG))
-             dNg_glx       = a_dsdg*(xg_glx**nu(I_mp_QG)) * exp(-lambdag*xg_glx**mu(I_mp_QG))&
-                  *(xg_glx/(b_m(I_mp_QG)*dg_glx))*dg_glx*w_gl(ngx)! dNdlogD*weight
-             !
-             ! Hexagonal Columns
-             if( di_glx <= 100.e-6_RP )then
-                acx = 0.1677_RP*1.e-3_RP*(100.0_RP**2.91_RP)
-                bcx = 2.91_RP
-                gcx = (0.684_RP*1.e-4_RP)*10.0_RP**(2.0_RP*2.0_RP)
-                scx = 2.0_RP
-             else
-                acx = 0.00166_RP*1.e-3_RP*(100.0_RP**1.91_RP)
-                bcx = 1.91_RP
-                gcx = (0.0696_RP*1.e-4_RP)*10.0_RP**(2.0_RP*1.5_RP)
-                scx = 1.5_RP
-             end if
-             num_Besti_glx = 2.0_RP*acx*GRAV*rho(k)*di_glx**(bcx+2.0_RP-scx)/(gcx*mua*mua)
-             num_Bests_glx = 2.0_RP*as *GRAV*rho(k)*ds_glx**(bs +2.0_RP-ss )/(gs *mua*mua)
-             num_Bestg_glx = 2.0_RP*ag *GRAV*rho(k)*dg_glx**(bg +2.0_RP-sg )/(gg *mua*mua)
-             num_Rei_glx   = 0.25_RP*d0*d0*( sqrt(1.0_RP+4.0_RP*sqrt(num_Besti_glx)/(d0*d0*sqrt(c0)))-1.0_RP )**2
-             num_Res_glx   = 0.25_RP*d0*d0*( sqrt(1.0_RP+4.0_RP*sqrt(num_Bests_glx)/(d0*d0*sqrt(c0)))-1.0_RP )**2
-             num_Reg_glx   = 0.25_RP*d0*d0*( sqrt(1.0_RP+4.0_RP*sqrt(num_Bestg_glx)/(d0*d0*sqrt(c0)))-1.0_RP )**2
-             !
-             vtc_glx = coef_vtr_ar2*dc_glx*(1.0_RP-exp(-coef_vtr_br2*dc_glx))
-             !
-             if( dr_glx < d_vtr_branch )then
-                vtr_glx = coef_vtr_ar2*dr_glx*(1.0_RP-exp(-coef_vtr_br2*dr_glx))
-             else
-                vtr_glx = coef_vtr_ar1-coef_vtr_br1*exp(-coef_vtr_cr1*dr_glx)
-             end if
-             !
-             vti_glx   = num_Rei_glx*nua/di_glx
-             vts_glx   = num_Res_glx*nua/ds_glx
-             vtg_glx   = num_Reg_glx*nua/dg_glx
-             ! equivalent area diameter
-             dac_glx = dc_glx
-             dar_glx = dr_glx
-             dai_glx = 2.0_RP*sqrt( (gcx*di_glx**scx)/pi )
-             das_glx = 2.0_RP*sqrt( (gs *ds_glx**ss )/pi )
-             dag_glx = 2.0_RP*sqrt( (gg *dg_glx**sg )/pi )
-             !
-             ! Particle Y
-             !
-             dr_gly        = dq_xave(k,I_mp_QR)*coefr_d_gl(ngy)
-             xr_gly        = ( (dr_gly/a_m(I_mp_QR)) )**(1.0_RP/b_m(I_mp_QR))
-             dNr_gly       = a_dsdr*(xr_gly**nu(I_mp_QR)) * exp(-lambdar*xr_gly**mu(I_mp_QR))&
-                  *(xr_gly/(b_m(I_mp_QR)*dr_gly))*dr_gly*wr_gl(ngy) ! dNdlogD*weight
-             !
-             di_gly        = dq_xave(k,I_mp_QI)*coef_d_gl(ngy)
-             xi_gly        = ( (di_gly/a_m(I_mp_QI)) )**(1.0_RP/b_m(I_mp_QI))
-             dNi_gly       = a_dsdi*(xi_gly**nu(I_mp_QI)) * exp(-lambdai*xi_gly**mu(I_mp_QI))&
-                  *(xi_gly/(b_m(I_mp_QI)*di_gly))*di_gly*w_gl(ngy) ! dNdlogD*weight
-             !
-             ds_gly        = dq_xave(k,I_mp_QS)*coef_d_gl(ngy)
-             xs_gly        = ( (ds_gly/a_m(I_mp_QS)) )**(1.0_RP/b_m(I_mp_QS))
-             dNs_gly       = a_dsds*(xs_gly**nu(I_mp_QS)) * exp(-lambdas*xs_gly**mu(I_mp_QS))&
-                  *(xs_gly/(b_m(I_mp_QS)*ds_gly))*ds_gly*w_gl(ngy)! dNdlogD*weight
-             !
-             dg_gly        = dq_xave(k,I_mp_QG)*coef_d_gl(ngy)
-             xg_gly        = ( (dg_gly/a_m(I_mp_QG)) )**(1.0_RP/b_m(I_mp_QG))
-             dNg_gly       = a_dsdg*(xg_gly**nu(I_mp_QG)) * exp(-lambdag*xg_gly**mu(I_mp_QG))&
-                  *(xg_gly/(b_m(I_mp_QG)*dg_gly))*dg_gly*w_gl(ngy)! dNdlogD*weight
-             !
-             ! Hexagonal Columns
-             if( di_gly <= 100.e-6_RP )then
-                acy = 0.1677_RP*1.d-3*(100.0_RP**2.91_RP)
-                bcy = 2.91_RP
-                gcy = (0.684_RP*1.e-4_RP)*10.0_RP**(2.0_RP*2.0_RP)
-                scy = 2.0_RP
-             else
-                acy = 0.00166_RP*1.e-3_RP*(100.0_RP**1.91_RP)
-                bcy = 1.91_RP
-                gcy = (0.0696_RP*1.e-4_RP)*10.0_RP**(2.0_RP*1.5_RP)
-                scy = 1.5_RP
-             end if
-             num_Besti_gly = 2.0_RP*acy*GRAV*rho(k)*di_gly**(bcy+2.0_RP-scy)/(gcy*mua*mua)
-             num_Bests_gly = 2.0_RP*as *GRAV*rho(k)*ds_gly**(bs +2.0_RP-ss )/(gs *mua*mua)
-             num_Bestg_gly = 2.0_RP*ag *GRAV*rho(k)*dg_gly**(bg +2.0_RP-sg )/(gg *mua*mua)
-             num_Rei_gly   = 0.25_RP*d0*d0*( sqrt(1.0_RP+4.0_RP*sqrt(num_Besti_gly)/(d0*d0*sqrt(c0)))-1.0_RP )**2
-             num_Res_gly   = 0.25_RP*d0*d0*( sqrt(1.0_RP+4.0_RP*sqrt(num_Bests_gly)/(d0*d0*sqrt(c0)))-1.0_RP )**2
-             num_Reg_gly   = 0.25_RP*d0*d0*( sqrt(1.0_RP+4.0_RP*sqrt(num_Bestg_gly)/(d0*d0*sqrt(c0)))-1.0_RP )**2
-             !
-             if( dr_gly < d_vtr_branch )then
-                vtr_gly = coef_vtr_ar2*dr_gly*(1.0_RP-exp(-coef_vtr_br2*dr_gly))
-             else
-                vtr_gly = coef_vtr_ar1-coef_vtr_br1*exp(-coef_vtr_cr1*dr_gly)
-             end if
-             !
-             vti_gly   = num_Rei_gly*nua/di_gly
-             vts_gly   = num_Res_gly*nua/ds_gly
-             vtg_gly   = num_Reg_gly*nua/dg_gly
-             ! equivalent area diameter
-             dar_gly = dr_gly
-             dai_gly = 2.0_RP*sqrt( (gcy*di_gly**scy)/pi )
-             das_gly = 2.0_RP*sqrt( (gs *ds_gly**ss )/pi )
-             dag_gly = 2.0_RP*sqrt( (gg *dg_gly**sg )/pi )
-             !
-             ! BULK collection efficiency are given as follows
-             !
-             E_c = max(0.0_RP, min(1.0_RP, (dq_xave(k,I_mp_QC)-dc0)/(dc1-dc0) ))
-             !
-             if (dq_xave(k,I_mp_QI)>di0) then
-                E_i = E_im
-             else
-                E_i = 0.0_RP
-             endif
-             if (dq_xave(k,I_mp_QS)>ds0) then
-                E_s = E_sm
-             else
-                E_s = 0.0_RP
-             endif
-             if (dq_xave(k,I_mp_QG)>dg0) then
-                E_g = E_gm
-             else
-                E_g = 0.0_RP
-             endif
-             E_ic = E_i*E_c
-             E_sc = E_s*E_c
-             E_gc = E_g*E_c
-             !=========================================================================================
-             ! collection equation
-             !=========================================================================================
+
+          do k = KS, KE
              !
              ! 1.c-g (X=Cloud, Y=Graupel)
              !
-             kernel_cg        = 0.25_RP*pi*(dag_gly+dac_glx)*(dag_gly+dac_glx)*sqrt((vtg_gly-vtc_glx)*(vtg_gly-vtc_glx))  * E_gc
-             Pac(k,I_NGacNC2NG) = Pac(k,I_NGacNC2NG) - kernel_cg       *dNc_glx*dNg_gly
-             Pac(k,I_LGacLC2LG) = Pac(k,I_LGacLC2LG) - kernel_cg*xc_glx*dNc_glx*dNg_gly
+!             kernel_cg = 0.25_RP*pi*(dag_gly(k,ngy)+dac_glx(k,ngx))*(dag_gly(k,ngy)+dac_glx(k,ngx))*sqrt((vtg_gly(k,ngy)-vtc_glx(k,ngx))*(vtg_gly(k,ngy)-vtc_glx(k,ngx)))  * E_gc(k)
+             kernel_cg = 0.25_RP * pi * (dag_gly(k,ngy)+dac_glx(k,ngx))**2 * abs(vtg_gly(k,ngy)-vtc_glx(k,ngx)) * E_gc(k)
+             Pac(k,I_NGacNC2NG) = Pac(k,I_NGacNC2NG) - kernel_cg              *dNc_glx(k,ngx)*dNg_gly(k,ngy)
+             Pac(k,I_LGacLC2LG) = Pac(k,I_LGacLC2LG) - kernel_cg*xc_glx(k,ngx)*dNc_glx(k,ngx)*dNg_gly(k,ngy)
+          end do
+          do k = KS, KE
              !
              ! 2.c-s (X=Cloud, Y=Snow)
              !
-             kernel_cs        = 0.25_RP*pi*(das_gly+dac_glx)*(das_gly+dac_glx)*sqrt((vts_gly-vtc_glx)*(vts_gly-vtc_glx))  * E_sc
-             Pac(k,I_NSacNC2NS) = Pac(k,I_NSacNC2NS) - kernel_cs       *dNc_glx*dNs_gly
-             Pac(k,I_LSacLC2LS) = Pac(k,I_LSacLC2LS) - kernel_cs*xc_glx*dNc_glx*dNs_gly
+!             kernel_cs = 0.25_RP*pi*(das_gly(k,ngy)+dac_glx(k,ngx))*(das_gly(k,ngy)+dac_glx(k,ngx))*sqrt((vts_gly(k,ngy)-vtc_glx(k,ngx))*(vts_gly(k,ngy)-vtc_glx(k,ngx)))  * E_sc(k)
+             kernel_cs = 0.25_RP * pi * (das_gly(k,ngy)+dac_glx(k,ngx))**2 * abs(vts_gly(k,ngy)-vtc_glx(k,ngx)) * E_sc(k)
+             Pac(k,I_NSacNC2NS) = Pac(k,I_NSacNC2NS) - kernel_cs              *dNc_glx(k,ngx)*dNs_gly(k,ngy)
+             Pac(k,I_LSacLC2LS) = Pac(k,I_LSacLC2LS) - kernel_cs*xc_glx(k,ngx)*dNc_glx(k,ngx)*dNs_gly(k,ngy)
+          end do
+          do k = KS, KE
              !
              ! 3.c-i (X=Cloud, Y=Cloud Ice)
              !
-             kernel_ci        = 0.25_RP*pi*(dai_gly+dac_glx)*(dai_gly+dac_glx)*sqrt((vti_gly-vtc_glx)*(vti_gly-vtc_glx))  * E_ic
-             Pac(k,I_NIacNC2NI) = Pac(k,I_NIacNC2NI) - kernel_ci       *dNc_glx*dNi_gly
-             Pac(k,I_LIacLC2LI) = Pac(k,I_LIacLC2LI) - kernel_ci*xc_glx*dNc_glx*dNi_gly
+!             kernel_ci = 0.25_RP*pi*(dai_gly(k,ngy)+dac_glx(k,ngx))*(dai_gly(k,ngy)+dac_glx(k,ngx))*sqrt((vti_gly(k,ngy)-vtc_glx(k,ngx))*(vti_gly(k,ngy)-vtc_glx(k,ngx)))  * E_ic(k)
+             kernel_ci = 0.25_RP * pi * (dai_gly(k,ngy)+dac_glx(k,ngx))**2 * abs(vti_gly(k,ngy)-vtc_glx(k,ngx)) * E_ic(k)
+             Pac(k,I_NIacNC2NI) = Pac(k,I_NIacNC2NI) - kernel_ci              *dNc_glx(k,ngx)*dNi_gly(k,ngy)
+             Pac(k,I_LIacLC2LI) = Pac(k,I_LIacLC2LI) - kernel_ci*xc_glx(k,ngx)*dNc_glx(k,ngx)*dNi_gly(k,ngy)
+          end do
+          do k = KS, KE
              !
              ! 4.r-g
              !
-             kernel_rg        = 0.25_RP*pi*(dag_gly+dar_glx)*(dag_gly+dar_glx)*sqrt((vtg_gly-vtr_glx)*(vtg_gly-vtr_glx)) * E_gr
+!             kernel_rg = 0.25_RP*pi*(dag_gly(k,ngy)+dar_glx(k,ngx))*(dag_gly(k,ngy)+dar_glx(k,ngx))*sqrt((vtg_gly(k,ngy)-vtr_glx(k,ngx))*(vtg_gly(k,ngy)-vtr_glx(k,ngx))) * E_gr
+             kernel_rg = 0.25_RP * pi * (dag_gly(k,ngy)+dar_glx(k,ngx))**2 * abs(vtg_gly(k,ngy)-vtr_glx(k,ngx)) * E_gr
              ! T < 273K  (X=Rain   , Y=Graupel)
-             Pac(k,I_NRacNG2NG) = Pac(k,I_NRacNG2NG) - kernel_rg       *dNr_glx*dNg_gly
-             Pac(k,I_LRacLG2LG) = Pac(k,I_LRacLG2LG) - kernel_rg*xr_glx*dNr_glx*dNg_gly
+             Pac(k,I_NRacNG2NG) = Pac(k,I_NRacNG2NG) - kernel_rg              *dNr_glx(k,ngx)*dNg_gly(k,ngy)
+             Pac(k,I_LRacLG2LG) = Pac(k,I_LRacLG2LG) - kernel_rg*xr_glx(k,ngx)*dNr_glx(k,ngx)*dNg_gly(k,ngy)
              ! T > 273K  (X=Graupel, Y=Rain   )
-             Pac(k,I_NRacNG2NR) = Pac(k,I_NRacNG2NR) - kernel_rg       *dNg_glx*dNr_gly
-             Pac(k,I_LRacLG2LR) = Pac(k,I_LRacLG2LR) - kernel_rg*xg_glx*dNg_glx*dNr_gly
+             Pac(k,I_NRacNG2NR) = Pac(k,I_NRacNG2NR) - kernel_rg              *dNg_glx(k,ngx)*dNr_gly(k,ngy)
+             Pac(k,I_LRacLG2LR) = Pac(k,I_LRacLG2LR) - kernel_rg*xg_glx(k,ngx)*dNg_glx(k,ngx)*dNr_gly(k,ngy)
+          end do
+          do k = KS, KE
              !
              ! 5.r-s
              !
-             kernel_rs          = 0.25_RP*pi*(das_glx+dar_gly)*(das_glx+dar_gly)*sqrt((vts_glx-vtr_gly)*(vts_glx-vtr_gly)) * E_sr
+!             kernel_rs = 0.25_RP*pi*(das_glx(k,ngx)+dar_gly(k,ngy))*(das_glx(k,ngx)+dar_gly(k,ngy))*sqrt((vts_glx(k,ngx)-vtr_gly(k,ngy))*(vts_glx(k,ngx)-vtr_gly(k,ngy))) * E_sr
+             kernel_rs = 0.25_RP * pi * (das_glx(k,ngx)+dar_gly(k,ngy))**2 * abs(vts_glx(k,ngx)-vtr_gly(k,ngy)) * E_sr
              ! (X=Snow, Y=Rain)
-             Pac(k,I_NRacNS2NG_R) = Pac(k,I_NRacNS2NG_R) - kernel_rs       *dNs_glx*dNr_gly
-             Pac(k,I_LRacLS2LG_R) = Pac(k,I_LRacLS2LG_R) - kernel_rs*xr_gly*dNs_glx*dNr_gly
+             Pac(k,I_NRacNS2NG_R) = Pac(k,I_NRacNS2NG_R) - kernel_rs              *dNs_glx(k,ngx)*dNr_gly(k,ngy)
+             Pac(k,I_LRacLS2LG_R) = Pac(k,I_LRacLS2LG_R) - kernel_rs*xr_gly(k,ngy)*dNs_glx(k,ngx)*dNr_gly(k,ngy)
              !
-             Pac(k,I_NRacNS2NG_S) = Pac(k,I_NRacNS2NG_S) - kernel_rs       *dNs_glx*dNr_gly
-             Pac(k,I_LRacLS2LG_S) = Pac(k,I_LRacLS2LG_S) - kernel_rs*xs_glx*dNs_glx*dNr_gly
+             Pac(k,I_NRacNS2NG_S) = Pac(k,I_NRacNS2NG_S) - kernel_rs              *dNs_glx(k,ngx)*dNr_gly(k,ngy)
+             Pac(k,I_LRacLS2LG_S) = Pac(k,I_LRacLS2LG_S) - kernel_rs*xs_glx(k,ngx)*dNs_glx(k,ngx)*dNr_gly(k,ngy)
+          end do
+          do k = KS, KE
              !
              ! 6.r-i
              !
-             kernel_ri          = 0.25_RP*pi*(dai_glx+dar_gly)*(dai_glx+dar_gly)*sqrt((vti_glx-vtr_gly)*(vti_glx-vtr_gly)) * E_ir
+!             kernel_ri = 0.25_RP*pi*(dai_glx(k,ngx)+dar_gly(k,ngy))*(dai_glx(k,ngx)+dar_gly(k,ngy))*sqrt((vti_glx(k,ngx)-vtr_gly(k,ngy))*(vti_glx(k,ngx)-vtr_gly(k,ngy))) * E_ir
+             kernel_ri = 0.25_RP * pi * (dai_glx(k,ngx)+dar_gly(k,ngy))**2 * abs(vti_glx(k,ngx)-vtr_gly(k,ngy)) * E_ir
              ! (X=Cloud Ice, Y=Rain)
-             Pac(k,I_NRacNI2NG_R) = Pac(k,I_NRacNI2NG_R) - kernel_ri       *dNi_glx*dNr_gly
-             Pac(k,I_LRacLI2LG_R) = Pac(k,I_LRacLI2LG_R) - kernel_ri*xr_gly*dNi_glx*dNr_gly
+             Pac(k,I_NRacNI2NG_R) = Pac(k,I_NRacNI2NG_R) - kernel_ri              *dNi_glx(k,ngx)*dNr_gly(k,ngy)
+             Pac(k,I_LRacLI2LG_R) = Pac(k,I_LRacLI2LG_R) - kernel_ri*xr_gly(k,ngy)*dNi_glx(k,ngx)*dNr_gly(k,ngy)
              !
-             Pac(k,I_NRacNI2NG_I) = Pac(k,I_NRacNI2NG_I) - kernel_ri       *dNi_glx*dNr_gly
-             Pac(k,I_LRacLI2LG_I) = Pac(k,I_LRacLI2LG_I) - kernel_ri*xi_glx*dNi_glx*dNr_gly
+             Pac(k,I_NRacNI2NG_I) = Pac(k,I_NRacNI2NG_I) - kernel_ri              *dNi_glx(k,ngx)*dNr_gly(k,ngy)
+             Pac(k,I_LRacLI2LG_I) = Pac(k,I_LRacLI2LG_I) - kernel_ri*xi_glx(k,ngx)*dNi_glx(k,ngx)*dNr_gly(k,ngy)
+          end do
+          do k = KS, KE
              !
              ! 7.i-g
              !
-             kernel_ig          = 0.25_RP*pi*(dai_glx+dag_gly)*(dai_glx+dag_gly)*sqrt((vti_glx-vtg_gly)*(vti_glx-vtg_gly))  * E_stick(k) * E_gi
-             Pac(k,I_NIacNG2NG)   = Pac(k,I_NIacNG2NG) - kernel_ig       *dNi_glx*dNg_gly
-             Pac(k,I_LIacLG2LG)   = Pac(k,I_LIacLG2LG) - kernel_ig*xi_glx*dNi_glx*dNg_gly
+!             kernel_ig = 0.25_RP*pi*(dai_glx(k,ngx)+dag_gly(k,ngy))*(dai_glx(k,ngx)+dag_gly(k,ngy))*sqrt((vti_glx(k,ngx)-vtg_gly(k,ngy))*(vti_glx(k,ngx)-vtg_gly(k,ngy)))  * E_stick(k) * E_gi
+             kernel_ig = 0.25_RP * pi * (dai_glx(k,ngx)+dag_gly(k,ngy))**2 * abs(vti_glx(k,ngx)-vtg_gly(k,ngy)) * E_stick(k) * E_gi
+             Pac(k,I_NIacNG2NG) = Pac(k,I_NIacNG2NG) - kernel_ig              *dNi_glx(k,ngx)*dNg_gly(k,ngy)
+             Pac(k,I_LIacLG2LG) = Pac(k,I_LIacLG2LG) - kernel_ig*xi_glx(k,ngx)*dNi_glx(k,ngx)*dNg_gly(k,ngy)
+          end do
+          do k = KS, KE
              !
              ! 8.i-s
              !
-             kernel_is          = 0.25_RP*pi*(dai_glx+das_gly)*(dai_glx+das_gly)*sqrt((vti_glx-vts_gly)*(vti_glx-vts_gly))  * E_stick(k) * E_si
-             Pac(k,I_NIacNS2NS)   = Pac(k,I_NIacNS2NS) - kernel_is       *dNi_glx*dNs_gly
-             Pac(k,I_LIacLS2LS)   = Pac(k,I_LIacLS2LS) - kernel_is*xi_glx*dNi_glx*dNs_gly
+!             kernel_is = 0.25_RP*pi*(dai_glx(k,ngx)+das_gly(k,ngy))*(dai_glx(k,ngx)+das_gly(k,ngy))*sqrt((vti_glx(k,ngx)-vts_gly(k,ngy))*(vti_glx(k,ngx)-vts_gly(k,ngy)))  * E_stick(k) * E_si
+             kernel_is = 0.25_RP * pi * (dai_glx(k,ngx)+das_gly(k,ngy))**2 * abs(vti_glx(k,ngx)-vts_gly(k,ngy)) * E_stick(k) * E_si
+             Pac(k,I_NIacNS2NS) = Pac(k,I_NIacNS2NS) - kernel_is              *dNi_glx(k,ngx)*dNs_gly(k,ngy)
+             Pac(k,I_LIacLS2LS) = Pac(k,I_LIacLS2LS) - kernel_is*xi_glx(k,ngx)*dNi_glx(k,ngx)*dNs_gly(k,ngy)
+          end do
+          do k = KS, KE
              !
              ! 9.i-i
              !
-             kernel_ii          = 0.25_RP*pi*(dai_glx+dai_gly)*(dai_glx+dai_gly)*sqrt((vti_glx-vti_gly)*(vti_glx-vti_gly))  * E_stick(k) * E_ii
-             Pac(k,I_NIacNI2NS)   = Pac(k,I_NIacNI2NS) - kernel_ii       *dNi_glx*dNi_gly
-             Pac(k,I_LIacLI2LS)   = Pac(k,I_LIacLI2LS) - kernel_ii*xi_glx*dNi_glx*dNi_gly
+!             kernel_ii = 0.25_RP*pi*(dai_glx(k,ngx)+dai_gly(k,ngy))*(dai_glx(k,ngx)+dai_gly(k,ngy))*sqrt((vti_glx(k,ngx)-vti_gly(k,ngy))*(vti_glx(k,ngx)-vti_gly(k,ngy)))  * E_stick(k) * E_ii
+             kernel_ii = 0.25_RP * pi * (dai_glx(k,ngx)+dai_gly(k,ngy))**2 * abs(vti_glx(k,ngx)-vti_gly(k,ngy)) * E_stick(k) * E_ii
+             Pac(k,I_NIacNI2NS) = Pac(k,I_NIacNI2NS) - kernel_ii              *dNi_glx(k,ngx)*dNi_gly(k,ngy)
+             Pac(k,I_LIacLI2LS) = Pac(k,I_LIacLI2LS) - kernel_ii*xi_glx(k,ngx)*dNi_glx(k,ngx)*dNi_gly(k,ngy)
+          end do
+          do k = KS, KE
              !
              ! 10.s-g
              !
-             kernel_sg          = 0.25_RP*pi*(das_glx+dag_gly)*(das_glx+dag_gly)*sqrt((vts_glx-vtg_gly)*(vts_glx-vtg_gly))  * E_stick(k) * E_gs
-             Pac(k,I_NGacNS2NG)   = Pac(k,I_NGacNS2NG) - kernel_sg       *dNs_glx*dNg_gly
-             Pac(k,I_LGacLS2LG)   = Pac(k,I_LGacLS2LG) - kernel_sg*xs_glx*dNs_glx*dNg_gly
+!             kernel_sg = 0.25_RP*pi*(das_glx(k,ngx)+dag_gly(k,ngy))*(das_glx(k,ngx)+dag_gly(k,ngy))*sqrt((vts_glx(k,ngx)-vtg_gly(k,ngy))*(vts_glx(k,ngx)-vtg_gly(k,ngy)))  * E_stick(k) * E_gs
+             kernel_sg = 0.25_RP * pi * (das_glx(k,ngx)+dag_gly(k,ngy))**2 * abs(vts_glx(k,ngx)-vtg_gly(k,ngy)) * E_stick(k) * E_gs
+             Pac(k,I_NGacNS2NG) = Pac(k,I_NGacNS2NG) - kernel_sg              *dNs_glx(k,ngx)*dNg_gly(k,ngy)
+             Pac(k,I_LGacLS2LG) = Pac(k,I_LGacLS2LG) - kernel_sg*xs_glx(k,ngx)*dNs_glx(k,ngx)*dNg_gly(k,ngy)
+          end do
+          do k = KS, KE
              !
              ! 11.s-s
              !
-             kernel_ss          = 0.125_RP*pi*(das_glx+das_gly)*(das_glx+das_gly)*sqrt((vts_glx-vts_gly)*(vts_glx-vts_gly))  * E_stick(k) * E_ss
-             Pac(k,I_NSacNS2NS)   = Pac(k,I_NSacNS2NS) - kernel_ss*dNs_glx*dNs_gly
+!             kernel_ss = 0.125_RP*pi*(das_glx(k,ngx)+das_gly(k,ngy))*(das_glx(k,ngx)+das_gly(k,ngy))*sqrt((vts_glx(k,ngx)-vts_gly(k,ngy))*(vts_glx(k,ngx)-vts_gly(k,ngy)))  * E_stick(k) * E_ss
+             kernel_ss = 0.125_RP * pi * (das_glx(k,ngx)+das_gly(k,ngy))**2 * abs(vts_glx(k,ngx)-vts_gly(k,ngy)) * E_stick(k) * E_ss
+             Pac(k,I_NSacNS2NS) = Pac(k,I_NSacNS2NS) - kernel_ss*dNs_glx(k,ngx)*dNs_gly(k,ngy)
+          end do
+          do k = KS, KE
              !
              ! 12.g-g
              !
-             kernel_gg          = 0.125_RP*pi*(dag_glx+dag_gly)*(dag_glx+dag_gly)*sqrt((vtg_glx-vtg_gly)*(vtg_glx-vtg_gly))  * E_stick(k) * E_gg
-             Pac(k,I_NGacNG2NG)   = Pac(k,I_NGacNG2NG) - kernel_gg*dNg_glx*dNg_gly
+!             kernel_gg = 0.125_RP*pi*(dag_glx(k,ngx)+dag_gly(k,ngy))*(dag_glx(k,ngx)+dag_gly(k,ngy))*sqrt((vtg_glx(k,ngx)-vtg_gly(k,ngy))*(vtg_glx(k,ngx)-vtg_gly(k,ngy)))  * E_stick(k) * E_gg
+             kernel_gg = 0.125_RP * pi * (dag_glx(k,ngx)+dag_gly(k,ngy))**2 * abs(vtg_glx(k,ngx)-vtg_gly(k,ngy)) * E_stick(k) * E_gg
+             Pac(k,I_NGacNG2NG) = Pac(k,I_NGacNG2NG) - kernel_gg*dNg_glx(k,ngx)*dNg_gly(k,ngy)
             
-             !--- Charge separation by Snow-Graupel rebound--------------------------------
-             alpha_lt = 5.0_RP * ( das_glx / d0_crg )**2*vtg_gly/v0_crg
-             alpha_lt = min( alpha_lt, 10.0_RP )
-             kernel_sg_reb      = 0.25_RP*pi*(das_glx+dag_gly)*(das_glx+dag_gly)*sqrt((vts_glx-vtg_gly)*(vts_glx-vtg_gly))  &
-                                * ( 1.0_RP - E_stick(k) ) * E_gs
-             Pcrg2(k,I_CGNGacNS2NG)= Pcrg2(k,I_CGNGacNS2NG)+kernel_sg_reb*dNs_glx*dNg_gly*dqcrg_work(k)*alpha_lt*beta_work(k)
           end do
        end do
     end do
+
+    !--- Charge separation by Snow-Graupel rebound--------------------------------
+    if ( flg_lt ) then
+       do k = KS, KE
+!OCL UNROLL('full')
+          do ngy = 1, ngmax
+!OCL UNROLL('full')
+             do ngx = 1, ngmax
+                alpha_lt = 5.0_RP * ( das_glx(k,ngx) / d0_crg )**2*vtg_gly(k,ngy)/v0_crg
+                alpha_lt = min( alpha_lt, 10.0_RP )
+!                kernel_sg_reb      = 0.25_RP*pi*(das_glx(k,ngx)+dag_gly(k,ngy))*(das_glx(k,ngx)+dag_gly(k,ngy))*sqrt((vts_glx(k,ngx)-vtg_gly(k,ngy))*(vts_glx(k,ngx)-vtg_gly(k,ngy)))  &
+                kernel_sg_reb = 0.25_RP * pi * (das_glx(k,ngx)+dag_gly(k,ngy))**2 * abs(vts_glx(k,ngx)-vtg_gly(k,ngy)) &
+                              * ( 1.0_RP - E_stick(k) ) * E_gs
+                Pcrg2(k,I_CGNGacNS2NG) = Pcrg2(k,I_CGNGacNS2NG) + kernel_sg_reb*dNs_glx(k,ngx)*dNg_gly(k,ngy)*dqcrg(k)*alpha_lt*beta_crg(k)
+             end do
+          end do
+       end do
+    end if
+
     !
     !
     do k=KS, KE
