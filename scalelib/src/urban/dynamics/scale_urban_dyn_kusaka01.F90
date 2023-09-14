@@ -377,7 +377,7 @@ contains
        TMPA, PRSA,                      &
        U1, V1,                          &
        DENS, QA, LHV,                   &
-       Z1, PBL,                         &
+       Z1,                              &
        RHOS, PRSS,                      &
        LWD, SWD,                        &
        RAIN, EFLX,                      &
@@ -422,7 +422,6 @@ contains
     real(RP), intent(in) :: QA  (UIA,UJA)
     real(RP), intent(in) :: LHV (UIA,UJA)
     real(RP), intent(in) :: Z1  (UIA,UJA)
-    real(RP), intent(in) :: PBL (UIA,UJA)
     real(RP), intent(in) :: RHOS(UIA,UJA) ! density  at the surface [kg/m3]
     real(RP), intent(in) :: PRSS(UIA,UJA)
     real(RP), intent(in) :: LWD (UIA,UJA,2)
@@ -537,7 +536,7 @@ contains
 
     LOG_PROGRESS(*) 'urban / dynamics / Kusaka01'
 
-    !$acc data copyin(TMPA,PRSA,U1,V1,DENS,QA,LHV,Z1,PBL,RHOS,PRSS,LWD,SWD,RAIN,EFLX,Z0M,Z0H,Z0E,ZD,CDZ,TanSL_X,TanSL_Y,fact_urban) &
+    !$acc data copyin(TMPA,PRSA,U1,V1,DENS,QA,LHV,Z1,RHOS,PRSS,LWD,SWD,RAIN,EFLX,Z0M,Z0H,Z0E,ZD,CDZ,TanSL_X,TanSL_Y,fact_urban) &
     !$acc      copy(TR_URB,TB_URB,TG_URB,TC_URB,QC_URB,UC_URB,TRL_URB,TBL_URB,TGL_URB,RAINR_URB,RAINB_URB,RAING_URB) &
     !$acc      copyout(ROFF_URB,SFC_TEMP,ALBEDO,MWFLX,MUFLX,MVFLX,SHFLX,LHFLX,GHFLX,Ustar,Tstar,Qstar,Wstar,RLmo,U10,V10,T2,Q2) &
     !$acc      create(SHR,SHB,SHG,LHR,LHB,LHG,GHR,GHB,GHG,RNR,RNB,RNG,RNgrd,DZR,DZB,DZG,TRLP,TBLP,TGLP,A,B,C,D,P,Q)
@@ -585,7 +584,7 @@ contains
        SWDt(:) = SWD(i,j,:)
        LWDt(:) = LWD(i,j,:)
 
-       call SLC_main( UKA, UKS, UKE, UIA, UIS, UIE, UJA, UJS, UJE, &
+       call SLC_main( UKA, UKS, UKE, &
                       TRL     (:),        & ! [INOUT]
                       TBL     (:),        & ! [INOUT]
                       TGL     (:),        & ! [INOUT]
@@ -751,7 +750,7 @@ contains
   !-----------------------------------------------------------------------------
 !OCL SERIAL
   subroutine SLC_main( &
-       UKA, UKS, UKE, UIA, UIS, UIE, UJA, UJS, UJE, &
+        UKA, UKS, UKE, &
         TRL,          & ! (inout)
         TBL,          & ! (inout)
         TGL,          & ! (inout)
@@ -843,8 +842,6 @@ contains
     implicit none
 
     integer, intent(in) :: UKA, UKS, UKE
-    integer, intent(in) :: UIA, UIS, UIE
-    integer, intent(in) :: UJA, UJS, UJE
 
     !-- In/Out variables from/to Coupler to/from Urban
     real(RP), intent(inout) :: TRL(UKS:UKE)  ! layer temperature [K]
@@ -948,9 +945,6 @@ contains
            !  true  = consider svf and shadow effects,
            !  false = consider svf effect only
 
-    real(RP) :: SSGD     ! downward direct short wave radiation   [W/m/m]
-    real(RP) :: SSGQ     ! downward diffuse short wave radiation  [W/m/m]
-
     real(RP) :: W, VFGS, VFGW, VFWG, VFWS, VFWW
     real(RP) :: rflux_SW, rflux_LW
 
@@ -1007,7 +1001,6 @@ contains
     real(RP) :: THA,THC,THS,THS1,THS2
     real(RP) :: RovCP
     real(RP) :: EXN  ! exner function at the surface
-    real(RP) :: qdry
 
     real(RP) :: FracU10, FracT2
 
@@ -1095,9 +1088,6 @@ contains
     rflux_SW   = SSG(1) + SSG(2) ! downward shortwave radiation [W/m2]
     rflux_LW   = LLG(1) + LLG(2) ! downward longwave  radiation [W/m2]
 
-    SSGD = SSG(1)          ! downward direct  shortwave radiation [W/m2]
-    SSGQ = SSG(2)          ! downward diffuse shortwave radiation [W/m2]
-
     !--- calculate canopy wind
 
     call canopy_wind(ZA, UA, Z0C, ZDC, UC)
@@ -1154,8 +1144,6 @@ contains
 
 
     EXN = ( PRSS / PRE00 )**RovCP ! exner function
-
-    qdry = 1.0_RP - QA
 
     !-----------------------------------------------------------
     ! Energy balance on roof/wall/road surface
@@ -1610,40 +1598,40 @@ contains
      if ( iteration > itr_max ) then
        LOG_WARN("URBAN_DYN_Kusaka01_main",*) 'iteration for TB/TG was not converged',PRC_myrank,i,j
        LOG_WARN_CONT(*) '---------------------------------------------------------------------------------'
-       LOG_WARN_CONT(*) 'DEBUG Message --- Residual                                       [K] :', resi1, resi2, resi3
-       LOG_WARN_CONT(*) 'DEBUG Message --- TBP : Initial TB                               [K] :', TBP
+       LOG_WARN_CONT(*) 'DEBUG Message --- Residual                                        [K] :', resi1, resi2, resi3
+       LOG_WARN_CONT(*) 'DEBUG Message --- TBP : Initial TB                                [K] :', TBP
 #ifdef _OPENACC
-       LOG_WARN_CONT(*) 'DEBUG Message --- TBLP: Initial TBL                              [K] :', TBLP(UKS)
+       LOG_WARN_CONT(*) 'DEBUG Message --- TBLP: Initial TBL                               [K] :', TBLP(UKS)
 #else
-       LOG_WARN_CONT(*) 'DEBUG Message --- TBLP: Initial TBL                              [K] :', TBLP(:)
+       LOG_WARN_CONT(*) 'DEBUG Message --- TBLP: Initial TBL                               [K] :', TBLP(:)
 #endif
-       LOG_WARN_CONT(*) 'DEBUG Message --- TGP : Initial TG                               [K] :', TGP
+       LOG_WARN_CONT(*) 'DEBUG Message --- TGP : Initial TG                                [K] :', TGP
 #ifdef _OPENACC
-       LOG_WARN_CONT(*) 'DEBUG Message --- TGLP: Initial TGL                              [K] :', TGLP(UKS)
+       LOG_WARN_CONT(*) 'DEBUG Message --- TGLP: Initial TGL                               [K] :', TGLP(UKS)
 #else
-       LOG_WARN_CONT(*) 'DEBUG Message --- TGLP: Initial TGL                              [K] :', TGLP(:)
+       LOG_WARN_CONT(*) 'DEBUG Message --- TGLP: Initial TGL                               [K] :', TGLP(:)
 #endif
-       LOG_WARN_CONT(*) 'DEBUG Message --- TCP : Initial TC                               [K] :', TCP
-       LOG_WARN_CONT(*) 'DEBUG Message --- QCP : Initial QC                               [K] :', QCP
-       LOG_WARN_CONT(*) 'DEBUG Message --- UC  : Canopy wind                            [m/s] :', UC
-       LOG_WARN_CONT(*) 'DEBUG Message --- rflux_SW  : Shortwave radiation             [W/m2] :', rflux_SW
-       LOG_WARN_CONT(*) 'DEBUG Message --- rflux_LW  : Longwave radiation              [W/m2] :', rflux_LW
-       LOG_WARN_CONT(*) 'DEBUG Message --- PRSS: Surface pressure                        [Pa] :', PRSS
-       LOG_WARN_CONT(*) 'DEBUG Message --- PRSA: Pressure at 1st atmos layer              [m] :', PRSA
-       LOG_WARN_CONT(*) 'DEBUG Message --- RHOO: Air density                          [kg/m3] :', RHOO
-       LOG_WARN_CONT(*) 'DEBUG Message --- RHOS: Surface density                      [kg/m3] :', RHOS
-       LOG_WARN_CONT(*) 'DEBUG Message --- RAINBP: Initial RAINB                      [kg/m2] :', RAINBP
-       LOG_WARN_CONT(*) 'DEBUG Message --- RAINGP: Initial RAING                      [kg/m2] :', RAINGP
-       LOG_WARN_CONT(*) 'DEBUG Message --- ZA  : Height at 1st atmos layer                [m] :', ZA
-       LOG_WARN_CONT(*) 'DEBUG Message --- TA  : Temperature at 1st atmos layer           [K] :', TA
-       LOG_WARN_CONT(*) 'DEBUG Message --- UA  : Wind speed at 1st atmos layer          [m/s] :', UA
-       LOG_WARN_CONT(*) 'DEBUG Message --- QA  : Specific humidity at 1st atmos layer [kg/kg] :', QA
+       LOG_WARN_CONT(*) 'DEBUG Message --- TCP : Initial TC                                [K] :', TCP
+       LOG_WARN_CONT(*) 'DEBUG Message --- QCP : Initial QC                                [K] :', QCP
+       LOG_WARN_CONT(*) 'DEBUG Message --- UC  : Canopy wind                             [m/s] :', UC
+       LOG_WARN_CONT(*) 'DEBUG Message --- rflux_SW  : Shortwave radiation              [W/m2] :', rflux_SW
+       LOG_WARN_CONT(*) 'DEBUG Message --- rflux_LW  : Longwave radiation               [W/m2] :', rflux_LW
+       LOG_WARN_CONT(*) 'DEBUG Message --- PRSS: Surface pressure                         [Pa] :', PRSS
+       LOG_WARN_CONT(*) 'DEBUG Message --- PRSA: Pressure at 1st atmos layer               [m] :', PRSA
+       LOG_WARN_CONT(*) 'DEBUG Message --- RHOO: Air density                           [kg/m3] :', RHOO
+       LOG_WARN_CONT(*) 'DEBUG Message --- RHOS: Surface density                       [kg/m3] :', RHOS
+       LOG_WARN_CONT(*) 'DEBUG Message --- RAINBP: Initial RAINB                       [kg/m2] :', RAINBP
+       LOG_WARN_CONT(*) 'DEBUG Message --- RAINGP: Initial RAING                       [kg/m2] :', RAINGP
+       LOG_WARN_CONT(*) 'DEBUG Message --- ZA  : Height at 1st atmos layer                 [m] :', ZA
+       LOG_WARN_CONT(*) 'DEBUG Message --- TA  : Temperature at 1st atmos layer            [K] :', TA
+       LOG_WARN_CONT(*) 'DEBUG Message --- UA  : Wind speed at 1st atmos layer           [m/s] :', UA
+       LOG_WARN_CONT(*) 'DEBUG Message --- QA  : Specific humidity at 1st atmos layer  [kg/kg] :', QA
 #ifdef _OPENACC
-       LOG_WARN_CONT(*) 'DEBUG Message --- DZB : Depth of surface layer                   [m] :', DZB(1)
-       LOG_WARN_CONT(*) 'DEBUG Message --- DZG : Depth of surface layer                   [m] :', DZG(1)
+       LOG_WARN_CONT(*) 'DEBUG Message --- DZB : Depth of surface layer                    [m] :', DZB(1)
+       LOG_WARN_CONT(*) 'DEBUG Message --- DZG : Depth of surface layer                    [m] :', DZG(1)
 #else
-       LOG_WARN_CONT(*) 'DEBUG Message --- DZB : Depth of surface layer                   [m] :', DZB(:)
-       LOG_WARN_CONT(*) 'DEBUG Message --- DZG : Depth of surface layer                   [m] :', DZG(:)
+       LOG_WARN_CONT(*) 'DEBUG Message --- DZB : Depth of surface layer                    [m] :', DZB(:)
+       LOG_WARN_CONT(*) 'DEBUG Message --- DZG : Depth of surface layer                    [m] :', DZG(:)
 #endif
        LOG_WARN_CONT(*) 'DEBUG Message --- R, W, RW  : Normalized height and road width    [-] :', R, W,RW
        LOG_WARN_CONT(*) 'DEBUG Message --- SVF       : Sky View Factors                    [-] :', SVF
@@ -1655,6 +1643,8 @@ contains
        LOG_WARN_CONT(*) 'DEBUG Message --- ZDC       : Desplacement height of canopy       [m] :', ZDC
        LOG_WARN_CONT(*) 'DEBUG Message --- Z0M       : Momentum roughness length of canopy [m] :', Z0C
        LOG_WARN_CONT(*) 'DEBUG Message --- Z0H/Z0E   : Thermal roughness length of canopy  [m] :', Z0HC
+       LOG_WARN_CONT(*) 'DEBUG Message --- LHV       : Latent heat of vapor           [J kg-1] :', LHV
+       LOG_WARN_CONT(*) 'DEBUG Message --- dt        : Time step                           [s] :', dt_RP
        LOG_WARN_CONT(*) '---------------------------------------------------------------------------------'
      endif
 

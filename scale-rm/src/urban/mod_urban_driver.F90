@@ -172,7 +172,6 @@ contains
        ATMOS_V,         &
        ATMOS_DENS,      &
        ATMOS_QV,        &
-       ATMOS_PBL,       &
        ATMOS_SFC_DENS,  &
        ATMOS_SFC_PRES,  &
        ATMOS_SFLX_LW,   &
@@ -385,7 +384,7 @@ contains
                                 ATMOS_TEMP(:,:), ATMOS_PRES(:,:),                            & ! [IN]
                                 ATMOS_U(:,:), ATMOS_V(:,:),                                  & ! [IN]
                                 ATMOS_DENS(:,:), ATMOS_QV(:,:), LHV(:,:),                    & ! [IN]
-                                REAL_Z1(:,:), ATMOS_PBL(:,:),                                & ! [IN]
+                                REAL_Z1(:,:),                                                & ! [IN]
                                 ATMOS_SFC_DENS(:,:), ATMOS_SFC_PRES(:,:),                    & ! [IN]
                                 ATMOS_SFLX_LW(:,:,:), ATMOS_SFLX_SW(:,:,:),                  & ! [IN]
                                 ATMOS_SFLX_water(:,:), ATMOS_SFLX_ENGI(:,:),                 & ! [IN]
@@ -497,6 +496,7 @@ contains
     call FILE_HISTORY_in( URBAN_RAINR_t(:,:), 'URBAN_RAINR_t', 'tendency of URBAN_RAINR', 'kg/m2/s', dim_type='XY' )
     call FILE_HISTORY_in( URBAN_RAINB_t(:,:), 'URBAN_RAINB_t', 'tendency of URBAN_RAINB', 'kg/m2/s', dim_type='XY' )
     call FILE_HISTORY_in( URBAN_RAING_t(:,:), 'URBAN_RAING_t', 'tendency of URBAN_RAING', 'kg/m2/s', dim_type='XY' )
+    call FILE_HISTORY_in( URBAN_ROFF   (:,:), 'URBAN_ROFF',    'urban runoff water',      'kg/m2/s', dim_type='XY' )
 
     if ( STATISTICS_checktotal ) then
 
