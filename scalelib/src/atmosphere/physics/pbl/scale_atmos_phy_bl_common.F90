@@ -102,7 +102,7 @@ contains
     integer :: k, i, j
 
 #ifdef _OPENACC
-    real(RP) :: work(KS:KE,2)
+    real(RP) :: work(KS:KE,4)
 #endif
     dt = real( DDT, kind=RP )
 
@@ -115,11 +115,11 @@ contains
     !$omp private(QTRC_n,RHO,RHOKh,rho_h,a,b,c,d,ap,sf_t,CDZ,FDZ) &
     !$omp private(KE_PBL,k,i,j)
     !$acc kernels
-    do j = JS, JE
-    !$acc loop &
+    !$acc loop collapse(2) &
     !$acc private(QTRC_n,RHO,RHOKh,rho_h,a,b,c,d,ap,sf_t,CDZ,FDZ, &
     !$acc         KE_PBL, &
     !$acc         work)
+    do j = JS, JE
     do i = IS, IE
 
        KE_PBL = KE-1
