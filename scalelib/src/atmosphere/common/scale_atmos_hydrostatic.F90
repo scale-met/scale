@@ -259,7 +259,6 @@ contains
     real(RP) :: CPtot
     real(RP) :: CPovCV
 
-    logical  :: error
     integer  :: k
     !---------------------------------------------------------------------------
 
@@ -876,8 +875,6 @@ contains
        temp, pres,   &
        converged     )
     !$acc routine seq
-    use scale_const, only: &
-       UNDEF => CONST_UNDEF
     use scale_prc, only: &
        PRC_abort
     use scale_atmos_hydrometeor, only: &

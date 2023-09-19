@@ -412,24 +412,29 @@ contains
        end do
 #endif
 
-       !$omp parallel do private( i, j, k, l, ii, len, &
-       !$omp MASS_total, MASS_water, MASS_ice,         &
-       !$omp TEMP2, WATER2, ICE2, ENGI,                &
-       !$omp F1, F2, F3, V, flux, kappa,               &
-       !$omp ro_sum, roe_sum,                          &
-       !$omp CS, CL, ro, rw, ri, sw )
+       !$omp parallel do &
+       !$omp private( i, j, k, l, ii, len,              &
+       !$omp          MASS_total, MASS_water, MASS_ice, &
+       !$omp          TEMP2, WATER2, ICE2, ENGI,        &
+       !$omp          F1, F2, F3, V, flux, kappa,       &
+       !$omp          ro_sum, roe_sum,                  &
+       !$omp          CS, CL, ro, rw, ri, sw )
        !$acc kernels
        do j = LJS, LJE
 #if LSIZE == 1
-       !$acc loop private( &
-       !$acc MASS_total, MASS_water, MASS_ice, &
-       !$acc TEMP2, WATER2, ICE2, ENGI,        &
-       !$acc F1, F2, F3, V, work, flux, kappa )
+       !$acc loop private( MASS_total, MASS_water, MASS_ice, &
+       !$acc               TEMP2, WATER2, ICE2, ENGI,        &
+       !$acc               F1, F2, F3, V, work, flux, kappa )
        do i = LIS, LIE
           if ( exists_land(i,j) ) then
 #else
        do ii = 1, land_iindx_list_epos(j), LSIZE
           len = min(ii+LSIZE,land_iindx_list_epos(j)+1) - ii
+#ifdef QUICKDEBUG
+          F1(:,:) = 0.0_RP
+          F2(:,:) = 1.0_RP
+          F3(:,:) = 0.0_RP
+#endif
           do l = 1, len
              i = land_iindx_list(ii+l-1,j)
 #endif
