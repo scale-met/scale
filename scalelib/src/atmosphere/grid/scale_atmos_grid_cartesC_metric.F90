@@ -219,17 +219,41 @@ contains
     use scale_topography, only: &
        TOPOGRAPHY_calc_tan_slope
     implicit none
+    real(RP) :: work(IA,JA)
+    integer :: i, j
     !---------------------------------------------------------------------------
 
     call MAPPROJECTION_mapfactor( IA, 1, IA, JA, 1, JA,   &
-         ATMOS_GRID_CARTESC_REAL_LAT  ( :, :), ATMOS_GRID_CARTESC_METRIC_MAPF(:,:,1,I_XY), ATMOS_GRID_CARTESC_METRIC_MAPF(:,:,2,I_XY))
+         ATMOS_GRID_CARTESC_REAL_LAT(:,:), ATMOS_GRID_CARTESC_METRIC_MAPF(:,:,1,I_XY), ATMOS_GRID_CARTESC_METRIC_MAPF(:,:,2,I_XY))
+
+    !$omp parallel do
+    do j = 1, JA
+    do i = 1, IA
+       work(i,j) = ATMOS_GRID_CARTESC_REAL_LATXV(i,j)
+    end do
+    end do
     call MAPPROJECTION_mapfactor( IA, 1, IA, JA, 1, JA, &
-         ATMOS_GRID_CARTESC_REAL_LATXV( :,1:), ATMOS_GRID_CARTESC_METRIC_MAPF(:,:,1,I_XV), ATMOS_GRID_CARTESC_METRIC_MAPF (:,:,2,I_XV))
+         work(:,:), ATMOS_GRID_CARTESC_METRIC_MAPF(:,:,1,I_XV), ATMOS_GRID_CARTESC_METRIC_MAPF (:,:,2,I_XV))
+
     if ( .not. PRC_TwoD ) then
-    call MAPPROJECTION_mapfactor( IA, 1, IA, JA, 1, JA,   &
-         ATMOS_GRID_CARTESC_REAL_LATUY(1:, :), ATMOS_GRID_CARTESC_METRIC_MAPF(:,:,1,I_UY), ATMOS_GRID_CARTESC_METRIC_MAPF(:,:,2,I_UY))
-    call MAPPROJECTION_mapfactor( IA, 1, IA, JA, 1, JA, &
-         ATMOS_GRID_CARTESC_REAL_LATUV(1:,1:), ATMOS_GRID_CARTESC_METRIC_MAPF(:,:,1,I_UV), ATMOS_GRID_CARTESC_METRIC_MAPF (:,:,2,I_UV))
+       !$omp parallel do
+       do j = 1, JA
+       do i = 1, IA
+          work(i,j) = ATMOS_GRID_CARTESC_REAL_LATUY(i,j)
+       end do
+       end do
+       call MAPPROJECTION_mapfactor( IA, 1, IA, JA, 1, JA,   &
+            work, ATMOS_GRID_CARTESC_METRIC_MAPF(:,:,1,I_UY), ATMOS_GRID_CARTESC_METRIC_MAPF(:,:,2,I_UY))
+
+       !$omp parallel do
+       do j = 1, JA
+       do i = 1, IA
+          work(i,j) = ATMOS_GRID_CARTESC_REAL_LATUV(i,j)
+       end do
+       end do
+       call MAPPROJECTION_mapfactor( IA, 1, IA, JA, 1, JA, &
+            work(:,:), ATMOS_GRID_CARTESC_METRIC_MAPF(:,:,1,I_UV), ATMOS_GRID_CARTESC_METRIC_MAPF (:,:,2,I_UV))
+
     end if
 
     !$acc update device(ATMOS_GRID_CARTESC_METRIC_MAPF)

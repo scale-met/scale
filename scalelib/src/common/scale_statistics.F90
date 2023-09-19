@@ -403,8 +403,8 @@ contains
     !$acc loop reduction(+:s1,s2)
     do i = IS, IE
        if ( var(i,j) /= UNDEF ) then
-          s1 = statval(1) + area(i,j) * var(i,j)
-          s2 = statval(2) + area(i,j)
+          s1 = s1 + area(i,j) * var(i,j)
+          s2 = s2 + area(i,j)
        endif
     enddo
     enddo
@@ -958,8 +958,7 @@ contains
        varname, var, &
        local         )
     use scale_prc, only: &
-       PRC_nprocs, &
-       PRC_myrank
+       PRC_nprocs
     use scale_comm_cartesC, only: &
        COMM_datatype
     implicit none
