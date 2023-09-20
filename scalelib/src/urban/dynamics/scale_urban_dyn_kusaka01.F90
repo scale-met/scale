@@ -517,17 +517,16 @@ contains
     real(RP) :: MFLX
     real(RP) :: w
 
-#ifdef _OPENACC
-    real(RP) :: TRLP(UKS:UKE,UIA,UJA)
-    real(RP) :: TBLP(UKS:UKE,UIA,UJA)
-    real(RP) :: TGLP(UKS:UKE,UIA,UJA)
-    real(RP) :: A(UKE,UIA,UJA)
-    real(RP) :: B(UKE,UIA,UJA)
-    real(RP) :: C(UKE,UIA,UJA)
-    real(RP) :: D(UKE,UIA,UJA)
-    real(RP) :: P(UKE,UIA,UJA)
-    real(RP) :: Q(UKE,UIA,UJA)
-#endif
+    ! work
+    real(RP) :: TRLP(UKA)
+    real(RP) :: TBLP(UKA)
+    real(RP) :: TGLP(UKA)
+    real(RP) :: A(UKA)
+    real(RP) :: B(UKA)
+    real(RP) :: C(UKA)
+    real(RP) :: D(UKA)
+    real(RP) :: P(UKA)
+    real(RP) :: Q(UKA)
 
     logical :: converged
 
@@ -539,7 +538,7 @@ contains
     !$acc data copyin(TMPA,PRSA,U1,V1,DENS,QA,LHV,Z1,RHOS,PRSS,LWD,SWD,RAIN,EFLX,Z0M,Z0H,Z0E,ZD,CDZ,TanSL_X,TanSL_Y,fact_urban) &
     !$acc      copy(TR_URB,TB_URB,TG_URB,TC_URB,QC_URB,UC_URB,TRL_URB,TBL_URB,TGL_URB,RAINR_URB,RAINB_URB,RAING_URB) &
     !$acc      copyout(ROFF_URB,SFC_TEMP,ALBEDO,MWFLX,MUFLX,MVFLX,SHFLX,LHFLX,GHFLX,Ustar,Tstar,Qstar,Wstar,RLmo,U10,V10,T2,Q2) &
-    !$acc      create(SHR,SHB,SHG,LHR,LHB,LHG,GHR,GHB,GHG,RNR,RNB,RNG,RNgrd,DZR,DZB,DZG,TRLP,TBLP,TGLP,A,B,C,D,P,Q)
+    !$acc      create(SHR,SHB,SHG,LHR,LHB,LHG,GHR,GHB,GHG,RNR,RNB,RNG,RNgrd,DZR,DZB,DZG)
 
 
     !$acc kernels
@@ -551,10 +550,12 @@ contains
     converged = .true.
 
     !$omp parallel do schedule(dynamic) collapse(2) &
-    !$omp private(w,Uabs,TR,TB,TG,TC,QC,UC,TRL,TBL,TGL,RAINR,RAINB,RAING,ALBD_LW,ALBD_SW,MFLX,SWDt,LWDt)
-    !$acc kernels
-    !$acc loop collapse(2) reduction(.and.: converged) independent &
-    !$acc private(w,Uabs,TR,TB,TG,TC,QC,UC,TRL,TBL,TGL,RAINR,RAINB,RAING,ALBD_LW,ALBD_SW,MFLX,SWDt,LWDt)
+    !$omp private(w,Uabs,TR,TB,TG,TC,QC,UC,TRL,TBL,TGL,RAINR,RAINB,RAING,ALBD_LW,ALBD_SW,MFLX,SWDt,LWDt, &
+    !$omp         TRLP,TBLP,TGLP,A,B,C,D,P,Q)
+    !$acc parallel
+    !$acc loop gang collapse(2) reduction(.and.: converged) independent &
+    !$acc private(w,Uabs,TR,TB,TG,TC,QC,UC,TRL,TBL,TGL,RAINR,RAINB,RAING,ALBD_LW,ALBD_SW,MFLX,SWDt,LWDt, &
+    !$acc         TRLP,TBLP,TGLP,A,B,C,D,P,Q)
     do j = UJS, UJE
     do i = UIS, UIE
 
@@ -625,6 +626,7 @@ contains
                       V10     (i,j),      & ! [OUT]
                       T2      (i,j),      & ! [OUT]
                       Q2      (i,j),      & ! [OUT]
+                      converged,          & ! [OUT]
                       LSOLAR,             & ! [IN]
                       PRSA    (i,j),      & ! [IN]
                       PRSS    (i,j),      & ! [IN]
@@ -644,21 +646,13 @@ contains
                       Z0M     (i,j),      & ! [IN]
                       Z0H     (i,j),      & ! [IN]
                       ZD      (i,j),      & ! [IN]
-                      DZR(:), DZG(:), DZB(:), & ! [IN]
+                      DZR(:),             & ! [IN]
+                      DZG(:), DZB(:),     & ! [IN]
                       dt,                 & ! [IN]
                       i, j,               & ! [IN]
-#ifdef _OPENACC
-                      TRLP(:,i,j),        &
-                      TBLP(:,i,j),        &
-                      TGLP(:,i,j),        &
-                      A(:,i,j),           &
-                      B(:,i,j),           &
-                      C(:,i,j),           &
-                      D(:,i,j),           &
-                      P(:,i,j),           &
-                      Q(:,i,j),           &
-#endif
-                      converged           ) ! [OUT]
+                      TRLP(:), TBLP(:), TGLP(:), & ! (work)
+                      A(:), B(:), C(:), D(:),    & ! (work)
+                      P(:), Q(:)                 ) ! (work)
 
        ! update
        TR_URB(i,j) = TR
@@ -728,7 +722,7 @@ contains
 
     end do
     end do
-    !$acc end kernels
+    !$acc end parallel
 
     if ( .not. converged ) then
        LOG_ERROR("URBAN_DYN_kusaka01_SLC_main",*) "not converged"
@@ -791,6 +785,7 @@ contains
         V10,          & ! (out)
         T2,           & ! (out)
         Q2,           & ! (out)
+        converged,    & ! (out)
         LSOLAR,       & ! (in)
         PRSA,         & ! (in)
         PRSS,         & ! (in)
@@ -813,11 +808,8 @@ contains
         DZR, DZB, DZG, & ! (in)
         dt,           & ! (in)
         i, j,         & ! (in)
-#ifdef _OPENACC
         TRLP, TBLP, TGLP, &
-        A, B, C, D, P, Q, &
-#endif
-        converged     ) ! (out)
+        A, B, C, D, P, Q )
     !$acc routine seq
     use scale_prc, only: &
        PRC_myrank, &
@@ -878,6 +870,7 @@ contains
     real(RP), intent(out)   :: V10    ! V wind at 10m                    [m/s]
     real(RP), intent(out)   :: T2     ! air temperature at 2m            [K]
     real(RP), intent(out)   :: Q2     ! specific humidity at 2m          [kg/kg]
+    logical,  intent(out)   :: converged
 
     !-- configuration variables
     logical , intent(in)    :: LSOLAR ! logical   [true=both, false=SSG only]
@@ -907,23 +900,17 @@ contains
     real(DP), intent(in)    :: dt
 
     integer,  intent(in)    :: i, j
-    logical,  intent(out)   :: converged
 
-#ifdef _OPENACC
-    real(RP), intent(out) :: TRLP(UKS:UKE)    ! Layer temperature at previous step  [K]
-    real(RP), intent(out) :: TBLP(UKS:UKE)    ! Layer temperature at previous step  [K]
-    real(RP), intent(out) :: TGLP(UKS:UKE)    ! Layer temperature at previous step  [K]
-    real(RP), intent(out) :: A(UKE)
-    real(RP), intent(out) :: B(UKE)
-    real(RP), intent(out) :: C(UKE)
-    real(RP), intent(out) :: D(UKE)
-    real(RP), intent(out) :: P(UKE)
-    real(RP), intent(out) :: Q(UKE)
-#else
-    real(RP) :: TRLP(UKS:UKE)    ! Layer temperature at previous step  [K]
-    real(RP) :: TBLP(UKS:UKE)    ! Layer temperature at previous step  [K]
-    real(RP) :: TGLP(UKS:UKE)    ! Layer temperature at previous step  [K]
-#endif
+    ! work
+    real(RP), intent(out) :: TRLP(UKA)    ! Layer temperature at previous step  [K]
+    real(RP), intent(out) :: TBLP(UKA)    ! Layer temperature at previous step  [K]
+    real(RP), intent(out) :: TGLP(UKA)    ! Layer temperature at previous step  [K]
+    real(RP), intent(out) :: A(UKA)
+    real(RP), intent(out) :: B(UKA)
+    real(RP), intent(out) :: C(UKA)
+    real(RP), intent(out) :: D(UKA)
+    real(RP), intent(out) :: P(UKA)
+    real(RP), intent(out) :: Q(UKA)
 
     !-- parameters
 !    real(RP), parameter     :: SRATIO    = 0.75_RP     ! ratio between direct/total solar [-]
@@ -1174,7 +1161,7 @@ contains
        THS = TR / EXN ! potential temp
 
        RIBR = ( GRAV * 2.0_RP / (THA+THS) ) * (THA-THS) * (Z+Z0R) / (UA*UA+EPS)
-       call mos(XXXR,CHR,CDR,BHR,RIBR,Z,Z0R,UA,THA,THS,RHOO)
+       call mos(XXXR,CHR,CDR,BHR,RIBR,Z,Z0R,UA,THA,THS,RHOO,i,j)
        ! ignore differential of CHR for Newton method
 
        call dqs_dtem( TR, RHOS,   & ! [IN]
@@ -1214,9 +1201,7 @@ contains
           TRL(k) = TRLP(k)
        end do
        call multi_layer(UKE,BOUND, &
-#ifdef _OPENACC
             A, B, C, D, P, Q, &
-#endif
             G0R,CAPR,AKSR,TRL,DZR,dt_RP,TRLEND)
        resi1  = TRL(1) - TR
 
@@ -1278,7 +1263,7 @@ contains
     !--- update only fluxes ----
      THS   = TR / EXN
      RIBR = ( GRAV * 2.0_RP / (THA+THS) ) * (THA-THS) * (Z+Z0R) / (UA*UA+EPS)
-     call mos(XXXR,CHR,CDR,BHR,RIBR,Z,Z0R,UA,THA,THS,RHOO)
+     call mos(XXXR,CHR,CDR,BHR,RIBR,Z,Z0R,UA,THA,THS,RHOO,i,j)
 
      call qsat( TR, RHOS, & ! [IN]
                 QS0R      ) ! [OUT]
@@ -1298,9 +1283,7 @@ contains
         TRL(k)  = TRLP(k)
      end do
      call multi_layer(UKE,BOUND, &
-#ifdef _OPENACC
           A, B, C, D, P, Q, &
-#endif
           G0R,CAPR,AKSR,TRL,DZR,dt_RP,TRLEND)
      resi1   = TRL(1) - TR
      TR      = TRL(1)
@@ -1382,7 +1365,7 @@ contains
            RIBC = ( GRAV * 2.0_RP / (THA+THC) ) * (THA-THC) * (Z+Z0C) / (UA*UA+EPS)
            XXXtmp = XXXC
            RIBC = ( GRAV * 2.0_RP / (THA+THC) ) * (THA-THC) * (Z+Z0C) / (UA*UA+EPS)
-           call mos(XXXtmp,CHC_TB,CDC,BHC,RIBC,Z,Z0C,UA,THA,THC,RHOO)
+           call mos(XXXtmp,CHC_TB,CDC,BHC,RIBC,Z,Z0C,UA,THA,THC,RHOO,i,j)
 
            ! TG = TG + Tdiff
            TC1    =  RW*ALPHAC    + RW*ALPHAG    + W*ALPHAB
@@ -1390,7 +1373,7 @@ contains
            THC    =  TC2 / TC1
            RIBC = ( GRAV * 2.0_RP / (THA+THC) ) * (THA-THC) * (Z+Z0C) / (UA*UA+EPS)
            XXXtmp = XXXC
-           call mos(XXXtmp,CHC_TG,CDC,BHC,RIBC,Z,Z0C,UA,THA,THC,RHOO)
+           call mos(XXXtmp,CHC_TG,CDC,BHC,RIBC,Z,Z0C,UA,THA,THC,RHOO,i,j)
 
            ! ALPHAC = ALPHAC + Adiff
            TC1    =  RW*(ALPHAC+Adiff)    + RW*ALPHAG    + W*ALPHAB
@@ -1398,7 +1381,7 @@ contains
            THC    =  TC2 / TC1
            RIBC = ( GRAV * 2.0_RP / (THA+THC) ) * (THA-THC) * (Z+Z0C) / (UA*UA+EPS)
            XXXtmp = XXXC
-           call mos(XXXtmp,CHC_AC,CDC,BHC,RIBC,Z,Z0C,UA,THA,THC,RHOO)
+           call mos(XXXtmp,CHC_AC,CDC,BHC,RIBC,Z,Z0C,UA,THA,THC,RHOO,i,j)
 
         end if
 
@@ -1407,7 +1390,7 @@ contains
         TC2    =  RW*ALPHAC*THA + W*ALPHAB*THS1 + RW*ALPHAG*THS2
         THC    =  TC2 / TC1
         RIBC = ( GRAV * 2.0_RP / (THA+THC) ) * (THA-THC) * (Z+Z0C) / (UA*UA+EPS)
-        call mos(XXXC,CHC,CDC,BHC,RIBC,Z,Z0C,UA,THA,THC,RHOO)
+        call mos(XXXC,CHC,CDC,BHC,RIBC,Z,Z0C,UA,THA,THC,RHOO,i,j)
 
         if ( iteration > 1 ) then
            dCHCdTB = ( CHC_TB - CHC ) / Tdiff
@@ -1523,9 +1506,7 @@ contains
            TBL(k) = TBLP(k)
         end do
         call multi_layer(UKE,BOUND, &
-#ifdef _OPENACC
            A, B, C, D, P, Q, &
-#endif
            G0B,CAPB,AKSB,TBL,DZB,dt_RP,TBLEND)
         resi1  = TBL(1) - TB
 
@@ -1533,9 +1514,7 @@ contains
            TGL(k) = TGLP(k)
         end do
         call multi_layer(UKE,BOUND, &
-#ifdef _OPENACC
            A, B, C, D, P, Q, &
-#endif
            G0G,CAPG,AKSG,TGL,DZG,dt_RP,TGLEND)
         resi2 = TGL(1) - TG
 
@@ -1700,9 +1679,7 @@ contains
         TBL(k) = TBLP(k)
      end do
      call multi_layer(UKE,BOUND, &
-#ifdef _OPENACC
           A, B, C, D, P, Q, &
-#endif
           G0B,CAPB,AKSB,TBL,DZB,dt_RP,TBLEND)
      resi1  = TBL(1) - TB
      TB     = TBL(1)
@@ -1711,9 +1688,7 @@ contains
         TGL(k) = TGLP(k)
      end do
      call multi_layer(UKE,BOUND, &
-#ifdef _OPENACC
           A, B, C, D, P, Q, &
-#endif
           G0G,CAPG,AKSG,TGL,DZG,dt_RP,TGLEND)
      resi2  = TGL(1) - TG
      TG     = TGL(1)
@@ -1895,7 +1870,7 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine cal_beta(BET, BET_CONST, WATER, STRG)
-   !$acc routine
+    !$acc routine
     implicit none
 
     real(RP), intent(out) :: BET       ! evapolation efficiency [-]
@@ -1948,13 +1923,13 @@ contains
   !  PSIM:  = PSIX of LSM
   !  PSIH:  = PSIT of LSM
 !OCL SERIAL
-  subroutine mos(XXX,CH,CD,B1,RIB,Z,Z0,UA,TA,TSF,RHO)
+  subroutine mos(XXX,CH,CD,B1,RIB,Z,Z0,UA,TA,TSF,RHO,i,j)
     !$acc routine
     use scale_const, only: &
        EPS   => CONST_EPS, &
        CPdry => CONST_CPdry ! CPP : heat capacity of dry air [J/K/kg]
     implicit none
-
+integer,intent(in)::i,j
     real(RP), intent(in)    :: B1, Z, Z0, UA, TA, TSF, RHO
     real(RP), intent(out)   :: CD, CH
     real(RP), intent(inout) :: XXX, RIB
@@ -2046,9 +2021,7 @@ contains
 !OCL SERIAL
   subroutine multi_layer( &
        KM,BOUND, &
-#ifdef _OPENACC
        A, B, C, D, P, Q, &
-#endif
        G0,CAP,AKS,TSL,DZ,DELT,TSLEND)
   !
   !  calculate temperature in roof/building/road
@@ -2066,11 +2039,8 @@ contains
     real(RP), intent(in)    :: DZ(KM)
     real(RP), intent(in)    :: DELT      ! Tim setep [ s ]
     real(RP), intent(in)    :: TSLEND
-#ifdef _OPENACC
     real(RP), intent(out)   :: A(KM), B(KM), C(KM), D(KM), P(KM), Q(KM)
-#else
-    real(RP)                :: A(KM), B(KM), C(KM), D(KM), P(KM), Q(KM)
-#endif
+
     real(RP)                :: DZEND
     integer                 :: K
 
@@ -2121,82 +2091,82 @@ contains
     return
   end subroutine multi_layer
 
-  !-------------------------------------------------------------------
-!OCL SERIAL
-  subroutine multi_layer2(KM,BOUND,G0,CAP,AKS,TSL,DZ,DELT,TSLEND,CAP1,AKS1)
-  !
-  !  calculate temperature in roof/building/road
-  !  multi-layer heat equation model
-  !  Solving Heat Equation by Tri Diagonal Matrix Algorithm
-  !-------------------------------------------------------------------
-
-    implicit none
-
-    real(RP), intent(in)    :: G0
-    real(RP), intent(in)    :: CAP
-    real(RP), intent(in)    :: AKS
-    real(RP), intent(in)    :: CAP1      ! for 1st layer
-    real(RP), intent(in)    :: AKS1      ! for 1st layer
-    real(DP), intent(in)    :: DELT      ! Time step [ s ]
-    real(RP), intent(in)    :: TSLEND
-    integer,  intent(in)    :: KM
-    integer,  intent(in)    :: BOUND
-    real(RP), intent(in)    :: DZ(KM)
-    real(RP), intent(inout) :: TSL(KM)
-    real(RP)                :: A(KM), B(KM), C(KM), D(KM), X(KM), P(KM), Q(KM)
-    real(RP)                :: DZEND
-    integer                 :: K
-
-    DZEND = DZ(KM)
-
-    A(1)  = 0.0_RP
-
-    B(1)  = CAP1 * DZ(1) / DELT &
-          + 2.0_RP * AKS1 / (DZ(1)+DZ(2))
-    C(1)  = -2.0_RP * AKS1 / (DZ(1)+DZ(2))
-    D(1)  = CAP1 * DZ(1) / DELT * TSL(1) + G0
-
-    do K = 2, KM-1
-      A(K) = -2.0_RP * AKS / (DZ(K-1)+DZ(K))
-      B(K) = CAP * DZ(K) / DELT + 2.0_RP * AKS / (DZ(K-1)+DZ(K)) + 2.0_RP * AKS / (DZ(K)+DZ(K+1))
-      C(K) = -2.0_RP * AKS / (DZ(K)+DZ(K+1))
-      D(K) = CAP * DZ(K) / DELT * TSL(K)
-    end do
-
-    if( BOUND == 1 ) then ! Flux=0
-      A(KM) = -2.0_RP * AKS / (DZ(KM-1)+DZ(KM))
-      B(KM) = CAP * DZ(KM) / DELT + 2.0_RP * AKS / (DZ(KM-1)+DZ(KM))
-      C(KM) = 0.0_RP
-      D(KM) = CAP * DZ(KM) / DELT * TSL(KM)
-    else ! T=constant
-      A(KM) = -2.0_RP * AKS / (DZ(KM-1)+DZ(KM))
-      B(KM) = CAP * DZ(KM) / DELT + 2.0_RP * AKS / (DZ(KM-1)+DZ(KM)) + 2.0_RP * AKS / (DZ(KM)+DZEND)
-      C(KM) = 0.0_RP
-      D(KM) = CAP * DZ(KM) / DELT * TSL(KM) + 2.0_RP * AKS * TSLEND / (DZ(KM)+DZEND)
-    end if
-
-    P(1) = -C(1) / B(1)
-    Q(1) =  D(1) / B(1)
-
-    !$acc loop seq
-    do K = 2, KM
-      P(K) = -C(K) / ( A(K) * P(K-1) + B(K) )
-      Q(K) = ( -A(K) * Q(K-1) + D(K) ) / ( A(K) * P(K-1) + B(K) )
-    end do
-
-    X(KM) = Q(KM)
-
-    !$acc loop seq
-    do K = KM-1, 1, -1
-      X(K) = P(K) * X(K+1) + Q(K)
-    end do
-
-    do K = 1, KM
-      TSL(K) = X(K)
-    enddo
-
-    return
-  end subroutine multi_layer2
+!!$  !-------------------------------------------------------------------
+!!$!OCL SERIAL
+!!$  subroutine multi_layer2(KM,BOUND,G0,CAP,AKS,TSL,DZ,DELT,TSLEND,CAP1,AKS1)
+!!$  !
+!!$  !  calculate temperature in roof/building/road
+!!$  !  multi-layer heat equation model
+!!$  !  Solving Heat Equation by Tri Diagonal Matrix Algorithm
+!!$  !-------------------------------------------------------------------
+!!$
+!!$    implicit none
+!!$
+!!$    real(RP), intent(in)    :: G0
+!!$    real(RP), intent(in)    :: CAP
+!!$    real(RP), intent(in)    :: AKS
+!!$    real(RP), intent(in)    :: CAP1      ! for 1st layer
+!!$    real(RP), intent(in)    :: AKS1      ! for 1st layer
+!!$    real(DP), intent(in)    :: DELT      ! Time step [ s ]
+!!$    real(RP), intent(in)    :: TSLEND
+!!$    integer,  intent(in)    :: KM
+!!$    integer,  intent(in)    :: BOUND
+!!$    real(RP), intent(in)    :: DZ(KM)
+!!$    real(RP), intent(inout) :: TSL(KM)
+!!$    real(RP)                :: A(KM), B(KM), C(KM), D(KM), X(KM), P(KM), Q(KM)
+!!$    real(RP)                :: DZEND
+!!$    integer                 :: K
+!!$
+!!$    DZEND = DZ(KM)
+!!$
+!!$    A(1)  = 0.0_RP
+!!$
+!!$    B(1)  = CAP1 * DZ(1) / DELT &
+!!$          + 2.0_RP * AKS1 / (DZ(1)+DZ(2))
+!!$    C(1)  = -2.0_RP * AKS1 / (DZ(1)+DZ(2))
+!!$    D(1)  = CAP1 * DZ(1) / DELT * TSL(1) + G0
+!!$
+!!$    do K = 2, KM-1
+!!$      A(K) = -2.0_RP * AKS / (DZ(K-1)+DZ(K))
+!!$      B(K) = CAP * DZ(K) / DELT + 2.0_RP * AKS / (DZ(K-1)+DZ(K)) + 2.0_RP * AKS / (DZ(K)+DZ(K+1))
+!!$      C(K) = -2.0_RP * AKS / (DZ(K)+DZ(K+1))
+!!$      D(K) = CAP * DZ(K) / DELT * TSL(K)
+!!$    end do
+!!$
+!!$    if( BOUND == 1 ) then ! Flux=0
+!!$      A(KM) = -2.0_RP * AKS / (DZ(KM-1)+DZ(KM))
+!!$      B(KM) = CAP * DZ(KM) / DELT + 2.0_RP * AKS / (DZ(KM-1)+DZ(KM))
+!!$      C(KM) = 0.0_RP
+!!$      D(KM) = CAP * DZ(KM) / DELT * TSL(KM)
+!!$    else ! T=constant
+!!$      A(KM) = -2.0_RP * AKS / (DZ(KM-1)+DZ(KM))
+!!$      B(KM) = CAP * DZ(KM) / DELT + 2.0_RP * AKS / (DZ(KM-1)+DZ(KM)) + 2.0_RP * AKS / (DZ(KM)+DZEND)
+!!$      C(KM) = 0.0_RP
+!!$      D(KM) = CAP * DZ(KM) / DELT * TSL(KM) + 2.0_RP * AKS * TSLEND / (DZ(KM)+DZEND)
+!!$    end if
+!!$
+!!$    P(1) = -C(1) / B(1)
+!!$    Q(1) =  D(1) / B(1)
+!!$
+!!$    !$acc loop seq
+!!$    do K = 2, KM
+!!$      P(K) = -C(K) / ( A(K) * P(K-1) + B(K) )
+!!$      Q(K) = ( -A(K) * Q(K-1) + D(K) ) / ( A(K) * P(K-1) + B(K) )
+!!$    end do
+!!$
+!!$    X(KM) = Q(KM)
+!!$
+!!$    !$acc loop seq
+!!$    do K = KM-1, 1, -1
+!!$      X(K) = P(K) * X(K+1) + Q(K)
+!!$    end do
+!!$
+!!$    do K = 1, KM
+!!$      TSL(K) = X(K)
+!!$    enddo
+!!$
+!!$    return
+!!$  end subroutine multi_layer2
 
   !-----------------------------------------------------------------------------
   !> set urban parameters
