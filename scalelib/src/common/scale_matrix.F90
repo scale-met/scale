@@ -738,6 +738,7 @@ contains
 
     if ( present(mask) ) then
        !$acc kernels
+       !$acc loop independent collapse(3)
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE

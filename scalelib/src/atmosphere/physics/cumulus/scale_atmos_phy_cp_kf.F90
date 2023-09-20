@@ -1715,6 +1715,7 @@ contains
     !< updraft main loop
     !< lcl-1 to z coodinate top-1
     !< if w<0 is cloud top -> exit
+    !$acc loop seq
     do kk = k_lclm1,KE-1 ! up_main original(wrf cood K is k_lclm1)
        kkp1 = kk + 1
        ! temporaly use below layer valuables
@@ -2409,7 +2410,7 @@ contains
        sflx_rain, sflx_snow, sflx_engi,     &
        cldfrac_KF, timecp, time_advec,      &
        error                                )
-    !$acc routine seq
+    !$acc routine vector
     use scale_const,only :&
          PRE00   => CONST_PRE00,  &
          GRAV    => CONST_GRAV,   &

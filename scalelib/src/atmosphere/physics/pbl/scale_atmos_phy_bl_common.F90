@@ -115,7 +115,7 @@ contains
     !$omp private(QTRC_n,RHO,RHOKh,rho_h,a,b,c,d,ap,sf_t,CDZ,FDZ) &
     !$omp private(KE_PBL,k,i,j)
     !$acc kernels
-    !$acc loop collapse(2) &
+    !$acc loop independent collapse(2) &
     !$acc private(QTRC_n,RHO,RHOKh,rho_h,a,b,c,d,ap,sf_t,CDZ,FDZ, &
     !$acc         KE_PBL, &
     !$acc         work)
