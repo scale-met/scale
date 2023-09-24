@@ -74,9 +74,9 @@ contains
 
     CPL_PHY_SFC_SKIN_itr_max = 100
 
-    CPL_PHY_SFC_SKIN_dTS_max = 5.0E-2_RP
-    CPL_PHY_SFC_SKIN_res_min = 1.0E+0_RP
-    CPL_PHY_SFC_SKIN_err_min = 1.0E-2_RP
+    CPL_PHY_SFC_SKIN_dTS_max = 0.1_RP  ! K/s
+    CPL_PHY_SFC_SKIN_res_min = 1.0_RP  ! W/m2
+    CPL_PHY_SFC_SKIN_err_min = 0.01_RP ! K
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -117,7 +117,7 @@ contains
        ALBEDO,              &
        Rb, TC_dZ,           &
        Z0M, Z0H, Z0E,       &
-       calc_flag, dt,       &
+       calc_flag, dt_DP,    &
        model_name,          &
        TMPS,                &
        ZMFLX, XMFLX, YMFLX, &
@@ -178,7 +178,7 @@ contains
     real(RP),         intent(in)    :: Z0H      (IA,JA)                     ! roughness length for heat     [m]
     real(RP),         intent(in)    :: Z0E      (IA,JA)                     ! roughness length for vapor    [m]
     logical,          intent(in)    :: calc_flag(IA,JA)                     ! to decide calculate or not
-    real(DP),         intent(in)    :: dt                                   ! delta time
+    real(DP),         intent(in)    :: dt_DP                                ! delta time
     character(len=*), intent(in)    :: model_name
 
     real(RP),         intent(inout) :: TMPS     (IA,JA)                     ! surface temperature [K]
@@ -201,7 +201,7 @@ contains
     real(RP),         intent(out)   :: Q2       (IA,JA)                     ! water vapor at 2m  [kg/kg]
 
     real(RP), parameter :: dTS0     = 1.0E-4_RP ! delta surface temp.
-    real(RP), parameter :: redf_min = 1.0E-2_RP ! minimum reduced factor
+    real(RP), parameter :: redf_min = 1.0E-3_RP ! minimum reduced factor
     real(RP), parameter :: redf_max = 1.0E+0_RP ! maximum reduced factor
     real(RP), parameter :: TFa      = 0.5E+0_RP ! factor a in Tomita (2009)
     real(RP), parameter :: TFb      = 1.1E+0_RP ! factor b in Tomita (2009)
@@ -221,6 +221,7 @@ contains
     real(RP) :: redf   ! reduced factor
     real(RP) :: dts    ! temperature change
     real(RP) :: olddts ! temperature change in previous step
+    real(RP) :: olddts0
 
     real(RP) :: dUstar      ! friction velocity difference               [m/s]
     real(RP) :: dTstar      ! friction potential temperature difference  [K]
@@ -232,14 +233,14 @@ contains
 
     real(RP) :: QVsat, dQVsat    ! saturation water vapor mixing ratio at surface [kg/kg]
     real(RP) :: QVS(IA,JA), dQVS ! water vapor mixing ratio at surface            [kg/kg]
-    real(RP) :: Rtot             ! total gas constant
-    real(RP) :: qdry             ! dry air mass ratio [kg/kg]
 
     real(RP) :: FracU10(IA,JA), dFracU10 ! calculation parameter for U10 [1]
     real(RP) :: FracT2 (IA,JA), dFracT2  ! calculation parameter for T2  [1]
     real(RP) :: FracQ2 (IA,JA), dFracQ2  ! calculation parameter for Q2  [1]
 
     real(RP) :: MFLUX
+
+    real(RP) :: dt
 
 #ifdef _OPENACC
     logical :: err_flag
@@ -269,6 +270,9 @@ contains
     err_flag = .false.
 #endif
 
+    dt = real(dt_DP, kind=RP)
+    olddts0 = max( 1.0_RP, CPL_PHY_SFC_SKIN_dTS_max * dt ) * 10.0_RP
+
     ! update surface temperature
     !$omp parallel do schedule(dynamic) collapse(2) &
 #ifndef __GFORTRAN__
@@ -276,31 +280,28 @@ contains
     !$omp shared(IO_UNIVERSALRANK,IO_LOCALRANK,IO_JOBID,IO_DOMAINID) &
     !$omp shared(IS,IE,JS,JE,EPS,UNDEF,Rdry,CPdry,PRC_myrank,IO_FID_LOG,IO_L,model_name,bulkflux, &
     !$omp        CPL_PHY_SFC_SKIN_itr_max,CPL_PHY_SFC_SKIN_dTS_max,CPL_PHY_SFC_SKIN_err_min,CPL_PHY_SFC_SKIN_res_min, &
-    !$omp        calc_flag,dt,QVA,QVS,TMPA,TMPS,PRSA,RHOA,WA,UA,VA,LH,Z1,PBL, &
+    !$omp        calc_flag,dt,olddts0,QVA,QVS,TMPA,TMPS,PRSA,RHOA,WA,UA,VA,LH,Z1,PBL, &
     !$omp        TG,PRSS,RHOS,TMPS1,WSTR,QVEF,Z0M,Z0H,Z0E,Rb,TC_dZ,ALBEDO,RFLXD, &
     !$omp        FracU10,FracT2,FracQ2, &
     !$omp        ZMFLX,XMFLX,YMFLX,SHFLX,LHFLX,QVFLX,GFLX,Ustar,Tstar,Qstar,Wstar,RLmo,U10,V10,T2,Q2) &
 #else
     !$omp default(shared) &
 #endif
-    !$omp private(qdry,Rtot,flx_qv,redf,res,dts,olddts,emis,LWD,LWU,SWD,SWU,dres,oldres,dQVS, &
+    !$omp private(flx_qv,redf,res,dts,olddts,emis,LWD,LWU,SWD,SWU,dres,oldres,dQVS, &
     !$omp         QVsat,dQVsat,dUstar,dTstar,dQstar,dWstar,dFracU10,dFracT2,dFracQ2, &
     !$omp         Uabs,dUabs,dRLmo,Ra,dRa,MFLUX)
     !$acc parallel
     !$acc loop collapse(2) reduction(.or.:err_flag) &
-    !$acc private(qdry,Rtot,flx_qv,redf,res,dts,olddts,emis,LWD,LWU,SWD,SWU,dres,oldres,dQVS, &
+    !$acc private(flx_qv,redf,res,dts,olddts,emis,LWD,LWU,SWD,SWU,dres,oldres,dQVS, &
     !$acc         QVsat,dQVsat,dUstar,dTstar,dQstar,dWstar,dFracU10,dFracT2,dFracQ2, &
     !$acc         Uabs,dUabs,dRLmo,Ra,dRa,MFLUX)
     do j = JS, JE
     do i = IS, IE
        if ( calc_flag(i,j) ) then
 
-!          qdry = 1.0_RP - QVA(i,j)
-!          Rtot = qdry * Rdry + QVA(i,j) * Rvap
-
           redf   = 1.0_RP
           oldres = huge(0.0_RP)
-          olddts = CPL_PHY_SFC_SKIN_dTS_max * dt
+          olddts = olddts0
 
           ! modified Newton-Raphson method (Tomita 2009)
           !$acc loop seq
@@ -308,8 +309,6 @@ contains
 
              call qsat( TMPS1(i,j),      RHOS(i,j), QVsat  )
              call qsat( TMPS1(i,j)+dTS0, RHOS(i,j), dQVsat )
-!             call qsat( TMPS1(i,j),      PRSS(i,j), qdry, QVsat  )
-!             call qsat( TMPS1(i,j)+dTS0, PRSS(i,j), qdry, dQVsat )
 
              QVS(i,j) = ( 1.0_RP-QVEF(i,j) ) * QVA(i,j) &
                       + (        QVEF(i,j) ) * QVsat
@@ -350,7 +349,7 @@ contains
                   + RFLXD(i,j,I_R_diffuse,I_R_VIS) * ALBEDO(i,j,I_R_diffuse,I_R_VIS)
 
              ! calculation for residual
-             flx_qv = min( - RHOS(i,j) * Ustar(i,j) * Qstar(i,j) * Ra / ( Ra+Rb(i,j) ), WSTR(i,j)/real(dt,RP) )
+             flx_qv = min( - RHOS(i,j) * Ustar(i,j) * Qstar(i,j) * Ra / ( Ra+Rb(i,j) ), WSTR(i,j)/dt )
              res = SWD - SWU + LWD - LWU                         &
                  + CPdry   * RHOS(i,j) * Ustar(i,j) * Tstar(i,j) &
                  - LH(i,j) * flx_qv                              &
@@ -359,7 +358,7 @@ contains
              ! calculation for d(residual)/dTMPS
              dres = -4.0_RP * emis / TMPS1(i,j) &
                   + CPdry   * RHOS(i,j) * ( Ustar(i,j)*(dTstar-Tstar(i,j))/dTS0 + Tstar(i,j)*(dUstar-Ustar(i,j))/dTS0 )                       &
-                  + LH(i,j) * RHOS(i,j) * ( Ustar(i,j)*(dQstar-Qstar(i,j))/dTS0 + Qstar(i,j)*(dUstar-Ustar(i,j))/dTS0 ) * Ra / ( Ra+Rb(i,j) ) &
+                  - LH(i,j) * ( min( - RHOS(i,j) * ( dUstar * dQstar * dRa / ( dRa+Rb(i,j) ) ), WSTR(i,j)/dt ) - flx_qv ) / dTS0 &
                   - TC_dZ(i,j)
 
              ! convergence test with residual and error levels
@@ -381,18 +380,21 @@ contains
 
              ! estimate next surface temperature
              dts = - redf * res / dres
-             dts = sign( min( abs(dts), abs(olddts) ), dts )
+             if ( n > 10 ) then
+                if ( res * oldres < 0.0_RP ) olddts = olddts * 0.8_RP
+                dts = sign( min( abs(dts), olddts ), dts )
+             end if
              TMPS1(i,j) = TMPS1(i,j) + dts
 
              ! save residual in this step
              oldres = res
-             olddts = dts
+             olddts = abs(dts)
           enddo
 
           ! update surface temperature with limitation
           TMPS1(i,j) = min( max( TMPS1(i,j),                                                 &
-                                 TMPS (i,j) - CPL_PHY_SFC_SKIN_dTS_max * real(dt,kind=RP) ), &
-                                 TMPS (i,j) + CPL_PHY_SFC_SKIN_dTS_max * real(dt,kind=RP) )
+                                 TMPS (i,j) - CPL_PHY_SFC_SKIN_dTS_max * dt ), &
+                                 TMPS (i,j) + CPL_PHY_SFC_SKIN_dTS_max * dt )
 
           if ( n > CPL_PHY_SFC_SKIN_itr_max ) then
              ! surface temperature was not converged
@@ -518,11 +520,7 @@ contains
           ! calculate surface flux
           TMPS(i,j) = TMPS1(i,j)
 
-!          qdry = 1.0_RP - QVA(i,j)
- !         Rtot = qdry * Rdry + QVA(i,j) * Rvap
-
           call qsat( TMPS(i,j), RHOS(i,j), QVsat )
-!          call qsat( TMPS(i,j), PRSS(i,j), qdry, QVsat )
 
           QVS(i,j) = ( 1.0_RP-QVEF(i,j) ) * QVA(i,j) &
                    + (        QVEF(i,j) ) * QVsat
@@ -547,7 +545,7 @@ contains
              YMFLX(i,j) = MFLUX * VA(i,j) / Uabs
           end if
           SHFLX(i,j) = -RHOS(i,j) * Ustar(i,j) * Tstar(i,j) * CPdry
-          QVFLX(i,j) = min( - RHOS(i,j) * Ustar(i,j) * Qstar(i,j) * Ra / ( Ra+Rb(i,j) ), WSTR(i,j)/real(dt,RP) )
+          QVFLX(i,j) = min( - RHOS(i,j) * Ustar(i,j) * Qstar(i,j) * Ra / ( Ra+Rb(i,j) ), WSTR(i,j)/dt )
 
           emis = ( 1.0_RP-ALBEDO(i,j,I_R_diffuse,I_R_IR) ) * STB * TMPS(i,j)**4
 

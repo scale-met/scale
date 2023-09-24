@@ -492,10 +492,18 @@ contains
                                                    WATER2(:,1)                        ) ! [OUT]
 #else
           end do
+#ifdef QUICKDEBUG
+          do l = len+1, LSIZE
+             F1(:,l) = 0.0_RP
+             F2(:,l) = 1.0_RP
+             F3(:,l) = 0.0_RP
+             V(:,l) = 0.0_RP
+          end do
+#endif
 
           call MATRIX_SOLVER_tridiagonal( LKMAX, 1, LKMAX, &
                                           F1(:,:), F2(:,:), F3(:,:), V(:,:), & ! [IN]
-                                          WATER2(:,:)                        ) ! [IN]
+                                          WATER2(:,:)                        ) ! [OUT]
 
           do l = 1, len
              i = land_iindx_list(ii+l-1,j)
