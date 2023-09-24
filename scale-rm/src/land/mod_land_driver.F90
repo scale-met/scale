@@ -873,7 +873,7 @@ contains
     implicit none
     !---------------------------------------------------------------------------
 
-    call PROF_rapstart('LND_SfcExch', 2)
+    call PROF_rapstart('LND_SfcExch', 3)
 
     if ( LAND_do ) then
        call CPL_getATM_LND( ATMOS_TEMP       (:,:),     & ! [OUT]
@@ -892,7 +892,7 @@ contains
                             ATMOS_SFLX_ENGI  (:,:)      ) ! [OUT]
     endif
 
-    call PROF_rapend  ('LND_SfcExch', 2)
+    call PROF_rapend  ('LND_SfcExch', 3)
 
     return
   end subroutine LAND_SURFACE_GET
@@ -930,7 +930,7 @@ contains
     logical, intent(in) :: countup
     !---------------------------------------------------------------------------
 
-    call PROF_rapstart('LND_SfcExch', 2)
+    call PROF_rapstart('LND_SfcExch', 3)
 
     if ( LAND_do ) then
        call CPL_putLND( LAND_SFC_TEMP  (:,:),       & ! [IN]
@@ -953,7 +953,7 @@ contains
                         countup                     ) ! [IN]
     endif
 
-    call PROF_rapend  ('LND_SfcExch', 2)
+    call PROF_rapend  ('LND_SfcExch', 3)
 
     return
   end subroutine LAND_SURFACE_SET
