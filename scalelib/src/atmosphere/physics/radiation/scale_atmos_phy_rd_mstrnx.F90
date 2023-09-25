@@ -1934,7 +1934,7 @@ contains
 
        ! two-stream transfer
        !call PROF_rapstart('RD_MSTRN_twst', 3)
-       call RD_MSTRN_two_stream( IA, IS, IE, IA, JS, JE, &
+       call RD_MSTRN_two_stream( IA, IS, IE, JA, JS, JE, &
                                  RD_KMAX, chmax,                        & ! [IN]
                                  cosSZA(i,j),                           & ! [IN]
                                  fsol_rgn, irgn,                        & ! [IN]
@@ -1953,8 +1953,6 @@ contains
                                  Em(:,:), Ep(:,:), Em0(:),              & ! [WORK]
                                  R12mns(:,:), R12pls(:,:),              & ! [WORK]
                                  E12mns(:,:), E12pls(:,:)               ) ! [WORK]
-
-
        !call PROF_rapend  ('RD_MSTRN_twst', 3)
 
        !$acc loop seq
