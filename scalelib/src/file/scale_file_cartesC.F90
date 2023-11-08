@@ -2531,10 +2531,10 @@ contains
 
     if ( hasZ ) then
        axisname = (/'z ', 'x ', 'y '/)
-       call FILE_Def_AssociatedCoordinate( fid, 'height',     'height above ground level', &
+       call FILE_Def_AssociatedCoordinate( fid, 'height',     'height above sea level', &
                                            'm', axisname(1:3), dtype                        )
        axisname = (/'zh', 'x ', 'y '/)
-       call FILE_Def_AssociatedCoordinate( fid, 'height_wxy', 'height above ground level (half level wxy)', &
+       call FILE_Def_AssociatedCoordinate( fid, 'height_wxy', 'height above sea level (half level wxy)', &
                                            'm', axisname(1:3), dtype                                         )
 
        axisname = (/'z ', 'xh', 'y '/)
