@@ -221,6 +221,7 @@ contains
 
     real(RP) :: work(KA_org-2,IA_org,JA_org)
     real(RP) :: work2d(IA_org,JA_org)
+    real(RP) :: coef
     integer  :: start(3), count(3)
 
     logical :: exist
@@ -351,19 +352,25 @@ contains
     end if
 
     ! height
+    coef = 1.0_RP
     call read3d( start(:), count(:), work(:,:,:), "height", file_id_atm, basename_num, exist=exist, step=nt )
     if ( .not. exist ) then
        call read3d( start(:), count(:), work(:,:,:), "HGT", file_id_atm, basename_num, exist=exist, step=nt )
        if ( .not. exist ) then
-          LOG_ERROR("ParentAtmosInputGrADS",*) '"height" or "HGT" is requierd'
-          call PRC_abort
+          ! geopotential to height
+          coef = 1.0_RP / GRAV
+          call read3d( start(:), count(:), work(:,:,:), "GP", file_id_atm, basename_num, exist=exist, step=nt )
+          if ( .not. exist ) then
+             LOG_ERROR("ParentAtmosInputGrADS",*) '"height", "HGT", or "GP" is requierd'
+             call PRC_abort
+          end if
        end if
     end if
     !$omp parallel do collapse(2)
     do j = 1, JA_org
     do i = 1, IA_org
     do k = 1, KA_org-2
-       cz_org(k+2,i,j) = work(k,i,j)
+       cz_org(k+2,i,j) = work(k,i,j) * coef
     enddo
     enddo
     enddo
@@ -599,12 +606,18 @@ contains
        end if
 
        ! topo
+       coef = 1.0_RP
        call read2d( start(2:), count(2:), work2d(:,:), "topo", file_id_atm, basename_num, exist=exist, step=nt )
+       if ( .not. exist ) then
+          ! surface geopotential
+          coef = 1.0_RP / GRAV
+          call read2d( start(2:), count(2:), work2d(:,:), "SGP", file_id_atm, basename_num, exist=exist, step=nt )
+       end if
        if ( exist ) then
           !$omp parallel do
           do j = 1, JA_org
           do i = 1, IA_org
-             cz_org(2,i,j) = work2d(i,j)
+             cz_org(2,i,j) = work2d(i,j) * coef
           enddo
           enddo
        else
@@ -779,6 +792,7 @@ contains
     use scale_const, only: &
        UNDEF => CONST_UNDEF, &
        D2R   => CONST_D2R,   &
+       GRAV  => CONST_GRAV,  &
        TEM00 => CONST_TEM00, &
        EPS   => CONST_EPS
     use scale_file_grads, only: &
@@ -897,6 +911,22 @@ contains
 
     ! topo_sfc, topo
     call read2d( start(2:), count(2:), topo_org(:,:), "topo_sfc", file_id_lnd, basename_num, exist=exist, step=nt )
+    if ( .not. exist ) then
+       call FILE_GrADS_get_shape( file_id_lnd, "SGP", & ! (in)
+                                  shape(:)            ) ! (out)
+       if ( ldims(2).ne.shape(1) .or. ldims(3).ne.shape(2) ) then
+          LOG_WARN("ParentLandInputGrADS",*) 'namelist of "topo_sfc" is not found in grads namelist!'
+          LOG_WARN_CONT(*) 'dimension of "SGP" is different! ', ldims(2), shape(1), ldims(3), shape(2)
+       else
+          call read2d( start(2:), count(2:), topo_org(:,:), "SGP", file_id_lnd, basename_num, exist=exist )
+       end if
+       !$omp parallel do
+       do j = 1, JA_org
+       do i = 1, IA_org
+          topo_org(i,j) = topo_org(i,j) / GRAV
+       end do
+       end do
+    end if
     if ( .not. exist ) then
        call FILE_GrADS_get_shape( file_id_lnd, "topo", & ! (in)
                                   shape(:)             ) ! (out)
