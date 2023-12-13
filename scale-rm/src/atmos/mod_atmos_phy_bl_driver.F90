@@ -286,7 +286,7 @@ contains
     case ( 'MYNN' )
        if ( QTRC(KS,IS,JE,QS) == UNDEF ) then
 
-          !$acc data create(N2,POTL,POTV,ATM_TEMP,ATM_PTES,ATM_U,ATM_V,ATM_W,ATM_QV,QW)
+          !$acc data create(N2,POTL,POTV,ATM_TEMP,ATM_PRES,ATM_U,ATM_V,ATM_W,ATM_QV,QW)
 
           call COMM_vars8(DENS, 1)
           call COMM_vars8(MOMZ, 2)
@@ -330,8 +330,7 @@ contains
           enddo
           !$acc end kernels
 
-          !$acc update host(ATM_W,ATM_U,ATM_V,ATM_TEMP,ATM_PRES,ATM_QV,SFC_DENS,SFC_TEMP,SFC_PRES,SFC_Z0M,SFC_Z0H,SFC_Z0E,Zi)
-          call ATMOS_PHY_SF_bulk_flux( IA, 1, IA, JA, 1, JA,                      & ! [IN]
+          call ATMOS_PHY_SF_bulk_flux( IA, 1, IA, JA, 1, JA, &
                                        ATM_W(:,:), ATM_U(:,:), ATM_V(:,:),          & ! [IN]
                                        ATM_TEMP(:,:), ATM_PRES(:,:), ATM_QV(:,:),   & ! [IN]
                                        SFC_DENS(:,:), SFC_TEMP(:,:), SFC_PRES(:,:), & ! [IN]
@@ -343,7 +342,6 @@ contains
                                        Wstar(:,:),                                  & ! [OUT]
                                        RLmo(:,:),                                   & ! [OUT]
                                        U10(:,:), V10(:,:), T2(:,:), Q2(:,:)         ) ! [OUT]
-          !$acc update device(SFLX_MW,SFLX_MU,SFLX_MV,SFLX_SH,SFLX_LH,SFLX_QV,Ustar,Tstar,Qstar,Wstar,RLmo,U10,V10,T2,Q2)
 
           !$acc kernels
           do j = 1, JA
@@ -368,6 +366,8 @@ contains
                frac_land(:,:),                                         & ! (in)
                CZ(:,:,:), FZ(:,:,:), F2H(:,:,:,:),                     & ! (in)
                BULKFLUX_type                                           ) ! (in)
+
+          !$acc end data
 
        end if
 

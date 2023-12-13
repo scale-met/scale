@@ -348,7 +348,6 @@ contains
           select case ( ATMOS_PHY_SF_TYPE )
           case ( 'BULK' )
 
-             !$acc update host(ATM_W,ATM_U,ATM_V,ATM_TEMP,ATM_PRES,ATM_QV,SFC_DENS,SFC_TEMP,SFC_PRES,SFC_Z0M,SFC_Z0H,SFC_Z0E,PBL_Zi)
              call ATMOS_PHY_SF_bulk_flux( IA, IS, IE, JA, JS, JE,                      & ! [IN]
                                           ATM_W(:,:), ATM_U(:,:), ATM_V(:,:),          & ! [IN]
                                           ATM_TEMP(:,:), ATM_PRES(:,:), ATM_QV(:,:),   & ! [IN]
@@ -361,7 +360,6 @@ contains
                                           Wstar(:,:),                                  & ! [OUT]
                                           RLmo(:,:),                                   & ! [OUT]
                                           U10(:,:), V10(:,:), T2(:,:), Q2(:,:)         ) ! [OUT]
-             !$acc update device(SFLX_MW,SFLX_MU,SFLX_MV,SFLX_SH,SFLX_LH,SFLX_QV,Ustar,Tstar,Qstar,Wstar,RLmo,U10,V10,T2,Q2)
 
           case ( 'CONST' )
 

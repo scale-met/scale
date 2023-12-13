@@ -94,13 +94,11 @@ module scale_atmos_phy_bl_mynn
   real(RP), private            :: Rf2
   real(RP), private            :: Rfc
   real(RP), private, parameter :: PrN = 0.74_RP
-  !$acc declare create(A1, A2, C1, G2, Rf1, Rf2, Rfc)
+  !$acc declare create(A1, A2, C1, C2, C3, G2, F2, Rf2, Rfc)
 
   real(RP), private, parameter :: SQRT_2PI  = sqrt( 2.0_RP * PI )
   real(RP), private, parameter :: RSQRT_2PI = 1.0_RP / SQRT_2PI
   real(RP), private, parameter :: RSQRT_2   = 1.0_RP / sqrt( 2.0_RP )
-
-  logical,  private            :: initialize
 
   ! for O2019
   integer, parameter :: max_plume = 10
@@ -108,6 +106,7 @@ module scale_atmos_phy_bl_mynn
   real(RP) :: dplume(max_plume)
   real(RP) :: pw(max_plume)
   logical  :: ATMOS_PHY_BL_MYNN_MF
+  !$acc declare create(nplume,dplume,pw,ATMOS_PHY_BL_MYNN_MF)
 
   ! history
   integer,  private :: HIST_Ri
@@ -134,6 +133,7 @@ module scale_atmos_phy_bl_mynn
   real(RP), private :: ATMOS_PHY_BL_MYNN_NU_MAX     =  1.E4_RP
   real(RP), private :: ATMOS_PHY_BL_MYNN_KH_MAX     =  1.E4_RP
   real(RP), private :: ATMOS_PHY_BL_MYNN_Lt_MAX     =  2000.0_RP
+  logical,  private :: ATMOS_PHY_BL_MYNN_use_Zi     = .true.
   real(RP), private :: ATMOS_PHY_BL_MYNN_zeta_lim   =  10.0_RP
   real(RP), private :: ATMOS_PHY_BL_MYNN_Sq_fact    = 3.0_RP
   real(RP), private :: ATMOS_PHY_BL_MYNN_cns        = -1.0_RP ! N01: 3.5,   O19: 10.0
@@ -142,7 +142,7 @@ module scale_atmos_phy_bl_mynn
   real(RP), private :: ATMOS_PHY_BL_MYNN_DUMP_coef  = 0.5_RP
   logical,  private :: ATMOS_PHY_BL_MYNN_dz_sim     = .true.
   logical,  private :: ATMOS_PHY_BL_MYNN_similarity = .true.
-  !$acc declare create(ATMOS_PHY_BL_MYNN_K2010,ATMOS_PHY_BL_MYNN_O2019,ATMOS_PHY_BL_MYNN_PBL_MAX,ATMOS_PHY_BL_MYNN_TKE_MIN,ATMOS_PHY_BL_MYNN_NU_MAX,ATMOS_PHY_BL_MYNN_KH_MAX,ATMOS_PHY_BL_MYNN_Lt_MAX,ATMOS_PHY_BL_MYNN_zeta_lim,ATMOS_PHY_BL_MYNN_Sq_fact,ATMOS_PHY_BL_MYNN_cns,ATMOS_PHY_BL_MYNN_alpha2,ATMOS_PHY_BL_MYNN_alpha4,ATMOS_PHY_BL_MYNN_dz_sim,ATMOS_PHY_BL_MYNN_similarity)
+  !$acc declare create(ATMOS_PHY_BL_MYNN_K2010,ATMOS_PHY_BL_MYNN_O2019,ATMOS_PHY_BL_MYNN_PBL_MAX,ATMOS_PHY_BL_MYNN_TKE_MIN,ATMOS_PHY_BL_MYNN_N2_MAX,ATMOS_PHY_BL_MYNN_NU_MAX,ATMOS_PHY_BL_MYNN_KH_MAX,ATMOS_PHY_BL_MYNN_Lt_MAX,ATMOS_PHY_BL_MYNN_use_Zi,ATMOS_PHY_BL_MYNN_zeta_lim,ATMOS_PHY_BL_MYNN_Sq_fact,ATMOS_PHY_BL_MYNN_cns,ATMOS_PHY_BL_MYNN_alpha2,ATMOS_PHY_BL_MYNN_alpha4,ATMOS_PHY_BL_MYNN_DUMP_coef,ATMOS_PHY_BL_MYNN_dz_sim,ATMOS_PHY_BL_MYNN_similarity)
 
   character(len=H_SHORT), private  :: ATMOS_PHY_BL_MYNN_LEVEL = "2.5" ! "2.5" or "3"
 
@@ -154,6 +154,7 @@ module scale_atmos_phy_bl_mynn
        ATMOS_PHY_BL_MYNN_NU_MAX,   &
        ATMOS_PHY_BL_MYNN_KH_MAX,   &
        ATMOS_PHY_BL_MYNN_Lt_MAX,   &
+       ATMOS_PHY_BL_MYNN_use_Zi,   &
        ATMOS_PHY_BL_MYNN_zeta_lim, &
        ATMOS_PHY_BL_MYNN_LEVEL,    &
        ATMOS_PHY_BL_MYNN_Sq_fact,  &
@@ -261,7 +262,6 @@ contains
        call PRC_abort
     endif
     LOG_NML(PARAM_ATMOS_PHY_BL_MYNN)
-    !$acc update device(ATMOS_PHY_BL_MYNN_K2010,ATMOS_PHY_BL_MYNN_O2019,ATMOS_PHY_BL_MYNN_PBL_MAX,ATMOS_PHY_BL_MYNN_TKE_MIN,ATMOS_PHY_BL_MYNN_NU_MAX,ATMOS_PHY_BL_MYNN_KH_MAX,ATMOS_PHY_BL_MYNN_Lt_MAX,ATMOS_PHY_BL_MYNN_zeta_lim,ATMOS_PHY_BL_MYNN_Sq_fact,ATMOS_PHY_BL_MYNN_cns,ATMOS_PHY_BL_MYNN_alpha2,ATMOS_PHY_BL_MYNN_alpha4,ATMOS_PHY_BL_MYNN_dz_sim,ATMOS_PHY_BL_MYNN_similarity)
 
     ATMOS_PHY_BL_MYNN_MF = .false.
     if ( ATMOS_PHY_BL_MYNN_O2019 ) then
@@ -271,6 +271,7 @@ contains
        if ( C2 < 0.0_RP ) C2 = 0.729_RP
        if ( C3 < 0.0_RP ) C3 = 0.34_RP
        ATMOS_PHY_BL_MYNN_K2010 = .true.
+       ATMOS_PHY_BL_MYNN_use_Zi = .true.
        if ( ATMOS_PHY_BL_MYNN_LEVEL .ne. "3" ) then
           ATMOS_PHY_BL_MYNN_MF = .true.
        end if
@@ -298,6 +299,8 @@ contains
        if ( C3 < 0.0_RP ) C3 = 0.352_RP
     end if
 
+    !$acc update device(nplume,dplume,pw,ATMOS_PHY_BL_MYNN_MF)
+
 
     A1  = B1 * (1.0_RP - 3.0_RP * G1) / 6.0_RP
     A2  = 1.0_RP / (3.0_RP * G1 * B1**(1.0_RP/3.0_RP) * PrN )
@@ -308,7 +311,7 @@ contains
     Rf2 = B1 * G1 / F2
     Rfc = G1 / (G1 + G2)
 
-    !$acc update device(A1, A2, C1, G2, Rf1, Rf2, Rfc)
+    !$acc update device(A1, A2, C1, C2, C3, G2, F2, Rf2, Rfc)
 
     select case ( BULKFLUX_type )
     case ( "B91", "B91W01" )
@@ -316,6 +319,9 @@ contains
     case default
        ATMOS_PHY_BL_MYNN_similarity = .false.
     end select
+
+    !$acc update device(ATMOS_PHY_BL_MYNN_K2010,ATMOS_PHY_BL_MYNN_O2019,ATMOS_PHY_BL_MYNN_PBL_MAX,ATMOS_PHY_BL_MYNN_TKE_MIN,ATMOS_PHY_BL_MYNN_N2_MAX,ATMOS_PHY_BL_MYNN_NU_MAX,ATMOS_PHY_BL_MYNN_KH_MAX,ATMOS_PHY_BL_MYNN_Lt_MAX,ATMOS_PHY_BL_MYNN_zeta_lim,ATMOS_PHY_BL_MYNN_Sq_fact,ATMOS_PHY_BL_MYNN_cns,ATMOS_PHY_BL_MYNN_alpha2,ATMOS_PHY_BL_MYNN_alpha4,ATMOS_PHY_BL_MYNN_DUMP_coef,ATMOS_PHY_BL_MYNN_dz_sim,ATMOS_PHY_BL_MYNN_similarity)
+
 
     ! history
     call FILE_HISTORY_reg('Ri_MYNN',       'Richardson number', '1',     HIST_Ri,     fill_halo=.true. )
@@ -477,6 +483,45 @@ contains
     real(RP) :: vflux(0:KA)
     real(RP) :: eflux(0:KA)
 
+    ! work
+    real(RP) :: PTLV (KA)
+    real(RP) :: Nu_f (KA) !> Nu at the full level
+    real(RP) :: Kh_f (KA) !> Kh at the full level
+    real(RP) :: q2_2 (KA) !> q^2 for level 2
+    real(RP) :: ac   (KA) !> \alpha_c
+    real(RP) :: betat(KA) !> \beta_t
+    real(RP) :: betaq(KA) !> \beta_q
+
+    real(RP) :: flx(0:KA)
+    real(RP) :: a(KA)
+    real(RP) :: b(KA)
+    real(RP) :: c(KA)
+    real(RP) :: d(KA)
+
+    real(RP) :: f_smp  (KA) !> stability function for velocity for the countergradient (factor)
+    real(RP) :: f_shpgh(KA) !> stability function for scalars for the countergradient (factor)
+    real(RP) :: f_gamma(KA) !> - E_H / q^2 * GRAV / Theta_0
+    real(RP) :: tltv25 (KA)
+    real(RP) :: qwtv25 (KA)
+    real(RP) :: tvsq25 (KA)
+    real(RP) :: tvsq_up(KA) !> upper limit of <\theta_v^2> - <\theta_v^2>2.5
+    real(RP) :: tvsq_lo(KA) !> lower limit
+    real(RP) :: dtsq   (KA)
+    real(RP) :: dqsq   (KA)
+    real(RP) :: dcov   (KA)
+
+    real(RP) :: mflux(0:KA)
+
+    real(RP) :: Uh(KA), Vh(KA), Wh(KA)
+    real(RP) :: qw2(KA), qh(KA)
+    real(RP) :: tlh(KA), tvh(KA)
+    real(RP) :: eh(KA), dh(KA)
+    real(RP) :: TEML(KA), LHVL(KA), psat(KA)
+
+#ifdef _OPENACC
+    real(RP) :: work(KA,4)
+#endif
+
     integer :: KE_PBL
     integer :: k, i, j
 
@@ -513,7 +558,7 @@ contains
     !$omp        ATMOS_PHY_BL_MYNN_K2010,ATMOS_PHY_BL_MYNN_O2019,ATMOS_PHY_BL_MYNN_MF, &
     !$omp        DENS,PROG,U,V,W,POTT,PRES,QDRY,QV,Qw,POTV,POTL,EXNER,N2, &
     !$omp        SFC_DENS,SFLX_MU,SFLX_MV,SFLX_SH,SFLX_QV,us,ts,qs,RLmo, &
-    !$omp        mynn_level3,initialize, &
+    !$omp        mynn_level3, &
     !$omp        frac_land, &
     !$omp        CZ,FZ,F2H, &
     !$omp        I_B_TYPE) &
@@ -527,20 +572,36 @@ contains
     !$omp         tsq,qsq,cov, &
     !$omp         prod_t,prod_q,prod_c,diss_p, &
     !$omp         tflux,qflux,uflux,vflux,eflux, &
+    !$omp         PTLV, Nu_f, Kh_f, q2_2, ac, betat, betaq, &
+    !$omp         flx, a, b, c, d, &
+    !$omp         f_smp, f_shpgh, f_gamma, tltv25, qwtv25, tvsq25, &
+    !$omp         tvsq_up, tvsq_lo, dtsq, dqsq, dcov, &
+    !$omp         mflux, &
+    !$omp         Uh, Vh, Wh, qw2, qh, tlh, tvh, eh, dh, &
+    !$omp         TEML, LHVL, psat, &
     !$omp         KE_PBL,k,i,j)
     !$acc kernels
-    do j = JS, JE
-    !$acc loop &
+    !$acc loop independent collapse(2) &
     !$acc private(N2_new,lq,sm25,sh25,q, &
     !$acc         SFLX_PT,CPtot,RHO,RHONu,RHOKh, &
     !$acc         Nu,Kh,Qlp,cldfrac,Zi,SFLX_BUOY, &
     !$acc         Ri,Pr,prod,diss,dudz2,l, &
     !$acc         smp,shpgh, &
     !$acc         dtldz,dqwdz,gammat,gammaq, &
-    !$acc         rho_h,tke,CDZ,FDZ,z1, &
+    !$acc         rho_h,tke,CDZ,FDZ,z, &
     !$acc         tsq,qsq,cov, &
     !$acc         prod_t,prod_q,prod_c,diss_p, &
-    !$acc         KE_PBL)
+    !$acc         tflux,qflux,uflux,vflux,eflux, &
+    !$acc         work, &
+    !$acc         PTLV, Nu_f, Kh_f, q2_2, ac, betat, betaq, &
+    !$acc         flx, a, b, c, d, &
+    !$acc         f_smp, f_shpgh, f_gamma, tltv25, qwtv25, tvsq25, &
+    !$acc         tvsq_up, tvsq_lo, dtsq, dqsq, dcov, &
+    !$acc         mflux, &
+    !$acc         Uh, Vh, Wh, qw2, qh, tlh, tvh, eh, dh, &
+    !$acc         TEML, LHVL, psat, &
+    !$acc         KE_PBL,k,i,j)
+    do j = JS, JE
     do i = IS, IE
 
        do k = KS, KE-1
@@ -596,7 +657,20 @@ contains
                        frac_land(i,j),                                     & ! (in)
                        dt,                                                 & ! (in)
                        I_B_TYPE,                                           & ! (in)
-                       mynn_level3, .true.                                 ) ! (in)
+                       mynn_level3, .true.,                                & ! (in)
+#ifdef _OPENACC
+                       work(:,:),                                          & ! (work)
+#endif
+                       PTLV(:), Nu_f(:), Kh_f(:), q2_2(:), ac(:),          & ! (work)
+                       betat(:), betaq(:),                                 & ! (work)
+                       flx(:), a(:), b(:), c(:), d(:),                     & ! (work)
+                       f_smp(:), f_shpgh(:), f_gamma(:),                   & ! (work)
+                       tltv25(:), qwtv25(:), tvsq25(:),                    & ! (work)
+                       tvsq_up(:), tvsq_lo(:), dtsq(:), dqsq(:), dcov(:),  & ! (work)
+                       mflux(:),                                           & ! (work)
+                       Uh(:), Vh(:), Wh(:), qw2(:), qh(:),                 & ! (work)
+                       tlh(:), tvh(:), eh(:), dh(:),                       & ! (work)
+                       TEML(:), LHVL(:), psat(:)                           ) ! (work)
 
        do k = KS, KE_PBL
           PROG(k,i,j,I_TKE) = tke(k)
@@ -795,9 +869,40 @@ contains
     integer :: KE_PBL
     integer :: k, k2, i, j
 
+
+    ! work
+    real(RP) :: PTLV (KA)
+    real(RP) :: Nu_f (KA) !> Nu at the full level
+    real(RP) :: Kh_f (KA) !> Kh at the full level
+    real(RP) :: q2_2 (KA) !> q^2 for level 2
+    real(RP) :: ac   (KA) !> \alpha_c
+    real(RP) :: betat(KA) !> \beta_t
+    real(RP) :: betaq(KA) !> \beta_q
+
+    real(RP) :: f_smp  (KA) !> stability function for velocity for the countergradient (factor)
+    real(RP) :: f_shpgh(KA) !> stability function for scalars for the countergradient (factor)
+    real(RP) :: f_gamma(KA) !> - E_H / q^2 * GRAV / Theta_0
+    real(RP) :: tltv25 (KA)
+    real(RP) :: qwtv25 (KA)
+    real(RP) :: tvsq25 (KA)
+    real(RP) :: tvsq_up(KA) !> upper limit of <\theta_v^2> - <\theta_v^2>2.5
+    real(RP) :: tvsq_lo(KA) !> lower limit
+    real(RP) :: dtsq   (KA)
+    real(RP) :: dqsq   (KA)
+    real(RP) :: dcov   (KA)
+
+    real(RP) :: mflux(0:KA)
+
+    real(RP) :: Uh(KA), Vh(KA), Wh(KA)
+    real(RP) :: qw2(KA), qh(KA)
+    real(RP) :: tlh(KA), tvh(KA)
+    real(RP) :: eh(KA), dh(KA)
+    real(RP) :: TEML(KA), LHVL(KA), psat(KA)
+
 #ifdef _OPENACC
     real(RP) :: work(KA,4)
 #endif
+
     !---------------------------------------------------------------------------
 
     dt = real(dt_DP, RP)
@@ -855,22 +960,37 @@ contains
     !$omp         fmin,kmin, &
     !$omp         tflux,qflux,uflux,vflux,eflux, &
     !$omp         tmp, &
+    !$omp         PTLV, Nu_f, Kh_f, q2_2, ac, betat, betaq, &
+    !$omp         f_smp, f_shpgh, f_gamma, tltv25, qwtv25, tvsq25, &
+    !$omp         tvsq_up, tvsq_lo, dtsq, dqsq, dcov, &
+    !$omp         mflux, &
+    !$omp         Uh, Vh, Wh, qw2, qh, tlh, tvh, eh, dh, &
+    !$omp         TEML, LHVL, psat, &
     !$omp         KE_PBL,k,k2,i,j)
     !$acc kernels
-    do j = JS, JE
-    !$acc loop &
+    !$acc loop independent collapse(2) &
     !$acc private(N2_new,lq,sm25,sh25,rlqsm_h,q, &
     !$acc         SFLX_PT,CPtot,RHO,RHONu,RHOKh, &
     !$acc         smp,shpgh, &
     !$acc         dtldz,dqwdz,gammat,gammaq, &
-    !$acc         flx,a,b,c,d,ap,rho_h,phi_n,tke,sf_t,CDZ,FDZ,z1, &
+    !$acc         flx,a,b,c,d,ap,rho_h,phi_n,tke,sf_t,CDZ,FDZ,z, &
     !$acc         dummy, &
     !$acc         tsq,qsq,cov, &
     !$acc         prod_t,prod_q,prod_c,diss_p, &
     !$acc         fmin,kmin, &
+    !$acc         tflux,qflux,uflux,vflux,eflux, &
     !$acc         tmp, &
-    !$acc         KE_PBL, &
-    !$acc         work)
+    !$acc         work, &
+    !$acc         PTLV, Nu_f, Kh_f, q2_2, ac, betat, betaq, &
+    !$acc         flx, a, b, c, d, &
+    !$acc         f_smp, f_shpgh, f_gamma, tltv25, qwtv25, tvsq25, &
+    !$acc         tvsq_up, tvsq_lo, dtsq, dqsq, dcov, &
+    !$acc         mflux, &
+    !$acc         Uh, Vh, Wh, qw2, qh, tlh, tvh, eh, dh, &
+    !$acc         TEML, LHVL, psat, &
+    !$acc         KE_PBL,k,k2,i,j)
+
+    do j = JS, JE
     do i = IS, IE
 
        do k = KS, KE-1
@@ -935,7 +1055,20 @@ contains
                        frac_land(i,j),                                      & ! (in)
                        dt,                                                  & ! (in)
                        I_B_TYPE,                                            & ! (in)
-                       mynn_level3, .false.                                 ) ! (in)
+                       mynn_level3, .false.,                                & ! (in)
+#ifdef _OPENACC
+                       work(:,:),                                           & ! (work)
+#endif
+                       PTLV(:), Nu_f(:), Kh_f(:), q2_2(:), ac(:),           & ! (work)
+                       betat(:), betaq(:),                                  & ! (work)
+                       flx(:), a(:), b(:), c(:), d(:),                      & ! (work)
+                       f_smp(:), f_shpgh(:), f_gamma(:),                    & ! (work)
+                       tltv25(:), qwtv25(:), tvsq25(:),                     & ! (work)
+                       tvsq_up(:), tvsq_lo(:), dtsq(:), dqsq(:), dcov(:),   & ! (work)
+                       mflux(:),                                            & ! (work)
+                       Uh(:), Vh(:), Wh(:), qw2(:), qh(:),                  & ! (work)
+                       tlh(:), tvh(:), eh(:), dh(:),                        & ! (work)
+                       TEML(:), LHVL(:), psat(:)                            ) ! (work)
 
 
        ! time integration
@@ -1127,23 +1260,21 @@ contains
           flxT2(k,i,j) = 0.0_RP
        end do
 
-       if ( .not. ATMOS_PHY_BL_MYNN_O2019 ) then
-          kmin = KS-1
-          if ( flxT(KS,i,j) > 1E-4_RP ) then
-             fmin = flxT(KS,i,j) / rho_h(KS)
-             !$acc loop seq
-             do k = KS+1, KE_PBL-2
-                tmp = ( flxT(k-1,i,j) + flxT(k,i,j) + flxT(k+1,i,j) ) &
-                     / ( rho_h(k-1) + rho_h(k) + rho_h(k+1) ) ! running mean
-                if ( fmin < 0.0_RP .and. tmp > fmin ) exit
-                if ( tmp < fmin ) then
-                   fmin = tmp
-                   kmin = k
-                end if
-             end do
-          end if
-          Zi(i,j) = FZ(kmin,i,j) - FZ(KS-1,i,j)
+       kmin = KS-1
+       if ( flxT(KS,i,j) > 1E-4_RP ) then
+          fmin = flxT(KS,i,j) / rho_h(KS)
+          !$acc loop seq
+          do k = KS+1, KE_PBL-2
+             tmp = ( flxT(k-1,i,j) + flxT(k,i,j) + flxT(k+1,i,j) ) &
+                  / ( rho_h(k-1) + rho_h(k) + rho_h(k+1) ) ! running mean
+             if ( fmin < 0.0_RP .and. tmp > fmin ) exit
+             if ( tmp < fmin ) then
+                fmin = tmp
+                kmin = k
+             end if
+          end do
        end if
+       Zi(i,j) = FZ(kmin,i,j) - FZ(KS-1,i,j)
 
        ! dens * qv
 
@@ -1242,6 +1373,7 @@ contains
           diss(k,i,j) = diss(k,i,j) * phi_n(k)
           RPROG_t(k,i,j,I_TKE) = ( phi_n(k) * RHO(k) - PROG(k,i,j,I_TKE) * DENS(k,i,j) ) / dt
        end do
+       !$acc loop independent
        do k = KE_PBL+1, KE
           RPROG_t(k,i,j,I_TKE) = - ATMOS_PHY_BL_MYNN_DUMP_COEF * PROG(k,i,j,I_TKE) * DENS(k,i,j) / dt
           diss(k,i,j) = 0.0_RP
@@ -1293,6 +1425,7 @@ contains
           do k = KS, KE_PBL
              RPROG_t(k,i,j,I_TSQ) = ( tsq(k) * RHO(k) - PROG(k,i,j,I_TSQ) * DENS(k,i,j) ) / dt
           end do
+          !$acc loop independent
           do k = KE_PBL+1, KE
              RPROG_t(k,i,j,I_TSQ) = - ATMOS_PHY_BL_MYNN_DUMP_COEF * PROG(k,i,j,I_TSQ) * DENS(k,i,j) / dt
           end do
@@ -1320,6 +1453,7 @@ contains
           do k = KS, KE_PBL
              RPROG_t(k,i,j,I_QSQ) = ( qsq(k) * RHO(k) - PROG(k,i,j,I_QSQ) * DENS(k,i,j) ) / dt
           end do
+          !$acc loop independent
           do k = KE_PBL+1, KE
              RPROG_t(k,i,j,I_QSQ) = - ATMOS_PHY_BL_MYNN_DUMP_COEF * PROG(k,i,j,I_QSQ) * DENS(k,i,j) / dt
           end do
@@ -1348,6 +1482,7 @@ contains
           do k = KS, KE_PBL
              RPROG_t(k,i,j,I_COV) = ( cov(k) * RHO(k) - PROG(k,i,j,I_COV) * DENS(k,i,j) ) / dt
           end do
+          !$acc loop independent
           do k = KE_PBL+1, KE
              RPROG_t(k,i,j,I_COV) = - ATMOS_PHY_BL_MYNN_DUMP_COEF * PROG(k,i,j,I_COV) * DENS(k,i,j) / dt
           end do
@@ -1444,7 +1579,17 @@ contains
        frac_land, &
        dt, &
        I_B_TYPE, &
-       mynn_level3, initialize )
+       mynn_level3, initialize, &
+#ifdef _OPENACC
+       work, &
+#endif
+       PTLV, Nu_f, Kh_f, q2_2, ac, betat, betaq, &
+       flx, a, b, c, d, &
+       f_smp, f_shpgh, f_gamma, tltv25, qwtv25, tvsq25, &
+       tvsq_up, tvsq_lo, dtsq, dqsq, dcov, &
+       mflux, &
+       Uh, Vh, Wh, qw2, qh, tlh, tvh, eh, dh, &
+       TEML, LHVL, psat )
     !$acc routine vector
     use scale_const, only: &
        EPS     => CONST_EPS,    &
@@ -1525,52 +1670,57 @@ contains
     logical,  intent(in) :: mynn_level3
     logical,  intent(in) :: initialize
 
-    real(RP) :: PTLV (KA)
-    real(RP) :: Nu_f  (KA) !> Nu at the full level
-    real(RP) :: Kh_f  (KA) !> Kh at the full level
-    real(RP) :: q2_2  (KA) !> q^2 for level 2
-    real(RP) :: ac    (KA) !> \alpha_c
-    real(RP) :: betat (KA) !> \beta_t
-    real(RP) :: betaq (KA) !> \beta_q
+    ! work
+    real(RP), intent(out) :: PTLV (KA)
+    real(RP), intent(out) :: Nu_f (KA) !> Nu at the full level
+    real(RP), intent(out) :: Kh_f (KA) !> Kh at the full level
+    real(RP), intent(out) :: q2_2 (KA) !> q^2 for level 2
+    real(RP), intent(out) :: ac   (KA) !> \alpha_c
+    real(RP), intent(out) :: betat(KA) !> \beta_t
+    real(RP), intent(out) :: betaq(KA) !> \beta_q
 
-    real(RP) :: flx(0:KA)
-    real(RP) :: a(KA)
-    real(RP) :: b(KA)
-    real(RP) :: c(KA)
-    real(RP) :: d(KA)
+    real(RP), intent(out) :: flx(0:KA)
+    real(RP), intent(out) :: a(KA)
+    real(RP), intent(out) :: b(KA)
+    real(RP), intent(out) :: c(KA)
+    real(RP), intent(out) :: d(KA)
+
     real(RP) :: ap
 
     real(RP) :: zeta
     real(RP) :: phi_m, phi_h
     real(RP) :: us3
 
-    ! for level 3
-    real(RP) :: f_smp  (KA) !> stability function for velocity for the countergradient (factor)
-    real(RP) :: f_shpgh(KA) !> stability function for scalars for the countergradient (factor)
-    real(RP) :: f_gamma(KA) !> - E_H / q^2 * GRAV / Theta_0
-    real(RP) :: tltv25 (KA)
-    real(RP) :: qwtv25 (KA)
-    real(RP) :: tvsq25 (KA)
-    real(RP) :: tvsq_up(KA) !> upper limit of <\theta_v^2> - <\theta_v^2>2.5
-    real(RP) :: tvsq_lo(KA) !> lower limit
-    real(RP) :: dtsq   (KA)
-    real(RP) :: dqsq   (KA)
-    real(RP) :: dcov   (KA)
+    ! for level 3 (work)
+    real(RP), intent(out) :: f_smp  (KA) !> stability function for velocity for the countergradient (factor)
+    real(RP), intent(out) :: f_shpgh(KA) !> stability function for scalars for the countergradient (factor)
+    real(RP), intent(out) :: f_gamma(KA) !> - E_H / q^2 * GRAV / Theta_0
+    real(RP), intent(out) :: tltv25 (KA)
+    real(RP), intent(out) :: qwtv25 (KA)
+    real(RP), intent(out) :: tvsq25 (KA)
+    real(RP), intent(out) :: tvsq_up(KA) !> upper limit of <\theta_v^2> - <\theta_v^2>2.5
+    real(RP), intent(out) :: tvsq_lo(KA) !> lower limit
+    real(RP), intent(out) :: dtsq   (KA)
+    real(RP), intent(out) :: dqsq   (KA)
+    real(RP), intent(out) :: dcov   (KA)
     real(RP) :: tvsq
     real(RP) :: tltv
     real(RP) :: qwtv
     real(RP) :: wtl
     real(RP) :: wqw
 
-    ! for O2019
-    real(RP) :: mflux(0:KA)
+    ! for O2019 (work)
+    real(RP), intent(out) :: mflux(0:KA)
 
     ! work
-    real(RP) :: Uh(KA), Vh(KA)
-    real(RP) :: qw2(KA), qh(KA)
-    real(RP) :: TEML(KA), LHVL(KA), psat(KA)
+    real(RP), intent(out) :: Uh(KA), Vh(KA), Wh(KA)
+    real(RP), intent(out) :: qw2(KA), qh(KA)
+    real(RP), intent(out) :: tlh(KA), tvh(KA)
+    real(RP), intent(out) :: eh(KA), dh(KA)
+    real(RP), intent(out) :: TEML(KA), LHVL(KA), psat(KA)
+
 #ifdef _OPENACC
-    real(RP) :: work(KA,4)
+    real(RP), intent(out) :: work(KA,4)
 #endif
 
     real(RP) :: sw, tmp
@@ -1599,8 +1749,7 @@ contains
        q(k) = sqrt( max( tke(k), ATMOS_PHY_BL_MYNN_TKE_MIN ) * 2.0_RP )
     end do
 
-    if ( ATMOS_PHY_BL_MYNN_O2019 ) then
-
+    if ( ATMOS_PHY_BL_MYNN_use_Zi ) then
        do k = KS, KE_PBL
           PTLV(k) = POTL(k) * ( 1.0_RP + EPSTvap * Qw(k) )
        end do
@@ -1642,7 +1791,9 @@ contains
                Zi, Z(:), CDZ(:), F2H(:,:),       & ! (in)
                mflux(:),                         & ! (out)
                tflux(:), qflux(:),               & ! (out)
-               uflux(:), vflux(:), eflux(:)      ) ! (out)
+               uflux(:), vflux(:), eflux(:),     & ! (out)
+               tlh(:), tvh(:), qh(:),            & ! (work)
+               Uh(:), Vh(:), Wh(:), eh(:), dh(:) ) ! (work)
        end if
 
        ! length
@@ -1723,34 +1874,33 @@ contains
        SFLX_BUOY = GRAV / POTV(KS) * ( betat(KS) * SFLX_PT + betaq(KS) * SFLX_QV ) / SFC_DENS
 
 
-       if ( ATMOS_PHY_BL_MYNN_O2019 ) then
-
+       if ( ATMOS_PHY_BL_MYNN_use_Zi ) then
           do k = KS, KE_PBL
              PTLV(k) = POTL(k) * betat(k) + Qw(k) * betaq(k)
           end do
-
           call calc_zi_o2019( KA, KS, KE_PBL, &
                               Zi,              & ! (out)
                               PTLV(:), tke(:), & ! (in)
                               z(:), frac_land, & ! (in)
                               .false.          ) ! (in)
+       end if
 
-          if ( ATMOS_PHY_BL_MYNN_MF ) then
-             call calc_mflux( &
-                  KA, KS, KE_PBL, &
-                  DENS(:), POTV(:), POTL(:), Qw(:), & ! (in)
-                  U(:), V(:), W(:), tke(:),         & ! (in)
-                  cldfrac(:),                       & ! (in)
-                  EXNER(:),                         & ! (in)
-                  SFLX_SH, SFLX_BUOY,               & ! (in)
-                  SFLX_PT, SFLX_QV,                 & ! (in)
-                  SFC_DENS,                         & ! (in)
-                  Zi, Z(:), CDZ(:), F2H(:,:),       & ! (in)
-                  mflux(:),                         & ! (out)
-                  tflux(:), qflux(:),               & ! (out)
-                  uflux(:), vflux(:), eflux(:)      ) ! (out)
-          end if
-
+       if ( ATMOS_PHY_BL_MYNN_MF ) then
+          call calc_mflux( &
+               KA, KS, KE_PBL, &
+               DENS(:), POTV(:), POTL(:), Qw(:), & ! (in)
+               U(:), V(:), W(:), tke(:),         & ! (in)
+               cldfrac(:),                       & ! (in)
+               EXNER(:),                         & ! (in)
+               SFLX_SH, SFLX_BUOY,               & ! (in)
+               SFLX_PT, SFLX_QV,                 & ! (in)
+               SFC_DENS,                         & ! (in)
+               Zi, Z(:), CDZ(:), F2H(:,:),       & ! (in)
+               mflux(:),                         & ! (out)
+               tflux(:), qflux(:),               & ! (out)
+               uflux(:), vflux(:), eflux(:),     & ! (out)
+               tlh(:), tvh(:), qh(:),            & ! (work)
+               Uh(:), Vh(:), Wh(:), eh(:), dh(:) ) ! (work)
        end if
 
 
@@ -2104,7 +2254,7 @@ contains
        KA, KS, KE_PBL, &
        q, n2,           &
        POTV, DENS,      &
-       mflux,           &
+       mflux_gl,        &
        Zi,              &
        SFLX_BUOY, RLmo, &
        z, CDZ, FDZ,     &
@@ -2122,7 +2272,7 @@ contains
     real(RP), intent(in) :: n2(KA)
     real(RP), intent(in) :: POTV(KA)
     real(RP), intent(in) :: DENS(KA)
-    real(RP), intent(in) :: mflux(0:KA)
+    real(RP), intent(in) :: mflux_gl(0:KA)
     real(RP), intent(in) :: Zi
     real(RP), intent(in) :: SFLX_BUOY !> g/T0 <w Tv> @ surface
     real(RP), intent(in) :: RLmo      !> inverse of Obukhov length
@@ -2157,8 +2307,9 @@ contains
     integer :: kmax
     integer :: k
 
-    if ( ATMOS_PHY_BL_MYNN_O2019 ) then
+    if ( ATMOS_PHY_BL_MYNN_use_Zi ) then
        kmax = KE_PBL
+       !$acc loop seq
        do k = KS, KE_PBL
           if ( z(k) > Zi * 1.3_RP ) then
              kmax = k - 1
@@ -2171,7 +2322,7 @@ contains
 
     int_qz = 0.0_RP
     int_q = 0.0_RP
-    !$acc loop reduction(+:int_qz,int_q)
+    !$acc loop private(qdz) reduction(+:int_qz,int_q)
     do k = KS, kmax
        qdz = q(k) * CDZ(k)
        int_qz = int_qz + z(k) * qdz
@@ -2188,6 +2339,7 @@ contains
        tau = 0.5_RP * zi / max(SFLX_BUOY,1.0E-10_RP)**OneOverThree
     end if
 
+    !$acc loop private(zeta,sw,ls,rn2sr,tau,lb)
     do k = KS, KE_PBL
        zeta = z(k) * RLmo
 
@@ -2223,7 +2375,7 @@ contains
 !!$          lbl = sqrt( lup**2 + ldown**2 )
 !!$          we = 0.5_RP * tanh( ( z(k) - zi * 1.3_RP ) /  ( zi * 0.15_RP ) ) + 0.5_RP
 !!$          lb = lb * ( 1.0_RP - we ) + lbl * we
-          lb = ATMOS_PHY_BL_MYNN_alpha2 * max( q(k), ( mflux(k)+mflux(k-1))/DENS(k) ) * rn2sr * sw &
+          lb = ATMOS_PHY_BL_MYNN_alpha2 * max( q(k), ( mflux_gl(k)+mflux_gl(k-1))/DENS(k) ) * rn2sr * sw &
              + tau * q(k) * sqrt05 * (1.0_RP-sw)
        else
           lb = ATMOS_PHY_BL_MYNN_alpha2 * (1.0_RP + 5.0_RP * sqrt(qc*rn2sr*rlt)) * q(k) * rn2sr * sw & ! qc=0 when RLmo > 0
@@ -2304,8 +2456,8 @@ contains
        sh25, f_shpgh,   &
        f_gamma,         &
        tltv25, qwtv25,  &
-       tvsq25,          &
-       tvsq_up, tvsq_lo )
+       tvsq25, tvsq_up, &
+       tvsq_lo          )
     !$acc routine vector
     use scale_const, only: &
        EPS  => CONST_EPS, &
@@ -2480,7 +2632,7 @@ contains
        else ! level 2.5
           tvsq_up(k) = 0.0_RP
           tvsq_lo(k) = 0.0_RP
-          f_smp  (k) = 0.0_RP
+          f_smp(k)   = 0.0_RP
           f_shpgh(k) = 0.0_RP
           f_gamma(k) = 0.0_RP
        end if
@@ -2500,7 +2652,7 @@ contains
        betat, betaq,           &
        f_gamma, l, q,          &
        dt,                     &
-       dtsq, dqsq, dcov        )
+       dtsq, dqsq, dcov )
     !$acc routine vector
     use scale_const, only: &
        GRAV => CONST_GRAV
@@ -2625,10 +2777,10 @@ contains
     real(RP), intent(in) :: phi_h
     real(RP), intent(in) :: z1
 
-    real(RP), intent(out) :: Uh(KA) ! work
-    real(RP), intent(out) :: Vh(KA) ! work
+    real(RP), intent(out) :: Uh (KA) ! work
+    real(RP), intent(out) :: Vh (KA) ! work
     real(RP), intent(out) :: qw2(KA) ! work
-    real(RP), intent(out) :: qh(KA) ! work
+    real(RP), intent(out) :: qh (KA) ! work
 
     integer :: k
 
@@ -2695,10 +2847,10 @@ contains
 !OCL SERIAL
   subroutine partial_condensation( &
        KA, KS, KE, &
-       betat, betaq, Qlp, cldfrac,        &
+       betat, betaq, Qlp, cldfrac,  &
        PRES, POTT, POTL, Qw, EXNER, &
-       tsq, qsq, cov,                     &
-       TEML, LHVL, psat                   )
+       tsq, qsq, cov,               &
+       TEML, LHVL, psat             )
     use scale_const, only: &
        CPdry   => CONST_CPdry,  &
        Rvap    => CONST_Rvap,   &
@@ -2913,7 +3065,10 @@ contains
        SFC_DENS, &
        Zi, &
        Z, CDZ, F2H, &
-       mflux, tflux, qflux, uflux, vflux, eflux )
+       mflux, tflux, qflux, uflux, vflux, eflux, &
+       tlh, tvh, qh, uh, vh, wh, eh, dh )
+
+    !$acc routine vector
     use scale_const, only: &
        GRAV    => CONST_GRAV, &
        CPdry => CONST_CPdry, &
@@ -2954,6 +3109,16 @@ contains
     real(RP), intent(out) :: vflux(0:KA)
     real(RP), intent(out) :: eflux(0:KA)
 
+    ! work
+    real(RP), intent(out) :: tlh(KA)
+    real(RP), intent(out) :: tvh(KA)
+    real(RP), intent(out) :: qh(KA)
+    real(RP), intent(out) :: uh(KA)
+    real(RP), intent(out) :: vh(KA)
+    real(RP), intent(out) :: wh(KA)
+    real(RP), intent(out) :: eh(KA)
+    real(RP), intent(out) :: dh(KA)
+
     real(RP), parameter :: amax = 0.1_RP
     real(RP), parameter :: Ce = 0.35_RP
     real(RP), parameter :: x = -1.9_RP
@@ -2962,14 +3127,6 @@ contains
     real(RP), parameter :: zs = 50.0_RP
     real(RP), parameter :: a = 2.0_RP
 
-    real(RP) :: tlh(KA)
-    real(RP) :: tvh(KA)
-    real(RP) :: qh(KA)
-    real(RP) :: uh(KA)
-    real(RP) :: vh(KA)
-    real(RP) :: wh(KA)
-    real(RP) :: eh(KA)
-    real(RP) :: dh(KA)
     real(RP) :: au ! total area
     real(RP) :: ap(nplume) ! area
     real(RP) :: wp, tp, qp, up, vp, ep
@@ -3005,6 +3162,7 @@ contains
     end if
 
     ! must be superadiabatic in the lowest 50 m
+    !$acc loop seq
     do k = KS, KE-1
        if ( z(k) > 50.0_RP ) exit
        if ( POTV(k+1) >= POTV(k) ) then
@@ -3013,6 +3171,7 @@ contains
     end do
 
     zmax = zi
+    !$acc loop seq
     do k = KS, KE
        if ( cldfrac(k) > 0.5_RP .and. z(k) <= 2000.0_RP ) then
           zmax = min( zmax, z(k) * 0.5_RP ) ! zc
@@ -3020,6 +3179,7 @@ contains
        end if
     end do
     np = nplume
+    !$acc loop seq
     do n = 1, nplume
        if ( dplume(n) > zmax ) then
           np = n - 1
@@ -3031,6 +3191,7 @@ contains
     ! updraft area
     au = amax * ( tanh( ( SHFLX - 20.0_RP ) / 90.0_RP ) * 0.5_RP + 0.5_RP )
     fact = 0.0_RP
+    !$acc loop reduction(+:fact)
     do n = 1, np
        if ( n == 1 ) then
           dd = dplume(2) - dplume(1)
@@ -3066,6 +3227,7 @@ contains
     sw = Cs * ws * tmp * ( 1.0_RP - 0.8_RP*zs/zi )
     sq = Cs * qs * tmp
     st = Cs * ts * tmp
+    !$acc loop seq
     do n = 1, np
        ! initial properties of the plume
        wp = min( pw(n) * sw, 0.5_RP )
@@ -3074,6 +3236,7 @@ contains
        up = uh(KS)
        vp = vh(KS)
        ep = eh(KS)
+       !$acc loop seq
        do k = KS, KE-1
           mf = ap(n) * ( wp - wh(k) ) * dh(k)
           mflux(k) = mflux(k) + mf

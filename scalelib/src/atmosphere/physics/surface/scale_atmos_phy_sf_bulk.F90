@@ -41,6 +41,7 @@ module scale_atmos_phy_sf_bulk
   !++ Private parameters & variables
   !
   real(RP), private :: ATMOS_PHY_SF_BULK_beta = 1.0_RP ! evaporation efficiency (0-1)
+  !$acc declare create(ATMOS_PHY_SF_BULK_beta)
 
   !-----------------------------------------------------------------------------
 contains
@@ -71,6 +72,8 @@ contains
        call PRC_abort
     endif
     LOG_NML(PARAM_ATMOS_PHY_SF_BULK)
+
+    !$acc update device(ATMOS_PHY_SF_BULK_beta)
 
     return
   end subroutine ATMOS_PHY_SF_bulk_setup
@@ -154,6 +157,11 @@ contains
 
     LOG_PROGRESS(*) 'atmosphere / physics / surface flux / bulk'
 
+    !$acc data copyin(ATM_W,ATM_U,ATM_V,ATM_TEMP,ATM_PRES,ATM_QV,SFC_DENS,SFC_TEMP,SFC_PRES,SFC_Z0M,SFC_Z0H,SFC_Z0E,PBL,ATM_Z1) &
+    !$acc      copyout(SFLX_MW,SFLX_MU,SFLX_MV,SFLX_SH,SFLX_LH,SFLX_QV,Ustar,Tstar,Qstar,Wstar,RLmo,U10,V10,T2,Q2) &
+    !$acc      create(SFC_PSAT,LHV,SFC_QV,FracU10,FracT2,FracQ2)
+
+
     call HYDROMETEOR_LHV( IA, IS, IE, JA, JS, JE, &
                           SFC_TEMP(:,:), & ! [IN]
                           LHV(:,:)       ) ! [OUT]
@@ -175,6 +183,9 @@ contains
     !$omp default(shared) &
 #endif
     !$omp private(SFC_QSAT,Uabs,Ra,MFLUX)
+    !$acc kernels
+    !$acc loop independent collapse(2) &
+    !$acc private(SFC_QSAT,Uabs,Ra,MFLUX)
     do j = JS, JE
     do i = IS, IE
        ! qdry = 1 - psat
@@ -213,6 +224,7 @@ contains
 
     enddo
     enddo
+    !$acc end kernels
 
     call BULKFLUX_diagnose_surface( IA, IS, IE, JA, JS, JE, &
                                     ATM_U(:,:), ATM_V(:,:),                    &
@@ -223,6 +235,8 @@ contains
                                     U10(:,:), V10(:,:), T2(:,:), Q2(:,:),      &
                                     FracU10 = FracU10(:,:),                    &
                                     FracT2 = FracT2(:,:), FracQ2 = FracQ2(:,:) )
+
+    !$acc end data
 
     return
   end subroutine ATMOS_PHY_SF_bulk_flux
