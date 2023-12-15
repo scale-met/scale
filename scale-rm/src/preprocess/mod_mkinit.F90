@@ -28,9 +28,9 @@ module mod_mkinit
      GRAV   => CONST_GRAV,   &
      Pstd   => CONST_Pstd,   &
      Rdry   => CONST_Rdry,   &
+     Rvap   => CONST_Rvap,   &
      CPdry  => CONST_CPdry,  &
-     P00    => CONST_PRE00,  &
-     EPSvap => CONST_EPSvap
+     P00    => CONST_PRE00
   use scale_random, only: &
      RANDOM_uniform
   use scale_comm_cartesC, only: &
@@ -59,9 +59,8 @@ module mod_mkinit
      HYDROSTATIC_buildrho_atmos  => ATMOS_HYDROSTATIC_buildrho_atmos, &
      HYDROSTATIC_buildrho_bytemp => ATMOS_HYDROSTATIC_buildrho_bytemp
   use scale_atmos_saturation, only: &
-     SATURATION_psat_all => ATMOS_SATURATION_psat_all, &
      SATURATION_pres2qsat_all => ATMOS_SATURATION_pres2qsat_all, &
-     SATURATION_pres2qsat_liq => ATMOS_SATURATION_pres2qsat_liq
+     SATURATION_psat_all => ATMOS_SATURATION_psat_all
   use mod_atmos_vars, only: &
      DENS, &
      MOMX, &
@@ -177,13 +176,13 @@ module mod_mkinit
   !
   !++ Private parameters & variables
   !
+  integer,  private, parameter           :: NITER_RH = 4
   real(RP), private, parameter           :: THETAstd = 300.0_RP ! [K]
 
   real(RP), private, allocatable         :: pres    (:,:,:) ! pressure [Pa]
   real(RP), private, allocatable         :: temp    (:,:,:) ! temperature [K]
   real(RP), private, allocatable         :: pott    (:,:,:) ! potential temperature [K]
-  real(RP), private, allocatable         :: qdry    (:,:,:) ! dry air mass ratio [kg/kg]
-  real(RP), private, allocatable         :: qsat    (:,:,:) ! satulated water vapor [kg/kg]
+  real(RP), private, allocatable         :: psat    (:,:,:) ! satulated water vapor [kg/kg]
   real(RP), private, allocatable         :: qv      (:,:,:) ! water vapor [kg/kg]
   real(RP), private, allocatable         :: qc      (:,:,:) ! cloud water [kg/kg]
   real(RP), private, allocatable         :: nc      (:,:,:) ! cloud water number density [1/kg]
@@ -194,7 +193,6 @@ module mod_mkinit
   real(RP), private, allocatable         :: pres_sfc(:,:) ! surface pressure [Pa]
   real(RP), private, allocatable         :: temp_sfc(:,:) ! surface temperature [K]
   real(RP), private, allocatable         :: pott_sfc(:,:) ! surface potential temperature [K]
-  real(RP), private, allocatable         :: psat_sfc(:,:) ! surface satulated water pressure [Pa]
   real(RP), private, allocatable         :: qsat_sfc(:,:) ! surface satulated water vapor [kg/kg]
   real(RP), private, allocatable         :: qv_sfc  (:,:) ! surface water vapor [kg/kg]
   real(RP), private, allocatable         :: qc_sfc  (:,:) ! surface cloud water [kg/kg]
@@ -236,8 +234,7 @@ contains
     allocate( pres(KA,IA,JA) )
     allocate( temp(KA,IA,JA) )
     allocate( pott(KA,IA,JA) )
-    allocate( qdry(KA,IA,JA) )
-    allocate( qsat(KA,IA,JA) )
+    allocate( psat(KA,IA,JA) )
     allocate( qv  (KA,IA,JA) )
     allocate( qc  (KA,IA,JA) )
     allocate( nc  (KA,IA,JA) )
@@ -248,7 +245,6 @@ contains
     allocate( pres_sfc(IA,JA) )
     allocate( temp_sfc(IA,JA) )
     allocate( pott_sfc(IA,JA) )
-    allocate( psat_sfc(IA,JA) )
     allocate( qsat_sfc(IA,JA) )
     allocate( qv_sfc  (IA,JA) )
     allocate( qc_sfc  (IA,JA) )
@@ -257,7 +253,7 @@ contains
     allocate( bubble(KA,IA,JA) )
     allocate( rect  (KA,IA,JA) )
 
-    !$acc enter data create(pres,temp,pott,qdry,qsat,qv,qc,nc,velx,vely,ptrc,pres_sfc,temp_sfc,pott_sfc,psat_sfc,qsat_sfc,qv_sfc,qc_sfc,rndm,bubble,rect)
+    !$acc enter data create(pres,temp,pott,psat,qv,qc,nc,velx,vely,ptrc,pres_sfc,temp_sfc,pott_sfc,qsat_sfc,qv_sfc,qc_sfc,rndm,bubble,rect)
 
     select case(trim(MKINIT_initname))
     case('NONE')
@@ -350,13 +346,12 @@ contains
     LOG_NEWLINE
     LOG_INFO("MKINIT_finalize",*) 'Finalize'
 
-    !$acc exit data delete(pres,temp,pott,qdry,qsat,qv,qc,nc,velx,vely,ptrc,pres_sfc,temp_sfc,pott_sfc,psat_sfc,qsat_sfc,qv_sfc,qc_sfc,rndm,bubble,rect)
+    !$acc exit data delete(pres,temp,pott,psat,qv,qc,nc,velx,vely,ptrc,pres_sfc,temp_sfc,pott_sfc,qsat_sfc,qv_sfc,qc_sfc,rndm,bubble,rect)
 
     deallocate( pres )
     deallocate( temp )
     deallocate( pott )
-    deallocate( qdry )
-    deallocate( qsat )
+    deallocate( psat )
     deallocate( qv   )
     deallocate( qc   )
     deallocate( nc   )
@@ -367,7 +362,6 @@ contains
     deallocate( pres_sfc )
     deallocate( temp_sfc )
     deallocate( pott_sfc )
-    deallocate( psat_sfc )
     deallocate( qsat_sfc )
     deallocate( qv_sfc   )
     deallocate( qc_sfc   )
@@ -419,7 +413,7 @@ contains
       pres(:,:,:) = UNDEF
       temp(:,:,:) = UNDEF
       pott(:,:,:) = UNDEF
-      qsat(:,:,:) = UNDEF
+      psat(:,:,:) = UNDEF
       velx(:,:,:) = UNDEF
       vely(:,:,:) = UNDEF
 
@@ -430,7 +424,6 @@ contains
       pres_sfc(:,:) = UNDEF
       temp_sfc(:,:) = UNDEF
       pott_sfc(:,:) = UNDEF
-      psat_sfc(:,:) = UNDEF
       qsat_sfc(:,:) = UNDEF
       !$acc end kernels
 
@@ -832,6 +825,8 @@ contains
     real(RP) :: k_max_inp(3) = k_max_def
     integer  :: n_kap_inp(3) = n_kap_def
 
+    real(RP) :: qdry(KA,IA,JA)
+
     namelist / PARAM_AERO / &
        ccn_init,  &
        m0_init,   &
@@ -864,6 +859,7 @@ contains
 
        select case ( ATMOS_PHY_AE_TYPE )
        case ( 'KAJINO13' )
+          !$acc data create(qdry)
           !$acc kernels
           qdry(:,:,:) = 1.0_RP - qv(:,:,:) - qc(:,:,:)
           !$acc end kernels
@@ -886,6 +882,7 @@ contains
                                              QTRC(:,:,:,QS_AE:QE_AE), & ! (out)
                                              CCN(:,:,:)               ) ! (out)
           !$acc update device(QTRC(:,:,:,QS_AE:QE_AE),CCN)
+          !$acc end data
        case ( 'OFFLINE' )
           call ATMOS_PHY_AE_offline_mkinit ( KA, KS, KE, IA, IS, IE, JA, JS, JE, & ! (in)
                                              ccn_init,                & ! (in)
@@ -1585,7 +1582,7 @@ contains
        RANDOM_RH
 
     integer :: ierr
-    integer :: k, i, j
+    integer :: k, i, j, itr
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
@@ -1648,37 +1645,6 @@ contains
                                REAL_CZ(:,:,:), REAL_FZ(:,:,:), AREA(:,:),              & ! [IN]
                                DENS(:,:,:), temp(:,:,:), pres(:,:,:), temp_sfc(:,:)    ) ! [OUT]
 
-    if ( .not. ATMOS_HYDROMETEOR_dry ) then
-       
-       ! Calculate QV from RH. 
-       ! Note that the RH consequently obtained by following calculations is not precisely identical with the RH set by namelist, 
-       ! because the iteration is not performed in the calculation of qv and density is re-built after including moisture. 
-       
-       call SATURATION_psat_all( IA, ISB, IEB, JA, JSB, JEB, &
-                                 temp_sfc(:,:), & ! [IN]
-                                 psat_sfc(:,:)  ) ! [OUT]
-       !$acc kernels
-       qdry(:,:,:) = 1.0_RP - qv(:,:,:) - qc(:,:,:)
-       !$acc end kernels
-       call SATURATION_pres2qsat_all( KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
-                                      temp(:,:,:), pres(:,:,:), qdry(:,:,:), & ! [IN]
-                                      qsat(:,:,:)                            ) ! [OUT]
-
-       call RANDOM_uniform(rndm) ! make random
-       !$acc kernels
-       do j = JSB, JEB
-       do i = ISB, IEB
-          qsat_sfc(i,j) = EPSvap * psat_sfc(i,j) / ( pres_sfc(i,j) - ( 1.0_RP-EPSvap ) * psat_sfc(i,j) )
-          qv_sfc(i,j) = max( 0.0_RP, SFC_RH + ( rndm(KS-1,i,j) * 2.0_RP  - 1.0_RP ) * RANDOM_RH ) * 1.E-2_RP * qsat_sfc(i,j)
-
-          do k = KS, KE
-             qv(k,i,j) = max( 0.0_RP, ENV_RH + ( rndm(k,i,j) * 2.0_RP - 1.0_RP ) * RANDOM_RH ) * 1.E-2_RP * qsat(k,i,j)
-          enddo
-       enddo
-       enddo
-       !$acc end kernels
-    end if
-
     call RANDOM_uniform(rndm) ! make random
     !$acc kernels
     do j = JSB, JEB
@@ -1692,12 +1658,51 @@ contains
     enddo
     !$acc end kernels
 
-    ! make density & pressure profile in moist condition
-    call HYDROSTATIC_buildrho( KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
-                               pott(:,:,:), qv(:,:,:), qc(:,:,:),                      & ! [IN]
-                               pres_sfc(:,:), pott_sfc(:,:), qv_sfc(:,:), qc_sfc(:,:), & ! [IN]
-                               REAL_CZ(:,:,:), REAL_FZ(:,:,:), AREA(:,:),              & ! [IN]
-                               DENS(:,:,:), temp(:,:,:), pres(:,:,:), temp_sfc(:,:)    ) ! [OUT]
+    if ( .not. ATMOS_HYDROMETEOR_dry ) then
+       
+       ! Calculate QV from RH. 
+       ! Note that the RH consequently obtained by following calculations is not precisely identical with the RH set by namelist, 
+       ! because the iteration is not performed in the calculation of qv and density is re-built after including moisture. 
+       
+       call SATURATION_pres2qsat_all( IA, ISB, IEB, JA, JSB, JEB, &
+                                      temp_sfc(:,:), pres_sfc(:,:), & ! [IN]
+                                      qsat_sfc(:,:)                 ) ! [OUT]
+
+       call RANDOM_uniform(rndm) ! make random
+       !$acc kernels
+       do j = JSB, JEB
+       do i = ISB, IEB
+          qv_sfc(i,j) = max( 0.0_RP, SFC_RH + ( rndm(KS-1,i,j) * 2.0_RP  - 1.0_RP ) * RANDOM_RH ) * 1.E-2_RP * qsat_sfc(i,j)
+       enddo
+       enddo
+       !$acc end kernels
+    end if
+
+
+    if ( .not. ATMOS_HYDROMETEOR_dry ) then
+       do itr = 1, NITER_RH
+          call SATURATION_psat_all( KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
+                                    temp(:,:,:), & ! [IN]
+                                    psat(:,:,:)  ) ! [OUT]
+
+          !$acc kernels
+          do j = JSB, JEB
+          do i = ISB, IEB
+          do k = KS, KE
+             qv(k,i,j) = max( 0.0_RP, ENV_RH + ( rndm(k,i,j) * 2.0_RP - 1.0_RP ) * RANDOM_RH ) * 1.E-2_RP * psat(k,i,j) / ( dens(k,i,j) * Rvap * temp(k,i,j) )
+          enddo
+          enddo
+          enddo
+          !$acc end kernels
+
+          ! make density & pressure profile in moist condition
+          call HYDROSTATIC_buildrho( KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
+                                     pott(:,:,:), qv(:,:,:), qc(:,:,:),                      & ! [IN]
+                                     pres_sfc(:,:), pott_sfc(:,:), qv_sfc(:,:), qc_sfc(:,:), & ! [IN]
+                                     REAL_CZ(:,:,:), REAL_FZ(:,:,:), AREA(:,:),              & ! [IN]
+                                     DENS(:,:,:), temp(:,:,:), pres(:,:,:), temp_sfc(:,:)    ) ! [OUT]
+       end do
+    end if
 
     call COMM_vars8( DENS(:,:,:), 1 )
     call COMM_wait ( DENS(:,:,:), 1 )
@@ -2310,7 +2315,7 @@ contains
 #endif
 
     integer :: ierr
-    integer :: k, i, j
+    integer :: k, i, j, itr
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
@@ -2355,33 +2360,6 @@ contains
                                DENS(:,1,1), temp(:,1,1), pres(:,1,1), temp_sfc(1,1),   & ! [OUT]
                                converged                                               ) ! [OUT]
 
-    if ( .not. ATMOS_HYDROMETEOR_dry ) then
-       ! calc QV from RH
-       call SATURATION_psat_all( temp_sfc(1,1), & ! [IN]
-                                 psat_sfc(1,1)  ) ! [OUT]
-       !$acc kernels
-       qdry(:,1,1) = 1.0_RP - qv(:,1,1) - qc(:,1,1)
-       !$acc end kernels
-       call SATURATION_pres2qsat_all( KA, KS, KE, &
-                                      temp(:,1,1), pres(:,1,1), qdry(:,1,1), & ! [IN]
-                                      qsat(:,1,1)                            ) ! [OUT]
-
-       call RANDOM_uniform(rndm) ! make random
-       !$acc kernels
-       !$acc loop collapse(2) independent
-       do j = JSB, JEB
-       do i = ISB, IEB
-          qsat_sfc(1,1) = EPSvap * psat_sfc(i,j) / ( pres_sfc(i,j) - ( 1.0_RP-EPSvap ) * psat_sfc(i,j) )
-          qv_sfc(i,j) = min( 0.0_RP, SFC_RH + ( rndm(KS-1,i,j) * 2.0_RP - 1.0_RP ) * RANDOM_RH ) * 1.E-2_RP * qsat_sfc(1,1)
-
-          do k = KS, KE
-             qv(k,i,j) = min( 0.0_RP, ENV_RH + ( rndm(k,i,j) * 2.0_RP - 1.0_RP ) * RANDOM_RH ) * 1.E-2_RP * qsat(k,1,1)
-          enddo
-       enddo
-       enddo
-       !$acc end kernels
-    end if
-
     call RANDOM_uniform(rndm) ! make random
     !$acc kernels
     do j = JSB, JEB
@@ -2396,12 +2374,52 @@ contains
     enddo
     !$acc end kernels
 
-    ! make density & pressure profile in moist condition
     call HYDROSTATIC_buildrho( KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
                                pott(:,:,:), qv(:,:,:), qc(:,:,:),                      & ! [IN]
                                pres_sfc(:,:), pott_sfc(:,:), qv_sfc(:,:), qc_sfc(:,:), & ! [IN]
                                REAL_CZ(:,:,:), REAL_FZ(:,:,:), AREA(:,:),              & ! [IN]
                                DENS(:,:,:), temp(:,:,:), pres(:,:,:), temp_sfc(:,:)    ) ! [OUT]
+
+    if ( .not. ATMOS_HYDROMETEOR_dry ) then
+       ! calc QV from RH
+       call SATURATION_pres2qsat_all( IA, ISB, IEB, JA, JSB, JEB, &
+                                      temp_sfc(:,:), pres_sfc(:,:), & ! [IN]
+                                      qsat_sfc(:,:)                 ) ! [OUT]
+
+       call RANDOM_uniform(rndm) ! make random
+       !$acc kernels
+       !$acc loop collapse(2) independent
+       do j = JSB, JEB
+       do i = ISB, IEB
+          qv_sfc(i,j) = min( 0.0_RP, SFC_RH + ( rndm(KS-1,i,j) * 2.0_RP - 1.0_RP ) * RANDOM_RH ) * 1.E-2_RP * qsat_sfc(1,1)
+       enddo
+       enddo
+       !$acc end kernels
+
+       do itr = 1, NITER_RH
+          call SATURATION_psat_all( KA, KS, KE, IA, IS, JE, JA, JS, JE, &
+                                    temp(:,:,:), & ! [IN]
+                                    psat(:,:,:)  ) ! [OUT]
+
+          !$acc kernels
+          !$acc loop collapse(2) independent
+          do j = JSB, JEB
+          do i = ISB, IEB
+          do k = KS, KE
+             qv(k,i,j) = min( 0.0_RP, ENV_RH + ( rndm(k,i,j) * 2.0_RP - 1.0_RP ) * RANDOM_RH ) * 1.E-2_RP * psat(k,i,j) / ( dens(k,i,j) * Rvap * temp(k,i,j) )
+          enddo
+          enddo
+          enddo
+          !$acc end kernels
+
+          ! make density & pressure profile in moist condition
+          call HYDROSTATIC_buildrho( KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
+                                     pott(:,:,:), qv(:,:,:), qc(:,:,:),                      & ! [IN]
+                                     pres_sfc(:,:), pott_sfc(:,:), qv_sfc(:,:), qc_sfc(:,:), & ! [IN]
+                                     REAL_CZ(:,:,:), REAL_FZ(:,:,:), AREA(:,:),              & ! [IN]
+                                     DENS(:,:,:), temp(:,:,:), pres(:,:,:), temp_sfc(:,:)    ) ! [OUT]
+       end do
+    end if
 
     call COMM_vars8( DENS(:,:,:), 1 )
     call COMM_wait ( DENS(:,:,:), 1 )
@@ -2916,7 +2934,7 @@ contains
 #endif
 
     integer :: ierr
-    integer :: k, i, j
+    integer :: k, i, j, itr
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
@@ -2973,40 +2991,37 @@ contains
                                converged                                               ) ! [OUT]
 
     ! calc QV from RH
-    call SATURATION_psat_all( temp_sfc(1,1), & ! [IN]
-                              psat_sfc(1,1)  ) ! [OUT]
+    call SATURATION_pres2qsat_all( temp_sfc(1,1), pres_sfc(1,1), & ! [IN]
+                                   qsat_sfc(1,1)                 ) ! [OUT]
     !$acc kernels
-    qsat_sfc(1,1) = EPSvap * psat_sfc(1,1) / ( pres_sfc(1,1) - ( 1.0_RP-EPSvap ) * psat_sfc(1,1) )
     qv_sfc(1,1) = SFC_RH * 1.E-2_RP * qsat_sfc(1,1)
     !$acc end kernels
-    !$acc kernels
-    qdry(:,1,1) = 1.0_RP - qv(:,1,1) - qc(:,1,1)
-    !$acc end kernels
-    call SATURATION_pres2qsat_all( KA, KS, KE, &
-                                   temp(:,1,1), pres(:,1,1), qdry(:,1,1), & ! [IN]
-                                   qsat(:,1,1)                            ) ! [OUT]
-    !$acc kernels
-    do k = KS, KE
-       if    ( CZ(k) <= ENV_L1_ZTOP ) then ! Layer 1
-          qv(k,1,1) = ENV_RH * 1.E-2_RP * qsat(k,1,1)
-       elseif( CZ(k) <= ENV_L2_ZTOP ) then ! Layer 2
-          qv(k,1,1) = ENV_RH * 1.E-2_RP * qsat(k,1,1)
-       else                                ! Layer 3
-          qv(k,1,1) = 0.0_RP
-       endif
-    enddo
-    !$acc end kernels
 
-    ! make density & pressure profile in moist condition
-    call HYDROSTATIC_buildrho( KA, KS, KE, &
-                               pott(:,1,1), qv(:,1,1), qc(:,1,1),                      & ! [IN]
-                               pres_sfc(1,1), pott_sfc(1,1), qv_sfc(1,1), qc_sfc(1,1), & ! [IN]
-                               CZ(:), FZ(:),                                           & ! [IN]
+    do itr = 1, NITER_RH
+       call SATURATION_psat_all( KA, KS, KE, &
+                                 temp(:,1,1), & ! [IN]
+                                 psat(:,1,1)  ) ! [OUT]
+       !$acc kernels
+       do k = KS, KE
+          if( CZ(k) <= ENV_L2_ZTOP ) then ! Layer 1 and 2
+             qv(k,1,1) = ENV_RH * 1.E-2_RP * psat(k,1,1) / ( dens(k,1,1) * Rvap * temp(k,1,1) )
+          else                            ! Layer 3
+             qv(k,1,1) = 0.0_RP
+          endif
+       enddo
+       !$acc end kernels
+
+       ! make density & pressure profile in moist condition
+       call HYDROSTATIC_buildrho( KA, KS, KE, &
+                                  pott(:,1,1), qv(:,1,1), qc(:,1,1),                      & ! [IN]
+                                  pres_sfc(1,1), pott_sfc(1,1), qv_sfc(1,1), qc_sfc(1,1), & ! [IN]
+                                  CZ(:), FZ(:),                                           & ! [IN]
 #ifdef _OPENACC
-                               work1(:), work2(:), work3(:),                           & ! [WORK]
+                                  work1(:), work2(:), work3(:),                           & ! [WORK]
 #endif
-                               DENS(:,1,1), temp(:,1,1), pres(:,1,1), temp_sfc(1,1),   & ! [OUT]
-                               converged                                               ) ! [OUT]
+                                  DENS(:,1,1), temp(:,1,1), pres(:,1,1), temp_sfc(1,1),   & ! [OUT]
+                                  converged                                               ) ! [OUT]
+    end do
 
     !$acc kernels
     !$acc loop collapse(3) independent
@@ -3206,7 +3221,7 @@ contains
     real(RP) :: rh_sfc(   IA,JA)
 
     integer :: ierr
-    integer :: k, i, j
+    integer :: k, i, j, itr
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
@@ -3274,37 +3289,41 @@ contains
     enddo
     !$acc end kernels
 
-    call SATURATION_psat_all( IA, ISB, IEB, JA, JSB, JEB, &
-                              temp_sfc(:,:), & ! [IN]
-                              psat_sfc(:,:)  ) ! [OUT]
-    !$acc kernels
-    qdry(:,:,:) = 1.0_RP - qv(:,:,:) - qc(:,:,:)
-    !$acc end kernels
-    call SATURATION_pres2qsat_all( KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
-                                   temp(:,:,:), pres(:,:,:), qdry(:,:,:), & ! [IN]
-                                   qsat(:,:,:)                            ) ! [OUT]
-
     QV0 = QV0 * 1e-3_RP ! g/kg to kg/kg
     QV0 = QV0 / ( 1.0_RP + QV0 ) ! mixing ratio to specicic humidity
 
+    call SATURATION_pres2qsat_all( IA, ISB, IEB, JA, JSB, JEB, &
+                                   temp_sfc(:,:), pres_sfc(:,:), & ! [IN]
+                                   qsat_sfc(:,:)                 ) ! [OUT]
     !$acc kernels
     do j = JSB, JEB
     do i = ISB, IEB
-       qsat_sfc(i,j) = EPSvap * psat_sfc(i,j) / ( pres_sfc(i,j) - ( 1.0_RP-EPSvap ) * psat_sfc(i,j) )
        qv_sfc(i,j) = min( rh_sfc(i,j) * qsat_sfc(i,j), QV0 )
-       do k = KS, KE
-          qv(k,i,j) = min( rh(k,i,j) * qsat(k,i,j), QV0 )
-       enddo
     enddo
     enddo
     !$acc end kernels
 
-    ! make density & pressure profile in moist condition
-    call HYDROSTATIC_buildrho( KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
-                               pott(:,:,:), qv(:,:,:), qc(:,:,:),                      & ! [IN]
-                               pres_sfc(:,:), pott_sfc(:,:), qv_sfc(:,:), qc_sfc(:,:), & ! [IN]
-                               REAL_CZ(:,:,:), REAL_FZ(:,:,:), AREA(:,:),              & ! [IN]
-                               DENS(:,:,:), temp(:,:,:), pres(:,:,:), temp_sfc(:,:)    ) ! [OUT]
+    do itr = 1, NITER_RH
+       call SATURATION_psat_all( KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
+                                 temp(:,:,:), & ! [IN]
+                                 psat(:,:,:)  ) ! [OUT]
+       !$acc kernels
+       do j = JSB, JEB
+       do i = ISB, IEB
+       do k = KS, KE
+          qv(k,i,j) = min( rh(k,i,j) * psat(k,i,j) / ( dens(k,i,j) * Rdry * temp(k,i,j) ), QV0 )
+       enddo
+       enddo
+       enddo
+       !$acc end kernels
+
+       ! make density & pressure profile in moist condition
+       call HYDROSTATIC_buildrho( KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
+                                  pott(:,:,:), qv(:,:,:), qc(:,:,:),                      & ! [IN]
+                                  pres_sfc(:,:), pott_sfc(:,:), qv_sfc(:,:), qc_sfc(:,:), & ! [IN]
+                                  REAL_CZ(:,:,:), REAL_FZ(:,:,:), AREA(:,:),              & ! [IN]
+                                  DENS(:,:,:), temp(:,:,:), pres(:,:,:), temp_sfc(:,:)    ) ! [OUT]
+    end do
 
     !$acc update host(pres(:,IS,JS),pott(:,IS,JS),rh(:,IS,JS),qv(:,IS,JS))
     do k = KS, KE
@@ -4947,7 +4966,7 @@ contains
     real(RP) :: cvtot(KA,IA,JA)
     real(RP) :: cptot(KA,IA,JA)
     real(RP) :: qdry
-    real(RP) :: psat, qsat
+    real(RP) :: qsat
     integer  :: i, j, k, ierr
     !---------------------------------------------------------------------------
 
@@ -4976,8 +4995,7 @@ contains
     endif
     LOG_NML(PARAM_MKINIT_BOXAERO)
 
-    call SATURATION_psat_all( init_temp, psat )
-    qsat = EPSvap * psat / ( init_pres - ( 1.0_RP-EPSvap ) * psat )
+    call SATURATION_pres2qsat_all( init_temp, init_pres, qsat )
 
     !$acc data create(rtot,cvtot,cptot)
 
@@ -5057,7 +5075,7 @@ contains
 #endif
 
     integer :: ierr
-    integer :: k, i, j
+    integer :: k, i, j, itr
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
@@ -5115,42 +5133,37 @@ contains
                                converged                                               ) ! [OUT]
 
     ! calc QV from RH
-    call SATURATION_psat_all( temp_sfc(1,1), psat_sfc(1,1) ) ! [IN], [OUT]
-    !$acc kernels
-    qsat_sfc(1,1) = EPSvap * psat_sfc(1,1) / ( pres_sfc(1,1) - ( 1.0_RP-EPSvap ) * psat_sfc(1,1) )
-
-    !$acc end kernels
-    !$acc kernels
-    qdry(:,1,1) = 1.0_RP - qv(:,1,1) - qc(:,1,1)
-    !$acc end kernels
-    call SATURATION_pres2qsat_all( KA, KS, KE, &
-                                   temp(:,1,1), pres(:,1,1), qdry(:,1,1), & ! [IN]
-                                   qsat(:,1,1)                            ) ! [OUT]
+    call SATURATION_pres2qsat_all( temp_sfc(1,1), pres_sfc(1,1), & ! [IN]
+                                   qsat_sfc(1,1)                 ) ! [OUT]
     !$acc kernels
     qv_sfc(1,1) = SFC_RH * 1.E-2_RP * qsat_sfc(1,1)
     !$acc end kernels
-    !$acc kernels
-    do k = KS, KE
-       if    ( CZ(k) <= ENV_L1_ZTOP ) then ! Layer 1
-          qv(k,1,1) = ENV_RH * 1.E-2_RP * qsat(k,1,1)
-       elseif( CZ(k) <= ENV_L2_ZTOP ) then ! Layer 2
-          qv(k,1,1) = ENV_RH * 1.E-2_RP * qsat(k,1,1)
-       else                                ! Layer 3
-          qv(k,1,1) = 0.0_RP
-       endif
-    enddo
-    !$acc end kernels
 
-    ! make density & pressure profile in moist condition
-    call HYDROSTATIC_buildrho( KA, KS, KE, &
-                               pott(:,1,1), qv(:,1,1), qc(:,1,1),                      & ! [IN]
-                               pres_sfc(1,1), pott_sfc(1,1), qv_sfc(1,1), qc_sfc(1,1), & ! [IN]
-                               CZ(:), FZ(:),                                           & ! [IN]
+    do itr = 1, NITER_RH
+       call SATURATION_psat_all( KA, KS, KE, &
+                                 temp(:,1,1), & ! [IN]
+                                 psat(:,1,1)  ) ! [OUT]
+       !$acc kernels
+       do k = KS, KE
+          if( CZ(k) <= ENV_L2_ZTOP ) then ! Layer 1 and 2
+             qv(k,1,1) = ENV_RH * 1.E-2_RP * psat(k,1,1) / ( dens(k,1,1) * Rvap * temp(k,1,1) )
+          else                            ! Layer 3
+             qv(k,1,1) = 0.0_RP
+          endif
+       enddo
+       !$acc end kernels
+
+       ! make density & pressure profile in moist condition
+       call HYDROSTATIC_buildrho( KA, KS, KE, &
+                                  pott(:,1,1), qv(:,1,1), qc(:,1,1),                      & ! [IN]
+                                  pres_sfc(1,1), pott_sfc(1,1), qv_sfc(1,1), qc_sfc(1,1), & ! [IN]
+                                  CZ(:), FZ(:),                                           & ! [IN]
 #ifdef _OPENACC
-                               work1(:), work2(:), work3(:),                           & ! [WORK]
+                                  work1(:), work2(:), work3(:),                           & ! [WORK]
 #endif
-                               DENS(:,1,1), temp(:,1,1), pres(:,1,1), temp_sfc(1,1),   & ! [OUT]
-                               converged                                               ) ! [OUT]
+                                  DENS(:,1,1), temp(:,1,1), pres(:,1,1), temp_sfc(1,1),   & ! [OUT]
+                                  converged                                               ) ! [OUT]
+    end do
 
     !$acc kernels
     !$acc loop collapse(3) independent
