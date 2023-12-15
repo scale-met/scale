@@ -38,6 +38,7 @@ VPATH = $(BUILD_DIR): \
         urban:        \
         lake:         \
         coupler:      \
+        data-assim:   \
         user:         \
         preprocess:
 
@@ -57,6 +58,7 @@ SUB_OBJS =	\
 	mod_urban_admin.o         \
 	mod_lake_admin.o          \
 	mod_cpl_admin.o           \
+	mod_da_admin.o            \
 	\
 	mod_atmos_dyn_vars.o      \
 	mod_atmos_phy_cp_vars.o   \
@@ -73,6 +75,7 @@ SUB_OBJS =	\
 	mod_land_vars.o           \
 	mod_urban_vars.o          \
 	mod_cpl_vars.o            \
+	mod_da_vars.o             \
 	\
 	mod_admin_restart.o       \
 	mod_atmos_dyn_driver.o    \
@@ -91,6 +94,7 @@ SUB_OBJS =	\
 	mod_land_driver.o         \
 	mod_urban_driver.o        \
 	mod_cpl_driver.o          \
+	mod_da_driver.o           \
 	\
 	mod_copytopo.o            \
 	mod_cnv2d.o               \
@@ -99,10 +103,11 @@ SUB_OBJS =	\
 	mod_cnvuser.o             \
 	mod_convert.o             \
 	mod_mktopo.o              \
-	mod_realinput_netcdf.o     \
+	mod_realinput_netcdf.o    \
 	mod_realinput_grads.o     \
 	mod_realinput.o           \
-	mod_mkinit.o
+	mod_mkinit.o              \
+	mod_da_param_estimation.o
 
 MAIN_OBJS =	\
 	mod_launcher.o            \

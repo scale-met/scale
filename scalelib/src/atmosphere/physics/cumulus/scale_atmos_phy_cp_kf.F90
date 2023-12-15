@@ -9,9 +9,9 @@
 !! @par References
 !! @li  Kain J. S. and J. M. Fritsch, 1990:
 !!      A one-dimensional entraining/detraining plume model and its application
-!!      in convective parameterization. J. Atmos. Sci. 47:2784–2802.
+!!      in convective parameterization. J. Atmos. Sci. 47:2784-2802.
 !! @li  Kain J. S., 2004:
-!!      The Kain–Fritsch Convective Parameterization: An Update, J. Appl. Meteor., 43, 170-181.
+!!      The Kain-Fritsch Convective Parameterization: An Update, J. Appl. Meteor., 43, 170-181.
 !! @li  Narita, M. and S. Ohmori, 2007:
 !!      Improving Precipitation Forecasts by the Operational Nonhydrostatic Mesoscale Model
 !!      with the Kain-Fritsch Convective Parameterization and Cloud Microphysics.
@@ -38,7 +38,7 @@
 !! out of or in connection with the access, use or performance of WRF, including
 !! infringement actions.
 !!
-!! WRF® is a registered trademark of the University Corporation for Atmospheric Research (UCAR).
+!! WRF is a registered trademark of the University Corporation for Atmospheric Research (UCAR).
 !!
 !<
 #include "scalelib.h"
@@ -63,6 +63,8 @@ module scale_atmos_phy_cp_kf
   !
   public :: ATMOS_PHY_CP_kf_setup
   public :: ATMOS_PHY_CP_kf_finalize
+  public :: ATMOS_PHY_CP_kf_putvar
+  public :: ATMOS_PHY_CP_kf_getvar
   public :: ATMOS_PHY_CP_kf_tendency
 
   !-----------------------------------------------------------------------------
@@ -441,6 +443,46 @@ contains
 
     return
   end subroutine ATMOS_PHY_CP_kf_finalize
+
+  !-----------------------------------------------------------------------------
+  !> overwrite private variables
+  subroutine ATMOS_PHY_CP_kf_putvar( &
+      in_delcape,         &
+      in_deeplifetime,    &
+      in_shallowlifetime  )
+    implicit none
+
+    real(RP), intent(in), optional :: in_delcape
+    real(RP), intent(in), optional :: in_deeplifetime
+    real(RP), intent(in), optional :: in_shallowlifetime
+    !---------------------------------------------------------------------------
+
+    if( present(in_delcape        ) ) DELCAPE         = in_delcape
+    if( present(in_deeplifetime   ) ) DEEPLIFETIME    = in_deeplifetime
+    if( present(in_shallowlifetime) ) SHALLOWLIFETIME = in_shallowlifetime
+
+    return
+  end subroutine ATMOS_PHY_CP_kf_putvar
+
+  !-----------------------------------------------------------------------------
+  !> read private variables
+  subroutine ATMOS_PHY_CP_kf_getvar( &
+      out_delcape,         &
+      out_deeplifetime,    &
+      out_shallowlifetime  )
+    implicit none
+
+    real(RP), intent(out), optional :: out_delcape
+    real(RP), intent(out), optional :: out_deeplifetime
+    real(RP), intent(out), optional :: out_shallowlifetime
+    !---------------------------------------------------------------------------
+
+    if( present(out_delcape        ) )  out_delcape         = DELCAPE
+    if( present(out_deeplifetime   ) )  out_deeplifetime    = DEEPLIFETIME
+    if( present(out_shallowlifetime) )  out_shallowlifetime = SHALLOWLIFETIME
+
+    return
+  end subroutine ATMOS_PHY_CP_kf_getvar
 
   !------------------------------------------------------------------------------
   !> CP_kf_param

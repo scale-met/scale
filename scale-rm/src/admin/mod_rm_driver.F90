@@ -205,6 +205,7 @@ contains
        TIME_DOLAND_step,      &
        TIME_DOURBAN_step,     &
        TIME_DOOCEAN_step,     &
+       TIME_DODA_step,        &
        TIME_DOresume,         &
        TIME_DOend
     use mod_admin_restart, only: &
@@ -282,6 +283,18 @@ contains
     use mod_cpl_driver, only: &
        CPL_driver_setup, &
        CPL_driver_finalize
+    use mod_da_admin, only: &
+       DA_admin_setup, &
+       DA_do
+    use mod_da_vars, only: &
+       DA_vars_setup,    &
+       DA_vars_finalize, &
+       DA_vars_history,  &
+       DA_vars_monitor
+    use mod_da_driver, only: &
+       DA_driver_setup,         &
+       DA_driver_finalize,      &
+       DA_driver_update
     use mod_user, only: &
        USER_tracer_setup,  &
        USER_setup,         &
@@ -359,6 +372,7 @@ contains
     call URBAN_admin_setup
     call LAKE_admin_setup
     call CPL_admin_setup
+    call DA_admin_setup
 
     ! setup horizontal/vertical grid coordinates (cartesian,idealized)
     if ( ATMOS_do ) then
@@ -450,6 +464,7 @@ contains
     if ( LAND_do  ) call LAND_vars_setup
     if ( URBAN_do ) call URBAN_vars_setup
     if ( CPL_sw   ) call CPL_vars_setup
+    if ( DA_do    ) call DA_vars_setup
 
 #ifdef JMAPPLIB
     call pp_print_parm_set_flg_out_msg( 0 )
@@ -473,6 +488,7 @@ contains
     if ( LAND_do  ) call LAND_driver_setup
     if ( URBAN_do ) call URBAN_driver_setup
     if ( CPL_sw   ) call CPL_driver_setup
+    if ( DA_do    ) call DA_driver_setup
 
     call USER_setup
 
@@ -515,12 +531,14 @@ contains
       call FILE_HISTORY_set_nowdate( TIME_NOWDATE, TIME_NOWSUBSEC, TIME_NOWSTEP )
 
       ! change to next state
+      if( DA_do    .AND. TIME_DODA_step    ) call DA_driver_update
       if( OCEAN_do .AND. TIME_DOOCEAN_step ) call OCEAN_driver_update
       if( LAND_do  .AND. TIME_DOLAND_step  ) call LAND_driver_update
       if( URBAN_do .AND. TIME_DOURBAN_step ) call URBAN_driver_update
       if( ATMOS_do .AND. TIME_DOATMOS_step ) call ATMOS_driver_update
                                              call USER_update
       ! restart & monitor output
+      if ( DA_do    ) call DA_vars_monitor
       if ( OCEAN_do ) call OCEAN_vars_monitor
       if ( LAND_do  ) call LAND_vars_monitor
       if ( URBAN_do ) call URBAN_vars_monitor
@@ -543,6 +561,7 @@ contains
       if ( OCEAN_do ) call OCEAN_vars_history
       if ( LAND_do  ) call LAND_vars_history
       if ( URBAN_do ) call URBAN_vars_history
+      if ( DA_do    ) call DA_vars_history
 
       call FILE_HISTORY_write
 
@@ -592,6 +611,7 @@ contains
     if( LAND_do  ) call LAND_driver_finalize
     if( URBAN_do ) call URBAN_driver_finalize
     if( CPL_sw   ) call CPL_driver_finalize
+    if( DA_do    ) call DA_driver_finalize
 
     ! check data
     if( ATMOS_RESTART_CHECK ) call ATMOS_vars_restart_check
@@ -614,9 +634,10 @@ contains
     ! setup variable container
     if ( ATMOS_do ) call ATMOS_vars_finalize
     if ( OCEAN_do ) call OCEAN_vars_finalize
-    if ( LAND_do )  call LAND_vars_finalize
+    if ( LAND_do  ) call LAND_vars_finalize
     if ( URBAN_do ) call URBAN_vars_finalize
     if ( CPL_sw   ) call CPL_vars_finalize
+    if ( DA_do    ) call DA_vars_finalize
 
 
     ! finalize external in
@@ -743,6 +764,11 @@ contains
        URBAN_vars_monitor
     use mod_cpl_admin, only: &
        CPL_sw
+    use mod_da_admin, only: &
+       DA_do
+    use mod_da_vars, only: &
+       DA_vars_history, &
+       DA_vars_monitor
     use mod_user, only: &
        USER_calc_tendency
     implicit none
@@ -785,11 +811,13 @@ contains
     if( OCEAN_do ) call OCEAN_vars_history
     if( LAND_do  ) call LAND_vars_history
     if( URBAN_do ) call URBAN_vars_history
+    if( DA_do    ) call DA_vars_history
 
     if( ATMOS_do ) call ATMOS_vars_monitor
     if( OCEAN_do ) call OCEAN_vars_monitor
     if( LAND_do  ) call LAND_vars_monitor
     if( URBAN_do ) call URBAN_vars_monitor
+    if( DA_do    ) call DA_vars_monitor
 
     return
   end subroutine restart_read

@@ -31,6 +31,7 @@ module scale_const
   !
   real(RP), public, parameter :: CONST_PI      = 4.0_RP * atan( 1.0_RP ) !< pi
   real(RP), public            :: CONST_D2R                           !< degree to radian
+  real(RP), public            :: CONST_R2D                           !< radian to degree
   real(RP), public            :: CONST_EPS     = 1.E-16_RP           !< small number
   real(RP), public            :: CONST_EPS1    = 0.99999999999999_RP !< small number
   real(RP), public            :: CONST_HUGE    = 1.E+30_RP           !< huge  number
@@ -187,6 +188,7 @@ contains
     endif
 
     CONST_D2R     = CONST_PI / 180.0_RP
+    CONST_R2D     = 180.0_RP / CONST_PI
     CONST_EPS     =          epsilon(0.0_RP)
     CONST_EPS1    = 1.0_RP - epsilon(0.0_RP)
     CONST_HUGE    =             huge(0.0_RP)

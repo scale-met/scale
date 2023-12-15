@@ -28,6 +28,8 @@ module scale_atmos_phy_mp_tomita08
   !
   public :: ATMOS_PHY_MP_tomita08_setup
   public :: ATMOS_PHY_MP_tomita08_finalize
+  public :: ATMOS_PHY_MP_tomita08_putvar
+  public :: ATMOS_PHY_MP_tomita08_getvar
   public :: ATMOS_PHY_MP_tomita08_adjustment
   public :: ATMOS_PHY_MP_tomita08_terminal_velocity
   public :: ATMOS_PHY_MP_tomita08_effective_radius
@@ -657,6 +659,64 @@ contains
 
     return
   end subroutine ATMOS_PHY_MP_tomita08_finalize
+
+  !-----------------------------------------------------------------------------
+  !> overwrite private variables
+  subroutine ATMOS_PHY_MP_tomita08_putvar( &
+      in_drag_g, &
+      in_re_qc,  &
+      in_re_qi,  &
+      in_Cr,     &
+      in_Cs      )
+    use scale_const, only: &
+       GRAV => CONST_GRAV
+    implicit none
+
+    real(RP), intent(in), optional :: in_drag_g
+    real(RP), intent(in), optional :: in_re_qc
+    real(RP), intent(in), optional :: in_re_qi
+    real(RP), intent(in), optional :: in_Cr
+    real(RP), intent(in), optional :: in_Cs
+    !---------------------------------------------------------------------------
+
+    if( present(in_drag_g) ) drag_g = in_drag_g
+    if( present(in_re_qc ) ) re_qc  = in_re_qc
+    if( present(in_re_qi ) ) re_qi  = in_re_qi
+    if( present(in_Cr    ) ) Cr     = in_Cr
+    if( present(in_Cs    ) ) Cs     = in_Cs
+
+    if( present(in_drag_g) ) then
+      Cg = sqrt( ( 4.0_RP * dens_g * GRAV ) / ( 3.0_RP * dens00 * drag_g ) ) ! recalc. Cg
+    end if
+
+    return
+  end subroutine ATMOS_PHY_MP_tomita08_putvar
+
+  !-----------------------------------------------------------------------------
+  !> read private variables
+  subroutine ATMOS_PHY_MP_tomita08_getvar( &
+      out_drag_g, &
+      out_re_qc,  &
+      out_re_qi,  &
+      out_Cr,     &
+      out_Cs      )
+    implicit none
+
+    real(RP), intent(out), optional :: out_drag_g
+    real(RP), intent(out), optional :: out_re_qc
+    real(RP), intent(out), optional :: out_re_qi
+    real(RP), intent(out), optional :: out_Cr
+    real(RP), intent(out), optional :: out_Cs
+    !---------------------------------------------------------------------------
+
+    if( present(out_drag_g) ) out_drag_g = drag_g
+    if( present(out_re_qc ) ) out_re_qc  = re_qc
+    if( present(out_re_qi ) ) out_re_qi  = re_qi
+    if( present(out_Cr    ) ) out_Cr     = Cr
+    if( present(out_Cs    ) ) out_Cs     = Cs
+
+    return
+  end subroutine ATMOS_PHY_MP_tomita08_getvar
 
   !-----------------------------------------------------------------------------
   !> ATMOS_PHY_MP_tomita08_adjustment

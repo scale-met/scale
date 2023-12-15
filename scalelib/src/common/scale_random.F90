@@ -29,6 +29,7 @@ module scale_random
   public :: RANDOM_uniform
   public :: RANDOM_normal
   public :: RANDOM_finalize
+  public :: RANDOM_Knuth_shuffle
 
   interface RANDOM_uniform
      module procedure RANDOM_uniform_1D
@@ -57,6 +58,7 @@ module scale_random
   !++ Private parameters & variables
   !
   logical, private :: RANDOM_FIX = .false.
+  logical, private :: RANDOM_SEED_INIT_Knuth_shuffle = .false.
 
   integer, private, allocatable :: RANDOM_seedvar(:)
 
@@ -70,7 +72,8 @@ contains
     implicit none
 
     namelist / PARAM_RANDOM / &
-       RANDOM_FIX
+       RANDOM_FIX,                     &
+       RANDOM_SEED_INIT_Knuth_shuffle
 
     integer :: nseeds, ierr
     !---------------------------------------------------------------------------
@@ -234,6 +237,33 @@ contains
 
     return
   end subroutine RANDOM_finalize
+
+  subroutine RANDOM_Knuth_shuffle( num, a )
+    implicit none
+    integer, intent(in) :: num
+    integer, intent(out) :: a(num)
+    integer :: i, randpos, tmp
+    real(DP) :: r
+
+    do i = 1, num
+      a(i) = i
+    end do
+
+    if( .NOT. RANDOM_SEED_INIT_Knuth_shuffle ) then
+      call RANDOM_reset
+      RANDOM_SEED_INIT_Knuth_shuffle = .true.
+    end if
+
+    do i = num, 2, -1
+      call random_number(r)
+      randpos = int(r * i) + 1
+      tmp = a(randpos)
+      a(randpos) = a(i)
+      a(i) = tmp
+    end do
+
+    return
+  end subroutine RANDOM_Knuth_shuffle
 
   ! private
 
