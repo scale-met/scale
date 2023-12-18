@@ -1083,16 +1083,21 @@ contains
     real(RP), intent(out) :: phi_m(KA)
     real(RP), intent(out) :: phi_h(KA)
     integer :: k
+    real(DP) :: z_DP, IL_DP
+
+    IL_DP = IL
 
     if ( IL > 0.0_RP ) then
        do k = KS, KE
-          phi_m(k) = pm_stable( Z(k), IL )
-          phi_h(k) = ph_stable( Z(k), IL )
+          z_DP = z(k)
+          phi_m(k) = pm_stable( z_DP, IL_DP )
+          phi_h(k) = ph_stable( z_DP, IL_DP )
        end do
     else
        do k = KS, KE
-          phi_m(k) = pm_unstable( Z(k), IL )
-          phi_h(k) = ph_unstable( Z(k), IL )
+          z_DP = z(k)
+          phi_m(k) = pm_unstable( z_DP, IL_DP )
+          phi_h(k) = ph_unstable( z_DP, IL_DP )
        end do
     end if
 
