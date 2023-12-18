@@ -361,12 +361,14 @@ contains
        ENSEMBLE_myrank => COMM_ENSEMBLE_myrank
     use scale_topography, only: &
        TOPO => TOPOGRAPHY_Zsfc
+#ifdef DA
     use scale_letkf, only: &
        LETKF_obs_readfile,   &
        LETKF_obs_clear,      &
        LETKF_obs_operator,   &
        LETKF_obs_initialize, &
        LETKF_system
+#endif
     use mod_atmos_vars, only: &
        ATMOS_vars_get_diagnostic, &
        U,    &
@@ -411,6 +413,7 @@ contains
     integer :: i, j, k
     !---------------------------------------------------------------------------
 
+#ifdef DA
     call PROF_rapstart('DA_Update', 1)
 
     !---------------------------------------------------------------------------
@@ -568,6 +571,7 @@ contains
     call make_output( 'ANLS' )
 
     call PROF_rapend  ('DA_Update', 1)
+#endif
 
     return
   end subroutine DA_driver_update

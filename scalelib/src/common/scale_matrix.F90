@@ -907,6 +907,7 @@ contains
     integer :: i, j, ierr
     !---------------------------------------------------------------------------
 
+#ifdef DA
     if( present(simdlen) ) then
       simdlen_ = simdlen
     else
@@ -1032,6 +1033,7 @@ contains
     deallocate( w )
     deallocate( work )
     deallocate( iwork )
+#endif
 
     return
   end subroutine MATRIX_SOLVER_eigenvalue_decomposition

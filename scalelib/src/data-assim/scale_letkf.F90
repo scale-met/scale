@@ -3131,6 +3131,7 @@ contains
     real(RP) :: eivec_evp(ne,ne)
     real(RP) :: eival_evp(ne)
 
+#ifdef DA
     rdiag_wloc_ = .FALSE.                               !GYL
     IF(present(rdiag_wloc)) rdiag_wloc_ = rdiag_wloc    !GYL
     infl_update_ = .FALSE.                              !GYL
@@ -3381,6 +3382,7 @@ contains
     sigma_o = 2.0d0/parm(3)*((parm_infl*parm(2)+parm(3))/parm(2))**2
     gain = sigma_b**2 / (sigma_o + sigma_b**2)
     parm_infl = parm_infl + gain * parm(4)
+#endif
 
     return
   end subroutine letkf_core
@@ -6570,11 +6572,13 @@ contains
     logical omp_nested
     integer maxnest
 
+#ifdef DA
     omp_nested = omp_get_nested()
     maxnest = floor(log(dble(omp_get_max_threads())) / log(2.0d0))
     call omp_set_nested(.true.)
     call merge_sort_2threads(n, array, 0, maxnest)
     call omp_set_nested(omp_nested)
+#endif
 
   end subroutine merge_sort_parallel
 

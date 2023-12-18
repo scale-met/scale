@@ -71,6 +71,7 @@ size_t ungzip_toshiba_mpr(size_t outbufsize, size_t bufsize, unsigned char *buf)
   z_stream strm;
   int ret;
 
+#ifdef DA
   outbuf = (unsigned char*)malloc(outbufsize);
   if(outbuf == NULL){
     printf("malloc failed in ungzip_toshiba_mpr\n");
@@ -96,6 +97,7 @@ size_t ungzip_toshiba_mpr(size_t outbufsize, size_t bufsize, unsigned char *buf)
     ret = inflateEnd(&strm);
     free(outbuf);
   }
+#endif
   return datsize;
 }
 
