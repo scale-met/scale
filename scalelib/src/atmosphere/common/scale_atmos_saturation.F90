@@ -913,7 +913,7 @@ contains
     !---------------------------------------------------------------------------
 
     !$omp parallel do OMP_SCHEDULE_
-    !$acc kernels copyin(temp,pres,qdry) copyout(qsat)
+    !$acc kernels copyin(temp,pres) copyout(qsat)
     do j = JS, JE
     do i = IS, IE
        call ATMOS_SATURATION_pres2qsat_all_0D( temp(i,j), pres(i,j), &
@@ -977,7 +977,7 @@ contains
     !---------------------------------------------------------------------------
 
     !$omp parallel do OMP_SCHEDULE_ collapse(2)
-    !$acc kernels copyin(temp,pres,qdry) copyout(qsat)
+    !$acc kernels copyin(temp,pres) copyout(qsat)
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -1148,7 +1148,7 @@ contains
     !---------------------------------------------------------------------------
 
     !$omp parallel do OMP_SCHEDULE_ collapse(2)
-    !$acc kernels copyin(temp,pres,qdry) copyout(qsat)
+    !$acc kernels copyin(temp,pres) copyout(qsat)
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -1319,7 +1319,7 @@ contains
     !---------------------------------------------------------------------------
 
     !$omp parallel do OMP_SCHEDULE_ collapse(2)
-    !$acc kernels copyin(temp,pres,qdry) copyout(qsat)
+    !$acc kernels copyin(temp,pres) copyout(qsat)
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
