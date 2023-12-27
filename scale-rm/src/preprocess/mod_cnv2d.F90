@@ -457,7 +457,8 @@ contains
                                           CX(:), CY(:),               & ! [IN]
                                           idx_i(:,:,:), idx_j(:,:,:), & ! [OUT]
                                           hfact(:,:,:),               & ! [OUT]
-                                          zonal = zonal, pole = pole  ) ! [IN]
+                                          zonal = zonal, pole = pole, & ! [IN]
+                                          missing = .true.            ) ! [IN, optional]
           deallocate( X_org, Y_org )
        end if
     case ( 'DIST-WEIGHT' )

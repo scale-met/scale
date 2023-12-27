@@ -559,7 +559,8 @@ contains
                                        idx_k(:,:,:,:,:), & ! [OUT]
                                        vfact(:,:,:,:),   & ! [OUT]
                                        zonal = zonal,    & ! [IN]
-                                       pole  = pole      ) ! [IN]
+                                       pole  = pole,     & ! [IN]
+                                       missing = .true.  ) ! [IN]
     case ( 'DIST-WEIGHT' )
        call INTERP_factor3d_weight( grads_3d%INTERP_LEVEL, & ! [IN]
                                     nLEV, 1, nLEV,         & ! [IN]
