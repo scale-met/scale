@@ -580,13 +580,15 @@ contains
        call PRC_abort
     end if
 
-    ATMOS_REFSTATE1D_pres(:) = pres(:)
-    ATMOS_REFSTATE1D_temp(:) = temp(:)
-    ATMOS_REFSTATE1D_dens(:) = dens(:)
-    ATMOS_REFSTATE1D_pott(:) = pott(:)
-    ATMOS_REFSTATE1D_qv  (:) = qv(:)
+    do k = KS, KE
+       ATMOS_REFSTATE1D_pres(k) = pres(k)
+       ATMOS_REFSTATE1D_temp(k) = temp(k)
+       ATMOS_REFSTATE1D_dens(k) = dens(k)
+       ATMOS_REFSTATE1D_pott(k) = pott(k)
+       ATMOS_REFSTATE1D_qv  (k) = qv(k)
+    end do
 
-    !$acc update device(ATMOS_REFSTATE1D_pres, ATMOS_REFSTATE1D_temp, ATMOS_REFSTATE1D_dens, ATMOS_REFSTATE1D_pott, ATMOS_REFSTATE1D_qv)
+    !$acc update device(ATMOS_REFSTATE1D_pres,  ATMOS_REFSTATE1D_temp, ATMOS_REFSTATE1D_dens, ATMOS_REFSTATE1D_pott, ATMOS_REFSTATE1D_qv)
 
     call ATMOS_REFSTATE_calc3D( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
                                 CZ(:), FZ(:), REAL_CZ(:,:,:), REAL_FZ(:,:,:), REAL_PHI(:,:,:) )

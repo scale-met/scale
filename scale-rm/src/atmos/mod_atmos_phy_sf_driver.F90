@@ -148,7 +148,12 @@ contains
   subroutine ATMOS_PHY_SF_driver_calc_tendency( update_flag )
     use scale_const, only: &
        UNDEF  => CONST_UNDEF, &
-       PRE00  => CONST_PRE00
+       PRE00  => CONST_PRE00, &
+       Rdry   => CONST_Rdry,  &
+       Rvap   => CONST_Rvap,  &
+       CPdry  => CONST_CPdry, &
+       CPvap  => CONST_CPvap, &
+       EPSTvap => CONST_EPSTvap
     use scale_atmos_grid_cartesC_real, only: &
        CZ => ATMOS_GRID_CARTESC_REAL_CZ, &
        FZ => ATMOS_GRID_CARTESC_REAL_FZ, &
@@ -244,12 +249,14 @@ contains
     real(RP) :: ATM_TEMP(IA,JA)
     real(RP) :: ATM_PRES(IA,JA)
     real(RP) :: ATM_QV  (IA,JA)
+    real(RP) :: SFC_POTV(IA,JA)
     real(RP) :: SFLX_SH2(IA,JA)
     real(RP) :: SFLX_QV (IA,JA)
     real(RP) :: CP_t, CV_t
     real(RP) :: ENGI_t
     real(RP) :: rdz
     real(RP) :: work
+    real(RP) :: kappa
 
     integer  :: i, j, iq
     !---------------------------------------------------------------------------
@@ -295,15 +302,20 @@ contains
              do j = JS, JE
              do i = IS, IE
                 SFLX_QV(i,j) = 0.0_RP
+                SFC_POTV(i,j) = SFC_TEMP(i,j) * ( PRE00 / SFC_PRES(i,j) )**( Rdry / CPdry )
              end do
              end do
              !$acc end kernels
           else
-             !$omp parallel do
+             !$omp parallel do private(kappa)
              !$acc kernels
              do j = JS, JE
              do i = IS, IE
                 SFLX_QV(i,j) = SFLX_QTRC(i,j,I_QV) - SFLX_QVEX(i,j)
+                kappa = ( Rdry + ( Rvap - Rdry ) * QV(KS,i,j) ) &
+                     / ( CPdry + ( CPvap - CPdry ) * QV(KS,i,j) )
+                SFC_POTV(i,j) = SFC_TEMP(i,j) * ( PRE00 / SFC_PRES(i,j) )**kappa &
+                              * ( 1.0_RP + EPSTvap * QV(KS,i,j) )
              end do
              end do
              !$acc end kernels
@@ -312,7 +324,7 @@ contains
           call BULKFLUX_diagnose_scales( IA, IS, IE, JA, JS, JE, &
                                          SFLX_MW(:,:), SFLX_MU(:,:), SFLX_MV(:,:),  & ! [IN]
                                          SFLX_SH2(:,:), SFLX_QV(:,:),               & ! [IN]
-                                         SFC_DENS(:,:), SFC_TEMP(:,:), PBL_Zi(:,:), & ! [IN]
+                                         SFC_DENS(:,:), SFC_POTV(:,:), PBL_Zi(:,:), & ! [IN]
                                          Ustar(:,:), Tstar(:,:), Qstar(:,:),        & ! [OUT]
                                          Wstar(:,:), RLmo(:,:)                      ) ! [OUT]
           !$acc end data
@@ -336,7 +348,6 @@ contains
           select case ( ATMOS_PHY_SF_TYPE )
           case ( 'BULK' )
 
-             !$acc update host(ATM_W,ATM_U,ATM_V,ATM_TEMP,ATM_PRES,ATM_QV,SFC_DENS,SFC_TEMP,SFC_PRES,SFC_Z0M,SFC_Z0H,SFC_Z0E,PBL_Zi)
              call ATMOS_PHY_SF_bulk_flux( IA, IS, IE, JA, JS, JE,                      & ! [IN]
                                           ATM_W(:,:), ATM_U(:,:), ATM_V(:,:),          & ! [IN]
                                           ATM_TEMP(:,:), ATM_PRES(:,:), ATM_QV(:,:),   & ! [IN]
@@ -349,7 +360,6 @@ contains
                                           Wstar(:,:),                                  & ! [OUT]
                                           RLmo(:,:),                                   & ! [OUT]
                                           U10(:,:), V10(:,:), T2(:,:), Q2(:,:)         ) ! [OUT]
-             !$acc update device(SFLX_MW,SFLX_MU,SFLX_MV,SFLX_SH,SFLX_LH,SFLX_QV,Ustar,Tstar,Qstar,Wstar,RLmo,U10,V10,T2,Q2)
 
           case ( 'CONST' )
 

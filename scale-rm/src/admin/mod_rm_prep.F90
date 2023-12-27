@@ -165,6 +165,8 @@ contains
        ATMOS_HYDROMETEOR_finalize
     use scale_atmos_saturation, only: &
        ATMOS_SATURATION_setup
+    use scale_bulkflux, only: &
+       BULKFLUX_setup
     use mod_atmos_driver, only: &
        ATMOS_driver_tracer_setup
     use mod_admin_restart, only: &
@@ -182,8 +184,6 @@ contains
        ATMOS_vars_finalize
     use mod_atmos_phy_mp_vars, only: &
        QA_MP
-    use mod_atmos_phy_mp_driver, only: &
-       ATMOS_phy_mp_driver_setup
     use mod_ocean_admin, only: &
        OCEAN_admin_setup, &
        OCEAN_do
@@ -228,7 +228,8 @@ contains
        USER_finalize, &
        USER_mkinit
     use mod_atmos_driver, only: &
-       ATMOS_SURFACE_GET
+       ATMOS_SURFACE_GET, &
+       ATMOS_driver_setup
     use mod_ocean_driver, only: &
        OCEAN_SURFACE_SET
     use mod_land_driver, only: &
@@ -390,6 +391,8 @@ contains
          sc0_in    = SOLARINS_constant)
 #endif
 
+    call BULKFLUX_setup( sqrt(DX**2+DY**2) )
+
     ! setup variable container
     if ( ATMOS_do ) call ATMOS_vars_setup
     if ( OCEAN_do ) call OCEAN_vars_setup
@@ -397,7 +400,8 @@ contains
     if ( URBAN_do ) call URBAN_vars_setup
     if ( CPL_sw   ) call CPL_vars_setup
 
-    if ( ATMOS_do ) call ATMOS_phy_mp_driver_setup
+    ! setup driver
+    if ( ATMOS_do ) call ATMOS_driver_setup( .true. )
 
     ! setup preprocess converter
     call CONVERT_setup

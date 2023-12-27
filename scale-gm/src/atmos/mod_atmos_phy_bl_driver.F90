@@ -110,7 +110,6 @@ contains
        select case ( ATMOS_PHY_BL_TYPE )
        case ( 'MYNN' )
           call ATMOS_PHY_BL_MYNN_setup( &
-               KA, KS, KE, IA, IS, IE, JA, JS, JE, &
                BULKFLUX_type ) ! (in)
        end select
     else
@@ -152,6 +151,7 @@ contains
        QTRC, &
        U,     &
        V,     &
+       W,     &
        TEMP,  &
        POTT,  &
        PRES,  &
@@ -201,6 +201,8 @@ contains
     real(RP) :: RHOQV_t(KA,IA,JA)
     real(RP) :: RHOQ_t(KA,IA,JA,QA)
 
+    real(RP) :: frac_land(IA,JA)
+
     integer  :: k, i, j, iq, l
     !---------------------------------------------------------------------------
 
@@ -209,6 +211,11 @@ contains
        call ATMOS_vars_get_diagnostic( "N2",   N2   )
        call ATMOS_vars_get_diagnostic( "POTL", POTL )
        call ATMOS_vars_get_diagnostic( "POTV", POTV )
+       do j = JS, JE
+       do i = IS, IE
+          frac_land(i,j) = 1.0_RP ! tentative
+       end do
+       end do
        do l = 1, ADM_lall
 
           do j = JS, JE
@@ -220,7 +227,7 @@ contains
           end do
           call ATMOS_PHY_BL_MYNN_tendency( &
                KA, KS, KE, IA, IS, IE, JA, JS, JE, &
-               DENS(:,:,:,l), U(:,:,:,l), V(:,:,:,l),                          & ! (in)
+               DENS(:,:,:,l), U(:,:,:,l), V(:,:,:,l), W(:,:,:,l),              & ! (in)
                POTT(:,:,:,l), QTRC(:,:,:,QS:QE,l),                             & ! (in)
                PRES(:,:,:,l), EXNER(:,:,:,l), N2(:,:,:,l),                     & ! (in)
                QDRY(:,:,:,l), QV(:,:,:,l), QW(:,:,:),                          & ! (in)
@@ -228,6 +235,7 @@ contains
                SFC_DENS(:,:,l),                                                & ! (in)
                SFLX_MU(:,:,l), SFLX_MV(:,:,l), SFLX_SH(:,:,l), SFLX_QV(:,:,l), & ! (in)
                Ustar(:,:,l), Tstar(:,:,l), Qstar(:,:,l), RLmo(:,:,l),          & ! (in)
+               frac_land(:,:),                                                 & ! (in)
                CZ(:,:,:,l), FZ(:,:,:,l), F2H(:,:,:,:,l), dt_BL,                & ! (in)
                BULKFLUX_type,                                                  & ! (in)
                RHOU_t(:,:,:), RHOV_t(:,:,:), RHOT_t(:,:,:),                    & ! (out)

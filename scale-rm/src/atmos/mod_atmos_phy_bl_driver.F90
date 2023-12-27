@@ -29,6 +29,7 @@ module mod_atmos_phy_bl_driver
   public :: ATMOS_PHY_BL_driver_tracer_setup
   public :: ATMOS_PHY_BL_driver_setup
   public :: ATMOS_PHY_BL_driver_finalize
+  public :: ATMOS_PHY_BL_driver_mkinit
   public :: ATMOS_PHY_BL_driver_calc_tendency
 
   !-----------------------------------------------------------------------------
@@ -110,7 +111,8 @@ contains
     use scale_atmos_phy_bl_mynn_jmapplib, only: &
        ATMOS_PHY_BL_MYNN_JMAPPLIB_setup
     use scale_atmos_grid_cartesC, only: &
-       CZ => ATMOS_GRID_CARTESC_CZ
+       CZ => ATMOS_GRID_CARTESC_CZ, &
+       DX
     use mod_atmos_admin, only: &
        ATMOS_PHY_BL_TYPE, &
        ATMOS_sw_phy_bl
@@ -131,8 +133,8 @@ contains
        select case ( ATMOS_PHY_BL_TYPE )
        case ( 'MYNN' )
           call ATMOS_PHY_BL_MYNN_setup( &
-               KA, KS, KE, IA, IS, IE, JA, JS, JE, &
-               BULKFLUX_type ) ! (in)
+               BULKFLUX_type, & ! (in)
+               dx = DX        ) ! (in)
        case ( 'MYNN-JMAPPLIB' )
           call ATMOS_PHY_BL_MYNN_JMAPPLIB_setup( &
                KA, KS, KE, &
@@ -184,6 +186,222 @@ contains
   end subroutine ATMOS_PHY_BL_driver_finalize
 
   !-----------------------------------------------------------------------------
+  !> make initial state
+  subroutine ATMOS_PHY_BL_driver_mkinit( TKE_CONST )
+    use scale_const, only: &
+       UNDEF => CONST_UNDEF
+    use scale_time, only: &
+       dt_BL => TIME_DTSEC_ATMOS_PHY_BL
+    use scale_atmos_phy_bl_mynn, only: &
+       ATMOS_PHY_BL_MYNN_mkinit
+    use scale_atmos_grid_cartesC_real, only: &
+       Z1 => ATMOS_GRID_CARTESC_REAL_Z1, &
+       CZ => ATMOS_GRID_CARTESC_REAL_CZ, &
+       FZ => ATMOS_GRID_CARTESC_REAL_FZ, &
+       F2H => ATMOS_GRID_CARTESC_REAL_F2H
+    use scale_bulkflux, only: &
+       BULKFLUX_type
+    use scale_landuse, only: &
+       frac_land => LANDUSE_frac_land
+    use scale_topography, only: &
+       TanSL_X => TOPOGRAPHY_TanSL_X, &
+       TanSL_Y => TOPOGRAPHY_TanSL_Y
+    use scale_atmos_bottom, only: &
+       BOTTOM_estimate => ATMOS_BOTTOM_estimate
+    use scale_atmos_phy_sf_bulk, only: &
+       ATMOS_PHY_SF_bulk_flux
+    use scale_comm_cartesC, only: &
+       COMM_vars8, &
+       COMM_wait
+    use mod_atmos_phy_bl_vars, only: &
+       QS, QE, &
+       Zi => ATMOS_PHY_BL_Zi
+    use mod_atmos_phy_sf_vars, only: &
+       SFC_TEMP => ATMOS_PHY_SF_SFC_TEMP,  &
+       SFC_DENS => ATMOS_PHY_SF_SFC_DENS,  &
+       SFC_PRES => ATMOS_PHY_SF_SFC_PRES,  &
+       SFC_Z0M   => ATMOS_PHY_SF_SFC_Z0M,   &
+       SFC_Z0H   => ATMOS_PHY_SF_SFC_Z0H,   &
+       SFC_Z0E   => ATMOS_PHY_SF_SFC_Z0E,   &
+       SFLX_MU  => ATMOS_PHY_SF_SFLX_MU,   &
+       SFLX_MV  => ATMOS_PHY_SF_SFLX_MV,   &
+       SFLX_MW  => ATMOS_PHY_SF_SFLX_MV,   &
+       SFLX_SH  => ATMOS_PHY_SF_SFLX_SH,   &
+       SFLX_LH  => ATMOS_PHY_SF_SFLX_LH,   &
+       SFLX_QV  => ATMOS_PHY_SF_SFLX_QV,   &
+       Ustar    => ATMOS_PHY_SF_Ustar,     &
+       Tstar    => ATMOS_PHY_SF_Tstar,     &
+       Qstar    => ATMOS_PHY_SF_Qstar,     &
+       Wstar    => ATMOS_PHY_SF_Wstar,     &
+       RLmo     => ATMOS_PHY_SF_RLmo,      &
+       U10       => ATMOS_PHY_SF_U10,      &
+       V10       => ATMOS_PHY_SF_V10,      &
+       T2        => ATMOS_PHY_SF_T2,       &
+       Q2        => ATMOS_PHY_SF_Q2
+    use mod_atmos_admin, only: &
+       ATMOS_PHY_BL_TYPE, &
+       ATMOS_sw_phy_bl
+    use mod_atmos_vars, only: &
+       DENS,  &
+       MOMZ,  &
+       MOMX,  &
+       MOMY,  &
+       RHOT,  &
+       QTRC,  &
+       U,     &
+       V,     &
+       W,     &
+       TEMP,  &
+       POTT,  &
+       PRES,  &
+       EXNER, &
+       QDRY,  &
+       QV,    &
+       QC,    &
+       QI,    &
+       ATMOS_vars_calc_diagnostics, &
+       ATMOS_vars_get_diagnostic
+    implicit none
+    real(RP), intent(in) :: TKE_CONST
+
+    real(RP) :: N2  (KA,IA,JA) !> static stability
+    real(RP) :: POTL(KA,IA,JA) !> liquid water potential temperature
+    real(RP) :: POTV(KA,IA,JA) !> virtual potential temperature
+
+    real(RP) :: ATM_TEMP(IA,JA)
+    real(RP) :: ATM_PRES(IA,JA)
+    real(RP) :: ATM_U   (IA,JA)
+    real(RP) :: ATM_V   (IA,JA)
+    real(RP) :: ATM_W   (IA,JA)
+    real(RP) :: ATM_QV  (IA,JA)
+
+    real(RP) :: QW(KA,IA,JA) !> total water
+
+    integer  :: k, i, j, iq
+    !---------------------------------------------------------------------------
+
+    if ( .not. ATMOS_sw_phy_bl ) return
+
+    select case ( ATMOS_PHY_BL_TYPE )
+    case ( 'MYNN' )
+       if ( QTRC(KS,IS,JE,QS) == UNDEF ) then
+
+          !$acc data create(N2,POTL,POTV,ATM_TEMP,ATM_PRES,ATM_U,ATM_V,ATM_W,ATM_QV,QW)
+
+          call COMM_vars8(DENS, 1)
+          call COMM_vars8(MOMZ, 2)
+          call COMM_vars8(MOMX, 3)
+          call COMM_vars8(MOMY, 4)
+          call COMM_vars8(RHOT, 5)
+          call COMM_vars8(QV, 6)
+          call COMM_vars8(QC, 7)
+          call COMM_vars8(QI, 8)
+          call COMM_wait(DENS, 1)
+          call COMM_wait(MOMZ, 2)
+          call COMM_wait(MOMX, 3)
+          call COMM_wait(MOMY, 4)
+          call COMM_wait(RHOT, 5)
+          call COMM_wait(QV, 6)
+          call COMM_wait(QC, 7)
+          call COMM_wait(QI, 8)
+
+          call ATMOS_vars_calc_diagnostics
+          call ATMOS_vars_get_diagnostic( "N2",   N2   )
+          call ATMOS_vars_get_diagnostic( "POTL", POTL )
+          call ATMOS_vars_get_diagnostic( "POTV", POTV )
+
+          call BOTTOM_estimate( KA, KS, KE, IA, 1, IA, JA, 1, JA, &
+                                DENS(:,:,:), PRES(:,:,:), QV(:,:,:), & ! [IN]
+                                SFC_TEMP(:,:),                       & ! [IN]
+                                FZ(:,:,:),                           & ! [IN]
+                                SFC_DENS(:,:), SFC_PRES(:,:)         ) ! [OUT]
+
+          !$omp parallel do
+          !$acc kernels
+          do j = 1, JA
+          do i = 1, IA
+             ATM_TEMP(i,j) = TEMP(KS,i,j)
+             ATM_PRES(i,j) = PRES(KS,i,j)
+             ATM_U   (i,j) = U   (KS,i,j)
+             ATM_V   (i,j) = V   (KS,i,j)
+             ATM_W   (i,j) = ATM_U(i,j) * TanSL_X(i,j) + ATM_V(i,j) * TanSL_Y(i,j)
+             ATM_QV  (i,j) = QV  (KS,i,j)
+          enddo
+          enddo
+          !$acc end kernels
+
+          call ATMOS_PHY_SF_bulk_flux( IA, 1, IA, JA, 1, JA, &
+                                       ATM_W(:,:), ATM_U(:,:), ATM_V(:,:),          & ! [IN]
+                                       ATM_TEMP(:,:), ATM_PRES(:,:), ATM_QV(:,:),   & ! [IN]
+                                       SFC_DENS(:,:), SFC_TEMP(:,:), SFC_PRES(:,:), & ! [IN]
+                                       SFC_Z0M(:,:), SFC_Z0H(:,:), SFC_Z0E(:,:),    & ! [IN]
+                                       Zi(:,:), Z1(:,:),                            & ! [IN]
+                                       SFLX_MW(:,:), SFLX_MU(:,:), SFLX_MV(:,:),    & ! [OUT]
+                                       SFLX_SH(:,:), SFLX_LH(:,:), SFLX_QV(:,:),    & ! [OUT]
+                                       Ustar(:,:), Tstar(:,:), Qstar(:,:),          & ! [OUT]
+                                       Wstar(:,:),                                  & ! [OUT]
+                                       RLmo(:,:),                                   & ! [OUT]
+                                       U10(:,:), V10(:,:), T2(:,:), Q2(:,:)         ) ! [OUT]
+
+          !$acc kernels
+          do j = 1, JA
+          do i = 1, IA
+          do k = KS, KE
+             QW(k,i,j) = QV(k,i,j) + QC(k,i,j) + QI(k,i,j)
+          end do
+          end do
+          end do
+          !$acc end kernels
+
+          call ATMOS_PHY_BL_MYNN_mkinit( &
+               KA, KS, KE, IA, 1, IA, JA, 1, JA, &
+               QTRC(:,:,:,QS:QE),                                      & ! (out)
+               DENS(:,:,:), U(:,:,:), V(:,:,:), W(:,:,:), POTT(:,:,:), & ! (in)
+               PRES(:,:,:), EXNER(:,:,:), N2(:,:,:),                   & ! (in)
+               QDRY(:,:,:), QV(:,:,:), QW(:,:,:),                      & ! (in)
+               POTL(:,:,:), POTV(:,:,:),                               & ! (in)
+               SFC_DENS(:,:),                                          & ! (in)
+               SFLX_MU(:,:), SFLX_MV(:,:), SFLX_SH(:,:), SFLX_QV(:,:), & ! (in)
+               Ustar(:,:), Tstar(:,:), Qstar(:,:), RLmo(:,:),          & ! (in)
+               frac_land(:,:),                                         & ! (in)
+               CZ(:,:,:), FZ(:,:,:), F2H(:,:,:,:),                     & ! (in)
+               BULKFLUX_type                                           ) ! (in)
+
+          !$acc end data
+
+       end if
+
+    case ( 'MYNN-JMAPPLIB' )
+       !$acc kernels
+       do j = 1, JA
+       do i = 1, IA
+       do k = KS, KE
+          if ( QTRC(k,i,j,QS) == UNDEF ) then
+             QTRC(:,:,:,QS) = TKE_CONST
+          end if
+       end do
+       end do
+       end do
+       !$acc end kernels
+       !$acc kernels
+       do iq = QS+1, QE
+       do j = 1, JA
+       do i = 1, IA
+       do k = KS, KE
+          if ( QTRC(k,i,j,iq) == UNDEF ) then
+             QTRC(:,:,:,iq) = 0.0_RP
+          end if
+       end do
+       end do
+       end do
+       end do
+       !$acc end kernels
+    end select
+
+    return
+  end subroutine ATMOS_PHY_BL_driver_mkinit
+
+  !-----------------------------------------------------------------------------
   !> calculate tendency
   subroutine ATMOS_PHY_BL_driver_calc_tendency( update_flag )
     use scale_statistics, only: &
@@ -209,14 +427,16 @@ contains
        I_QV
     use scale_bulkflux, only: &
        BULKFLUX_type
+    use scale_landuse, only: &
+       frac_land => LANDUSE_frac_land
     use mod_atmos_admin, only: &
-       ATMOS_PHY_BL_TYPE, &
-       ATMOS_sw_phy_bl
+       ATMOS_PHY_BL_TYPE
     use mod_atmos_vars, only: &
        DENS => DENS_av, &
        QTRC => QTRC_av, &
        U,     &
        V,     &
+       W,     &
        POTT,  &
        PRES,  &
        EXNER, &
@@ -300,7 +520,7 @@ contains
           end if
           call ATMOS_PHY_BL_MYNN_tendency( &
                KA, KS, KE, IA, IS, IE, JA, JS, JE, &
-               DENS(:,:,:), U(:,:,:), V(:,:,:),                        & ! (in)
+               DENS(:,:,:), U(:,:,:), V(:,:,:), W(:,:,:),              & ! (in)
                POTT(:,:,:), QTRC(:,:,:,QS:QE),                         & ! (in)
                PRES(:,:,:), EXNER(:,:,:), N2(:,:,:),                   & ! (in)
                QDRY(:,:,:), QV(:,:,:), QW(:,:,:),                      & ! (in)
@@ -308,6 +528,7 @@ contains
                SFC_DENS(:,:),                                          & ! (in)
                SFLX_MU(:,:), SFLX_MV(:,:), SFLX_SH(:,:), SFLX_QV(:,:), & ! (in)
                Ustar(:,:), Tstar(:,:), Qstar(:,:), RLmo(:,:),          & ! (in)
+               frac_land(:,:),                                         & ! (in)
                CZ(:,:,:), FZ(:,:,:), F2H(:,:,:,:), dt_BL,              & ! (in)
                BULKFLUX_type,                                          & ! (in)
                RHOU_t_BL(:,:,:), RHOV_t_BL(:,:,:), RHOT_t_BL(:,:,:),   & ! (out)
