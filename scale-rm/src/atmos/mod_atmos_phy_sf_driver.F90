@@ -132,13 +132,13 @@ contains
     SFLX_ENGI(:,:)   = 0.0_RP
     !$acc end kernels
 
-    call FILE_HISTORY_reg( 'Uabs10', '10m absolute wind',         'm/s'  , hist_uabs10, fill_halo=.true. )
-    call FILE_HISTORY_reg( 'U10m',   '10m eastward wind',         'm/s'  , hist_u10m,   fill_halo=.true. )
-    call FILE_HISTORY_reg( 'V10m',   '10m northward wind',        'm/s'  , hist_v10m,   fill_halo=.true. )
-    call FILE_HISTORY_reg( 'T2',     '2m air temperature',        'K'    , hist_t2,     fill_halo=.true. )
-    call FILE_HISTORY_reg( 'Q2',     '2m specific humidity',      'kg/kg', hist_q2,     fill_halo=.true. )
-    call FILE_HISTORY_reg( 'RH2',    '2m relative humidity',      '%',     hist_rh2,    fill_halo=.true. )
-    call FILE_HISTORY_reg( 'MSLP',   'mean sea-level pressure',   'Pa'   , hist_mslp,   fill_halo=.true., standard_name='air_pressure_at_mean_sea_level' )
+    call FILE_HISTORY_reg( 'Uabs10', '10m absolute wind',         'm/s'  , hist_uabs10, ndims=2, fill_halo=.true. )
+    call FILE_HISTORY_reg( 'U10m',   '10m eastward wind',         'm/s'  , hist_u10m,   ndims=2, fill_halo=.true. )
+    call FILE_HISTORY_reg( 'V10m',   '10m northward wind',        'm/s'  , hist_v10m,   ndims=2, fill_halo=.true. )
+    call FILE_HISTORY_reg( 'T2',     '2m air temperature',        'K'    , hist_t2,     ndims=2, fill_halo=.true. )
+    call FILE_HISTORY_reg( 'Q2',     '2m specific humidity',      'kg/kg', hist_q2,     ndims=2, fill_halo=.true. )
+    call FILE_HISTORY_reg( 'RH2',    '2m relative humidity',      '%',     hist_rh2,    ndims=2, fill_halo=.true. )
+    call FILE_HISTORY_reg( 'MSLP',   'mean sea-level pressure',   'Pa'   , hist_mslp,   ndims=2, fill_halo=.true., standard_name='air_pressure_at_mean_sea_level' )
 
     return
   end subroutine ATMOS_PHY_SF_driver_setup
