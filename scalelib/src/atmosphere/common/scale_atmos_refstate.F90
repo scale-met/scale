@@ -1015,8 +1015,9 @@ contains
        end do
        ATMOS_REFSTATE_pres(KS-1,   i,j) = ATMOS_REFSTATE_pres(KS+1,i,j) &
                                         - ATMOS_REFSTATE_dens(KS  ,i,j) * ( REAL_PHI(KS-1,i,j) - REAL_PHI(KS+1,i,j) )
-       ATMOS_REFSTATE_pres(KE+1,   i,j) = ATMOS_REFSTATE_pres(KE-1,i,j) &
-                                        - ATMOS_REFSTATE_dens(KE  ,i,j) * ( REAL_PHI(KE+1,i,j) - REAL_PHI(KE-1,i,j) )
+       ATMOS_REFSTATE_pres(KE+1,   i,j) = max( 1E-20_RP, &
+                                          ATMOS_REFSTATE_pres(KE-1,i,j) &
+                                        - ATMOS_REFSTATE_dens(KE  ,i,j) * ( REAL_PHI(KE+1,i,j) - REAL_PHI(KE-1,i,j) ) )
        !$acc loop seq
        do k = KE+2, KA
           ATMOS_REFSTATE_pres(k,i,j) = UNDEF

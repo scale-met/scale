@@ -723,7 +723,7 @@ contains
        dgrd = - pres_L2  * CPovCV_L2  / dens_s / dz &
               - GRAV * 0.5_RP
 
-       dens_L2 = dens_s - dhyd/dgrd
+       dens_L2 = max( dens_s - dhyd/dgrd, dens_s * 0.1_RP )
 
        if ( dens_L2*0.0_RP /= 0.0_RP ) exit
     enddo
