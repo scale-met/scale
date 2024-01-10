@@ -1344,8 +1344,8 @@ contains
     if ( I_TKE > 0 ) then ! TB
        !$omp parallel do collapse(2)
        !$acc kernels
-       do j = 1, JA
-       do i = 1, IA
+       do j = JSB, JEB
+       do i = ISB, IEB
        do k = 1, KA
           if ( QTRC(k,i,j,I_TKE) == UNDEF ) then
              QTRC(k,i,j,I_TKE) = TKE_CONST
@@ -1357,8 +1357,8 @@ contains
     end if
 
     !$acc kernels
-    do j = 1, JA
-    do i = 1, IA
+    do j = JSB, JEB
+    do i = ISB, IEB
        Zi(i,j) = Zi_CONST
     end do
     end do

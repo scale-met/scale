@@ -3035,9 +3035,8 @@ contains
           exit
        end if
     end do
-    if ( initialize ) then
-       zie = 1000.0_RP
-    else
+    zie = 1000.0_RP
+    if ( .not. initialize ) then
        tke_min = max( tke(KS), 0.02_RP )
        do k = KS+1, KE
           if ( tke(k) <= tke_min * 0.05_RP ) then
