@@ -310,7 +310,7 @@ contains
           call ATMOS_vars_get_diagnostic( "POTL", POTL )
           call ATMOS_vars_get_diagnostic( "POTV", POTV )
 
-          call BOTTOM_estimate( KA, KS, KE, IA, 1, IA, JA, 1, JA, &
+          call BOTTOM_estimate( KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
                                 DENS(:,:,:), PRES(:,:,:), QV(:,:,:), & ! [IN]
                                 SFC_TEMP(:,:),                       & ! [IN]
                                 FZ(:,:,:),                           & ! [IN]
@@ -318,8 +318,8 @@ contains
 
           !$omp parallel do
           !$acc kernels
-          do j = 1, JA
-          do i = 1, IA
+          do j = JSB, JEB
+          do i = ISB, IEB
              ATM_TEMP(i,j) = TEMP(KS,i,j)
              ATM_PRES(i,j) = PRES(KS,i,j)
              ATM_U   (i,j) = U   (KS,i,j)
@@ -330,7 +330,7 @@ contains
           enddo
           !$acc end kernels
 
-          call ATMOS_PHY_SF_bulk_flux( IA, 1, IA, JA, 1, JA, &
+          call ATMOS_PHY_SF_bulk_flux( IA, ISB, IEB, JA, JSB, JEB, &
                                        ATM_W(:,:), ATM_U(:,:), ATM_V(:,:),          & ! [IN]
                                        ATM_TEMP(:,:), ATM_PRES(:,:), ATM_QV(:,:),   & ! [IN]
                                        SFC_DENS(:,:), SFC_TEMP(:,:), SFC_PRES(:,:), & ! [IN]
@@ -344,8 +344,8 @@ contains
                                        U10(:,:), V10(:,:), T2(:,:), Q2(:,:)         ) ! [OUT]
 
           !$acc kernels
-          do j = 1, JA
-          do i = 1, IA
+          do j = JSB, JEB
+          do i = ISB, IEB
           do k = KS, KE
              QW(k,i,j) = QV(k,i,j) + QC(k,i,j) + QI(k,i,j)
           end do
@@ -354,7 +354,7 @@ contains
           !$acc end kernels
 
           call ATMOS_PHY_BL_MYNN_mkinit( &
-               KA, KS, KE, IA, 1, IA, JA, 1, JA, &
+               KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
                QTRC(:,:,:,QS:QE),                                      & ! (out)
                DENS(:,:,:), U(:,:,:), V(:,:,:), W(:,:,:), POTT(:,:,:), & ! (in)
                PRES(:,:,:), EXNER(:,:,:), N2(:,:,:),                   & ! (in)
@@ -373,11 +373,11 @@ contains
 
     case ( 'MYNN-JMAPPLIB' )
        !$acc kernels
-       do j = 1, JA
-       do i = 1, IA
+       do j = JSB, JEB
+       do i = ISB, IEB
        do k = KS, KE
           if ( QTRC(k,i,j,QS) == UNDEF ) then
-             QTRC(:,:,:,QS) = TKE_CONST
+             QTRC(k,i,j,QS) = TKE_CONST
           end if
        end do
        end do
@@ -385,11 +385,11 @@ contains
        !$acc end kernels
        !$acc kernels
        do iq = QS+1, QE
-       do j = 1, JA
-       do i = 1, IA
+       do j = JSB, JEB
+       do i = ISB, IEB
        do k = KS, KE
           if ( QTRC(k,i,j,iq) == UNDEF ) then
-             QTRC(:,:,:,iq) = 0.0_RP
+             QTRC(k,i,j,iq) = 0.0_RP
           end if
        end do
        end do
