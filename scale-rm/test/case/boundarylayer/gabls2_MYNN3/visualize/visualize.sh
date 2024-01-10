@@ -23,7 +23,7 @@ echo "+visualize by gpview"
 rm -f dcl.pdf
 
 var__set=(SFC_TEMP SHFLX LHFLX Ustar Tstar Qstar RLmo Zi_BL)
-rangeset=(auto auto auto)
+rangeset=(auto     auto  auto  auto  auto  auto  auto auto)
 time_set=
 
 i=0
