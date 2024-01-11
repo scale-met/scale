@@ -22,13 +22,19 @@ do
    (( n > TPROC )) && TPROC=${n}
 done
 
+NVH=`expr \( $TPROC - 1 \) / 64   + 1`
+NVE=`expr \( $TPROC - 1 \) / 8    + 1`
+NVE=`expr \( $NVE   - 1 \) / $NVH + 1`
+
 if [ ! ${PPCONF} = "NONE" ]; then
    CONFLIST=(`echo ${PPCONF} | tr -s ',' ' '`)
    ndata=${#CONFLIST[@]}
    for n in `seq 1 ${ndata}`
    do
       let i="n - 1"
-      RUN_PP=`echo -e "${RUN_PP}\n"${MPIEXEC} ${PROCLIST[i]} ${BINDIR}/${PPNAME} ${CONFLIST[i]} "|| exit 1"`
+      nn=`expr \( ${PROCLIST[i]} - 1 \) / 8 + 1`
+      nnp=`expr ${PROCLIST[i]} / ${nn}`
+      RUN_PP=`echo -e "${RUN_PP}\n"${MPIEXEC} -nn ${nn} -nnp ${nnp} ${BINDIR}/${PPNAME} ${CONFLIST[i]} "|| exit 1"`
    done
 fi
 
@@ -38,7 +44,9 @@ if [ ! ${INITCONF} = "NONE" ]; then
    for n in `seq 1 ${ndata}`
    do
       let i="n - 1"
-      RUN_INIT=`echo -e "${RUN_INIT}\n"${MPIEXEC} ${PROCLIST[i]} ${BINDIR}/${INITNAME} ${CONFLIST[i]} "|| exit 1"`
+      nn=`expr \( ${PROCLIST[i]} - 1 \) / 8 + 1`
+      nnp=`expr ${PROCLIST[i]} / ${nn}`
+      RUN_INIT=`echo -e "${RUN_INIT}\n"${MPIEXEC} -nn ${nn} -nnp ${nnp} ${BINDIR}/${INITNAME} ${CONFLIST[i]} "|| exit 1"`
    done
 fi
 
@@ -48,7 +56,9 @@ if [ ! ${RUNCONF} = "NONE" ]; then
    for n in `seq 1 ${ndata}`
    do
       let i="n - 1"
-      RUN_MAIN=`echo -e "${RUN_MAIN}\n"${MPIEXEC} ${PROCLIST[i]} ${BINDIR}/${BINNAME} ${CONFLIST[i]} "|| exit 1"`
+      nn=`expr \( ${PROCLIST[i]} - 1 \) / 8 + 1`
+      nnp=`expr ${PROCLIST[i]} / ${nn}`
+      RUN_MAIN=`echo -e "${RUN_MAIN}\n"${MPIEXEC} -nn ${nn} -nnp ${nnp} ${BINDIR}/${BINNAME} ${CONFLIST[i]} "|| exit 1"`
    done
 fi
 
@@ -58,13 +68,11 @@ if [ ! ${N2GCONF} = "NONE" ]; then
    for n in `seq 1 ${ndata}`
    do
       let i="n - 1"
-      RUN_N2G=`echo -e "${RUN_N2G}\n"${MPIEXEC} ${PROCLIST[i]} ${BINDIR}/${N2GNAME} ${CONFLIST[i]} "|| exit 1"`
+      nn=`expr \( ${PROCLIST[i]} - 1 \) / 8 + 1`
+      nnp=`expr ${PROCLIST[i]} / ${nn}`
+      RUN_N2G=`echo -e "${RUN_N2G}\n"${MPIEXEC} -nn ${nn} -nnp ${nnp} ${BINDIR}/${N2GNAME} ${CONFLIST[i]} "|| exit 1"`
    done
 fi
-
-NNODE=`expr \( $TPROC - 1 \) / 70 + 1`
-NPROC=`expr $TPROC / $NNODE`
-NPIN=`expr 287 / \( $NPROC \) + 1`
 
 if [[ ${BINNAME} =~ ^scale-gm ]]; then
    nc=""
@@ -78,23 +86,26 @@ cat << EOF1 > ./run.sh
 #! /bin/bash -x
 ################################################################################
 #
-# ------ For Linux64 & intel fortran&C & intel mpi -----
+# ------ For SX-Aurora TSUBASA
 #
 ################################################################################
-export FORT_FMT_RECL=500
+#PBS -q v_normal
+#PBS -T necmpi
+#PBS -l elapstim_req=1:00:00
+#PBS -v OMP_NUM_THREADS=1
+##PBS -v VE_PROGINF=YES
+#PBS -v VE_FORT_UFMTENDIAN=ALL
+#PBS -b ${NVH}
+#PBS --venum-lhost=${NVE}
 
-export HFI_NO_CPUAFFINITY=1
-export I_MPI_PIN_PROCESSOR_EXCLUDE_LIST=0,1,72,73,144,145,216,217
-#export I_MPI_HBW_POLICY=hbw_preferred,,
-#export I_MPI_FABRICS_LIST=tmi
-unset KMP_AFFINITY
-#export KMP_AFFINITY=verbose
-#export I_MPI_DEBUG=5
+module load ncc/5.1.0
+module load nfort/5.1.0
+module load nec-mpi/latest
+module load nlc/latest
+module load netCDF-f_ve/4.5.4
 
 export OMP_NUM_THREADS=1
-export I_MPI_PIN_DOMAIN=${NPIN}
-export I_MPI_PERHOST=${NPROC}
-export KMP_HW_SUBSET=1t
+cd \$PBS_O_WORKDIR
 
 EOF1
 

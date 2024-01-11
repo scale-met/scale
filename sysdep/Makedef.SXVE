@@ -1,0 +1,91 @@
+################################################################################
+#
+# ------ For FUGAKU -----
+#
+################################################################################
+
+##### Fortran setting
+#FFLAGS is set in Mkinclude. FFLAGS_DEBUG is used if SCALE_DEBUG=T
+
+FC  = mpinfort
+SFC = nfort
+MODDIROPT = -module
+
+FFLAGS_FAST  = -O3 -fpp                                        \
+               -mvector-power-to-explog -mvector-power-to-sqrt \
+               -std=f2003 -report-all -fextend-source          \
+               -fdiag-parallel=2 -fdiag-vector=2
+#               -floop-count=5000 -finline-functions -mstack-arrays
+
+FFLAGS_QUICKDEBUG = -fcheck=bounds -minit-stack=nan -traceback
+
+FFLAGS_DYN   = $(FFLAGS)
+
+FFLAGS_DEBUG = -O1 -fpp                               \
+               -fcheck=bounds -minit-stack=nan        \
+               -std=f2003 -report-all -fextend-source \
+               -fdiag-parallel=2 -fdiag-vector=2
+#               -g -traceback -mmemory-trace
+
+
+
+##### C setting
+#CFLAGS is set in Mkinclude. CFLAGS_DEBUG is used if SCALE_DEBUG=T
+
+CC = mpincc
+
+CFLAGS_FAST  =
+CFLAGS_DEBUG = -g -traceback
+
+
+
+##### Special setting
+
+FFLAGS_OPENMP = -fopenmp
+
+# Performance monitor
+# disable
+PERF_MONIT = -no-ftrace
+# ftrace
+#PERF_MONIT = -ftrace
+
+FFLAGS_SYSDEPEND = $(PERF_MONIT) -DNFORT
+CFLAGS_SYSDEPEND = $(PERF_MONIT) -DNFORT
+
+
+
+##### Linker setting
+
+LD      = $(FC)
+LDFLAGS = $(FFLAGS)
+
+
+
+##### Execute command
+
+MPIEXEC = "mpirun -venode"
+
+
+
+################################################################################
+
+###### NetCDF library
+# Settings are inquired by using nf-config & nc-config command (see scale/Mkinclude)
+# Or, please set environment variable
+# example:
+# export SCALE_NETCDF_INCLUDE="-I/opt/share/netCDF-f_ve/4.5.4/include -I/opt/share/netCDF_tools/include -I/opt/share/netCDF-c_ve/4.8.1/include"
+# export SCLAE_NETCDF_LIBS="-L/opt/share/netCDF-f_ve/4.5.4/lib -L/opt/share/netCDF_tools/lib -L/opt/share/netCDF-c_ve/4.8.1/lib -lnetcdff -lnetcdf -lhdf5_hl -lhdf5 -lsz -lz -ldl"
+
+###### Math library
+# Default settings
+SCALE_MATHLIB_LIBS ?=
+# Or, please set environment variable
+# example:
+# export SCALE_MATHLIB_LIBS=-L$(NLC_HOME)/lib -llapack -lblas_sequential
+
+##### for frontend
+INSTALL = cp -u
+AR      = nar
+ARFLAGS = r
+RANLIB  = touch
+JOBSUB  = qsub

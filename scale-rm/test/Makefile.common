@@ -98,7 +98,7 @@ util:
 	$(MAKE) -C $(UTILDIR)
 
 run: jobshell
-	$(JOBSUB) run.sh
+	$(JOBSUB) run.sh $(JOBSUB_OPTION)
 
 jobshell:
 	@if [ -f $(SYSDEP_DIR)/Mkjobshell.$(SCALE_SYS).sh ]; then \
