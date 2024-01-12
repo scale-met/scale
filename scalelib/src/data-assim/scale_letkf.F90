@@ -3814,10 +3814,10 @@ contains
     n_ref = 0
     nobs_ze = 0
     nobs_vr = 0
-    min_obs_ze = huge(1.0d0)
-    max_obs_ze = -huge(1.0d0)
-    min_obs_vr = huge(1.0d0)
-    max_obs_vr = -huge(1.0d0)
+    min_obs_ze = huge(1.0_RP)
+    max_obs_ze = -huge(1.0_RP)
+    min_obs_vr = huge(1.0_RP)
+    max_obs_vr = -huge(1.0_RP)
 
     do idx = 1, nobs_sp
       ii = nint( ( grid_lon_ze(idx) - lon(1) ) / dlon ) + 1
@@ -4143,10 +4143,10 @@ contains
     n_ref = 0
     nobs_ze = 0
     nobs_vr = 0
-    min_obs_ze = huge(1.0d0)
-    max_obs_ze = -huge(1.0d0)
-    min_obs_vr = huge(1.0d0)
-    max_obs_vr = -huge(1.0d0)
+    min_obs_ze = huge(1.0_RP)
+    max_obs_ze = -huge(1.0_RP)
+    min_obs_vr = huge(1.0_RP)
+    max_obs_vr = -huge(1.0_RP)
 
     do idx = 1, nobs_sp
       ii = nint( ( grid_lon_ze(idx) - lon(1) ) / dlon ) + 1
@@ -5887,7 +5887,7 @@ contains
       dist_bdy = min(min(ri-xhalo, nlong+xhalo+1-ri) * DX, &
                      min(rj-yhalo, nlatg+yhalo+1-rj) * DY) / BOUNDARY_BUFFER_WIDTH
       if (dist_bdy < 1.0d0) then
-        beta = max(dist_bdy, 0.0d0)
+        beta = max(dist_bdy, 0.0_RP)
       end if
     end if
 
