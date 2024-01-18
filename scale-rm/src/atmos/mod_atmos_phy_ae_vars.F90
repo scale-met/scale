@@ -266,6 +266,7 @@ contains
 
     !$omp parallel do
     !$acc kernels
+    !$acc loop independent collapse(2)
     do j  = JS, JE
     do i  = IS, IE
        ATMOS_PHY_AE_CCN(   1:KS-1,i,j) = ATMOS_PHY_AE_CCN(KS,i,j)
@@ -342,6 +343,7 @@ contains
           ! fill K halos
           !$omp parallel do
           !$acc kernels
+          !$acc loop independent collapse(2)
           do j  = 1, JA
           do i  = 1, IA
              ATMOS_PHY_AE_CCN(   1:KS-1,i,j) = ATMOS_PHY_AE_CCN(KS,i,j)

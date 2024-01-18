@@ -982,7 +982,6 @@ contains
     !$acc         tmp, &
     !$acc         work, &
     !$acc         PTLV, Nu_f, Kh_f, q2_2, ac, betat, betaq, &
-    !$acc         flx, a, b, c, d, &
     !$acc         f_smp, f_shpgh, f_gamma, tltv25, qwtv25, tvsq25, &
     !$acc         tvsq_up, tvsq_lo, dtsq, dqsq, dcov, &
     !$acc         mflux, &

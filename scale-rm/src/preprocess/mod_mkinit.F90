@@ -664,7 +664,7 @@ contains
 
        ! make bubble coefficient
        !$acc kernels
-       !$acc loop collapse(3) reduction(.or.:error)
+       !$acc loop independent collapse(3) reduction(.or.:error)
        do j = 1, JA
        do i = 1, IA
        do k = KS, KE
@@ -2740,7 +2740,8 @@ contains
 
     !$omp parallel do private(y,yphase,geopot_hvari,del_eta,itr,ln_eta,temp_vfunc) reduction(.or.:error)
     !$acc kernels
-    !$acc loop collapse(2) reduction(.or.:error)
+    !$acc loop independent collapse(2) &
+    !$acc private(work1,work2,work3) reduction(.or.:error)
     do j = JSB, JEB
     do i = ISB, IEB            ! Note that initial fields are zonaly symmetric
 

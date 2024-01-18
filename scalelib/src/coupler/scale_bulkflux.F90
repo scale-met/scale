@@ -42,14 +42,15 @@ module scale_bulkflux
 #ifndef _OPENACC
   abstract interface
      subroutine bc( &
-          T1, T0,                 &
-          P1, P0,                 &
-          Q1, Q0,                 &
-          Uabs, Z1, PBL,          &
-          Z0M, Z0H, Z0E,          &
-          Ustar, Tstar, Qstar,    &
-          Wstar, RLmo, Ra,        &
-          FracU10, FracT2, FracQ2 )
+          T1, T0,                  &
+          P1, P0,                  &
+          Q1, Q0,                  &
+          Uabs, Z1, PBL,           &
+          Z0M, Z0H, Z0E,           &
+          Ustar, Tstar, Qstar,     &
+          Wstar, RLmo, Ra,         &
+          FracU10, FracT2, FracQ2, &
+          RLmo_in, Wstar_in        )
        use scale_precision
        implicit none
        real(RP), intent(in) :: T1  ! tempearature at the lowest atmospheric layer [K]
@@ -74,6 +75,9 @@ module scale_bulkflux
        real(RP), intent(out) :: FracU10 ! calculation parameter for U10 [-]
        real(RP), intent(out) :: FracT2  ! calculation parameter for T2 [-]
        real(RP), intent(out) :: FracQ2  ! calculation parameter for Q2 [-]
+
+       real(RP), intent(in), optional :: RLmo_in
+       real(RP), intent(in), optional :: Wstar_in
      end subroutine bc
   end interface
 
@@ -513,14 +517,15 @@ contains
 
 #ifdef _OPENACC
   subroutine BULKFLUX( &
-       T1, T0,                 &
-       P1, P0,                 &
-       Q1, Q0,                 &
-       Uabs, Z1, PBL,          &
-       Z0M, Z0H, Z0E,          &
-       Ustar, Tstar, Qstar,    &
-       Wstar, RLmo, Ra,        &
-       FracU10, FracT2, FracQ2 )
+       T1, T0,                  &
+       P1, P0,                  &
+       Q1, Q0,                  &
+       Uabs, Z1, PBL,           &
+       Z0M, Z0H, Z0E,           &
+       Ustar, Tstar, Qstar,     &
+       Wstar, RLmo, Ra,         &
+       FracU10, FracT2, FracQ2, &
+       RLmo_in, Wstar_in        )
     !$acc routine seq
     real(RP), intent(in) :: T1  ! tempearature at the lowest atmospheric layer [K]
     real(RP), intent(in) :: T0  ! skin temperature [K]
@@ -545,27 +550,32 @@ contains
     real(RP), intent(out) :: FracT2  ! calculation parameter for T2 [-]
     real(RP), intent(out) :: FracQ2  ! calculation parameter for Q2 [-]
 
+    real(RP), intent(in), optional :: RLmo_in
+    real(RP), intent(in), optional :: Wstar_in
+
     select case ( BULKFLUX_type )
     case('U95')
        call BULKFLUX_U95( &
-       T1, T0,                 &
-       P1, P0,                 &
-       Q1, Q0,                 &
-       Uabs, Z1, PBL,          &
-       Z0M, Z0H, Z0E,          &
-       Ustar, Tstar, Qstar,    &
-       Wstar, RLmo, Ra,        &
-       FracU10, FracT2, FracQ2 )
+       T1, T0,                  &
+       P1, P0,                  &
+       Q1, Q0,                  &
+       Uabs, Z1, PBL,           &
+       Z0M, Z0H, Z0E,           &
+       Ustar, Tstar, Qstar,     &
+       Wstar, RLmo, Ra,         &
+       FracU10, FracT2, FracQ2, &
+       RLmo_in, Wstar_in        )
     case('B71', 'B91W01', 'B91')
        call BULKFLUX_B91W01( &
-       T1, T0,                 &
-       P1, P0,                 &
-       Q1, Q0,                 &
-       Uabs, Z1, PBL,          &
-       Z0M, Z0H, Z0E,          &
-       Ustar, Tstar, Qstar,    &
-       Wstar, RLmo, Ra,        &
-       FracU10, FracT2, FracQ2 )
+       T1, T0,                  &
+       P1, P0,                  &
+       Q1, Q0,                  &
+       Uabs, Z1, PBL,           &
+       Z0M, Z0H, Z0E,           &
+       Ustar, Tstar, Qstar,     &
+       Wstar, RLmo, Ra,         &
+       FracU10, FracT2, FracQ2, &
+       RLmo_in, Wstar_in        )
     end select
 
     return
@@ -576,14 +586,15 @@ contains
   ! ref. Uno et al. (1995)
   !-----------------------------------------------------------------------------
   subroutine BULKFLUX_U95( &
-       T1, T0,                 &
-       P1, P0,                 &
-       Q1, Q0,                 &
-       Uabs, Z1, PBL,          &
-       Z0M, Z0H, Z0E,          &
-       Ustar, Tstar, Qstar,    &
-       Wstar, RLmo, Ra,        &
-       FracU10, FracT2, FracQ2 )
+       T1, T0,                  &
+       P1, P0,                  &
+       Q1, Q0,                  &
+       Uabs, Z1, PBL,           &
+       Z0M, Z0H, Z0E,           &
+       Ustar, Tstar, Qstar,     &
+       Wstar, RLmo, Ra,         &
+       FracU10, FracT2, FracQ2, &
+       RLmo_in, Wstar_in        )
     !$acc routine seq
     use scale_const, only: &
       GRAV   => CONST_GRAV,   &
@@ -623,6 +634,9 @@ contains
     real(RP), intent(out) :: FracU10 ! calculation parameter for U10 [-]
     real(RP), intent(out) :: FracT2  ! calculation parameter for T2 [-]
     real(RP), intent(out) :: FracQ2  ! calculation parameter for Q2 [-]
+
+    real(RP), intent(in), optional :: RLmo_in
+    real(RP), intent(in), optional :: Wstar_in
 
     ! work
     real(RP) :: UabsW
@@ -712,7 +726,11 @@ contains
     Ustar = sqrt( CmZ1 ) * UabsW
     Tstar = ChZ1 * UabsW / Ustar * ( TH1 - TH0 )
     Qstar = CqZ1 * UabsW / Ustar * ( Q1  - Q0  )
-    Wstar = 0.0_RP
+    if ( present(Wstar_in) ) then
+       Wstar = Wstar_in
+    else
+       Wstar = 0.0_RP
+    end if
 
     FracU10 = sqrt( CmZ1 / Cm10 )
     FracT2  = ChZ1 / Ch02 * sqrt( Cm02 / CmZ1 )
@@ -734,14 +752,15 @@ contains
   !-----------------------------------------------------------------------------
 !OCL SERIAL
   subroutine BULKFLUX_B91W01( &
-       T1, T0,                 &
-       P1, P0,                 &
-       Q1, Q0,                 &
-       Uabs, Z1, PBL,          &
-       Z0M, Z0H, Z0E,          &
-       Ustar, Tstar, Qstar,    &
-       Wstar, RLmo, Ra,        &
-       FracU10, FracT2, FracQ2 )
+       T1, T0,                  &
+       P1, P0,                  &
+       Q1, Q0,                  &
+       Uabs, Z1, PBL,           &
+       Z0M, Z0H, Z0E,           &
+       Ustar, Tstar, Qstar,     &
+       Wstar, RLmo, Ra,         &
+       FracU10, FracT2, FracQ2, &
+       RLmo_in, Wstar_in        )
     !$acc routine seq
     use scale_const, only: &
       GRAV    => CONST_GRAV,    &
@@ -780,6 +799,9 @@ contains
     real(RP), intent(out) :: FracU10 ! calculation parameter for U10 [-]
     real(RP), intent(out) :: FracT2  ! calculation parameter for T2 [-]
     real(RP), intent(out) :: FracQ2  ! calculation parameter for Q2 [-]
+
+    real(RP), intent(in), optional :: RLmo_in
+    real(RP), intent(in), optional :: Wstar_in
 
     ! work
     integer :: n
@@ -838,30 +860,38 @@ contains
     log_Z1ovZ0E = log( DP_Z1 / DP_Z0E )
 
 
-    ! bulk Richardson number at initial step
-    RiB0 = GRAV * DP_Z1 * ( TV1 - TV0 ) / ( TV0 * UabsC**2 )
-
-    ! first guess of inversed Obukhov length under neutral condition
-    IL = RiB0 / DP_Z1 * log_Z1ovZ0M**2 / log_Z1ovZ0H
-
     ! free convection velocity scale at initial step
-    WstarC = BULKFLUX_Wstar_min
+    if ( present(Wstar_in) ) then
+       WstarC = Wstar_in
+    else
+       WstarC = BULKFLUX_Wstar_min
+    end if
 
-    ! Successive approximation
-    !$acc loop seq
-    do n = 1, BULKFLUX_itr_sa_max
+    if ( present(RLmo_in) ) then
+       IL = RLmo_in
+    else
+       ! bulk Richardson number at initial step
+       RiB0 = GRAV * DP_Z1 * ( TV1 - TV0 ) / ( TV0 * UabsC**2 )
 
-       call calc_scales_B91W01( &
-            IL, UabsC, TH1, TH0, TV0, Q1, Q0, PBL, & ! (in)
-            log_Z1ovZ0M, log_Z1ovZ0H, log_Z1ovZ0E, & ! (in)
-            DP_Z1, DP_Z0M, DP_Z0H, DP_Z0E,         & ! (in)
-            RzM, RzH, RzE,                         & ! (in)
-            WstarC,                                & ! (inout)
-            UstarC, TstarC, QstarC, BFLX           ) ! (out)
+       ! first guess of inversed Obukhov length under neutral condition
+       IL = RiB0 / DP_Z1 * log_Z1ovZ0M**2 / log_Z1ovZ0H
 
-       ! estimate the inversed Obukhov length
-       IL = - KARMAN * GRAV * BFLX / ( UstarC**3 * TV0 )
-    end do
+       ! Successive approximation
+       !$acc loop seq
+       do n = 1, BULKFLUX_itr_sa_max
+
+          call calc_scales_B91W01( &
+               IL, UabsC, TH1, TH0, TV0, Q1, Q0, PBL, & ! (in)
+               log_Z1ovZ0M, log_Z1ovZ0H, log_Z1ovZ0E, & ! (in)
+               DP_Z1, DP_Z0M, DP_Z0H, DP_Z0E,         & ! (in)
+               RzM, RzH, RzE,                         & ! (in)
+               WstarC,                                & ! (inout)
+               UstarC, TstarC, QstarC, BFLX           ) ! (out)
+
+          ! estimate the inversed Obukhov length
+          IL = - KARMAN * GRAV * BFLX / ( UstarC**3 * TV0 )
+       end do
+    end if
 
     ! Newton-Raphson method
     !$acc loop seq

@@ -333,7 +333,9 @@ contains
                             Z0M(i,j), Z0H(i,j), Z0E(i,j), & ! [IN]
                             dUstar, dTstar, dQstar,       & ! [OUT]
                             dWstar, dRLmo, dRa,           & ! [OUT] ! not used
-                            dFracU10, dFracT2, dFracQ2    ) ! [OUT] ! not used
+                            dFracU10, dFracT2, dFracQ2,   & ! [OUT] ! not used
+                            RLmo_in = RLmo(i,j),          & ! [IN, optional]
+                            Wstar_in = Wstar(i,j)         ) ! [IN, optional]
 
              emis = ( 1.0_RP - ALBEDO(i,j,I_R_diffuse,I_R_IR) ) * STB * TMPS1(i,j)**4
 

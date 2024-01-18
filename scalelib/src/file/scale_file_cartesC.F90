@@ -1380,6 +1380,8 @@ contains
     integer, pointer :: start(:), count(:)
     integer :: dim1_S, dim1_E
     integer :: dim2_S, dim2_E
+
+    real(RP), allocatable :: buf(:,:)
     !---------------------------------------------------------------------------
 
     if ( .not. FILE_opened(fid) ) return
@@ -1442,7 +1444,13 @@ contains
           LOG_ERROR("FILE_CARTESC_read_var_2D",*) 'size of var is invalid: ', trim(varname), size(var), vsize
           call PRC_abort
        end if
-       call FILE_Read( fid, varname, var(dim1_S:dim1_E,dim2_S:dim2_E), step=step )
+       allocate( buf(dim1_S:dim1_E,dim2_S:dim2_E) )
+       call FILE_Read( fid, varname, buf(:,:), step=step )
+       !$omp workshare
+       var(dim1_S:dim1_E,dim2_S:dim2_E) = buf(:,:)
+       !$omp endworkshare
+       deallocate( buf )
+
        !$acc update device(var) if(acc_is_present(var))
     endif
 
@@ -1485,6 +1493,7 @@ contains
     integer :: dim1_S, dim1_E
     integer :: dim2_S, dim2_E
     integer :: dim3_S, dim3_E
+    real(RP), allocatable :: buf(:,:,:)
     !---------------------------------------------------------------------------
 
     if ( .not. FILE_opened(fid) ) return
@@ -1620,8 +1629,15 @@ contains
           LOG_ERROR("FILE_CARTESC_read_var_3D",*) 'size of var is invalid: ', trim(varname), size(var), vsize
           call PRC_abort
        end if
-       call FILE_Read( fid, varname, var(dim1_S:dim1_E,dim2_S:dim2_E,dim3_S:dim3_E), &
-                       step=step, allow_missing=allow_missing                        )
+
+       allocate( buf(dim1_S:dim1_E,dim2_S:dim2_E,dim3_S:dim3_E) )
+       call FILE_Read( fid, varname, buf(:,:,:), &
+                       step=step, allow_missing=allow_missing )
+       !$omp workshare
+       var(dim1_S:dim1_E,dim2_S:dim2_E,dim3_S:dim3_E) = buf(:,:,:)
+       !$omp end workshare
+       deallocate( buf )
+
        !$acc update device(var) if(acc_is_present(var))
     endif
 
@@ -1665,6 +1681,8 @@ contains
     integer :: dim2_S, dim2_E
     integer :: dim3_S, dim3_E
     integer :: dim4_S, dim4_E
+
+    real(RP), allocatable :: buf(:,:,:,:)
     !---------------------------------------------------------------------------
 
     if ( .not. FILE_opened(fid) ) return
@@ -1772,8 +1790,15 @@ contains
        end if
        dim4_S   = 1
        dim4_E   = step
-       call FILE_Read( fid, varname,                                     & ! (in)
-            var(dim1_S:dim1_E,dim2_S:dim2_E,dim3_S:dim3_E,dim4_S:dim4_E) ) ! (out)
+
+       allocate( buf(dim1_S:dim1_E,dim2_S:dim2_E,dim3_S:dim3_E,dim4_S:dim4_E) )
+       call FILE_Read( fid, varname, & ! (in)
+                       buf(:,:,:,:)  ) ! (out)
+       !$omp workshare
+       var(dim1_S:dim1_E,dim2_S:dim2_E,dim3_S:dim3_E,dim4_S:dim4_E) = buf(:,:,:,:)
+       !$omp end workshare
+       deallocate( buf )
+
        !$acc update device(var) if(acc_is_present(var))
     endif
 

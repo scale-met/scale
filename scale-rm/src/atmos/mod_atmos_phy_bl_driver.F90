@@ -373,6 +373,7 @@ contains
 
     case ( 'MYNN-JMAPPLIB' )
        !$acc kernels
+       !$acc loop independent collapse(3)
        do j = JSB, JEB
        do i = ISB, IEB
        do k = KS, KE
@@ -384,6 +385,7 @@ contains
        end do
        !$acc end kernels
        !$acc kernels
+       !$acc loop independent collapse(4)
        do iq = QS+1, QE
        do j = JSB, JEB
        do i = ISB, IEB

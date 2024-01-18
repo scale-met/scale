@@ -1218,7 +1218,7 @@ contains
     implicit none
     !---------------------------------------------------------------------------
 
-    call PROF_rapstart('OCN_SfcExch', 2)
+    call PROF_rapstart('OCN_SfcExch', 3)
 
     if ( OCEAN_do ) then
        call CPL_getATM_OCN( ATMOS_TEMP       (:,:),     & ! [OUT]
@@ -1237,7 +1237,7 @@ contains
                             ATMOS_SFLX_ENGI  (:,:)      ) ! [OUT]
     endif
 
-    call PROF_rapend  ('OCN_SfcExch', 2)
+    call PROF_rapend  ('OCN_SfcExch', 3)
 
     return
   end subroutine OCEAN_SURFACE_GET
@@ -1273,7 +1273,7 @@ contains
     logical, intent(in) :: countup
     !---------------------------------------------------------------------------
 
-    call PROF_rapstart('OCN_SfcExch', 2)
+    call PROF_rapstart('OCN_SfcExch', 3)
 
     if ( OCEAN_do ) then
        call CPL_putOCN( OCEAN_SFC_TEMP  (:,:),     & ! [IN]
@@ -1296,7 +1296,7 @@ contains
                         countup                    ) ! [IN]
     endif
 
-    call PROF_rapend  ('OCN_SfcExch', 2)
+    call PROF_rapend  ('OCN_SfcExch', 3)
 
     return
   end subroutine OCEAN_SURFACE_SET

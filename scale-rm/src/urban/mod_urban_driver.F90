@@ -691,7 +691,7 @@ contains
     integer  :: i, j
     !---------------------------------------------------------------------------
 
-    call PROF_rapstart('URB_SfcExch', 2)
+    call PROF_rapstart('URB_SfcExch', 3)
 
     !$acc data create(ATMOS_SFLX_rad_dn)
 
@@ -730,7 +730,7 @@ contains
 
     !$acc end data
 
-    call PROF_rapend  ('URB_SfcExch', 2)
+    call PROF_rapend  ('URB_SfcExch', 3)
 
     return
   end subroutine URBAN_SURFACE_GET
@@ -770,7 +770,7 @@ contains
     logical, intent(in) :: countup
     !---------------------------------------------------------------------------
 
-    call PROF_rapstart('URB_SfcExch', 2)
+    call PROF_rapstart('URB_SfcExch', 3)
 
     if ( URBAN_do ) then
        call CPL_putURB( URBAN_SFC_TEMP  (:,:),     & ! [IN]
@@ -796,7 +796,7 @@ contains
                         countup                    ) ! [IN]
     endif
 
-    call PROF_rapend  ('URB_SfcExch', 2)
+    call PROF_rapend  ('URB_SfcExch', 3)
 
     return
   end subroutine URBAN_SURFACE_SET

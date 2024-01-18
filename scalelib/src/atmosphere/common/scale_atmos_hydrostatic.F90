@@ -408,7 +408,8 @@ contains
     !--- from surface to lowermost atmosphere
     !$omp parallel do OMP_SCHEDULE_ collapse(2) private(flag) reduction(.and.:converged)
     !$acc kernels
-    !$acc loop collapse(2) private(flag) reduction(.and.: converged)
+    !$acc loop independent collapse(2) &
+    !$acc private(flag) reduction(.and.: converged)
     do j = JS, JE
     do i = IS, IE
        call ATMOS_HYDROSTATIC_buildrho_1D( KA, KS, KE, &
@@ -1014,7 +1015,8 @@ contains
 
     !$omp parallel do OMP_SCHEDULE_ collapse(2) private(flag) reduction(.and.:converged)
     !$acc kernels copyin(pott_L2, qv_l2, qc_l2, dens_l1, pott_L1, qv_L1, qc_L1, dz) copyout(dens_L2, temp_L2, pres_L2)
-    !$acc loop collapse(2) private(flag) reduction(.and.: converged)
+    !$acc loop independent collapse(2) &
+    !$acc private(flag) reduction(.and.: converged)
     do j = JS, JE
     do i = IS, IE
        call ATMOS_HYDROSTATIC_buildrho_atmos_0D( &
@@ -1072,7 +1074,8 @@ contains
 
     !$omp parallel do OMP_SCHEDULE_ collapse(2) private(flag) reduction(.and.:converged)
     !$acc kernels copyin(pott_L1, qv_L1, qc_L1, dens_L2, pott_L2, qv_L2, qc_L2, dz) copyout(dens_L1, temp_L1, pres_L1)
-    !$acc loop collapse(2) private(flag) reduction(.and.: converged)
+    !$acc loop independent collapse(2) &
+    !$acc private(flag) reduction(.and.: converged)
     do j = JS, JE
     do i = IS, IE
        call ATMOS_HYDROSTATIC_buildrho_atmos_0D( &
@@ -1152,7 +1155,8 @@ contains
 
     !$omp parallel do OMP_SCHEDULE_ collapse(2) private(flag) reduction(.and.:converged)
     !$acc kernels copyin(pott, qv, qc, dz, kref_) copy(dens) copyout(temp, pres)
-    !$acc loop collapse(2) private(flag) reduction(.and.: converged)
+    !$acc loop independent collapse(2) &
+    !$acc private(flag) reduction(.and.: converged)
     do j = JS, JE
     do i = IS, IE
        if ( kref_(i,j) < KE ) then
@@ -1225,7 +1229,8 @@ contains
 
        !$omp parallel do OMP_SCHEDULE_ collapse(2) private(flag) reduction(.and.:converged)
        !$acc kernels copyin(pott, qv, qc, dz, kref_) copy(dens) copyout(temp, pres)
-       !$acc loop collapse(2) private(flag) reduction(.and.: converged)
+       !$acc loop independent collapse(2) &
+       !$acc private(flag) reduction(.and.: converged)
        do j = JS, JE
        do i = IS, IE
           if ( kref_(i,j) > KS ) then
@@ -1247,7 +1252,8 @@ contains
     else
        !$omp parallel do OMP_SCHEDULE_ collapse(2) private(flag) reduction(.and.:converged)
        !$acc kernels copyin(pott, qv, qc, dz) copy(dens) copyout(temp, pres)
-       !$acc loop collapse(2) private(flag) reduction(.and.: converged)
+       !$acc loop independent collapse(2) &
+       !$acc private(flag) reduction(.and.: converged)
        do j = JS, JE
        do i = IS, IE
           call ATMOS_HYDROSTATIC_buildrho_atmos_rev_1D( KA, KS, KE,                        &
@@ -1464,7 +1470,8 @@ contains
     !--- from surface to lowermost atmosphere
     !$omp parallel do OMP_SCHEDULE_ collapse(2) private(flag) reduction(.and.:converged)
     !$acc kernels copyin(temp, qv, qc, pres_sfc, temp_sfc, qv_sfc, qc_sfc, cz, fz) copyout(dens, pott, pres, pott_sfc)
-    !$acc loop collapse(2) private(flag) reduction(.and.: converged)
+    !$acc loop independent collapse(2) &
+    !$acc private(flag) reduction(.and.: converged)
     do j = JS, JE
     do i = IS, IE
        call ATMOS_HYDROSTATIC_buildrho_bytemp_1D( KA, KS, KE, &
@@ -1758,7 +1765,8 @@ contains
 
     !$omp parallel do OMP_SCHEDULE_ collapse(2) private(flag) reduction(.and.:converged)
     !$acc kernels copyin(temp, qv, qc, dz) copy(dens) copyout(pott, pres)
-    !$acc loop collapse(2) private(flag) reduction(.and.: converged)
+    !$acc loop independent collapse(2) &
+    !$acc private(flag) reduction(.and.: converged)
     do j = JS, JE
     do i = IS, IE
        call ATMOS_HYDROSTATIC_buildrho_bytemp_atmos_1D( KA, KS, KE, &

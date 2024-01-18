@@ -201,6 +201,7 @@ contains
     !$acc data copy(ATMOS_PHY_LT_Epot)
 
     !$acc kernels
+    !$acc loop independent collapse(2)
     do j  = JS, JE
     do i  = IS, IE
        ATMOS_PHY_LT_Epot(   1:KS-1,i,j) = ATMOS_PHY_LT_Epot(KS,i,j)
@@ -287,6 +288,7 @@ contains
 
           ! fill K halos
           !$acc kernels
+          !$acc loop independent collapse(2)
           do j  = 1, JA
           do i  = 1, IA
              ATMOS_PHY_LT_Epot(   1:KS-1,i,j) = ATMOS_PHY_LT_Epot(KS,i,j)
