@@ -150,8 +150,9 @@ contains
     use scale_prc, only: &
        PRC_isMaster
     use scale_const, only: &
-       GRAV => CONST_GRAV, &
-       D2R  => CONST_D2R
+       UNDEF => CONST_UNDEF, &
+       GRAV  => CONST_GRAV, &
+       D2R   => CONST_D2R
     use scale_file, only: &
        FILE_get_dimLength, &
        FILE_get_attribute, &
@@ -199,17 +200,23 @@ contains
          SCALE_LATLON_CATALOGUE
 
     character(len=H_SHORT) :: mapping_name
+    real(DP) :: false_easting
+    real(DP) :: false_northing
     real(DP) :: longitude_of_central_meridian
     real(DP) :: longitude_of_projection_origin
     real(DP) :: latitude_of_projection_origin
+    real(DP) :: straight_vertical_longitude_from_pole
     real(DP) :: standard_parallel(2)
     real(DP) :: rotation
 
     namelist / NetCDF_MAPPROJECTION / &
          mapping_name, &
+         false_easting, &
+         false_northing, &
          longitude_of_central_meridian, &
          longitude_of_projection_origin, &
          latitude_of_projection_origin, &
+         straight_vertical_longitude_from_pole, &
          standard_parallel, &
          rotation
 
@@ -268,11 +275,14 @@ contains
     if ( do_read ) then
 
        mapping_name = ""
-       longitude_of_central_meridian = 0.0D0
-       longitude_of_projection_origin = 0.0D0
-       latitude_of_projection_origin = 0.0D0
-       standard_parallel = (/ 0.0D0, 0.0D0 /)
-       rotation = 0.0D0
+       false_easting = UNDEF
+       false_easting = UNDEF
+       longitude_of_central_meridian = UNDEF
+       longitude_of_projection_origin = UNDEF
+       latitude_of_projection_origin = UNDEF
+       straight_vertical_longitude_from_pole = UNDEF
+       standard_parallel = (/ UNDEF, UNDEF /)
+       rotation = UNDEF
 
        vars_atmos = hash_table()
 
@@ -346,19 +356,28 @@ contains
              call FILE_get_attribute( fid_atm, "QV", "grid_mapping", map, existed=exist )
              if ( exist ) then
                 call FILE_get_attribute( fid_atm, map, "grid_mapping_name", mapping_name )
-                call FILE_get_attribute( fid_atm, map, "longitude_of_central_meridian", longitude_of_central_meridian )
-                call FILE_get_attribute( fid_atm, map, "longitude_of_projection_origin", longitude_of_projection_origin )
-                call FILE_get_attribute( fid_atm, map, "latitude_of_projection_origin", latitude_of_projection_origin )
-                call FILE_get_attribute( fid_atm, map, "standard_parallel", standard_parallel )
-                call FILE_get_attribute( fid_atm, map, "rotation", rotation )
+
+                call FILE_get_attribute( fid_atm, map, "false_easting", false_easting, existed=exist )
+                call FILE_get_attribute( fid_atm, map, "false_northing", false_northing, existed=exist )
+                call FILE_get_attribute( fid_atm, map, "longitude_of_central_meridian", longitude_of_central_meridian, existed=exist )
+                call FILE_get_attribute( fid_atm, map, "longitude_of_projection_origin", longitude_of_projection_origin, existed=exist )
+                call FILE_get_attribute( fid_atm, map, "latitude_of_projection_origin", latitude_of_projection_origin, existed=exist )
+                call FILE_get_attribute( fid_atm, map, "straight_vertical_longitude_from_pole", straight_vertical_longitude_from_pole, existed=exist )
+                call FILE_get_attribute( fid_atm, map, "standard_parallel", standard_parallel(:), existed=exist )
+                if ( .not. exist ) &
+                call FILE_get_attribute( fid_atm, map, "standard_parallel", standard_parallel(1:1), existed=exist )
+                call FILE_get_attribute( fid_atm, map, "rotation", rotation, existed=exist )
              end if
           end if
 
           call COMM_bcast( mapping_name )
 
+          call COMM_bcast( false_easting )
+          call COMM_bcast( false_northing )
           call COMM_bcast( longitude_of_central_meridian )
           call COMM_bcast( longitude_of_projection_origin )
           call COMM_bcast( latitude_of_projection_origin )
+          call COMM_bcast( straight_vertical_longitude_from_pole )
           call COMM_bcast( 2, standard_parallel )
           call COMM_bcast( rotation )
 
@@ -526,11 +545,15 @@ contains
        end if
 
        mapping_info%mapping_name = mapping_name
-       mapping_info%longitude_of_central_meridian = longitude_of_central_meridian
-       mapping_info%longitude_of_projection_origin = longitude_of_projection_origin
-       mapping_info%latitude_of_projection_origin = latitude_of_projection_origin
-       mapping_info%standard_parallel = standard_parallel
-       mapping_info%rotation = rotation
+       if ( false_easting /= UNDEF ) mapping_info%false_easting = false_easting
+       if ( false_northing /= UNDEF ) mapping_info%false_northing = false_northing
+       if ( longitude_of_central_meridian /= UNDEF ) mapping_info%longitude_of_central_meridian = longitude_of_central_meridian
+       if ( longitude_of_projection_origin /= UNDEF ) mapping_info%longitude_of_projection_origin = longitude_of_projection_origin
+       if ( latitude_of_projection_origin /= UNDEF ) mapping_info%latitude_of_projection_origin = latitude_of_projection_origin
+       if ( straight_vertical_longitude_from_pole /= UNDEF ) mapping_info%straight_vertical_longitude_from_pole = straight_vertical_longitude_from_pole
+       if ( standard_parallel(1) /= UNDEF ) mapping_info%standard_parallel(1) = standard_parallel(1)
+       if ( standard_parallel(2) /= UNDEF ) mapping_info%standard_parallel(2) = standard_parallel(2)
+       if ( rotation /= UNDEF ) mapping_info%rotation = rotation
 
     end if
 
