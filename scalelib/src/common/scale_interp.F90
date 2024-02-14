@@ -478,7 +478,8 @@ contains
        x, y,               &
        idx_i, idx_j,       &
        hfact,              &
-       zonal, pole         )
+       zonal, pole,        &
+       missing             )
     use scale_prc, only: &
        PRC_abort
     use scale_const, only: &
@@ -501,11 +502,13 @@ contains
 
     logical, intent(in), optional :: zonal
     logical, intent(in), optional :: pole
+    logical, intent(in), optional :: missing
 
     real(RP) :: u, v
     integer  :: inc_i, inc_j
     logical  :: error, err
     logical  :: zonal_, pole_
+    logical  :: missing_
 
     real(RP) :: workh(4)
     integer  :: worki(4), workj(4)
@@ -529,12 +532,18 @@ contains
     else
        pole_ = .false.
     end if
+    if ( present(missing) ) then
+       missing_ = missing
+    else
+       missing_ = .false.
+    end if
 
     ii0 = ( IA_ref + 1 ) / 2
     jj0 = ( JA_ref + 1 ) / 2
     error = .false.
 
     ite_max = IA_ref + JA_ref
+
 
     !$omp parallel do &
     !$omp private(inc_i,inc_j,ii,jj,i1,i2,i3,i4,j1,j2,j3,j4,u,v,err,workh,worki,workj) &
@@ -676,14 +685,17 @@ contains
           idx_i(i,j,:) = 1
           idx_j(i,j,:) = 1
           hfact(i,j,:) = 0.0_RP
-          error = .true.
+          if ( .not. missing_ ) then
+             error = .true.
 #ifndef _OPENACC
-          LOG_ERROR("INTERP_factor2d_linear_xy",*) 'iteration max has been reached', i, j, x(i), y(j)
-          LOG_ERROR_CONT(*) minval(x_ref), maxval(x_ref), minval(y_ref), maxval(y_ref)
-          LOG_ERROR_CONT(*) x_ref(1,1), x_ref(IA_ref,1),x_ref(1,JA_ref)
-          LOG_ERROR_CONT(*) y_ref(1,1), y_ref(IA_ref,1),y_ref(1,JA_ref)
-          call PRC_abort
+             LOG_ERROR("INTERP_factor2d_linear_xy",*) 'iteration max has been reached'
+             LOG_ERROR_CONT(*) 'The point may be out of region.', i, j, x(i), y(j)
+             LOG_ERROR_CONT(*) minval(x_ref), maxval(x_ref), minval(y_ref), maxval(y_ref)
+             LOG_ERROR_CONT(*) x_ref(1,1), x_ref(IA_ref,1),x_ref(1,JA_ref),x_ref(IA_ref,JA_ref)
+             LOG_ERROR_CONT(*) y_ref(1,1), y_ref(IA_ref,1),y_ref(1,JA_ref),y_ref(IA_ref,JA_ref)
+             call PRC_abort
 #endif
+          end if
        end if
 
 #ifndef _OPENACC
@@ -1030,7 +1042,8 @@ contains
        idx_k,                  &
        vfact,                  &
        flag_extrap,            &
-       zonal, pole             )
+       zonal, pole,            &
+       missing                 )
     implicit none
     integer,  intent(in)  :: KA_ref, KS_ref, KE_ref        ! number of z-direction    (reference)
     integer,  intent(in)  :: IA_ref                        ! number of x-direction    (reference)
@@ -1054,6 +1067,7 @@ contains
     logical,  intent(in), optional :: flag_extrap          ! when true, vertical extrapolation will be executed (just copy)
     logical,  intent(in), optional :: zonal
     logical,  intent(in), optional :: pole
+    logical,  intent(in), optional :: missing
 
     integer :: i, j, ii, jj, n
 
@@ -1065,7 +1079,8 @@ contains
          x_ref(:,:), y_ref(:,:),                   & ! [IN]
          x(:), y(:),                               & ! [IN]
          idx_i(:,:,:), idx_j(:,:,:), hfact(:,:,:), & ! [OUT]
-         zonal = zonal, pole = pole                ) ! [IN]
+         zonal = zonal, pole = pole,               & ! [IN]
+         missing = missing                         ) ! [IN]
 
     call PROF_rapstart('INTERP_fact',3)
 
