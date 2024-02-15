@@ -27,6 +27,7 @@ typedef struct{
   char     dim_name[File_HSHORT*RANK_MAX];
   int32_t  dim_size[RANK_MAX];
   int32_t  step;
+  _Bool    has_tdim;
   real64_t time_start;
   real64_t time_end;
   char     time_units[File_HMID];

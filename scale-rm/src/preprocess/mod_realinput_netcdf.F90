@@ -2459,10 +2459,12 @@ contains
     integer :: kmax
     integer :: cxs, cxe, cys, cye
     integer :: pxs, pxe, pys, pye
+    logical :: has_tdim
     logical :: transpose
     logical :: exist_
     integer :: i0, i1, j0, j1
     integer :: kst, ist, jst
+    integer :: it_
     integer :: k, i, j, n
 
     if ( .not. associated(var) ) then
@@ -2487,7 +2489,7 @@ contains
           return
        end if
 
-       call FILE_get_dataInfo( fid, var%name, existed=exist_ )
+       call FILE_get_dataInfo( fid, var%name, has_tdim=has_tdim, existed=exist_ )
        if ( .not. exist_ ) then
           if ( present(exist) ) then
              exist = .false.
@@ -2496,6 +2498,12 @@ contains
              LOG_ERROR("read3d",*) 'data is not found: ', trim(var%name)
              call PRC_abort
           end if
+       end if
+
+       if ( has_tdim ) then
+          it_ = it
+       else
+          it_ = 1
        end if
 
        kmax = KE_org - KS_org + 1
@@ -2541,7 +2549,7 @@ contains
              if ( transpose ) then
                 allocate( buf3d(pxs+i0:pxe-i1,pys+j0:pye-j1,KS_org:KE_org+kst) )
                 call FILE_read( fids(n), var%name, buf3d(:,:,:), &
-                     step=it, start=(/pxs+i0,pys+j0,1/), count=(/pxe-pxs+1-i1-i0,pye-pys+1-j1-j0,kmax+kst/) )
+                     step=it_, start=(/pxs+i0,pys+j0,1/), count=(/pxe-pxs+1-i1-i0,pye-pys+1-j1-j0,kmax+kst/) )
                 if ( var%zstg ) then
                    !$omp parallel do
                    do j = j0, pye-pys-j1
@@ -2581,7 +2589,7 @@ contains
              else
                 allocate( buf3d(KS_org:KE_org+kst,pxs+i0:pxe-i1,pys+j0:pye-j1) )
                 call FILE_read( fids(n), var%name, buf3d(:,:,:), &
-                     step=it, start=(/1,pxs+i0,pys+j0/), count=(/kmax+kst,pxe-pxs+1-i1-i0,pye-pys+1-j1-j0/) )
+                     step=it_, start=(/1,pxs+i0,pys+j0/), count=(/kmax+kst,pxe-pxs+1-i1-i0,pye-pys+1-j1-j0/) )
                 if ( var%zstg ) then
                    !$omp parallel do
                    do j = j0, pye-pys-j1
@@ -2633,7 +2641,7 @@ contains
              call FILE_read( &
                   fid, var%name, &
                   buf3d(:,:,:), &
-                  step=it, &
+                  step=it_, &
                   start=(/IS_org,JS_org,1/), &
                   count=(/IA_org+ist,JA_org+jst,kmax+kst/))
              if ( var%zstg ) then
@@ -2679,7 +2687,7 @@ contains
              call FILE_read( &
                   fid, var%name, &
                   buf3d(:,:,:), &
-                  step=it, &
+                  step=it_, &
                   start=(/1,IS_org,JS_org/), &
                   count=(/kmax+kst,IA_org+ist,JA_org+jst/) )
              if ( var%zstg ) then
@@ -2771,7 +2779,9 @@ contains
     integer :: i0, i1, j0, j1
     integer :: ist, jst
 
+    logical :: has_tdim
     logical :: exist_
+    integer :: it_
     integer :: n, i, j
 
     if ( .not. associated(var) ) then
@@ -2796,7 +2806,7 @@ contains
           return
        end if
 
-       call FILE_get_dataInfo( fid, var%name, existed=exist_ )
+       call FILE_get_dataInfo( fid, var%name, has_tdim=has_tdim, existed=exist_ )
        if ( .not. exist_ ) then
           if ( present(exist) ) then
              exist = .false.
@@ -2805,6 +2815,12 @@ contains
              LOG_ERROR("read2d",*) 'data is not found: ', trim(var%name)
              call PRC_abort
           end if
+       end if
+
+       if ( has_tdim ) then
+          it_ = it
+       else
+          it_ = 1
        end if
 
        if ( var%xstg ) then
@@ -2839,7 +2855,7 @@ contains
              j1 = max(cye - JE_org - jst, 0)
              allocate( buf2d(pxs+i0:pxe-i1,pys+j0:pye-j1) )
              call FILE_read( fids(n), var%name, buf2d(:,:), &
-                  step=it, start=(/pxs+i0,pys+j0/), count=(/pxe-pxs+1-i1-i0,pye-pys+1-j1-j0/) )
+                  step=it_, start=(/pxs+i0,pys+j0/), count=(/pxe-pxs+1-i1-i0,pye-pys+1-j1-j0/) )
              !$omp parallel do
              do j = j0, pye-pys-j1
              do i = i0, pxe-pxs-i1
@@ -2889,7 +2905,7 @@ contains
           call FILE_read( &
                fid, var%name, &
                work(:,:), &
-               step=it, &
+               step=it_, &
                start=(/IS_org,JS_org/), &
                count=(/IA_org+ist,JA_org+jst/) )
           if ( var%xstg ) then
@@ -2946,7 +2962,10 @@ contains
 
     logical, intent(out), optional :: exist
 
+    logical :: has_tdim
     logical :: exist_
+
+    integer :: it_
 
     if ( .not. associated(var) ) then
        if ( present(exist) ) then
@@ -2970,7 +2989,7 @@ contains
           return
        end if
 
-       call FILE_get_dataInfo( fid, var%name, existed=exist_ )
+       call FILE_get_dataInfo( fid, var%name, has_tdim=has_tdim, existed=exist_ )
        if ( .not. exist_ ) then
           if ( present(exist) ) then
              exist = .false.
@@ -2981,7 +3000,13 @@ contains
           end if
        end if
 
-       call FILE_read( fid, var%name, val(:), step=it )
+       if ( has_tdim ) then
+          it_ = it
+       else
+          it_ = 1
+       end if
+
+       call FILE_read( fid, var%name, val(:), step=it_ )
        if ( var%fact .ne. 1.0_RP .or. var%offset .ne. 0.0_RP ) then
           val(:) = val(:) * var%fact + var%offset
        end if
