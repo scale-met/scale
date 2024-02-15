@@ -611,11 +611,13 @@ int file_get_datainfo_c(       datainfo_t *dinfo,   // (out)
 	  dinfo->calendar[0] = '\0';
 	}
       }
+      dinfo->has_tdim = 1;
     } else {
       if ( step > 1 ) { // if variable does not have time dimention, step > 1 should not exist
 	fprintf(stderr, "requested step is larger than tdim: step=%d tdim=%d\n", step, tdim);
 	return ERROR_CODE;
       }
+      dinfo->has_tdim = 0;
       dinfo->time_start = 0.0;
       dinfo->time_end = 0.0;
       dinfo->time_units[0] = '\0';
@@ -626,6 +628,7 @@ int file_get_datainfo_c(       datainfo_t *dinfo,   // (out)
     dinfo->description[0]   = '\0';
     dinfo->units[0]         = '\0';
     dinfo->standard_name[0] = '\0';
+    dinfo->has_tdim = 0;
     dinfo->time_start = 0.0;
     dinfo->time_end = 0.0;
     dinfo->time_units[0] = '\0';

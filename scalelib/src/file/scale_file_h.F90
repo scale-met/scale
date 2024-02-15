@@ -61,6 +61,7 @@ module scale_file_h
      character(c_char) :: dim_name(FILE_HSHORT,RANK_MAX)
      integer           :: dim_size(RANK_MAX)
      integer           :: step
+     logical(c_bool)   :: has_tdim
      real(DP)          :: time_start
      real(DP)          :: time_end
      character(c_char) :: time_units(FILE_HMID)

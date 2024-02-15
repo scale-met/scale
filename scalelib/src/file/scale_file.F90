@@ -3047,6 +3047,7 @@ contains
       basename, varname, &
       dims,              &
       rankid, single,    &
+      has_tdim,          &
       error              )
     implicit none
 
@@ -3055,6 +3056,7 @@ contains
     integer,          intent(out)           :: dims(:)
     integer,          intent( in), optional :: rankid
     logical,          intent( in), optional :: single
+    logical,          intent(out), optional :: has_tdim
     logical,          intent(out), optional :: error
 
     integer :: fid
@@ -3065,9 +3067,10 @@ contains
                     fid,                         & ! (out)
                     rankid=rankid, single=single ) ! (in)
 
-    call FILE_get_shape_fid( fid, varname, & ! (in)
-                             dims(:),      & ! (out)
-                             error = error ) ! (out)
+    call FILE_get_shape_fid( fid, varname,        & ! (in)
+                             dims(:),             & ! (out)
+                             has_tdim = has_tdim, & ! (out)
+                             error = error        ) ! (out)
 
     return
   end subroutine FILE_get_shape_fname
@@ -3075,13 +3078,13 @@ contains
   subroutine FILE_get_shape_fid( &
        fid, varname, &
        dims,         &
+       has_tdim,     &
        error         )
     implicit none
     integer,          intent( in)           :: fid
     character(len=*), intent( in)           :: varname
-
     integer,          intent(out)           :: dims(:)
-
+    logical,          intent(out), optional :: has_tdim
     logical,          intent(out), optional :: error
 
     type(datainfo) :: dinfo
@@ -3130,6 +3133,7 @@ contains
        dims(n) = dinfo%dim_size(n)
     end do
 
+    if ( present(has_tdim) ) has_tdim = dinfo%has_tdim
     if ( present(error) ) error = .false.
 
     return
@@ -3263,8 +3267,9 @@ contains
        datatype,                           &
        dim_rank, dim_name, dim_size,       &
        natts, att_name, att_type, att_len, &
-       time_start, time_end,               &
-       time_units, calendar                )
+       has_tdim,                           &
+       time_start, time_end, time_units,   &
+       calendar                            )
     implicit none
 
     character(len=*),           intent(in)  :: basename
@@ -3285,6 +3290,7 @@ contains
     character(len=FILE_HSHORT), intent(out), optional :: att_name(:)
     integer,                    intent(out), optional :: att_type(:)
     integer,                    intent(out), optional :: att_len (:)
+    logical,                    intent(out), optional :: has_tdim
     real(DP),                   intent(out), optional :: time_start
     real(DP),                   intent(out), optional :: time_end
     character(len=FILE_HMID),   intent(out), optional :: time_units
@@ -3305,14 +3311,16 @@ contains
                     fid,                          & ! [OUT]
                     rankid=rankid, single=single_ ) ! [IN]
 
-    call FILE_get_dataInfo_fid( fid, varname,                              & ! [IN]
-                                istep,                                     & ! [IN] , optional
-                                existed,                                   & ! [OUT], optional
-                                description, units, standard_name,         & ! [OUT], optional
-                                datatype,                                  & ! [OUT], optional
-                                dim_rank, dim_name, dim_size,              & ! [OUT], optional
-                                natts, att_name, att_type, att_len,        & ! [OUT], optional
-                                time_start, time_end, time_units, calendar ) ! [OUT], optional
+    call FILE_get_dataInfo_fid( fid, varname,                       & ! [IN]
+                                istep,                              & ! [IN] , optional
+                                existed,                            & ! [OUT], optional
+                                description, units, standard_name,  & ! [OUT], optional
+                                datatype,                           & ! [OUT], optional
+                                dim_rank, dim_name, dim_size,       & ! [OUT], optional
+                                natts, att_name, att_type, att_len, & ! [OUT], optional
+                                has_tdim,                           & ! [OUT], optional
+                                time_start, time_end, time_units,   & ! [OUT], optional
+                                calendar                            ) ! [OUT], optional
 
     return
   end subroutine FILE_get_dataInfo_fname
@@ -3325,8 +3333,9 @@ contains
        datatype,                           &
        dim_rank, dim_name, dim_size,       &
        natts, att_name, att_type, att_len, &
-       time_start, time_end,               &
-       time_units, calendar                )
+       has_tdim,                           &
+       time_start, time_end, time_units,   &
+       calendar                            )
     implicit none
 
     integer,          intent(in)  :: fid
@@ -3345,6 +3354,7 @@ contains
     character(len=*), intent(out), optional :: att_name(:)
     integer,          intent(out), optional :: att_type(:)
     integer,          intent(out), optional :: att_len (:)
+    logical,          intent(out), optional :: has_tdim
     real(DP),         intent(out), optional :: time_start
     real(DP),         intent(out), optional :: time_end
     character(len=*), intent(out), optional :: time_units
@@ -3454,6 +3464,10 @@ contains
        else
           call fstr(calendar, dinfo%calendar)
        end if
+    end if
+
+    if ( present(has_tdim) ) then
+       has_tdim = dinfo%has_tdim
     end if
 
     if ( present(time_start)  ) then
