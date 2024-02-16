@@ -2737,7 +2737,7 @@ contains
     enddo
 
     do iq = 1, QA
-       if ( iq >= QS_MP .and. iq <= QS_MP ) cycle
+       if ( iq >= QS_MP .and. iq <= QE_MP ) cycle
        if ( .not. qtrc_flag(iq) ) cycle
        call FILE_CARTESC_write_var( fid, vid(5+iq),QTRC(:,:,:,iq:iq), TRACER_NAME(iq), &
                               'ZXYT', timeintv, timeofs=timeofs                  )
