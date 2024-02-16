@@ -167,7 +167,7 @@ module mod_realinput
 
   ! for namelist
   integer,                private :: NUMBER_OF_FILES            = 1
-  integer,                private :: NUMBER_OF_TSTEPS           = 1       ! num of time steps in one file
+  integer,                private :: NUMBER_OF_TSTEPS           = -1      ! num of time steps in one file
   integer,                private :: NUMBER_OF_SKIP_TSTEPS      = 0       ! num of skipped first several data
 
   logical,                private :: SERIAL_PROC_READ           = .true.  ! read by one MPI process and broadcast
@@ -332,9 +332,13 @@ contains
                            timelen,          & ! [OUT]
                            qtrc_flag(:)      ) ! [OUT]
 
-    if ( timelen > 0 ) then
-       NUMBER_OF_TSTEPS = timelen ! read from file
-    endif
+    if ( timelen < NUMBER_OF_TSTEPS ) then
+       LOG_ERROR("REALINPUT_atmos",*) 'time dimension in file is shorter than NUMBER_OF_TSTEPS', timelen, NUMBER_OF_TSTEPS
+       call PRC_abort
+    end if
+    if ( NUMBER_OF_TSTEPS < 1 ) then
+       NUMBER_OF_TSTEPS = timelen
+    end if
 
     LOG_NEWLINE
     LOG_INFO("REALINPUT_atmos",*) 'Number of temporal data in each file : ', NUMBER_OF_TSTEPS
@@ -678,7 +682,7 @@ contains
     integer :: ldims(3), odims(2)
 
     integer :: totaltimesteps = 1
-    integer :: timelen
+    integer :: timelen_land, timelen_ocean
     integer :: ierr
 
     character(len=H_LONG) :: basename_out_mod
@@ -861,7 +865,8 @@ contains
     call ParentSurfaceSetup( ldims, odims,           & ![OUT]
                              mdlid_land,             & ![OUT]
                              mdlid_ocean,            & ![OUT]
-                             timelen,                & ![OUT]
+                             timelen_land,           & ![OUT]
+                             timelen_ocean,          & ![OUT]
                              BASENAME_ORG_LAND,      & ![IN]
                              BASENAME_ORG_OCEAN,     & ![IN]
                              BASENAME_LAND,          & ![IN]
@@ -876,9 +881,22 @@ contains
                              intrp_ocean_TEMP,       & ![IN]
                              intrp_ocean_sfc_TEMP    ) ![IN]
 
-    if ( timelen > 0 ) then
-       NUMBER_OF_TSTEPS_OCEAN = timelen ! read from file
-    endif
+    if ( timelen_land < NUMBER_OF_TSTEPS_LAND ) then
+       LOG_ERROR("REALINPUT_surface",*) 'time dimension in file is shorter than NUMBER_OF_TSTEPS_LAND', timelen_land, NUMBER_OF_TSTEPS_LAND
+       call PRC_abort
+    end if
+
+    if ( timelen_ocean < NUMBER_OF_TSTEPS_OCEAN ) then
+       LOG_ERROR("REALINPUT_surface",*) 'time dimension in file is shorter than NUMBER_OF_TSTEPS_OCEAN', timelen_ocean, NUMBER_OF_TSTEPS_OCEAN
+       call PRC_abort
+    end if
+
+    if ( NUMBER_OF_TSTEPS_LAND < 1 ) then
+       NUMBER_OF_TSTEPS_LAND = timelen_land
+    end if
+    if ( NUMBER_OF_TSTEPS_OCEAN < 1 ) then
+       NUMBER_OF_TSTEPS_OCEAN = timelen_ocean
+    end if
 
     totaltimesteps = NUMBER_OF_FILES_OCEAN * NUMBER_OF_TSTEPS_OCEAN
 
@@ -2753,7 +2771,8 @@ contains
   subroutine ParentSurfaceSetup( &
        ldims, odims,        &
        lmdlid, omdlid,      &
-       timelen,             &
+       timelen_land,        &
+       timelen_ocean,       &
        basename_org_land,   &
        basename_org_ocean,  &
        basename_land,       &
@@ -2785,7 +2804,8 @@ contains
     integer,          intent(out) :: odims(2) ! dims for ocean
     integer,          intent(out) :: lmdlid   ! model id for land
     integer,          intent(out) :: omdlid   ! model id for ocean
-    integer,          intent(out) :: timelen  ! number of time steps in ocean file
+    integer,          intent(out) :: timelen_land  ! number of time steps in land file
+    integer,          intent(out) :: timelen_ocean ! number of time steps in ocean file
 
     character(len=*), intent(in)  :: basename_org_land
     character(len=*), intent(in)  :: basename_org_ocean
@@ -2836,7 +2856,7 @@ contains
 
        lmdlid = iNetCDF
        call ParentLandSetupNetCDF( ldims,              & ! (out)
-                                   timelen,            & ! (out)
+                                   timelen_land,       & ! (out)
                                    lon_all, lat_all,   & ! (out)
                                    basename_org_land,  & ! (in)
                                    basename_land,      & ! (in)
@@ -2848,7 +2868,7 @@ contains
 
        lmdlid = iGrADS
        if ( do_read_land ) call ParentLandSetupGrADS( ldims,             & ! (out)
-                                                      timelen,           & ! (out)
+                                                      timelen_land,      & ! (out)
                                                       lon_all, lat_all,  & ! (out)
                                                       basename_org_land, & ! (in)
                                                       basename_land      ) ! (in)
@@ -2867,7 +2887,7 @@ contains
 
     if ( serial_land ) then
        call COMM_bcast( 3, ldims(:) )
-       call COMM_bcast( timelen )
+       call COMM_bcast( timelen_land )
 
        if ( .not. do_read_land ) then
           allocate( LON_all(ldims(2), ldims(3)) )
@@ -2966,20 +2986,20 @@ contains
     case('NetCDF')
 
        omdlid = iNetCDF
-       call ParentOceanSetupNetCDF( odims, timelen,     & ! (out)
-                                    lon_all, lat_all,   & ! (out)
-                                    basename_org_ocean, & ! (in)
-                                    basename_ocean,     & ! (in)
-                                    serial_ocean,       & ! (inout)
-                                    do_read_ocean       ) ! (inout)
+       call ParentOceanSetupNetCDF( odims, timelen_ocean, & ! (out)
+                                    lon_all, lat_all,     & ! (out)
+                                    basename_org_ocean,   & ! (in)
+                                    basename_ocean,       & ! (in)
+                                    serial_ocean,         & ! (inout)
+                                    do_read_ocean         ) ! (inout)
 
     case('GrADS')
 
        omdlid = iGrADS
-       if ( do_read_ocean ) call ParentOceanSetupGrADS( odims, timelen,     & ! (out)
-                                                        lon_all, lat_all,   & ! (out)
-                                                        basename_org_ocean, & ! (in)
-                                                        basename_ocean      ) ! (in)
+       if ( do_read_ocean ) call ParentOceanSetupGrADS( odims, timelen_ocean, & ! (out)
+                                                        lon_all, lat_all,     & ! (out)
+                                                        basename_org_ocean,   & ! (in)
+                                                        basename_ocean        ) ! (in)
     case default
 
        LOG_ERROR("ParentSurfaceSetup",*) 'Unsupported FILE TYPE:', trim(filetype_ocean)
@@ -2994,7 +3014,7 @@ contains
 
     if ( serial_ocean ) then
        call COMM_bcast( 2, odims(:) )
-       call COMM_bcast( timelen )
+       call COMM_bcast( timelen_ocean )
 
        if ( .not. do_read_ocean ) then
           allocate( LON_all(odims(1), odims(2)) )
