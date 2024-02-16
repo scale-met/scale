@@ -846,7 +846,6 @@ contains
                            work(:,:,:),           & ! [IN]
                            qv(:,:,:)              ) ! [OUT]
 
-
     !--- build up density to TOA (1D)
     qc_1D = 0.0_RP
     dz_1D = FZ(KE) - CZ(KE)

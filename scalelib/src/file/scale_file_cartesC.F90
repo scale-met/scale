@@ -108,7 +108,6 @@ module scale_file_cartesC
   !
   !++ Private procedure
   !
-  private :: closeall
   private :: check_1d
   private :: check_2d
   private :: check_3d
@@ -355,8 +354,6 @@ contains
     deallocate( AXIS_VOLU )
 
     call Free_Derived_Datatype
-
-    call closeall
 
     set_coordinates = .false.
 
@@ -765,7 +762,7 @@ contains
     logical,          intent(in), optional :: aggregate
     !---------------------------------------------------------------------------
 
-    call PROF_rapstart('FILE_O_NetCDF', 2)
+    call PROF_rapstart('FILE_Write', 2)
 
     call FILE_Open( basename,            & ! [IN]
                     fid,                 & ! [OUT]
@@ -773,7 +770,7 @@ contains
                     aggregate=aggregate, & ! [IN]
                     rankid=PRC_myrank    ) ! [IN]
 
-    call PROF_rapend  ('FILE_O_NetCDF', 2)
+    call PROF_rapend  ('FILE_Write', 2)
 
     return
   end subroutine FILE_CARTESC_open
@@ -834,7 +831,7 @@ contains
     !---------------------------------------------------------------------------
 
     prof = .true.
-    call PROF_rapstart('FILE_O_NetCDF', 2)
+    call PROF_rapstart('FILE_Write', 2)
 
     if ( present(single) ) then
        single_ = single
@@ -942,7 +939,7 @@ contains
 
     end if
 
-    call PROF_rapend  ('FILE_O_NetCDF', 2)
+    call PROF_rapend  ('FILE_Write', 2)
     prof = .false.
 
     return
@@ -954,7 +951,7 @@ contains
     use scale_file, only: &
        FILE_get_AGGREGATE, &
        FILE_opened,    &
-       FILE_single,    &
+       FILE_allnodes,  &
        FILE_EndDef,    &
        FILE_Flush,     &
        FILE_Attach_Buffer
@@ -967,7 +964,7 @@ contains
 
     if ( .not. FILE_opened(fid) ) return
 
-    call PROF_rapstart('FILE_O_NetCDF', 2, disable_barrier = FILE_single(fid) )
+    call PROF_rapstart('FILE_Write', 2, disable_barrier = .not. FILE_allnodes(fid) )
 
     call FILE_EndDef( fid ) ! [IN]
 
@@ -997,7 +994,7 @@ contains
        call FILE_Attach_Buffer( fid, write_buf_amount(fid) )
     endif
 
-    call PROF_rapend('FILE_O_NetCDF', 2, disable_barrier = FILE_single(fid) )
+    call PROF_rapend('FILE_Write', 2, disable_barrier = .not. FILE_allnodes(fid) )
 
     return
   end subroutine FILE_CARTESC_enddef
@@ -1008,7 +1005,7 @@ contains
     use scale_file, only: &
        FILE_get_AGGREGATE, &
        FILE_opened, &
-       FILE_single, &
+       FILE_allnodes, &
        FILE_Flush
     implicit none
 
@@ -1017,13 +1014,13 @@ contains
 
     if ( .not. FILE_opened(fid) ) return
 
-    call PROF_rapstart('FILE_O_NetCDF', 2, disable_barrier = FILE_single(fid) )
+    call PROF_rapstart('FILE_Write', 2, disable_barrier = .not. FILE_allnodes(fid) )
 
     if ( FILE_get_AGGREGATE(fid) ) then
        call FILE_Flush( fid ) ! flush all pending read/write requests
     end if
 
-    call PROF_rapend('FILE_O_NetCDF', 2, disable_barrier = FILE_single(fid) )
+    call PROF_rapend('FILE_Write', 2, disable_barrier = .not. FILE_allnodes(fid) )
 
     return
   end subroutine FILE_CARTESC_flush
@@ -1034,7 +1031,7 @@ contains
     use scale_file, only: &
        FILE_get_AGGREGATE, &
        FILE_opened,    &
-       FILE_single,    &
+       FILE_allnodes,  &
        FILE_Close,     &
        FILE_Flush,     &
        FILE_Detach_Buffer
@@ -1045,7 +1042,7 @@ contains
 
     if ( .not. FILE_opened(fid) ) return
 
-    call PROF_rapstart('FILE_O_NetCDF', 2, disable_barrier = FILE_single(fid) )
+    call PROF_rapstart('FILE_Write', 2, disable_barrier = .not. FILE_allnodes(fid) )
 
     if ( FILE_get_AGGREGATE(fid) ) then
        call FILE_Flush( fid )        ! flush all pending read/write requests
@@ -1057,7 +1054,7 @@ contains
 
     call FILE_Close( fid ) ! [IN]
 
-    call PROF_rapend('FILE_O_NetCDF', 2, disable_barrier = FILE_single(fid) )
+    call PROF_rapend('FILE_Write', 2, disable_barrier = .not. FILE_allnodes(fid) )
 
     return
   end subroutine FILE_CARTESC_close
@@ -1223,7 +1220,7 @@ contains
     use scale_file, only: &
        FILE_get_AGGREGATE, &
        FILE_opened, &
-       FILE_single, &
+       FILE_allnodes, &
        FILE_Read
     use scale_prc, only: &
        PRC_abort
@@ -1249,7 +1246,7 @@ contains
 
     if ( .not. FILE_opened(fid) ) return
 
-    call PROF_rapstart('FILE_I_NetCDF', 2, disable_barrier = FILE_single(fid) )
+    call PROF_rapstart('FILE_Read', 2, disable_barrier = .not. FILE_allnodes(fid) )
 
     LOG_INFO("FILE_CARTESC_read_var_1D",'(1x,2A)') 'Read from file (1D), name : ', trim(varname)
 
@@ -1345,7 +1342,7 @@ contains
        call FILE_Read( fid, varname, var(dim1_S:dim1_E), step=step )
     endif
 
-    call PROF_rapend('FILE_I_NetCDF', 2, disable_barrier = FILE_single(fid) )
+    call PROF_rapend('FILE_Read', 2, disable_barrier = .not. FILE_allnodes(fid) )
 
     return
   end subroutine FILE_CARTESC_read_var_1D
@@ -1361,7 +1358,7 @@ contains
     use scale_file, only: &
        FILE_get_AGGREGATE, &
        FILE_opened, &
-       FILE_single, &
+       FILE_allnodes, &
        FILE_Read
     use scale_prc, only: &
        PRC_abort
@@ -1386,7 +1383,7 @@ contains
 
     if ( .not. FILE_opened(fid) ) return
 
-    call PROF_rapstart('FILE_I_NetCDF', 2, disable_barrier = FILE_single(fid) )
+    call PROF_rapstart('FILE_Read', 2, disable_barrier = .not. FILE_allnodes(fid) )
 
     LOG_INFO("FILE_CARTESC_read_var_2D",'(1x,2A)') 'Read from file (2D), name : ', trim(varname)
 
@@ -1454,7 +1451,7 @@ contains
        !$acc update device(var) if(acc_is_present(var))
     endif
 
-    call PROF_rapend('FILE_I_NetCDF', 2, disable_barrier = FILE_single(fid) )
+    call PROF_rapend('FILE_Read', 2, disable_barrier = .not. FILE_allnodes(fid) )
 
     return
   end subroutine FILE_CARTESC_read_var_2D
@@ -1470,7 +1467,7 @@ contains
     use scale_file, only: &
        FILE_get_AGGREGATE, &
        FILE_opened, &
-       FILE_single, &
+       FILE_allnodes, &
        FILE_Read
     use scale_prc, only: &
        PRC_abort
@@ -1498,7 +1495,7 @@ contains
 
     if ( .not. FILE_opened(fid) ) return
 
-    call PROF_rapstart('FILE_I_NetCDF', 2, disable_barrier = FILE_single(fid) )
+    call PROF_rapstart('FILE_Read', 2, disable_barrier = .not. FILE_allnodes(fid) )
 
     LOG_INFO("FILE_CARTESC_read_var_3D",'(1x,2A)') 'Read from file (3D), name : ', trim(varname)
 
@@ -1641,7 +1638,7 @@ contains
        !$acc update device(var) if(acc_is_present(var))
     endif
 
-    call PROF_rapend('FILE_I_NetCDF', 2, disable_barrier = FILE_single(fid) )
+    call PROF_rapend('FILE_Read', 2, disable_barrier = .not. FILE_allnodes(fid) )
 
     return
   end subroutine FILE_CARTESC_read_var_3D
@@ -1657,7 +1654,7 @@ contains
     use scale_file, only: &
        FILE_get_AGGREGATE, &
        FILE_opened, &
-       FILE_single, &
+       FILE_allnodes, &
        FILE_Read
     use scale_prc, only: &
        PRC_abort
@@ -1687,7 +1684,7 @@ contains
 
     if ( .not. FILE_opened(fid) ) return
 
-    call PROF_rapstart('FILE_I_NetCDF', 2, disable_barrier = FILE_single(fid) )
+    call PROF_rapstart('FILE_Read', 2, disable_barrier = .not. FILE_allnodes(fid) )
 
     LOG_INFO("FILE_CARTESC_read_var_4D",'(1x,2A)') 'Read from file (4D), name : ', trim(varname)
 
@@ -1802,7 +1799,7 @@ contains
        !$acc update device(var) if(acc_is_present(var))
     endif
 
-    call PROF_rapend('FILE_I_NetCDF', 2, disable_barrier = FILE_single(fid) )
+    call PROF_rapend('FILE_Read', 2, disable_barrier = .not. FILE_allnodes(fid) )
 
     return
   end subroutine FILE_CARTESC_read_var_4D
@@ -1815,7 +1812,7 @@ contains
        step, existed )
     use scale_file, only: &
        FILE_opened, &
-       FILE_single, &
+       FILE_allnodes, &
        FILE_get_shape, &
        FILE_get_dataInfo, &
        FILE_get_attribute, &
@@ -1848,7 +1845,7 @@ contains
 
     if ( .not. FILE_opened(fid) ) return
 
-    call PROF_rapstart('FILE_I_NetCDF', 2, disable_barrier = FILE_single(fid) )
+    call PROF_rapstart('FILE_Read', 2, disable_barrier = .not. FILE_allnodes(fid) )
 
     LOG_INFO("FILE_CARTESC_read_auto_2D",'(1x,2A)') 'Read from file (2D), name : ', trim(varname)
 
@@ -1857,7 +1854,7 @@ contains
     if ( present( existed ) ) then
        existed = existed2
        if ( .not. existed2 ) then
-          call PROF_rapend  ('FILE_I_NetCDF', 2)
+          call PROF_rapend  ('FILE_Read', 2)
           return
        end if
     end if
@@ -1889,7 +1886,7 @@ contains
     call FILE_CARTESC_flush( fid )
     !$acc update device(var) if(acc_is_present(var))
 
-    call PROF_rapend('FILE_I_NetCDF', 2, disable_barrier = FILE_single(fid) )
+    call PROF_rapend('FILE_Read', 2, disable_barrier = .not. FILE_allnodes(fid) )
 
     return
   end subroutine FILE_CARTESC_read_auto_2D
@@ -1902,7 +1899,7 @@ contains
        step, existed )
     use scale_file, only: &
        FILE_opened, &
-       FILE_single, &
+       FILE_allnodes, &
        FILE_get_shape, &
        FILE_get_dataInfo, &
        FILE_get_attribute, &
@@ -1937,7 +1934,7 @@ contains
 
     if ( .not. FILE_opened(fid) ) return
 
-    call PROF_rapstart('FILE_I_NetCDF', 2, disable_barrier = FILE_single(fid) )
+    call PROF_rapstart('FILE_Read', 2, disable_barrier = .not. FILE_allnodes(fid) )
 
     LOG_INFO("FILE_CARTESC_read_auto_3D",'(1x,2A)') 'Read from file (3D), name : ', trim(varname)
 
@@ -1946,7 +1943,7 @@ contains
     if ( present(existed) ) then
        existed = existed2
        if ( .not. existed2 ) then
-          call PROF_rapend  ('FILE_I_NetCDF', 2)
+          call PROF_rapend  ('FILE_Read', 2)
           return
        end if
     end if
@@ -2020,7 +2017,7 @@ contains
        call PRC_abort
     end if
 
-    call PROF_rapend('FILE_I_NetCDF', 2, disable_barrier = FILE_single(fid) )
+    call PROF_rapend('FILE_Read', 2, disable_barrier = .not. FILE_allnodes(fid) )
 
     return
   end subroutine FILE_CARTESC_read_auto_3D
@@ -2336,7 +2333,7 @@ contains
        ATMOS_GRID_CARTESC_NAME
     use scale_file, only: &
        FILE_opened, &
-       FILE_single, &
+       FILE_allnodes, &
        FILE_Set_Attribute
 
     integer,          intent(in) :: fid
@@ -2353,7 +2350,7 @@ contains
 
     if ( .not. FILE_opened(fid) ) return
 
-    if ( .not. prof ) call PROF_rapstart('FILE_O_NetCDF', 2, disable_barrier = FILE_single(fid) )
+    if ( .not. prof ) call PROF_rapstart('FILE_Write', 2, disable_barrier = .not. FILE_allnodes(fid) )
 
     call FILE_Set_Attribute( fid, "global", "Conventions", "CF-1.6" ) ! [IN]
 
@@ -2385,7 +2382,7 @@ contains
     call FILE_Set_Attribute( fid, "global", "time_units", tunits )
     call FILE_Set_Attribute( fid, "global", "time_start", (/time/) )
 
-    if ( .not. prof ) call PROF_rapend('FILE_O_NetCDF', 2, disable_barrier = FILE_single(fid) )
+    if ( .not. prof ) call PROF_rapend('FILE_Write', 2, disable_barrier = .not. FILE_allnodes(fid) )
 
     return
   end subroutine FILE_CARTESC_put_globalAttributes
@@ -2398,7 +2395,6 @@ contains
        hasZ   )
     use scale_file, only: &
        FILE_opened,                   &
-       FILE_single,                   &
        FILE_get_AGGREGATE,            &
        FILE_Def_Axis,                 &
        FILE_Set_Attribute,            &
@@ -2879,7 +2875,6 @@ contains
        UNDEF => CONST_UNDEF
     use scale_file, only: &
        FILE_opened, &
-       FILE_single, &
        FILE_get_AGGREGATE, &
        FILE_Write_Axis,                 &
        FILE_Write_AssociatedCoordinate
@@ -3354,7 +3349,7 @@ contains
        FILE_REAL4
     use scale_file, only: &
        FILE_opened, &
-       FILE_single, &
+       FILE_allnodes, &
        FILE_Def_Variable, &
        FILE_Set_Attribute
     use scale_prc, only: &
@@ -3390,7 +3385,7 @@ contains
 
     if ( .not. FILE_opened(fid) ) return
 
-    call PROF_rapstart('FILE_O_NetCDF', 2, disable_barrier = FILE_single(fid) )
+    call PROF_rapstart('FILE_Write', 2, disable_barrier = .not. FILE_allnodes(fid) )
 
     if    ( datatype == 'REAL8' ) then
        dtype = FILE_REAL8
@@ -3529,7 +3524,7 @@ contains
        call FILE_Set_Attribute( fid, varname, "location", FILE_CARTESC_dims(dimid)%location )
     end if
 
-    call PROF_rapend('FILE_O_NetCDF', 2, disable_barrier = FILE_single(fid) )
+    call PROF_rapend('FILE_Write', 2, disable_barrier = .not. FILE_allnodes(fid) )
 
     return
   end subroutine FILE_CARTESC_def_var
@@ -3545,7 +3540,7 @@ contains
     use scale_file, only: &
        FILE_get_AGGREGATE, &
        FILE_opened, &
-       FILE_single, &
+       FILE_allnodes, &
        FILE_Write
     use scale_prc, only: &
        PRC_myrank,  &
@@ -3570,7 +3565,7 @@ contains
 
     if ( .not. FILE_opened(fid) ) return
 
-    call PROF_rapstart('FILE_O_NetCDF', 2, disable_barrier = FILE_single(fid) )
+    call PROF_rapstart('FILE_Write', 2, disable_barrier = .not. FILE_allnodes(fid) )
 
     rankidx(1) = PRC_2Drank(PRC_myrank,1)
     rankidx(2) = PRC_2Drank(PRC_myrank,2)
@@ -3614,7 +3609,7 @@ contains
     if( exec ) call FILE_Write( vid, var(dim1_S:dim1_E),          & ! [IN]
                                 NOWDAYSEC, NOWDAYSEC, start=start ) ! [IN]
 
-    call PROF_rapend('FILE_O_NetCDF', 2, disable_barrier = FILE_single(fid) )
+    call PROF_rapend('FILE_Write', 2, disable_barrier = .not. FILE_allnodes(fid) )
 
     return
   end subroutine FILE_CARTESC_write_var_1D
@@ -3633,7 +3628,7 @@ contains
     use scale_file, only: &
        FILE_get_AGGREGATE, &
        FILE_opened, &
-       FILE_single, &
+       FILE_allnodes, &
        FILE_Write
     use scale_prc, only: &
        PRC_myrank,     &
@@ -3667,7 +3662,7 @@ contains
 
     if ( .not. FILE_opened(fid) ) return
 
-    call PROF_rapstart('FILE_O_NetCDF', 2, disable_barrier = FILE_single(fid) )
+    call PROF_rapstart('FILE_Write', 2, disable_barrier = .not. FILE_allnodes(fid) )
 
     rankidx(1) = PRC_2Drank(PRC_myrank,1)
     rankidx(2) = PRC_2Drank(PRC_myrank,2)
@@ -3756,7 +3751,7 @@ contains
 
     endif
 
-    call PROF_rapend('FILE_O_NetCDF', 2, disable_barrier = FILE_single(fid) )
+    call PROF_rapend('FILE_Write', 2, disable_barrier = .not. FILE_allnodes(fid) )
 
     return
   end subroutine FILE_CARTESC_write_var_2D
@@ -3775,7 +3770,7 @@ contains
     use scale_file, only: &
        FILE_get_AGGREGATE, &
        FILE_opened, &
-       FILE_single, &
+       FILE_allnodes, &
        FILE_Write
     use scale_prc, only: &
        PRC_myrank,  &
@@ -3810,7 +3805,7 @@ contains
 
     if ( .not. FILE_opened(fid) ) return
 
-    call PROF_rapstart('FILE_O_NetCDF', 2, disable_barrier = FILE_single(fid) )
+    call PROF_rapstart('FILE_Write', 2, disable_barrier = .not. FILE_allnodes(fid) )
 
     fill_halo_ = .false.
     if( present(fill_halo) ) fill_halo_ = fill_halo
@@ -3917,7 +3912,7 @@ contains
                         NOWDAYSEC, NOWDAYSEC, start                          ) ! [IN]
     endif
 
-    call PROF_rapend('FILE_O_NetCDF', 2, disable_barrier = FILE_single(fid) )
+    call PROF_rapend('FILE_Write', 2, disable_barrier = .not. FILE_allnodes(fid) )
 
     return
   end subroutine FILE_CARTESC_write_var_3D
@@ -3939,7 +3934,7 @@ contains
     use scale_file, only: &
        FILE_get_AGGREGATE, &
        FILE_opened, &
-       FILE_single, &
+       FILE_allnodes, &
        FILE_Write
     use scale_prc, only: &
        PRC_myrank,     &
@@ -3978,7 +3973,7 @@ contains
 
     if ( .not. FILE_opened(fid) ) return
 
-    call PROF_rapstart('FILE_O_NetCDF', 2, disable_barrier = FILE_single(fid) )
+    call PROF_rapstart('FILE_Write', 2, disable_barrier = .not. FILE_allnodes(fid) )
 
     fill_halo_ = .false.
     if( present(fill_halo) ) fill_halo_ = fill_halo
@@ -4106,7 +4101,7 @@ contains
        enddo
     endif
 
-    call PROF_rapend('FILE_O_NetCDF', 2, disable_barrier = FILE_single(fid) )
+    call PROF_rapend('FILE_Write', 2, disable_barrier = .not. FILE_allnodes(fid) )
 
     return
   end subroutine FILE_CARTESC_write_var_3D_t
@@ -4128,7 +4123,7 @@ contains
     use scale_file, only: &
        FILE_get_AGGREGATE, &
        FILE_opened, &
-       FILE_single, &
+       FILE_allnodes, &
        FILE_Write, &
        FILE_Flush
     use scale_prc, only: &
@@ -4169,7 +4164,7 @@ contains
 
     if ( .not. FILE_opened(fid) ) return
 
-    call PROF_rapstart('FILE_O_NetCDF', 2, disable_barrier = FILE_single(fid) )
+    call PROF_rapstart('FILE_Write', 2, disable_barrier = .not. FILE_allnodes(fid) )
 
     fill_halo_ = .false.
     if( present(fill_halo) ) fill_halo_ = fill_halo
@@ -4350,7 +4345,7 @@ contains
        enddo
     endif
 
-    call PROF_rapend('FILE_O_NetCDF', 2, disable_barrier = FILE_single(fid) )
+    call PROF_rapend('FILE_Write', 2, disable_barrier = .not. FILE_allnodes(fid) )
 
     return
   end subroutine FILE_CARTESC_write_var_4D
@@ -4359,20 +4354,6 @@ contains
   !-----------------------------------------------------------------------------
 
   ! private procedures
-
-  !-----------------------------------------------------------------------------
-  subroutine closeall
-    implicit none
-
-    integer :: fid
-    !---------------------------------------------------------------------------
-
-    do fid = 0, FILE_FILE_MAX-1
-       call FILE_CARTESC_close( fid )
-    enddo
-
-    return
-  end subroutine closeall
 
   !-----------------------------------------------------------------------------
   subroutine check_1d( &

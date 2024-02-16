@@ -281,6 +281,8 @@ contains
     integer :: i, j
     !---------------------------------------------------------------------------
 
+    call PROF_rapstart('INTERP_interp',3)
+
     !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
     !$omp shared(KA,KS,KE,IS,IE,JS,JE) &
     !$omp shared(Z,Xi,var,var_Xi) &
@@ -302,6 +304,8 @@ contains
     end do
     end do
     !$acc end kernels
+
+    call PROF_rapend  ('INTERP_interp',3)
 
     return
   end subroutine INTERP_VERT_z2xi
