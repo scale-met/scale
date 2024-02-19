@@ -230,8 +230,6 @@ contains
        TKE_MIN, PBL_MAX )
     use scale_prc, only: &
        PRC_abort
-    use scale_const, only: &
-       PI => CONST_PI
     use scale_file_history, only: &
        FILE_HISTORY_reg
     implicit none
@@ -867,7 +865,7 @@ contains
     logical :: do_put
 
     integer :: KE_PBL
-    integer :: k, k2, i, j
+    integer :: k, i, j
 
 
     ! work
@@ -966,7 +964,7 @@ contains
     !$omp         mflux, &
     !$omp         Uh, Vh, Wh, qw2, qh, tlh, tvh, eh, dh, &
     !$omp         TEML, LHVL, psat, &
-    !$omp         KE_PBL,k,k2,i,j)
+    !$omp         KE_PBL,k,i,j)
     !$acc kernels
     !$acc loop independent collapse(2) &
     !$acc private(N2_new,lq,sm25,sh25,rlqsm_h,q, &
@@ -987,7 +985,7 @@ contains
     !$acc         mflux, &
     !$acc         Uh, Vh, Wh, qw2, qh, tlh, tvh, eh, dh, &
     !$acc         TEML, LHVL, psat, &
-    !$acc         KE_PBL,k,k2,i,j)
+    !$acc         KE_PBL,k,i,j)
 
     do j = JS, JE
     do i = IS, IE
@@ -2282,7 +2280,6 @@ contains
 
     real(RP), intent(out) :: l(KA)
 
-    real(RP), parameter :: ls_fact_max = 2.0_RP
     real(RP), parameter :: sqrt05 = sqrt( 0.5_RP )
 
     real(RP) :: ls     !> L_S
@@ -3016,6 +3013,7 @@ contains
     integer :: k, k2
 
     tmin = 999e10_RP
+    k2 = KE
     do k = KS, KE
        tmin = min( tmin, PTLV(k) )
        if ( z(k) > 200.0_RP ) then
@@ -3028,6 +3026,7 @@ contains
     else ! over water
        dtv = 0.75_RP
     end if
+    zit = z(KE)
     do k = k2+1, KE
        if ( tmin + dtv <= PTLV(k) ) then
           zit = z(k)
