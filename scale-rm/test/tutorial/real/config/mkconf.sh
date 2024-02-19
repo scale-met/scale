@@ -263,7 +263,7 @@ do
   eval 'INIT_CONF_FILES[$D]="init.d${FNUM}.conf"'
   eval 'RUN_CONF_FILES[$D]="run.d${FNUM}.conf"'
   eval 'SNO_CONF_FILES[$D]="sno.vgridope.d${FNUM}.conf,sno.hgridope.d${FNUM}.conf"'
-  eval 'PRC_SNO[$D]="${PRC_DOMAINS[$D]},${PRC_DOMAINS[$D]}"'
+  eval 'PRC_SNO[$D]="${PRC_DOMAINS[$D]},1"'
 
   # set vertical axis
   LINE_Z="${DEF_Z[$D]}"
