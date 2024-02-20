@@ -2191,7 +2191,7 @@ contains
     use scale_const, only: &
       UNDEF => CONST_UNDEF
     use scale_statistics, only: &
-      AVERAGE => STATISTICS_AVERAGE
+      average => STATISTICS_AVERAGE
     use scale_matrix, only: &
       MATRIX_SOLVER_eigenvalue_decomposition
     use scale_random, only: &
@@ -2308,13 +2308,13 @@ contains
     do n  = 1, nv3d
     do k  = 1, nlev
     do ij = 1, nij1
-      gues3d(ij,k,mmean,n) = AVERAGE( gues3d(ij,k,1:nmem,n), UNDEF )
+      gues3d(ij,k,mmean,n) = average( nmem, gues3d(ij,k,1:nmem,n), UNDEF )
     end do
     end do
     end do
     do n  = 1, nv2d
     do ij = 1, nij1
-      gues2d(ij,mmean,n) = AVERAGE( gues2d(ij,1:nmem,n), UNDEF )
+      gues2d(ij,mmean,n) = average( nmem, gues2d(ij,1:nmem,n), UNDEF )
     end do
     end do
 
@@ -2873,7 +2873,7 @@ contains
     use scale_const, only: &
       UNDEF => CONST_UNDEF
     use scale_statistics, only: &
-      AVERAGE => STATISTICS_AVERAGE
+      average => STATISTICS_AVERAGE
     implicit none
 
     integer, intent(in) :: PEST_PMAX
@@ -2914,7 +2914,7 @@ contains
 
     ! -- obtain the ensemble mean
     do n = 1, PEST_PMAX
-      gues0d(mmean,n) = AVERAGE( gues0d(1:nmem,n), UNDEF )
+      gues0d(mmean,n) = average( nmem, gues0d(1:nmem,n), UNDEF )
     end do
 
     !

@@ -1397,6 +1397,9 @@ contains
     implicit none
 
     ! arguments
+    integer,  intent(in) :: KA
+    integer,  intent(in) :: IA
+    integer,  intent(in) :: JA
     real(RP), intent(in) :: ARRAY(KA,IA,JA)
 
     real(RP), intent(in), optional :: UNDEF
@@ -1462,7 +1465,7 @@ contains
         STATISTICS_variance_1D = UNDEF
       end if
     else
-      STATISTICS_variance_1D = STATISTICS_summation( IA, ( ARRAY(:) - STATISTICS_average( ARRAY(:) ) )**2 ) &
+      STATISTICS_variance_1D = STATISTICS_summation( IA, ( ARRAY(:) - STATISTICS_average( IA, ARRAY(:) ) )**2 ) &
                              / real( IA - 1, kind=RP )
     end if
 
@@ -1512,7 +1515,7 @@ contains
         STATISTICS_variance_2D = UNDEF
       end if
     else
-      STATISTICS_variance_2D = STATISTICS_summation( IA, JA, ( ARRAY(:,:) - STATISTICS_average( ARRAY(:,:) ) )**2 ) &
+      STATISTICS_variance_2D = STATISTICS_summation( IA, JA, ( ARRAY(:,:) - STATISTICS_average( IA, JA, ARRAY(:,:) ) )**2 ) &
                              / real( IA*JA - 1, kind=RP )
     end if
 
@@ -1563,7 +1566,7 @@ contains
         STATISTICS_variance_3D = UNDEF
       end if
     else
-      STATISTICS_variance_3D = STATISTICS_summation( KA, IA, JA, ( ARRAY(:,:,:) - STATISTICS_average( ARRAY(:,:,:) ) )**2 ) &
+      STATISTICS_variance_3D = STATISTICS_summation( KA, IA, JA, ( ARRAY(:,:,:) - STATISTICS_average( KA, IA, JA, ARRAY(:,:,:) ) )**2 ) &
                              / real( KA*IA*JA - 1, kind=RP )
     end if
 

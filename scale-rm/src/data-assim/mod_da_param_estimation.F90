@@ -321,12 +321,13 @@ contains
     use scale_const, only: &
       UNDEF => CONST_UNDEF
     use scale_comm_ensemble, only: &
+      ENSEMBLE_nprocs => COMM_ENSEMBLE_nprocs, &
       ENSEMBLE_myrank => COMM_ENSEMBLE_myrank
     use scale_time, only: &
       TIME_NOWDATE
     use scale_statistics, only: &
-      AVERAGE => STATISTICS_AVERAGE, &
-      STDDEV  => STATISTICS_STDDEV
+      average => STATISTICS_average, &
+      stddev  => STATISTICS_stddev
     implicit none
 
     character(len=20) :: nowdate
@@ -347,7 +348,11 @@ contains
       end do
 
       LOG_INFO("DA_param_estimation_update",*) 'result [time, name, rank-var, mean, std]: ', &
-        nowdate, trim(ESTIMATION_TARGET(v)), param_array(1+ENSEMBLE_myrank,v), AVERAGE( param_array(:,v), UNDEF ), STDDEV( param_array(:,v), UNDEF )
+        nowdate,                                             &
+        trim(ESTIMATION_TARGET(v)),                          &
+        param_array(1+ENSEMBLE_myrank,v),                    &
+        average( ENSEMBLE_nprocs, param_array(:,v), UNDEF ), &
+        stddev ( ENSEMBLE_nprocs, param_array(:,v), UNDEF )
     end do
 
     return
