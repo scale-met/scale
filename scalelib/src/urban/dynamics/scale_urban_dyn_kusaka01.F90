@@ -1170,7 +1170,7 @@ contains
 
        RAINR = max( RAINRP - EVPR * dt_RP, 0.0_RP )
        call cal_beta(BETR, BETR_CONST, RAINR, STRGR)
-       dBETR = ( BETR - BETRP ) / dTR
+       dBETR = ( BETR - BETRP ) / sign( max(abs(dTR), 1E-10_RP), dTR )
        BETRP = BETR
 
        RR  = EPSR * ( rflux_LW - STB * (TR**4)  )
