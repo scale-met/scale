@@ -998,12 +998,12 @@ contains
     integer  :: iteration
     real(RP) :: DTS_MAX_onestep ! DTS_MAX * dt
     real(RP) :: resi1, resi2, resi3 ! residual
-    real(RP) :: fact
+    real(RP) :: fact1, fact2, fact3
     real(RP) :: threshold
 
     ! for Newton method
     real(RP) :: dTR, dTB, dTG, dAC
-    real(RP) :: dTBp, dTGp, dACp
+    real(RP) :: dTRp, dTBp, dTGp, dACp
     real(RP) :: dr1dTR
     real(RP) :: dr1dTB, dr1dTG, dr1dAC, dr2dTB, dr2dTG, dr2dAC, dr3dTB, dr3dTG, dr3dAC
     real(RP) :: dTRdG0R, dTBdG0B, dTGdG0G
@@ -1158,6 +1158,8 @@ contains
     BETRP = 0.0_RP
     XXXR = 0.0_RP
     dTR = 1.0e10_RP
+    dTRp = 0.0_RP
+    fact1 = 1.0_RP
     !$acc loop seq
     do iteration = 1, itr_max
 
@@ -1218,8 +1220,19 @@ contains
        dr1dTR = dTRdG0R * dG0RdTR - 1.0_RP
 
        dTR = - resi1 / dr1dTR
+       dTR = sign( min(abs(dTR), 5.0_RP), dTR )
 
-       TR = TR + dTR
+       if ( iteration > 50 ) then
+          if ( dTR*dTRp < 0.0_RP ) then
+             fact1 = max( fact1 * 0.5_RP, 0.01_RP )
+          else
+             fact1 = min( fact1 * 1.5_RP, 1.1_RP )
+          end if
+       end if
+       tmp = TR
+       TR = max( TR + dTR * fact1, 100.0_RP )
+       dTR = TR - tmp
+       dTRp = dTR
 
     enddo
 
@@ -1349,7 +1362,9 @@ contains
      dTBp = 0.0_RP
      dTGp = 0.0_RP
      dACp = 0.0_RP
-     fact = 1.0_RP
+     fact1 = 1.0_RP
+     fact2 = 1.0_RP
+     fact3 = 1.0_RP
      !$acc loop seq
      do iteration = 1, itr_max
 
@@ -1557,21 +1572,35 @@ contains
                 + ( dr1dTB * dr3dTG - dr1dTG * dr3dTB ) * resi2 &
                 - ( dr1dTB * dr2dTG - dr1dTG * dr2dTB ) * resi3 ) * rdet
 
+        dTB = sign( min(abs(dTB), 5.0_RP), dTB )
+        dTG = sign( min(abs(dTG), 5.0_RP), dTG )
+        dAC = sign( min(abs(dAC), 50.0_RP), dAC )
+
         if ( iteration > 50 ) then
-           if ( dTB*dTBp < 0.0_RP .or. dTG*dTGp < 0.0_RP .or. dAC*dACp < 0.0_RP ) then
-              fact = max( fact * 0.5_RP, 0.01_RP )
+           if ( dTB*dTBp < 0.0_RP ) then
+              fact1 = max( fact1 * 0.5_RP, 1E-10_RP )
            else
-              fact = min( fact * 1.1_RP, 1.1_RP )
+              fact1 = min( fact1 * 1.5_RP, 1.1_RP )
+           end if
+           if ( dTG*dTGp < 0.0_RP ) then
+              fact2 = max( fact2 * 0.5_RP, 1E-10_RP )
+           else
+              fact2 = min( fact2 * 1.5_RP, 1.1_RP )
+           end if
+           if ( dAC*dACp < 0.0_RP ) then
+              fact3 = max( fact3 * 0.5_RP, 1E-10_RP )
+           else
+              fact3 = min( fact3 * 1.5_RP, 1.1_RP )
            end if
         end if
 
         tmp = TB
-        TB = max( TB + dTB * fact, 100.0_RP )
+        TB = max( TB + dTB * fact1, 100.0_RP )
         dTB = TB - tmp
         tmp = TG
-        TG = max( TG + dTG * fact, 100.0_RP )
+        TG = max( TG + dTG * fact2, 100.0_RP )
         dTG = TG - tmp
-        ALPHAC = max( ALPHACp + dAC * fact, EPS )
+        ALPHAC = max( ALPHACp + dAC * fact3, EPS )
         dAC = ALPHAC - ALPHACp
 
         if ( abs(dTB) < threshold .AND. abs(dTG) < threshold .AND. abs(dAC) < threshold ) then
