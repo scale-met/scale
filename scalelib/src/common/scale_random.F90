@@ -58,7 +58,6 @@ module scale_random
   !++ Private parameters & variables
   !
   logical, private :: RANDOM_FIX = .false.
-  logical, private :: RANDOM_SEED_INIT_Knuth_shuffle = .false.
 
   integer, private, allocatable :: RANDOM_seedvar(:)
 
@@ -72,8 +71,7 @@ contains
     implicit none
 
     namelist / PARAM_RANDOM / &
-       RANDOM_FIX,                     &
-       RANDOM_SEED_INIT_Knuth_shuffle
+       RANDOM_FIX
 
     integer :: nseeds, ierr
     !---------------------------------------------------------------------------
@@ -248,11 +246,6 @@ contains
     do i = 1, num
       a(i) = i
     end do
-
-    if( .NOT. RANDOM_SEED_INIT_Knuth_shuffle ) then
-      call RANDOM_reset
-      RANDOM_SEED_INIT_Knuth_shuffle = .true.
-    end if
 
     do i = num, 2, -1
       call random_number(r)

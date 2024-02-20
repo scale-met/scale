@@ -1033,6 +1033,9 @@ contains
     deallocate( w )
     deallocate( work )
     deallocate( iwork )
+#else
+    LOG_INFO('MATRIX_SOLVER_eigenvalue_decomposition',*) 'Binary not compiled for DA! STOP.'
+    call PRC_abort
 #endif
 
     return

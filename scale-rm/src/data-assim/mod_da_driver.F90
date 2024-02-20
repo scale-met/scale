@@ -639,8 +639,8 @@ contains
        do n = 1, ENSEMBLE_nprocs
           work(i,j,n) = recv( i + (j-1)*IMAX + (n-1)*IMAX*JMAX )
        end do
-       mean2d(i,j) = average( work(i,j,:), UNDEF )
-       sprd2d(i,j) = stddev ( work(i,j,:), UNDEF )
+       mean2d(i,j) = average( ENSEMBLE_nprocs, work(i,j,:), UNDEF )
+       sprd2d(i,j) = stddev ( ENSEMBLE_nprocs, work(i,j,:), UNDEF )
     end do
     end do
 
@@ -715,8 +715,8 @@ contains
        do n = 1, ENSEMBLE_nprocs
           work(k,i,j,n) = recv( k + (i-1)*KMAX + (j-1)*KMAX*IMAX + (n-1)*KMAX*IMAX*JMAX )
        end do
-       mean3d(k,i,j) = average( work(k,i,j,:), UNDEF )
-       sprd3d(k,i,j) = stddev ( work(k,i,j,:), UNDEF )
+       mean3d(k,i,j) = average( ENSEMBLE_nprocs, work(k,i,j,:), UNDEF )
+       sprd3d(k,i,j) = stddev ( ENSEMBLE_nprocs, work(k,i,j,:), UNDEF )
     end do
     end do
     end do

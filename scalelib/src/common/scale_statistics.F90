@@ -1130,12 +1130,14 @@ contains
   !
   !-----------------------------------------------------------------------------
   function STATISTICS_summation_1D( &
+      IA,    & ! (in)
       ARRAY, & ! (in)
       UNDEF  ) ! (in)
     implicit none
 
     ! arguments
-    real(RP), intent(in) :: ARRAY(:)
+    integer,  intent(in) :: IA
+    real(RP), intent(in) :: ARRAY(IA)
 
     real(RP), intent(in), optional :: UNDEF
 
@@ -1145,8 +1147,7 @@ contains
     ! work
     integer :: i
 
-    real(RP) :: tmp_ARRAY( size( ARRAY(:) ) )
-
+    real(RP) :: tmp_ARRAY(IA)
     real(RP) :: tmp
     real(RP) :: res
     !---------------------------------------------------------------------------
@@ -1172,7 +1173,7 @@ contains
     res = 0.0_RP
 
     ! Kahan's Compensated Summation (Kahan 1965)
-    do i = 1, size( ARRAY(:) )
+    do i = 1, IA
       tmp = STATISTICS_summation_1D + ( tmp_ARRAY(i) + res )
       res = ( tmp_ARRAY(i) + res ) - ( tmp - STATISTICS_summation_1D )
       STATISTICS_summation_1D = tmp
@@ -1188,12 +1189,15 @@ contains
   !
   !-----------------------------------------------------------------------------
   function STATISTICS_summation_2D( &
-      ARRAY, & ! (in)
-      UNDEF  ) ! (in)
+      IA, JA, & ! (in)
+      ARRAY,  & ! (in)
+      UNDEF   ) ! (in)
     implicit none
 
     ! arguments
-    real(RP), intent(in) :: ARRAY(:,:)
+    integer , intent(in) :: IA
+    integer , intent(in) :: JA
+    real(RP), intent(in) :: ARRAY(IA,JA)
 
     real(RP), intent(in), optional :: UNDEF
 
@@ -1203,9 +1207,7 @@ contains
     ! work
     integer :: i, j
 
-    real(RP) :: tmp_ARRAY( size( ARRAY(:,1) ), &
-                           size( ARRAY(1,:) )  )
-
+    real(RP) :: tmp_ARRAY(IA,JA)
     real(RP) :: tmp
     real(RP) :: res
     !---------------------------------------------------------------------------
@@ -1231,8 +1233,8 @@ contains
     res = 0.0_RP
 
     ! Kahan's Compensated Summation (Kahan 1965)
-    do j = 1, size( ARRAY(1,:) )
-    do i = 1, size( ARRAY(:,1) )
+    do j = 1, JA
+    do i = 1, IA
       tmp = STATISTICS_summation_2D + ( tmp_ARRAY(i,j) + res )
       res = ( tmp_ARRAY(i,j) + res ) - ( tmp - STATISTICS_summation_2D )
       STATISTICS_summation_2D = tmp
@@ -1249,12 +1251,16 @@ contains
   !
   !-----------------------------------------------------------------------------
   function STATISTICS_summation_3D( &
-      ARRAY, & ! (in)
-      UNDEF  ) ! (in)
+      KA, IA, JA, & ! (in)
+      ARRAY,      & ! (in)
+      UNDEF       ) ! (in)
     implicit none
 
     ! arguments
-    real(RP), intent(in) :: ARRAY(:,:,:)
+    integer,  intent(in) :: KA
+    integer,  intent(in) :: IA
+    integer,  intent(in) :: JA
+    real(RP), intent(in) :: ARRAY(KA,IA,JA)
 
     real(RP), intent(in), optional :: UNDEF
 
@@ -1264,10 +1270,7 @@ contains
     ! work
     integer :: i, j, k
 
-    real(RP) :: tmp_ARRAY( size( ARRAY(:,1,1) ), &
-                           size( ARRAY(1,:,1) ), &
-                           size( ARRAY(1,1,:) )  )
-
+    real(RP) :: tmp_ARRAY(KA,IA,JA)
     real(RP) :: tmp
     real(RP) :: res
     !---------------------------------------------------------------------------
@@ -1293,9 +1296,9 @@ contains
     res = 0.0_RP
 
     ! Kahan's Compensated Summation (Kahan 1965)
-    do k = 1, size( ARRAY(1,1,:) )
-    do j = 1, size( ARRAY(1,:,1) )
-    do i = 1, size( ARRAY(:,1,1) )
+    do j = 1, JA
+    do i = 1, IA
+    do k = 1, KA
       tmp = STATISTICS_summation_3D + ( tmp_ARRAY(i,j,k) + res )
       res = ( tmp_ARRAY(i,j,k) + res ) - ( tmp - STATISTICS_summation_3D )
       STATISTICS_summation_3D = tmp
@@ -1313,12 +1316,14 @@ contains
   !
   !-----------------------------------------------------------------------------
   function STATISTICS_average_1D( &
+      IA,    & ! (in)
       ARRAY, & ! (in)
       UNDEF  ) ! (in)
     implicit none
 
     ! arguments
-    real(RP), intent(in) :: ARRAY(:)
+    integer,  intent(in) :: IA
+    real(RP), intent(in) :: ARRAY(IA)
 
     real(RP), intent(in), optional :: UNDEF
 
@@ -1328,14 +1333,14 @@ contains
 
     if( present( UNDEF ) ) then
       if( any( abs( ARRAY(:) - UNDEF ) > EPS ) ) then
-        STATISTICS_average_1D = STATISTICS_summation( ARRAY(:), UNDEF ) &
+        STATISTICS_average_1D = STATISTICS_summation( IA, ARRAY(:), UNDEF ) &
                               / real( count( abs( ARRAY(:) - UNDEF ) > EPS ), kind=RP )
       else
         STATISTICS_average_1D = UNDEF
       end if
     else
-      STATISTICS_average_1D = STATISTICS_summation( ARRAY(:) ) &
-                            / real( size( ARRAY(:) ), kind=RP )
+      STATISTICS_average_1D = STATISTICS_summation( IA, ARRAY(:) ) &
+                            / real( IA, kind=RP )
     end if
 
     return
@@ -1348,12 +1353,15 @@ contains
   !
   !-----------------------------------------------------------------------------
   function STATISTICS_average_2D( &
-      ARRAY, & ! (in)
-      UNDEF  ) ! (in)
+      IA, JA, & ! (in)
+      ARRAY,  & ! (in)
+      UNDEF   ) ! (in)
     implicit none
 
     ! arguments
-    real(RP), intent(in) :: ARRAY(:,:)
+    integer,  intent(in) :: IA
+    integer,  intent(in) :: JA
+    real(RP), intent(in) :: ARRAY(IA,JA)
 
     real(RP), intent(in), optional :: UNDEF
 
@@ -1363,14 +1371,14 @@ contains
 
     if( present( UNDEF ) ) then
       if( any( abs( ARRAY(:,:) - UNDEF ) > EPS ) ) then
-        STATISTICS_average_2D = STATISTICS_summation( ARRAY(:,:), UNDEF ) &
+        STATISTICS_average_2D = STATISTICS_summation( IA, JA, ARRAY(:,:), UNDEF ) &
                               / real( count( abs( ARRAY(:,:) - UNDEF ) > EPS ), kind=RP )
       else
         STATISTICS_average_2D = UNDEF
       end if
     else
-      STATISTICS_average_2D = STATISTICS_summation( ARRAY(:,:) ) &
-                            / real( size( ARRAY(:,:) ), kind=RP )
+      STATISTICS_average_2D = STATISTICS_summation( IA, JA, ARRAY(:,:) ) &
+                            / real( IA*JA, kind=RP )
     end if
 
     return
@@ -1383,12 +1391,13 @@ contains
   !
   !-----------------------------------------------------------------------------
   function STATISTICS_average_3D( &
-      ARRAY, & ! (in)
-      UNDEF  ) ! (in)
+      KA, IA, JA, & ! (in)
+      ARRAY,      & ! (in)
+      UNDEF       ) ! (in)
     implicit none
 
     ! arguments
-    real(RP), intent(in) :: ARRAY(:,:,:)
+    real(RP), intent(in) :: ARRAY(KA,IA,JA)
 
     real(RP), intent(in), optional :: UNDEF
 
@@ -1398,14 +1407,14 @@ contains
 
     if( present( UNDEF ) ) then
       if( any( abs( ARRAY(:,:,:) - UNDEF ) > EPS ) ) then
-        STATISTICS_average_3D = STATISTICS_summation( ARRAY(:,:,:), UNDEF ) &
+        STATISTICS_average_3D = STATISTICS_summation( KA, IA, JA, ARRAY(:,:,:), UNDEF ) &
                               / real( count( abs( ARRAY(:,:,:) - UNDEF ) > EPS ), kind=RP )
       else
         STATISTICS_average_3D = UNDEF
       end if
     else
-      STATISTICS_average_3D = STATISTICS_summation( ARRAY(:,:,:) ) &
-                            / real( size( ARRAY(:,:,:) ), kind=RP )
+      STATISTICS_average_3D = STATISTICS_summation( KA, IA, JA, ARRAY(:,:,:) ) &
+                            / real( KA*IA*JA, kind=RP )
     end if
 
     return
@@ -1418,12 +1427,14 @@ contains
   !
   !-----------------------------------------------------------------------------
   function STATISTICS_variance_1D( &
+      IA,    & ! (in)
       ARRAY, & ! (in)
       UNDEF  ) ! (in)
     implicit none
 
     ! arguments
-    real(RP), intent(in) :: ARRAY(:)
+    integer,  intent(in) :: IA
+    real(RP), intent(in) :: ARRAY(IA)
 
     real(RP), intent(in), optional :: UNDEF
 
@@ -1431,14 +1442,13 @@ contains
     real(RP) :: STATISTICS_variance_1D
 
     ! work
-    real(RP) :: tmp_ARRAY( size( ARRAY(:) ) )
-
+    real(RP) :: tmp_ARRAY(IA)
     real(RP) :: tmp
     !---------------------------------------------------------------------------
 
     if( present( UNDEF ) ) then
       if( count( abs( ARRAY(:) - UNDEF ) > EPS ) > 1 ) then
-        tmp = STATISTICS_average( ARRAY(:), UNDEF )
+        tmp = STATISTICS_average( IA, ARRAY(:), UNDEF )
 
         where( abs( ARRAY(:) - UNDEF ) > EPS )
           tmp_ARRAY(:) = ( ARRAY(:) - tmp )**2
@@ -1446,14 +1456,14 @@ contains
           tmp_ARRAY(:) = UNDEF
         end where
 
-        STATISTICS_variance_1D = STATISTICS_summation( tmp_ARRAY(:), UNDEF ) &
+        STATISTICS_variance_1D = STATISTICS_summation( IA, tmp_ARRAY(:), UNDEF ) &
                                / real( count( abs( ARRAY(:) - UNDEF ) > EPS ) - 1, kind=RP )
       else
         STATISTICS_variance_1D = UNDEF
       end if
     else
-      STATISTICS_variance_1D = STATISTICS_summation( ( ARRAY(:) - STATISTICS_average( ARRAY(:) ) )**2 ) &
-                             / real( size( ARRAY(:) ) - 1, kind=RP )
+      STATISTICS_variance_1D = STATISTICS_summation( IA, ( ARRAY(:) - STATISTICS_average( ARRAY(:) ) )**2 ) &
+                             / real( IA - 1, kind=RP )
     end if
 
     return
@@ -1466,12 +1476,15 @@ contains
   !
   !-----------------------------------------------------------------------------
   function STATISTICS_variance_2D( &
-      ARRAY, & ! (in)
-      UNDEF  ) ! (in)
+      IA, JA, & ! (in)
+      ARRAY,  & ! (in)
+      UNDEF   ) ! (in)
     implicit none
 
     ! arguments
-    real(RP), intent(in) :: ARRAY(:,:)
+    integer,  intent(in) :: IA
+    integer,  intent(in) :: JA
+    real(RP), intent(in) :: ARRAY(IA,JA)
 
     real(RP), intent(in), optional :: UNDEF
 
@@ -1479,15 +1492,13 @@ contains
     real(RP) :: STATISTICS_variance_2D
 
     ! work
-    real(RP) :: tmp_ARRAY( size( ARRAY(:,1) ), &
-                           size( ARRAY(1,:) )  )
-
+    real(RP) :: tmp_ARRAY(IA,JA)
     real(RP) :: tmp
     !---------------------------------------------------------------------------
 
     if( present( UNDEF ) ) then
       if( count( abs( ARRAY(:,:) - UNDEF ) > EPS ) > 1 ) then
-        tmp = STATISTICS_average( ARRAY(:,:), UNDEF )
+        tmp = STATISTICS_average( IA, JA, ARRAY(:,:), UNDEF )
 
         where( abs( ARRAY(:,:) - UNDEF ) > EPS )
           tmp_ARRAY(:,:) = ( ARRAY(:,:) - tmp )**2
@@ -1495,14 +1506,14 @@ contains
           tmp_ARRAY(:,:) = UNDEF
         end where
 
-        STATISTICS_variance_2D = STATISTICS_summation( tmp_ARRAY(:,:), UNDEF ) &
+        STATISTICS_variance_2D = STATISTICS_summation( IA, JA, tmp_ARRAY(:,:), UNDEF ) &
                                / real( count( abs( ARRAY(:,:) - UNDEF ) > EPS ) - 1, kind=RP )
       else
         STATISTICS_variance_2D = UNDEF
       end if
     else
-      STATISTICS_variance_2D = STATISTICS_summation( ( ARRAY(:,:) - STATISTICS_average( ARRAY(:,:) ) )**2 ) &
-                             / real( size( ARRAY(:,:) ) - 1, kind=RP )
+      STATISTICS_variance_2D = STATISTICS_summation( IA, JA, ( ARRAY(:,:) - STATISTICS_average( ARRAY(:,:) ) )**2 ) &
+                             / real( IA*JA - 1, kind=RP )
     end if
 
     return
@@ -1515,12 +1526,16 @@ contains
   !
   !-----------------------------------------------------------------------------
   function STATISTICS_variance_3D( &
-      ARRAY, & ! (in)
-      UNDEF  ) ! (in)
+      KA, IA, JA, & ! (in)
+      ARRAY,      & ! (in)
+      UNDEF       ) ! (in)
     implicit none
 
     ! arguments
-    real(RP), intent(in) :: ARRAY(:,:,:)
+    integer,  intent(in) :: KA
+    integer,  intent(in) :: IA
+    integer,  intent(in) :: JA
+    real(RP), intent(in) :: ARRAY(KA,IA,JA)
 
     real(RP), intent(in), optional :: UNDEF
 
@@ -1528,16 +1543,13 @@ contains
     real(RP) :: STATISTICS_variance_3D
 
     ! work
-    real(RP) :: tmp_ARRAY( size( ARRAY(:,1,1) ), &
-                           size( ARRAY(1,:,1) ), &
-                           size( ARRAY(1,1,:) )  )
-
+    real(RP) :: tmp_ARRAY(KA,IA,JA)
     real(RP) :: tmp
     !---------------------------------------------------------------------------
 
     if( present( UNDEF ) ) then
       if( count( abs( ARRAY(:,:,:) - UNDEF ) > EPS ) > 1 ) then
-        tmp = STATISTICS_average( ARRAY(:,:,:), UNDEF )
+        tmp = STATISTICS_average( KA, IA, JA, ARRAY(:,:,:), UNDEF )
 
         where( abs( ARRAY(:,:,:) - UNDEF ) > EPS )
           tmp_ARRAY(:,:,:) = ( ARRAY(:,:,:) - tmp )**2
@@ -1545,14 +1557,14 @@ contains
           tmp_ARRAY(:,:,:) = UNDEF
         end where
 
-        STATISTICS_variance_3D = STATISTICS_summation(  tmp_ARRAY(:,:,:), UNDEF ) &
+        STATISTICS_variance_3D = STATISTICS_summation(  KA, IA, JA, tmp_ARRAY(:,:,:), UNDEF ) &
                                / real( count( abs( ARRAY(:,:,:) - UNDEF ) > EPS ) - 1, kind=RP )
       else
         STATISTICS_variance_3D = UNDEF
       end if
     else
-      STATISTICS_variance_3D = STATISTICS_summation( ( ARRAY(:,:,:) - STATISTICS_average( ARRAY(:,:,:) ) )**2 ) &
-                             / real( size( ARRAY(:,:,:) ) - 1, kind=RP )
+      STATISTICS_variance_3D = STATISTICS_summation( KA, IA, JA, ( ARRAY(:,:,:) - STATISTICS_average( ARRAY(:,:,:) ) )**2 ) &
+                             / real( KA*IA*JA - 1, kind=RP )
     end if
 
     return
@@ -1565,12 +1577,14 @@ contains
   !
   !-----------------------------------------------------------------------------
   function STATISTICS_stddev_1D( &
+      IA,    & ! (in)
       ARRAY, & ! (in)
       UNDEF  ) ! (in)
     implicit none
 
     ! arguments
-    real(RP), intent(in) :: ARRAY(:)
+    integer,  intent(in) :: IA
+    real(RP), intent(in) :: ARRAY(IA)
 
     real(RP), intent(in), optional :: UNDEF
 
@@ -1578,7 +1592,7 @@ contains
     real(RP) :: STATISTICS_stddev_1D
     !---------------------------------------------------------------------------
 
-    STATISTICS_stddev_1D = sqrt( STATISTICS_variance( ARRAY(:), UNDEF ) )
+    STATISTICS_stddev_1D = sqrt( STATISTICS_variance( IA, ARRAY(:), UNDEF ) )
 
     return
   end function STATISTICS_stddev_1D
@@ -1590,12 +1604,15 @@ contains
   !
   !-----------------------------------------------------------------------------
   function STATISTICS_stddev_2D( &
-      ARRAY, & ! (in)
-      UNDEF  ) ! (in)
+      IA, JA, & ! in)
+      ARRAY,  & ! (in)
+      UNDEF   ) ! (in)
     implicit none
 
     ! arguments
-    real(RP), intent(in) :: ARRAY(:,:)
+    integer,  intent(in) :: IA
+    integer,  intent(in) :: JA
+    real(RP), intent(in) :: ARRAY(IA,JA)
 
     real(RP), intent(in), optional :: UNDEF
 
@@ -1603,7 +1620,7 @@ contains
     real(RP) :: STATISTICS_stddev_2D
     !---------------------------------------------------------------------------
 
-    STATISTICS_stddev_2D = sqrt( STATISTICS_variance( ARRAY(:,:), UNDEF ) )
+    STATISTICS_stddev_2D = sqrt( STATISTICS_variance( IA, JA, ARRAY(:,:), UNDEF ) )
 
     return
   end function STATISTICS_stddev_2D
@@ -1615,12 +1632,16 @@ contains
   !
   !-----------------------------------------------------------------------------
   function STATISTICS_stddev_3D( &
-      ARRAY, & ! (in)
-      UNDEF  ) ! (in)
+      KA, IA, JA, & ! (in)
+      ARRAY,      & ! (in)
+      UNDEF       ) ! (in)
     implicit none
 
     ! arguments
-    real(RP), intent(in) :: ARRAY(:,:,:)
+    integer,  intent(in) :: KA
+    integer,  intent(in) :: IA
+    integer,  intent(in) :: JA
+    real(RP), intent(in) :: ARRAY(KA,IA,JA)
 
     real(RP), intent(in), optional :: UNDEF
 
@@ -1628,7 +1649,7 @@ contains
     real(RP) :: STATISTICS_stddev_3D
     !---------------------------------------------------------------------------
 
-    STATISTICS_stddev_3D = sqrt( STATISTICS_variance( ARRAY(:,:,:), UNDEF ) )
+    STATISTICS_stddev_3D = sqrt( STATISTICS_variance( KA, IA, JA, ARRAY(:,:,:), UNDEF ) )
 
     return
   end function STATISTICS_stddev_3D
@@ -1640,14 +1661,16 @@ contains
   !
   !-----------------------------------------------------------------------------
   function STATISTICS_covariance( &
-      ARRAY1, & ! (in)
-      ARRAY2, & ! (in)
-      UNDEF   ) ! (in)
+      IA1, IA2, & ! (in)
+      ARRAY1,   & ! (in)
+      ARRAY2,   & ! (in)
+      UNDEF     ) ! (in)
     implicit none
 
     ! argument
-    real(RP), intent(in) :: ARRAY1(:)
-    real(RP), intent(in) :: ARRAY2(:)
+    integer,  intent(in) :: IA1, IA2
+    real(RP), intent(in) :: ARRAY1(IA1)
+    real(RP), intent(in) :: ARRAY2(IA2)
 
     real(RP), intent(in), optional :: UNDEF
 
@@ -1655,8 +1678,8 @@ contains
     real(RP) :: STATISTICS_covariance
 
     ! works
-    real(RP) :: tmp_ARRAY1( size( ARRAY1(:) ) )
-    real(RP) :: tmp_ARRAY2( size( ARRAY2(:) ) )
+    real(RP) :: tmp_ARRAY1(IA1)
+    real(RP) :: tmp_ARRAY2(IA2)
 
     real(RP), allocatable :: fixed_ARRAY1(:)
     real(RP), allocatable :: fixed_ARRAY2(:)
@@ -1665,12 +1688,12 @@ contains
     !---------------------------------------------------------------------------
 
     if( present( UNDEF ) ) then
-      n = STATISTICS_undef_arraysize( ARRAY1(:), ARRAY2(:), UNDEF )
+      n = STATISTICS_undef_arraysize( IA1, IA2, ARRAY1(:), ARRAY2(:), UNDEF )
 
       if( n > 1 ) then
         ! embed undefined value each other
-        tmp_ARRAY1 = STATISTICS_undef_embed( ARRAY1(:), ARRAY2(:), UNDEF )
-        tmp_ARRAY2 = STATISTICS_undef_embed( ARRAY2(:), ARRAY1(:), UNDEF )
+        tmp_ARRAY1 = STATISTICS_undef_embed( IA1, IA2, ARRAY1(:), ARRAY2(:), UNDEF )
+        tmp_ARRAY2 = STATISTICS_undef_embed( IA2, IA1, ARRAY2(:), ARRAY1(:), UNDEF )
 
         allocate( fixed_ARRAY1(n) )
         allocate( fixed_ARRAY2(n) )
@@ -1679,8 +1702,8 @@ contains
         fixed_ARRAY1(:) = pack( tmp_ARRAY1(:), abs( tmp_ARRAY1(:) - UNDEF ) > EPS )
         fixed_ARRAY2(:) = pack( tmp_ARRAY2(:), abs( tmp_ARRAY2(:) - UNDEF ) > EPS )
 
-        STATISTICS_covariance = STATISTICS_summation( ( fixed_ARRAY1(:) - STATISTICS_average( ARRAY1(:), UNDEF ) ) &
-                                                    * ( fixed_ARRAY2(:) - STATISTICS_average( ARRAY2(:), UNDEF ) ) ) &
+        STATISTICS_covariance = STATISTICS_summation( n, ( fixed_ARRAY1(:) - STATISTICS_average( n, ARRAY1(:), UNDEF ) ) &
+                                                       * ( fixed_ARRAY2(:) - STATISTICS_average( n, ARRAY2(:), UNDEF ) ) ) &
                               / real( n-1, kind=RP )
 
         deallocate( fixed_ARRAY1 )
@@ -1689,10 +1712,10 @@ contains
         STATISTICS_covariance = UNDEF
       end if
     else
-      n = STATISTICS_undef_arraysize( ARRAY1(:), ARRAY2(:) )
+      n = STATISTICS_undef_arraysize( IA1, IA2, ARRAY1(:), ARRAY2(:) )
       ! simple covariance
-      STATISTICS_covariance = STATISTICS_summation( ( ARRAY1(:) - STATISTICS_average( ARRAY1(:) ) ) &
-                                                  * ( ARRAY2(:) - STATISTICS_average( ARRAY2(:) ) ) ) &
+      STATISTICS_covariance = STATISTICS_summation( n, ( ARRAY1(:) - STATISTICS_average( n, ARRAY1(:) ) ) &
+                                                     * ( ARRAY2(:) - STATISTICS_average( n, ARRAY2(:) ) ) ) &
                             / real( n-1, kind=RP )
     end if
 
@@ -1706,14 +1729,16 @@ contains
   !
   !-----------------------------------------------------------------------------
   function STATISTICS_correlation( &
-      ARRAY1, & ! (in)
-      ARRAY2, & ! (in)
-      UNDEF   ) ! (in)
+      IA1, IA2, & ! (in)
+      ARRAY1,   & ! (in)
+      ARRAY2,   & ! (in)
+      UNDEF     ) ! (in)
     implicit none
 
     ! arguments
-    real(RP), intent(in) :: ARRAY1(:)
-    real(RP), intent(in) :: ARRAY2(:)
+    integer,  intent(in) :: IA1, IA2
+    real(RP), intent(in) :: ARRAY1(IA1)
+    real(RP), intent(in) :: ARRAY2(IA2)
 
     real(RP), intent(in), optional :: UNDEF
 
@@ -1722,23 +1747,23 @@ contains
     !---------------------------------------------------------------------------
 
     if( present( UNDEF ) ) then
-      if( abs( STATISTICS_covariance( ARRAY1(:), ARRAY2(:), UNDEF ) - UNDEF ) > EPS .and. &
-          abs( STATISTICS_stddev( ARRAY1(:), UNDEF ) - UNDEF ) > EPS                .and. &
-          abs( STATISTICS_stddev( ARRAY2(:), UNDEF ) - UNDEF ) > EPS                .and. &
-          abs( STATISTICS_stddev( ARRAY1(:), UNDEF )         ) > 0.0_RP             .and. &
-          abs( STATISTICS_stddev( ARRAY2(:), UNDEF )         ) > 0.0_RP                   ) then
+      if( abs( STATISTICS_covariance( IA1, IA2, ARRAY1(:), ARRAY2(:), UNDEF ) - UNDEF ) > EPS .and. &
+          abs( STATISTICS_stddev( IA1, ARRAY1(:), UNDEF ) - UNDEF ) > EPS                     .and. &
+          abs( STATISTICS_stddev( IA2, ARRAY2(:), UNDEF ) - UNDEF ) > EPS                     .and. &
+          abs( STATISTICS_stddev( IA1, ARRAY1(:), UNDEF )         ) > 0.0_RP                  .and. &
+          abs( STATISTICS_stddev( IA2, ARRAY2(:), UNDEF )         ) > 0.0_RP                        ) then
         ! correlation coefficient without undefined value
-        STATISTICS_correlation = STATISTICS_covariance( ARRAY1(:), ARRAY2(:), UNDEF ) &
-                               / ( STATISTICS_stddev( ARRAY1(:), UNDEF ) &
-                                 * STATISTICS_stddev( ARRAY2(:), UNDEF ) )
+        STATISTICS_correlation = STATISTICS_covariance( IA1, IA2, ARRAY1(:), ARRAY2(:), UNDEF ) &
+                               / ( STATISTICS_stddev( IA1, ARRAY1(:), UNDEF ) &
+                                 * STATISTICS_stddev( IA2, ARRAY2(:), UNDEF ) )
       else
         STATISTICS_correlation = UNDEF
       end if
     else
       ! simple correlation coefficient
-      STATISTICS_correlation = STATISTICS_covariance( ARRAY1(:), ARRAY2(:) ) &
-                             / ( STATISTICS_stddev( ARRAY1(:) ) &
-                               * STATISTICS_stddev( ARRAY2(:) ) )
+      STATISTICS_correlation = STATISTICS_covariance( IA1, IA2, ARRAY1(:), ARRAY2(:) ) &
+                             / ( STATISTICS_stddev( IA1, ARRAY1(:) ) &
+                               * STATISTICS_stddev( IA2, ARRAY2(:) ) )
     end if
 
     return
@@ -1751,14 +1776,16 @@ contains
   !
   !-----------------------------------------------------------------------------
   function STATISTICS_regression( &
-      ARRAY1, & ! (in)
-      ARRAY2, & ! (in)
-      UNDEF   ) ! (in)
+      IA1, IA2, & ! (in)
+      ARRAY1,   & ! (in)
+      ARRAY2,   & ! (in)
+      UNDEF     ) ! (in)
     implicit none
 
     ! arguments
-    real(RP), intent(in) :: ARRAY1(:)
-    real(RP), intent(in) :: ARRAY2(:)
+    integer,  intent(in) :: IA1, IA2
+    real(RP), intent(in) :: ARRAY1(IA1)
+    real(RP), intent(in) :: ARRAY2(IA2)
 
     real(RP), intent(in), optional :: UNDEF
 
@@ -1767,22 +1794,22 @@ contains
     !---------------------------------------------------------------------------
 
     if( present( UNDEF ) ) then
-      if( abs( STATISTICS_correlation( ARRAY1(:), ARRAY2(:), UNDEF ) - UNDEF ) > EPS .and. &
-          abs( STATISTICS_stddev( ARRAY1(:), UNDEF ) - UNDEF ) > EPS                 .and. &
-          abs( STATISTICS_stddev( ARRAY2(:), UNDEF ) - UNDEF ) > EPS                 .and. &
-          abs( STATISTICS_stddev( ARRAY2(:), UNDEF )         ) > 0.0_RP                    ) then
+      if( abs( STATISTICS_correlation( IA1, IA2, ARRAY1(:), ARRAY2(:), UNDEF ) - UNDEF ) > EPS .and. &
+          abs( STATISTICS_stddev( IA1, ARRAY1(:), UNDEF ) - UNDEF ) > EPS                      .and. &
+          abs( STATISTICS_stddev( IA2, ARRAY2(:), UNDEF ) - UNDEF ) > EPS                      .and. &
+          abs( STATISTICS_stddev( IA2, ARRAY2(:), UNDEF )         ) > 0.0_RP                         ) then
         ! regression coefficient without undefined value
-        STATISTICS_regression = STATISTICS_correlation( ARRAY1(:), ARRAY2(:), UNDEF ) &
-                              * STATISTICS_stddev( ARRAY1(:), UNDEF ) &
-                              / STATISTICS_stddev( ARRAY2(:), UNDEF )
+        STATISTICS_regression = STATISTICS_correlation( IA1, IA2, ARRAY1(:), ARRAY2(:), UNDEF ) &
+                              * STATISTICS_stddev( IA1, ARRAY1(:), UNDEF ) &
+                              / STATISTICS_stddev( IA2, ARRAY2(:), UNDEF )
       else
         STATISTICS_regression = UNDEF
       end if
     else
       ! simple regression coefficient
-      STATISTICS_regression = STATISTICS_correlation( ARRAY1(:), ARRAY2(:) ) &
-                            * STATISTICS_stddev( ARRAY1(:) ) &
-                            / STATISTICS_stddev( ARRAY2(:) )
+      STATISTICS_regression = STATISTICS_correlation( IA1, IA2, ARRAY1(:), ARRAY2(:) ) &
+                            * STATISTICS_stddev( IA1, ARRAY1(:) ) &
+                            / STATISTICS_stddev( IA2, ARRAY2(:) )
     end if
 
     return
@@ -1795,15 +1822,17 @@ contains
   !
   !-----------------------------------------------------------------------------
   function STATISTICS_lag_correlation( &
-      ARRAY1, & ! (in)
-      ARRAY2, & ! (in)
-      LAG,    & ! (in)
-      UNDEF   ) ! (in)
+      IA1, IA2, & ! (in)
+      ARRAY1,   & ! (in)
+      ARRAY2,   & ! (in)
+      LAG,      & ! (in)
+      UNDEF     ) ! (in)
     implicit none
 
     ! arguments
-    real(RP), intent(in) :: ARRAY1(:)
-    real(RP), intent(in) :: ARRAY2(:)
+    integer,  intent(in) :: IA1, IA2
+    real(RP), intent(in) :: ARRAY1(IA1)
+    real(RP), intent(in) :: ARRAY2(IA2)
 
     integer,  intent(in) :: LAG
 
@@ -1813,12 +1842,12 @@ contains
     real(RP) :: STATISTICS_lag_correlation
 
     ! works
-    real(RP) :: tmp( size( ARRAY2(:) ) )
+    real(RP) :: tmp(IA2)
     !---------------------------------------------------------------------------
 
     tmp(:) = eoshift( ARRAY2(:), LAG, UNDEF )
 
-    STATISTICS_lag_correlation = STATISTICS_correlation( ARRAY1(:), tmp(:), UNDEF )
+    STATISTICS_lag_correlation = STATISTICS_correlation( IA1, IA2, ARRAY1(:), tmp(:), UNDEF )
 
     return
   end function STATISTICS_lag_correlation
@@ -1830,16 +1859,18 @@ contains
   !
   !-----------------------------------------------------------------------------
   function STATISTICS_partial_correlation( &
-      ARRAY1, & ! (in)
-      ARRAY2, & ! (in)
-      ARRAY3, & ! (in)
-      UNDEF   ) ! (in)
+      IA1, IA2, IA3, & ! (in)
+      ARRAY1,        & ! (in)
+      ARRAY2,        & ! (in)
+      ARRAY3,        & ! (in)
+      UNDEF          ) ! (in)
     implicit none
 
     ! arguments
-    real(RP), intent(in) :: ARRAY1(:)
-    real(RP), intent(in) :: ARRAY2(:)
-    real(RP), intent(in) :: ARRAY3(:)
+    integer,  intent(in) :: IA1, IA2, IA3
+    real(RP), intent(in) :: ARRAY1(IA1)
+    real(RP), intent(in) :: ARRAY2(IA2)
+    real(RP), intent(in) :: ARRAY3(IA3)
 
     real(RP), intent(in), optional :: UNDEF
 
@@ -1853,9 +1884,9 @@ contains
     !---------------------------------------------------------------------------
 
     if( present( UNDEF ) ) then
-      corr12 = STATISTICS_correlation( ARRAY1(:), ARRAY2(:), UNDEF )
-      corr13 = STATISTICS_correlation( ARRAY1(:), ARRAY3(:), UNDEF )
-      corr23 = STATISTICS_correlation( ARRAY2(:), ARRAY3(:), UNDEF )
+      corr12 = STATISTICS_correlation( IA1, IA2, ARRAY1(:), ARRAY2(:), UNDEF )
+      corr13 = STATISTICS_correlation( IA1, IA3, ARRAY1(:), ARRAY3(:), UNDEF )
+      corr23 = STATISTICS_correlation( IA2, IA3, ARRAY2(:), ARRAY3(:), UNDEF )
 
       if( corr12 == UNDEF .or. &
           corr13 == UNDEF .or. &
@@ -1873,9 +1904,9 @@ contains
                                        / sqrt( ( 1.0_RP - corr13**2 ) * ( 1.0_RP - corr23**2 ) )
       endif
     else
-      corr12 = STATISTICS_correlation( ARRAY1(:), ARRAY2(:) )
-      corr13 = STATISTICS_correlation( ARRAY1(:), ARRAY3(:) )
-      corr23 = STATISTICS_correlation( ARRAY2(:), ARRAY3(:) )
+      corr12 = STATISTICS_correlation( IA1, IA2, ARRAY1(:), ARRAY2(:) )
+      corr13 = STATISTICS_correlation( IA1, IA3, ARRAY1(:), ARRAY3(:) )
+      corr23 = STATISTICS_correlation( IA2, IA3, ARRAY2(:), ARRAY3(:) )
 
       ! simple partial correlation
       STATISTICS_partial_correlation = ( corr12 - ( corr13 * corr23 ) ) &
@@ -1887,24 +1918,26 @@ contains
 
   !-----------------------------------------------------------------------------
   function STATISTICS_undef_replace( &
+      IA,     & ! (in)
       ARRAY,  & ! (in)
       UNDEF1, & ! (in)
       UNDEF2  ) ! (in)
     implicit none
 
     ! arguments
-    real(RP), intent(in) :: ARRAY(:)
+    integer,  intent(in) :: IA
+    real(RP), intent(in) :: ARRAY(IA)
     real(RP), intent(in) :: UNDEF1
     real(RP), intent(in) :: UNDEF2
 
     ! function result
-    real(RP) :: STATISTICS_undef_replace( size( ARRAY(:) ) )
+    real(RP) :: STATISTICS_undef_replace(IA)
 
     ! works
     integer :: i
     !---------------------------------------------------------------------------
 
-    do i = 1, size( ARRAY(:) )
+    do i = 1, IA
       if( abs( ARRAY(i) - UNDEF2 ) > EPS ) then
         STATISTICS_undef_replace(i) = ARRAY(i)
       else
@@ -1917,33 +1950,33 @@ contains
 
   !-----------------------------------------------------------------------------
   function STATISTICS_undef_embed( &
-      ARRAY1, & ! (in)
-      ARRAY2, & ! (in)
-      UNDEF   ) ! (in)
+      IA1, IA2, & ! (in)
+      ARRAY1,   & ! (in)
+      ARRAY2,   & ! (in)
+      UNDEF     ) ! (in)
     implicit none
 
     ! arguments
-    real(RP), intent(in) :: ARRAY1(:)
-    real(RP), intent(in) :: ARRAY2(:)
+    integer,  intent(in) :: IA1, IA2
+    real(RP), intent(in) :: ARRAY1(IA1)
+    real(RP), intent(in) :: ARRAY2(IA2)
 
     real(RP), intent(in), optional :: UNDEF
 
     ! function result
-    real(RP) :: STATISTICS_undef_embed( size( ARRAY1(:) ) )
+    real(RP) :: STATISTICS_undef_embed(IA1)
 
     ! works
-    integer :: i, n
+    integer :: i
     !---------------------------------------------------------------------------
 
     ! check the length of input arrays
-    if( size( ARRAY1(:) ) /= size( ARRAY2(:) ) ) then
+    if( IA1 /= IA2 ) then
       write(*,*) "Error: different array size !!"
       stop
-    else
-      n = size( ARRAY1(:) )
     end if
 
-    do i = 1, n
+    do i = 1, IA1
       if( abs( ARRAY2(i) - UNDEF ) > EPS ) then
         STATISTICS_undef_embed(i) = ARRAY1(i)
       else
@@ -1954,14 +1987,16 @@ contains
 
   !-----------------------------------------------------------------------------
   function STATISTICS_undef_arraysize( &
-      ARRAY1, & ! (in)
-      ARRAY2, & ! (in)
-      UNDEF   ) ! (in)
+      IA1, IA2, & ! (in)
+      ARRAY1,   & ! (in)
+      ARRAY2,   & ! (in)
+      UNDEF     ) ! (in)
     implicit none
 
     ! arguments
-    real(RP), intent(in) :: ARRAY1(:)
-    real(RP), intent(in) :: ARRAY2(:)
+    integer,  intent(in) :: IA1, IA2
+    real(RP), intent(in) :: ARRAY1(IA1)
+    real(RP), intent(in) :: ARRAY2(IA2)
 
     real(RP), intent(in), optional :: UNDEF
 
@@ -1969,20 +2004,18 @@ contains
     integer :: STATISTICS_undef_arraysize
 
     ! works
-    integer :: i, n, cnt
+    integer :: i, cnt
     !---------------------------------------------------------------------------
 
     ! check the length of input arrays
-    if( size( ARRAY1(:) ) /= size( ARRAY2(:) ) ) then
+    if( IA1 /= IA2 ) then
       write(*,*) "Error: different array size !!"
       stop
-    else
-      n = size( ARRAY1(:) )
     end if
 
     if( present( UNDEF ) ) then
       cnt = 0
-      do i = 1, n
+      do i = 1, IA1
         if( abs( ARRAY1(i) - UNDEF ) > EPS .and. &
             abs( ARRAY2(i) - UNDEF ) > EPS       ) then
           cnt = cnt + 1
@@ -1992,7 +2025,7 @@ contains
       STATISTICS_undef_arraysize = cnt
     else
       ! simple array size
-      STATISTICS_undef_arraysize = n
+      STATISTICS_undef_arraysize = IA1
     end if
 
     return

@@ -531,18 +531,18 @@ contains
       call FILE_HISTORY_set_nowdate( TIME_NOWDATE, TIME_NOWSUBSEC, TIME_NOWSTEP )
 
       ! change to next state
-      if( DA_do    .AND. TIME_DODA_step    ) call DA_driver_update
       if( OCEAN_do .AND. TIME_DOOCEAN_step ) call OCEAN_driver_update
       if( LAND_do  .AND. TIME_DOLAND_step  ) call LAND_driver_update
       if( URBAN_do .AND. TIME_DOURBAN_step ) call URBAN_driver_update
       if( ATMOS_do .AND. TIME_DOATMOS_step ) call ATMOS_driver_update
+      if( DA_do    .AND. TIME_DODA_step    ) call DA_driver_update
                                              call USER_update
       ! restart & monitor output
-      if ( DA_do    ) call DA_vars_monitor
       if ( OCEAN_do ) call OCEAN_vars_monitor
       if ( LAND_do  ) call LAND_vars_monitor
       if ( URBAN_do ) call URBAN_vars_monitor
       if ( ATMOS_do ) call ATMOS_vars_monitor
+      if ( DA_do    ) call DA_vars_monitor
       call ADMIN_restart_write
       call MONITOR_write('MAIN', TIME_NOWSTEP)
 
