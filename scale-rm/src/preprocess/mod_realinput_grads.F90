@@ -909,33 +909,36 @@ contains
     endif
 
 
-    ! topo_sfc, topo
+    ! topo_sfc, topo, SGP
     call read2d( start(2:), count(2:), topo_org(:,:), "topo_sfc", file_id_lnd, basename_num, exist=exist, step=nt )
     if ( .not. exist ) then
-       call FILE_GrADS_get_shape( file_id_lnd, "SGP", & ! (in)
-                                  shape(:)            ) ! (out)
-       if ( ldims(2).ne.shape(1) .or. ldims(3).ne.shape(2) ) then
-          LOG_WARN("ParentLandInputGrADS",*) 'namelist of "topo_sfc" is not found in grads namelist!'
-          LOG_WARN_CONT(*) 'dimension of "SGP" is different! ', ldims(2), shape(1), ldims(3), shape(2)
-       else
-          call read2d( start(2:), count(2:), topo_org(:,:), "SGP", file_id_lnd, basename_num, exist=exist )
+       call read2d( start(2:), count(2:), topo_org(:,:), "topo", file_id_lnd, basename_num, exist=exist )
+       if ( exist ) then
+          call FILE_GrADS_get_shape( file_id_lnd, "topo", & ! (in)
+                                     shape(:)             ) ! (out)
+          if ( ldims(2).ne.shape(1) .or. ldims(3).ne.shape(2) ) then
+             LOG_WARN_CONT(*) 'dimension of "topo" is different! ', ldims(2), shape(1), ldims(3), shape(2)
+          end if
        end if
-       !$omp parallel do
-       do j = 1, JA_org
-       do i = 1, IA_org
-          topo_org(i,j) = topo_org(i,j) / GRAV
-       end do
-       end do
     end if
     if ( .not. exist ) then
-       call FILE_GrADS_get_shape( file_id_lnd, "topo", & ! (in)
-                                  shape(:)             ) ! (out)
-       if ( ldims(2).ne.shape(1) .or. ldims(3).ne.shape(2) ) then
-          LOG_WARN("ParentLandInputGrADS",*) 'namelist of "topo_sfc" is not found in grads namelist!'
-          LOG_WARN_CONT(*) 'dimension of "topo" is different! ', ldims(2), shape(1), ldims(3), shape(2)
-       else
-          call read2d( start(2:), count(2:), topo_org(:,:), "topo", file_id_lnd, basename_num, exist=exist )
+       call read2d( start(2:), count(2:), topo_org(:,:), "SGP", file_id_lnd, basename_num, exist=exist )
+       if ( exist ) then
+          call FILE_GrADS_get_shape( file_id_lnd, "SGP", & ! (in)
+                                     shape(:)            ) ! (out)
+          if ( ldims(2).ne.shape(1) .or. ldims(3).ne.shape(2) ) then
+             LOG_WARN_CONT(*) 'dimension of "SGP" is different! ', ldims(2), shape(1), ldims(3), shape(2)
+          end if
+          !$omp parallel do
+          do j = 1, JA_org
+          do i = 1, IA_org
+             topo_org(i,j) = topo_org(i,j) / GRAV
+          end do
+          end do
        end if
+    end if
+    if ( .not. exist ) then
+       LOG_WARN("ParentLandInputGrADS",*) '"topo_sfc", "topo", or "SGP" is not found in grads namelist'
     end if
 
     return
