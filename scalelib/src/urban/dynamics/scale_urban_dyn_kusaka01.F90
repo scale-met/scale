@@ -1023,6 +1023,7 @@ contains
     real(RP) :: ALPHACp
     real(RP) :: rdet
     real(RP) :: b1, b2
+    real(RP) :: tmp
 
     integer :: k
 
@@ -1414,8 +1415,8 @@ contains
         RAING = max( ( RAINGP - EVPG * dt_RP ), 0.0_RP )
         call cal_beta(BETB, BETB_CONST, RAINB, STRGB)
         call cal_beta(BETG, BETG_CONST, RAING, STRGG)
-        dBETB = ( BETB - BETBP ) / ( dTB * fact )
-        dBETG = ( BETG - BETGP ) / ( dTG * fact )
+        dBETB = ( BETB - BETBP ) / sign( max(abs(dTB),1E-10_RP), dTB )
+        dBETG = ( BETG - BETGP ) / sign( max(abs(dTG),1E-10_RP), dTG )
         BETBP = BETB
         BETGP = BETG
 
@@ -1562,9 +1563,22 @@ contains
            end if
         end if
 
+        tmp = TB
         TB = max( TB + dTB * fact, 100.0_RP )
+        dTB = TB - tmp
+        tmp = TG
         TG = max( TG + dTG * fact, 100.0_RP )
+        dTG = TG - tmp
         ALPHAC = max( ALPHACp + dAC * fact, EPS )
+        dAC = ALPHAC - ALPHACp
+
+        if ( abs(dTB) < threshold .AND. abs(dTG) < threshold .AND. abs(dAC) < threshold ) then
+           TB = TBL(1)
+           TG = TGL(1)
+           TB = max( TBP - DTS_MAX_onestep, min( TBP + DTS_MAX_onestep, TB ) )
+           TG = max( TGP - DTS_MAX_onestep, min( TGP + DTS_MAX_onestep, TG ) )
+           exit
+        endif
 
         ALPHACp = ALPHAC
         dTBp = dTB
