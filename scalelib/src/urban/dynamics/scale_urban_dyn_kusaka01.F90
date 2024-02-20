@@ -58,9 +58,10 @@ module scale_urban_dyn_kusaka01
   ! from namelist
   real(RP), private :: DTS_MAX    =    0.1_RP ! maximum dT during one step [K/step]
                                               ! DTS_MAX * dt
-  integer , private :: BOUND      =    1      ! Boundary Condition for Roof, Wall, Ground Layer Temp
+  integer,  private :: BOUND      =    1      ! Boundary Condition for Roof, Wall, Ground Layer Temp
                                               !       [1: Zero-Flux, 2: T = Constant]
-  !$acc declare create(DTS_MAX,BOUND)
+  logical,  private :: debug      = .false.
+  !$acc declare create(DTS_MAX,BOUND,debug)
 
   ! urban parameters
   real(RP), private :: ZR         =   10.0_RP ! roof level (building height) [m]
@@ -158,6 +159,7 @@ contains
     namelist / PARAM_URBAN_DYN_KUSAKA01 /          &
        DTS_MAX,                                    &
        BOUND,                                      &
+       debug,                                      &
        URBAN_DYN_KUSAKA01_PARAM_IN_FILENAME,       &
        URBAN_DYN_KUSAKA01_GRIDDED_Z0M_IN_FILENAME, &
        URBAN_DYN_KUSAKA01_GRIDDED_Z0H_IN_FILENAME, &
@@ -362,7 +364,7 @@ contains
     !$acc update device(Z0M, Z0H, Z0E, ZD, AH_URB, AHL_URB)
     !$acc end data
 
-    !$acc update device(DTS_MAX,BOUND)
+    !$acc update device(DTS_MAX,BOUND,debug)
     !$acc update device(ZR,BETR_CONST,BETB_CONST,BETG_CONST,STRGR,STRGB,STRGG,CAPR,CAPB,CAPG,AKSR,AKSB,AKSG,ALBR,ALBB,ALBG,EPSR,EPSB,EPSG,Z0R,TRLEND,TBLEND,TGLEND)
     !$acc update device(R,RW,HGT,Z0HR,Z0HB,Z0HG,SVF)
 
@@ -1222,7 +1224,7 @@ contains
     enddo
 
     ! output for debug
-    if ( iteration > itr_max ) then
+    if ( iteration > itr_max .and. debug ) then
        LOG_WARN("URBAN_DYN_kusaka01_SLC_main",*) 'iteration for TR was not converged',PRC_myrank,i,j
        LOG_WARN_CONT(*) '---------------------------------------------------------------------------------'
        LOG_WARN_CONT(*) 'DEBUG Message --- Residual                                          [K] :', resi1
@@ -1588,7 +1590,7 @@ contains
      enddo
 
      ! output for debug
-     if ( iteration > itr_max ) then
+     if ( iteration > itr_max .and. debug ) then
        LOG_WARN("URBAN_DYN_Kusaka01_main",*) 'iteration for TB/TG was not converged',PRC_myrank,i,j
        LOG_WARN_CONT(*) '---------------------------------------------------------------------------------'
        LOG_WARN_CONT(*) 'DEBUG Message --- Residual                                        [K] :', resi1, resi2, resi3
