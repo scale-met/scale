@@ -28,6 +28,7 @@ module scale_urban_dyn_kusaka01
   !++ Public procedure
   !
   public :: URBAN_DYN_kusaka01_setup
+  public :: URBAN_DYN_kusaka01_finalize
   public :: URBAN_DYN_kusaka01
 
   !-----------------------------------------------------------------------------
@@ -60,7 +61,11 @@ module scale_urban_dyn_kusaka01
                                               ! DTS_MAX * dt
   integer,  private :: BOUND      =    1      ! Boundary Condition for Roof, Wall, Ground Layer Temp
                                               !       [1: Zero-Flux, 2: T = Constant]
+#ifdef DEBUG_KUSAKA01
+  logical,  private :: debug      = .true.
+#else
   logical,  private :: debug      = .false.
+#endif
   !$acc declare create(DTS_MAX,BOUND,debug)
 
   ! urban parameters
@@ -114,6 +119,13 @@ module scale_urban_dyn_kusaka01
   integer, private :: I_LHR, I_LHB, I_LHG
   integer, private :: I_GHR, I_GHB, I_GHG
   integer, private :: I_RNR, I_RNB, I_RNG, I_RNgrd
+
+#ifdef DEBUG_KUSAKA01
+  integer, private :: cnt_num1, cnt_num2
+  integer, private :: cnt_itr1, cnt_itr2
+  integer, private :: max_itr1, max_itr2
+  !$acc declare create(cnt_num1,cnt_num2,cnt_itr1,cnt_itr2,max_itr1,max_itr2)
+#endif
 
   !-----------------------------------------------------------------------------
 contains
@@ -368,8 +380,48 @@ contains
     !$acc update device(ZR,BETR_CONST,BETB_CONST,BETG_CONST,STRGR,STRGB,STRGG,CAPR,CAPB,CAPG,AKSR,AKSB,AKSG,ALBR,ALBB,ALBG,EPSR,EPSB,EPSG,Z0R,TRLEND,TBLEND,TGLEND)
     !$acc update device(R,RW,HGT,Z0HR,Z0HB,Z0HG,SVF)
 
+#ifdef DEBUG_KUSAKA01
+    cnt_num1 = 0
+    cnt_num2 = 0
+    cnt_itr1 = 0
+    cnt_itr2 = 0
+    max_itr1 = 0
+    max_itr2 = 0
+    !$acc update device(cnt_num1,cnt_num2,cnt_itr1,cnt_itr2,max_itr1,max_itr2)
+#endif
+
     return
   end subroutine URBAN_DYN_kusaka01_setup
+
+  !-----------------------------------------------------------------------------
+  !> Finalize
+  subroutine URBAN_DYN_kusaka01_finalize
+    use mpi
+    use scale_prc, only: &
+       PRC_LOCAL_COMM_WORLD, &
+       PRC_IsMaster
+    implicit none
+
+#ifdef DEBUG_KUSAKA01
+    integer :: iwork1(4), iwork2(2), ierr
+    !$acc update host(cnt_num1,cnt_num2,cnt_itr1,cnt_itr2,max_itr1,max_itr2)
+    iwork1(1) = cnt_num1
+    iwork1(2) = cnt_num2
+    iwork1(3) = cnt_itr1
+    iwork1(4) = cnt_itr2
+    call MPI_Reduce( MPI_IN_PLACE, iwork1, 4, MPI_INTEGER, MPI_SUM, 0, PRC_LOCAL_COMM_WORLD, ierr)
+    iwork2(1) = max_itr1
+    iwork2(2) = max_itr2
+    call MPI_Reduce( MPI_IN_PLACE, iwork2, 2, MPI_INTEGER, MPI_MAX, 0, PRC_LOCAL_COMM_WORLD, ierr)
+
+    if ( PRC_IsMaster ) then
+       LOG_INFO("URBAN_DYN_kusaka01_finalize",*) "Averaged iteration count"
+       LOG_INFO_CONT(*) "TR:    ", real(iwork1(3),DP) / iwork1(1), ", (max ", iwork2(1), ")"
+       LOG_INFO_CONT(*) "TB/TG: ", real(iwork1(4),DP) / iwork1(2), ", (max ", iwork2(2), ")"
+    end if
+#endif
+
+  end subroutine URBAN_DYN_kusaka01_finalize
 
   !-----------------------------------------------------------------------------
   !> Main routine for land submodel
@@ -532,6 +584,10 @@ contains
 
     logical :: converged
 
+#ifdef DEBUG_KUSAKA01
+    integer :: cn1, cn2, ci1, ci2, mi1, mi2
+#endif
+
     integer :: k, i, j
     !---------------------------------------------------------------------------
 
@@ -551,11 +607,21 @@ contains
 
     converged = .true.
 
+#ifdef DEBUG_KUSAKA01
+    cn1 = 0; cn2 = 0; ci1 = 0; ci2 = 0; mi1 = 0; mi2 = 0
+#endif
+
     !$omp parallel do schedule(dynamic) collapse(2) &
+#ifdef DEBUG_KUSAKA01
+    !$omp reduction(+:cn1,cn2,ci1,ci2) reduction(max:mi1,mi2) &
+#endif
     !$omp private(w,Uabs,TR,TB,TG,TC,QC,UC,TRL,TBL,TGL,RAINR,RAINB,RAING,ALBD_LW,ALBD_SW,MFLX,SWDt,LWDt, &
     !$omp         TRLP,TBLP,TGLP,A,B,C,D,P,Q)
     !$acc parallel
     !$acc loop gang collapse(2) reduction(.and.: converged) independent &
+#ifdef DEBUG_KUSAKA01
+    !$acc reduction(+:cn1,cn2,ci1,ci2) reduction(max:mi1,mi2) &
+#endif
     !$acc private(w,Uabs,TR,TB,TG,TC,QC,UC,TRL,TBL,TGL,RAINR,RAINB,RAING,ALBD_LW,ALBD_SW,MFLX,SWDt,LWDt, &
     !$acc         TRLP,TBLP,TGLP,A,B,C,D,P,Q)
     do j = UJS, UJE
@@ -652,6 +718,9 @@ contains
                       DZG(:), DZB(:),     & ! [IN]
                       dt,                 & ! [IN]
                       i, j,               & ! [IN]
+#ifdef DEBUG_KUSAKA01
+                      cn1, cn2, ci1, ci2, mi1, mi2, & ! [INOUT]
+#endif
                       TRLP(:), TBLP(:), TGLP(:), & ! (work)
                       A(:), B(:), C(:), D(:),    & ! (work)
                       P(:), Q(:)                 ) ! (work)
@@ -740,6 +809,15 @@ contains
 
     !$acc end data
 
+#ifdef DEBUG_KUSAKA01
+    cnt_num1 = cnt_num1 + cn1
+    cnt_num2 = cnt_num2 + cn2
+    cnt_itr1 = cnt_itr1 + ci1
+    cnt_itr2 = cnt_itr2 + ci2
+    max_itr1 = max(max_itr1, mi1)
+    max_itr2 = max(max_itr2, mi2)
+#endif
+
     return
   end subroutine URBAN_DYN_kusaka01
 
@@ -810,6 +888,11 @@ contains
         DZR, DZB, DZG, & ! (in)
         dt,           & ! (in)
         i, j,         & ! (in)
+#ifdef DEBUG_KUSAKA01
+        cnt_num1, cnt_num2, & ! (inout)
+        cnt_itr1, cnt_itr2, & ! (inout)
+        max_itr1, max_itr2, & ! (inout)
+#endif
         TRLP, TBLP, TGLP, &
         A, B, C, D, P, Q )
     !$acc routine seq
@@ -903,6 +986,12 @@ contains
 
     integer,  intent(in)    :: i, j
 
+#ifdef DEBUG_KUSAKA01
+    integer, intent(inout) :: cnt_num1, cnt_num2
+    integer, intent(inout) :: cnt_itr1, cnt_itr2
+    integer, intent(inout) :: max_itr1, max_itr2
+#endif
+
     ! work
     real(RP), intent(out) :: TRLP(UKA)    ! Layer temperature at previous step  [K]
     real(RP), intent(out) :: TBLP(UKA)    ! Layer temperature at previous step  [K]
@@ -927,7 +1016,7 @@ contains
     real(RP), parameter     :: rain_rate_B = 0.1_RP
     real(RP), parameter     :: rain_rate_G = 0.9_RP
 
-    integer, parameter :: itr_max = 200
+    integer, parameter :: itr_max = 100
 
     !-- Local variables
 !    logical  :: SHADOW = .false.
@@ -1235,6 +1324,12 @@ contains
        dTRp = dTR
 
     enddo
+
+#ifdef DEBUG_KUSAKA01
+    cnt_num1 = cnt_num1 + 1
+    cnt_itr1 = cnt_itr1 + iteration - 1
+    max_itr1 = max(max_itr1, iteration - 1)
+#endif
 
     ! output for debug
     if ( iteration > itr_max .and. debug ) then
@@ -1617,6 +1712,12 @@ contains
         dACp = dAC
 
      enddo
+
+#ifdef DEBUG_KUSAKA01
+     cnt_num2 = cnt_num2 + 1
+     cnt_itr2 = cnt_itr2 + iteration - 1
+     max_itr2 = max(max_itr2, iteration - 1)
+#endif
 
      ! output for debug
      if ( iteration > itr_max .and. debug ) then
