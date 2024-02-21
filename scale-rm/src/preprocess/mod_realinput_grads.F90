@@ -921,8 +921,10 @@ contains
                                      shape(:)             ) ! (out)
           if ( ldims(2).ne.shape(1) .or. ldims(3).ne.shape(2) ) then
              LOG_WARN_CONT(*) 'dimension of "topo" is different! ', ldims(2), shape(1), ldims(3), shape(2)
+             exist = .false.
+          else
+             call read2d( start(2:), count(2:), topo_org(:,:), "topo", file_id_lnd, basename_num, exist=exist )
           end if
-          call read2d( start(2:), count(2:), topo_org(:,:), "topo", file_id_lnd, basename_num, exist=exist )
        end if
     end if
     if ( .not. exist ) then
@@ -933,14 +935,16 @@ contains
                                      shape(:)            ) ! (out)
           if ( ldims(2).ne.shape(1) .or. ldims(3).ne.shape(2) ) then
              LOG_WARN_CONT(*) 'dimension of "SGP" is different! ', ldims(2), shape(1), ldims(3), shape(2)
+             exist = .false.
+          else
+             call read2d( start(2:), count(2:), topo_org(:,:), "SGP", file_id_lnd, basename_num, exist=exist )
+             !$omp parallel do
+             do j = 1, JA_org
+             do i = 1, IA_org
+                topo_org(i,j) = topo_org(i,j) / GRAV
+             end do
+             end do
           end if
-          call read2d( start(2:), count(2:), topo_org(:,:), "SGP", file_id_lnd, basename_num, exist=exist )
-          !$omp parallel do
-          do j = 1, JA_org
-          do i = 1, IA_org
-             topo_org(i,j) = topo_org(i,j) / GRAV
-          end do
-          end do
        end if
     end if
     if ( .not. exist ) then
