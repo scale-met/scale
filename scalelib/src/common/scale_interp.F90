@@ -1302,10 +1302,6 @@ contains
     integer :: k
     !---------------------------------------------------------------------------
 
-#ifndef _OPENACC
-    call PROF_rapstart('INTERP_interp',3)
-#endif
-
     spline_ = INTERP_use_spline_vert
     if ( present(spline) ) then
        spline_ = spline
@@ -1361,10 +1357,6 @@ contains
           endif
        end do
     endif
-
-#ifndef _OPENACC
-    call PROF_rapend  ('INTERP_interp',3)
-#endif
 
     return
   end subroutine INTERP_interp1d

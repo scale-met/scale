@@ -663,6 +663,7 @@ contains
                basename,              & ! [IN]
                fids_atm(n),           & ! [OUT]
                aggregate=.false.,     & ! [IN]
+               allnodes=.false.,      & ! [IN]
                rankid=tile_id_atm(n)  ) ! [IN]
        end do
 
@@ -1668,6 +1669,7 @@ contains
                basename,             & ! [IN]
                fids_lnd(n),          & ! [OUT]
                aggregate=.false.,    & ! [IN]
+               allnodes=.false.,     & ! [IN]
                rankid=tile_id_lnd(n) ) ! [IN]
        end do
 
@@ -1722,9 +1724,6 @@ contains
     use scale_const, only: &
        D2R => CONST_D2R, &
        UNDEF => CONST_UNDEF
-    use scale_file, only: &
-       FILE_open, &
-       FILE_read
     implicit none
     integer, intent(in) :: KA_org, KS_org, KE_org
     integer, intent(in) :: IA_org, IS_org, IE_org
@@ -1880,7 +1879,6 @@ contains
     use scale_const, only: &
        D2R => CONST_D2R
     use scale_file, only: &
-       FILE_open, &
        FILE_get_dimLength
     use scale_comm_cartesC, only: &
        COMM_bcast
@@ -2172,6 +2170,7 @@ contains
                basename,             & ! [IN]
                fids_ocn(n),          & ! [OUT]
                aggregate=.false.,    & ! [IN]
+               allnodes=.false.,     & ! [IN]
                rankid=tile_id_ocn(n) ) ! [IN]
        end do
 
@@ -2220,9 +2219,6 @@ contains
     use scale_const, only: &
        D2R => CONST_D2R, &
        UNDEF => CONST_UNDEF
-    use scale_file, only: &
-       FILE_open, &
-       FILE_read
     implicit none
     integer, intent(in) :: IA_org, IS_org, IE_org
     integer, intent(in) :: JA_org, JS_org, JE_org
@@ -2372,7 +2368,7 @@ contains
        LOG_ERROR(subname,*) "file is not found: ", trim(basename_org)
        call PRC_abort
     end if
-    call FILE_open(fname, fid, postfix="")
+    call FILE_open(fname, fid, postfix="", allnodes=.false.)
     if ( FILE_TYPE == "AUTO" ) then
        call FILE_get_attribute( &
             fid, "global", "source", &

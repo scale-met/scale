@@ -41,6 +41,7 @@ module scale_file
   public :: FILE_open
   public :: FILE_opened
   public :: FILE_single
+  public :: FILE_allnodes
   public :: FILE_create
   public :: FILE_get_dimLength
   public :: FILE_set_option
@@ -209,6 +210,7 @@ module scale_file
      integer                   :: fid
      logical                   :: aggregate
      logical                   :: single
+     logical                   :: allnodes
      integer(8)                :: buffer_size
   end type file
   type(file) :: FILE_files(FILE_FILE_MAX)
@@ -289,7 +291,7 @@ contains
        fid, existed,               &
        rankid, single, aggregate,  &
        time_units, calendar,       &
-       append                      )
+       allnodes, append            )
     implicit none
 
     character(len=*), intent(in)  :: basename
@@ -305,6 +307,7 @@ contains
     logical,          intent(in), optional :: aggregate
     character(len=*), intent(in), optional :: time_units
     character(len=*), intent(in), optional :: calendar
+    logical,          intent(in), optional :: allnodes
     logical,          intent(in), optional :: append
 
     character(len=FILE_HMID)   :: time_units_
@@ -354,9 +357,12 @@ contains
     call FILE_get_fid( basename, mode,     & ! [IN]
                        rankid_, single_,   & ! [IN]
                        fid, existed,       & ! [OUT]
+                       allnodes=allnodes,  & ! [IN]
                        aggregate=aggregate ) ! [IN]
 
     if( existed ) return
+
+    call PROF_rapstart('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
 
     !--- append package header to the file
     call FILE_set_attribute( fid, "global", "title"      , title       ) ! [IN]
@@ -376,6 +382,8 @@ contains
        LOG_ERROR("FILE_create",*) 'failed to set time units'
        call PRC_abort
     endif
+
+    call PROF_rapend('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
 
     return
   end subroutine FILE_create
@@ -398,9 +406,10 @@ contains
        call PRC_abort
     end if
 
+    call PROF_rapstart('FILE_Read', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
+
     error = file_get_nvars_c( nvars,              & ! (out)
                               FILE_files(fid)%fid ) ! (in)
-
     if ( error /= FILE_SUCCESS_CODE ) then
        LOG_ERROR("FILE_get_var_num",*) 'failed to get varnum. fid = ', fid
        call PRC_abort
@@ -410,6 +419,8 @@ contains
        LOG_ERROR("FILE_get_var_num",*) 'number of variables exceeds the requested size.', nvars, nvars_limit
        call PRC_abort
     endif
+
+    call PROF_rapend  ('FILE_Read', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
 
     return
   end subroutine FILE_get_var_num
@@ -432,14 +443,17 @@ contains
        call PRC_abort
     end if
 
+    call PROF_rapstart('FILE_Read', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
+
     error = file_get_varname_c( varname, &
                                 FILE_files(fid)%fid, cvid, len(varname) ) ! (in)
     call fstr(varname)
-
     if ( error /= FILE_SUCCESS_CODE ) then
        LOG_ERROR("FILE_get_var_name",*) 'failed to get varname. cvid = ', cvid
        call PRC_abort
     end if
+
+    call PROF_rapend  ('FILE_Read', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
 
     return
   end subroutine FILE_get_var_name
@@ -457,7 +471,11 @@ contains
        call PRC_abort
     end if
 
+    call PROF_rapstart('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
+
     error = file_add_associatedvariable_c( FILE_files(fid)%fid, cstr(vname) ) ! (in)
+
+    call PROF_rapend ('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
 
     if ( present(existed) ) then
        if ( error == FILE_ALREADY_EXISTED_CODE ) then
@@ -491,11 +509,15 @@ contains
        call PRC_abort
     end if
 
+    call PROF_rapstart('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
+
     error = file_set_option_c( FILE_files(fid)%fid, cstr(filetype), cstr(key), cstr(val) ) ! (in)
     if ( error /= FILE_SUCCESS_CODE ) then
        LOG_ERROR("FILE_set_option",*) 'failed to set option'
        call PRC_abort
     end if
+
+    call PROF_rapend  ('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
 
     return
   end subroutine FILE_set_option
@@ -506,6 +528,7 @@ contains
       fid,       &
       mode,      &
       single,    &
+      allnodes,  &
       aggregate, &
       rankid,    &
       postfix    )
@@ -515,6 +538,7 @@ contains
     integer,          intent(out) :: fid
     integer,          intent( in), optional :: mode
     logical,          intent( in), optional :: single
+    logical,          intent( in), optional :: allnodes
     logical,          intent( in), optional :: aggregate
     integer,          intent( in), optional :: rankid
     character(len=*), intent( in), optional :: postfix
@@ -541,6 +565,7 @@ contains
 
     call FILE_get_fid( basename, mode_, rankid_, single_,   & ! (in)
                        fid, existed,                        & ! (out)
+                       allnodes=allnodes,                   & ! (in)
                        aggregate=aggregate, postfix=postfix ) ! (in)
 
     return
@@ -581,6 +606,23 @@ contains
   end function FILE_single
 
   !-----------------------------------------------------------------------------
+  !> check if the file is allnodes
+  function FILE_allnodes( fid )
+    implicit none
+
+    integer, intent( in) :: fid
+    logical :: FILE_allnodes
+
+    if ( fid < 1 ) then
+       FILE_allnodes = .false.
+    else
+       FILE_allnodes = FILE_files(fid)%allnodes
+    end if
+
+    return
+  end function FILE_allnodes
+
+  !-----------------------------------------------------------------------------
   !> get length of dimension
   !-----------------------------------------------------------------------------
   subroutine FILE_get_dimLength( &
@@ -603,6 +645,8 @@ contains
        call PRC_abort
     end if
 
+    call PROF_rapstart('FILE_Read', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
+
     if ( present(error) ) then
        suppress = .true.
     else
@@ -623,6 +667,8 @@ contains
     else
        if ( present(error) ) error = .false.
     end if
+
+    call PROF_rapend  ('FILE_Read', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
 
     return
   end subroutine FILE_get_dimLength
@@ -646,12 +692,14 @@ contains
     integer :: error
     intrinsic size
 
-    !$acc update host(val) if(acc_is_present(val))
-
     if ( .not. FILE_opened(fid) ) then
        LOG_ERROR("FILE_put_axis_real",*) 'File is not opened. fid = ', fid
        call PRC_abort
     end if
+
+    call PROF_rapstart('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
+
+    !$acc update host(val) if(acc_is_present(val))
 
     error = file_put_axis_c( FILE_files(fid)%fid,                 & ! (in)
                              cstr(name), cstr(desc), cstr(units), & ! (in)
@@ -665,6 +713,8 @@ contains
        LOG_ERROR("FILE_put_axis_realSP",*) 'failed to put axis'
        call PRC_abort
     end if
+
+    call PROF_rapend  ('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
 
     return
   end subroutine FILE_put_axis_realSP
@@ -684,12 +734,14 @@ contains
     integer :: error
     intrinsic size
 
-    !$acc update host(val) if(acc_is_present(val))
-
     if ( .not. FILE_opened(fid) ) then
        LOG_ERROR("FILE_put_axis_real",*) 'File is not opened. fid = ', fid
        call PRC_abort
     end if
+
+    call PROF_rapstart('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
+
+    !$acc update host(val) if(acc_is_present(val))
 
     error = file_put_axis_c( FILE_files(fid)%fid,                 & ! (in)
                              cstr(name), cstr(desc), cstr(units), & ! (in)
@@ -703,6 +755,8 @@ contains
        LOG_ERROR("FILE_put_axis_realDP",*) 'failed to put axis'
        call PRC_abort
     end if
+
+    call PROF_rapend  ('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
 
     return
   end subroutine FILE_put_axis_realDP
@@ -735,6 +789,8 @@ contains
        call PRC_abort
     end if
 
+    call PROF_rapstart('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
+
     error = file_def_axis_c( FILE_files(fid)%fid,                     & ! (in)
                              cstr(name), cstr(desc), cstr(units),     & ! (in)
                              cstr(dim_name), dtype, dim_size, bounds_ ) ! (in)
@@ -742,6 +798,8 @@ contains
        LOG_ERROR("FILE_def_axis",*) 'failed to define axis'
        call PRC_abort
     end if
+
+    call PROF_rapend  ('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
 
     return
   end subroutine FILE_def_axis
@@ -767,6 +825,8 @@ contains
        call PRC_abort
     end if
 
+    call PROF_rapstart('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
+
     !$acc update host(val) if(acc_is_present(val))
 
     if ( present(start) ) then
@@ -789,6 +849,8 @@ contains
        call PRC_abort
     end if
 
+    call PROF_rapend  ('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
+
     return
   end subroutine FILE_write_axis_realSP
   subroutine FILE_write_axis_realDP( &
@@ -808,6 +870,8 @@ contains
        LOG_ERROR("FILE_write_axis_realDP",*) 'File is not opened. fid = ', fid
        call PRC_abort
     end if
+
+    call PROF_rapstart('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
 
     !$acc update host(val) if(acc_is_present(val))
 
@@ -830,6 +894,8 @@ contains
        LOG_ERROR("FILE_write_axis_realDP",*) 'failed to write axis: '//trim(name)
        call PRC_abort
     end if
+
+    call PROF_rapend  ('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
 
     return
   end subroutine FILE_write_axis_realDP
@@ -867,6 +933,8 @@ contains
        call PRC_abort
     end if
 
+    call PROF_rapstart('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
+
     !allocate( character(len=len(dim_names)+1) :: cptr(size(dim_names)) )
     allocate( cptr(size(dim_names)) )
     do i = 1, size(dim_names)
@@ -901,6 +969,8 @@ contains
     end block
 #endif
 
+    call PROF_rapend  ('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
+
     return
   end subroutine FILE_put_associatedCoordinate_realSP_1D
   subroutine FILE_put_associatedCoordinate_realDP_1D( &
@@ -932,6 +1002,8 @@ contains
        LOG_ERROR("FILE_put_associatedCoordinate_realDP_1D",*) 'File is not opened. fid = ', fid
        call PRC_abort
     end if
+
+    call PROF_rapstart('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
 
     !allocate( character(len=len(dim_names)+1) :: cptr(size(dim_names)) )
     allocate( cptr(size(dim_names)) )
@@ -967,6 +1039,8 @@ contains
     end block
 #endif
 
+    call PROF_rapend  ('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
+
     return
   end subroutine FILE_put_associatedCoordinate_realDP_1D
   subroutine FILE_put_associatedCoordinate_realSP_2D( &
@@ -998,6 +1072,8 @@ contains
        LOG_ERROR("FILE_put_associatedCoordinate_realSP_2D",*) 'File is not opened. fid = ', fid
        call PRC_abort
     end if
+
+    call PROF_rapstart('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
 
     !allocate( character(len=len(dim_names)+1) :: cptr(size(dim_names)) )
     allocate( cptr(size(dim_names)) )
@@ -1033,6 +1109,8 @@ contains
     end block
 #endif
 
+    call PROF_rapend  ('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
+
     return
   end subroutine FILE_put_associatedCoordinate_realSP_2D
   subroutine FILE_put_associatedCoordinate_realDP_2D( &
@@ -1064,6 +1142,8 @@ contains
        LOG_ERROR("FILE_put_associatedCoordinate_realDP_2D",*) 'File is not opened. fid = ', fid
        call PRC_abort
     end if
+
+    call PROF_rapstart('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
 
     !allocate( character(len=len(dim_names)+1) :: cptr(size(dim_names)) )
     allocate( cptr(size(dim_names)) )
@@ -1099,6 +1179,8 @@ contains
     end block
 #endif
 
+    call PROF_rapend  ('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
+
     return
   end subroutine FILE_put_associatedCoordinate_realDP_2D
   subroutine FILE_put_associatedCoordinate_realSP_3D( &
@@ -1130,6 +1212,8 @@ contains
        LOG_ERROR("FILE_put_associatedCoordinate_realSP_3D",*) 'File is not opened. fid = ', fid
        call PRC_abort
     end if
+
+    call PROF_rapstart('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
 
     !allocate( character(len=len(dim_names)+1) :: cptr(size(dim_names)) )
     allocate( cptr(size(dim_names)) )
@@ -1165,6 +1249,8 @@ contains
     end block
 #endif
 
+    call PROF_rapend  ('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
+
     return
   end subroutine FILE_put_associatedCoordinate_realSP_3D
   subroutine FILE_put_associatedCoordinate_realDP_3D( &
@@ -1196,6 +1282,8 @@ contains
        LOG_ERROR("FILE_put_associatedCoordinate_realDP_3D",*) 'File is not opened. fid = ', fid
        call PRC_abort
     end if
+
+    call PROF_rapstart('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
 
     !allocate( character(len=len(dim_names)+1) :: cptr(size(dim_names)) )
     allocate( cptr(size(dim_names)) )
@@ -1231,6 +1319,8 @@ contains
     end block
 #endif
 
+    call PROF_rapend  ('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
+
     return
   end subroutine FILE_put_associatedCoordinate_realDP_3D
   subroutine FILE_put_associatedCoordinate_realSP_4D( &
@@ -1262,6 +1352,8 @@ contains
        LOG_ERROR("FILE_put_associatedCoordinate_realSP_4D",*) 'File is not opened. fid = ', fid
        call PRC_abort
     end if
+
+    call PROF_rapstart('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
 
     !allocate( character(len=len(dim_names)+1) :: cptr(size(dim_names)) )
     allocate( cptr(size(dim_names)) )
@@ -1297,6 +1389,8 @@ contains
     end block
 #endif
 
+    call PROF_rapend  ('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
+
     return
   end subroutine FILE_put_associatedCoordinate_realSP_4D
   subroutine FILE_put_associatedCoordinate_realDP_4D( &
@@ -1328,6 +1422,8 @@ contains
        LOG_ERROR("FILE_put_associatedCoordinate_realDP_4D",*) 'File is not opened. fid = ', fid
        call PRC_abort
     end if
+
+    call PROF_rapstart('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
 
     !allocate( character(len=len(dim_names)+1) :: cptr(size(dim_names)) )
     allocate( cptr(size(dim_names)) )
@@ -1363,6 +1459,8 @@ contains
     end block
 #endif
 
+    call PROF_rapend  ('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
+
     return
   end subroutine FILE_put_associatedCoordinate_realDP_4D
 
@@ -1390,6 +1488,8 @@ contains
        call PRC_abort
     end if
 
+    call PROF_rapstart('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
+
     !allocate( character(len=len(dim_names)+1) :: cptr(size(dim_names)) )
     allocate( cptr(size(dim_names)) )
     do i = 1, size(dim_names)
@@ -1405,6 +1505,8 @@ contains
        LOG_ERROR("FILE_def_associatedCoordinate",*) 'failed to define associated coordinate: '//trim(name)
        call PRC_abort
     end if
+
+    call PROF_rapend  ('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
 
     return
   end subroutine FILE_def_associatedCoordinate
@@ -1439,6 +1541,8 @@ contains
        LOG_ERROR("FILE_write_associatedCoordinate_realSP_1D",*) 'File is not opened. fid = ', fid
        call PRC_abort
     end if
+
+    call PROF_rapstart('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
 
     if ( present(ndims) ) then
        ndims_ = ndims
@@ -1496,6 +1600,8 @@ contains
     end block
 #endif
 
+    call PROF_rapend  ('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
+
     return
   end subroutine FILE_write_associatedCoordinate_realSP_1D
   subroutine FILE_write_associatedCoordinate_realDP_1D( &
@@ -1525,6 +1631,8 @@ contains
        LOG_ERROR("FILE_write_associatedCoordinate_realDP_1D",*) 'File is not opened. fid = ', fid
        call PRC_abort
     end if
+
+    call PROF_rapstart('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
 
     if ( present(ndims) ) then
        ndims_ = ndims
@@ -1582,6 +1690,8 @@ contains
     end block
 #endif
 
+    call PROF_rapend  ('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
+
     return
   end subroutine FILE_write_associatedCoordinate_realDP_1D
   subroutine FILE_write_associatedCoordinate_realSP_2D( &
@@ -1611,6 +1721,8 @@ contains
        LOG_ERROR("FILE_write_associatedCoordinate_realSP_2D",*) 'File is not opened. fid = ', fid
        call PRC_abort
     end if
+
+    call PROF_rapstart('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
 
     if ( present(ndims) ) then
        ndims_ = ndims
@@ -1668,6 +1780,8 @@ contains
     end block
 #endif
 
+    call PROF_rapend  ('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
+
     return
   end subroutine FILE_write_associatedCoordinate_realSP_2D
   subroutine FILE_write_associatedCoordinate_realDP_2D( &
@@ -1697,6 +1811,8 @@ contains
        LOG_ERROR("FILE_write_associatedCoordinate_realDP_2D",*) 'File is not opened. fid = ', fid
        call PRC_abort
     end if
+
+    call PROF_rapstart('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
 
     if ( present(ndims) ) then
        ndims_ = ndims
@@ -1754,6 +1870,8 @@ contains
     end block
 #endif
 
+    call PROF_rapend  ('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
+
     return
   end subroutine FILE_write_associatedCoordinate_realDP_2D
   subroutine FILE_write_associatedCoordinate_realSP_3D( &
@@ -1783,6 +1901,8 @@ contains
        LOG_ERROR("FILE_write_associatedCoordinate_realSP_3D",*) 'File is not opened. fid = ', fid
        call PRC_abort
     end if
+
+    call PROF_rapstart('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
 
     if ( present(ndims) ) then
        ndims_ = ndims
@@ -1840,6 +1960,8 @@ contains
     end block
 #endif
 
+    call PROF_rapend  ('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
+
     return
   end subroutine FILE_write_associatedCoordinate_realSP_3D
   subroutine FILE_write_associatedCoordinate_realDP_3D( &
@@ -1869,6 +1991,8 @@ contains
        LOG_ERROR("FILE_write_associatedCoordinate_realDP_3D",*) 'File is not opened. fid = ', fid
        call PRC_abort
     end if
+
+    call PROF_rapstart('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
 
     if ( present(ndims) ) then
        ndims_ = ndims
@@ -1926,6 +2050,8 @@ contains
     end block
 #endif
 
+    call PROF_rapend  ('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
+
     return
   end subroutine FILE_write_associatedCoordinate_realDP_3D
   subroutine FILE_write_associatedCoordinate_realSP_4D( &
@@ -1955,6 +2081,8 @@ contains
        LOG_ERROR("FILE_write_associatedCoordinate_realSP_4D",*) 'File is not opened. fid = ', fid
        call PRC_abort
     end if
+
+    call PROF_rapstart('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
 
     if ( present(ndims) ) then
        ndims_ = ndims
@@ -2012,6 +2140,8 @@ contains
     end block
 #endif
 
+    call PROF_rapend  ('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
+
     return
   end subroutine FILE_write_associatedCoordinate_realSP_4D
   subroutine FILE_write_associatedCoordinate_realDP_4D( &
@@ -2041,6 +2171,8 @@ contains
        LOG_ERROR("FILE_write_associatedCoordinate_realDP_4D",*) 'File is not opened. fid = ', fid
        call PRC_abort
     end if
+
+    call PROF_rapstart('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
 
     if ( present(ndims) ) then
        ndims_ = ndims
@@ -2098,6 +2230,8 @@ contains
     end block
 #endif
 
+    call PROF_rapend  ('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
+
     return
   end subroutine FILE_write_associatedCoordinate_realDP_4D
 
@@ -2126,11 +2260,15 @@ contains
        call PRC_abort
     end if
 
+    call PROF_rapstart('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
+
     call FILE_add_variable_with_time( fid,    & ! (in)
          varname, desc, units, standard_name, & ! (in)
          dims, dtype, -1.0_DP,                & ! (in)
          vid,                                 & ! (out)
          time_stats = time_stats              ) ! (in)
+
+    call PROF_rapend  ('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
 
     return
   end subroutine FILE_add_variable_no_time
@@ -2176,6 +2314,8 @@ contains
        LOG_ERROR("FILE_add_variable_with_time",*) 'File is not opened. fid = ', fid
        call PRC_abort
     end if
+
+    call PROF_rapstart('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
 
     vid = -1
     do n = 1, FILE_nvars
@@ -2223,6 +2363,8 @@ contains
        'Variable registration : NO.', fid, ', vid = ', vid, ', name = ', trim(varname)
     endif
 
+    call PROF_rapend  ('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
+
     return
   end subroutine FILE_add_variable_with_time
 
@@ -2265,6 +2407,8 @@ contains
        LOG_ERROR("FILE_def_variable",*) 'File is not opened. fid = ', fid
        call PRC_abort
     end if
+
+    call PROF_rapstart('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
 
     vid = -1
     do n = 1, FILE_nvars
@@ -2318,6 +2462,8 @@ contains
        if ( present(existed) ) existed = .true.
     endif
 
+    call PROF_rapend  ('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
+
     return
   end subroutine FILE_def_variable
 
@@ -2344,6 +2490,8 @@ contains
        call PRC_abort
     end if
 
+    call PROF_rapstart('FILE_Read', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
+
     if ( present(existed) ) then
        suppress = .true.
     else
@@ -2364,6 +2512,8 @@ contains
     else
        if ( present(existed) ) existed = .true.
     end if
+
+    call PROF_rapend  ('FILE_Read', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
 
     return
   end subroutine FILE_get_attribute_text_fid
@@ -2421,6 +2571,8 @@ contains
        call PRC_abort
     end if
 
+    call PROF_rapstart('FILE_Read', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
+
     call FILE_get_attribute_text_fid( fid, vname, key, & ! (in)
                                       buf, existed     ) ! (out)
 
@@ -2436,6 +2588,8 @@ contains
        LOG_ERROR("FILE_get_attribute_logical_fid",*) 'value is not eigher true or false'
        call PRC_abort
     end if
+
+    call PROF_rapend  ('FILE_Read', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
 
     return
   end subroutine FILE_get_attribute_logical_fid
@@ -2495,6 +2649,8 @@ contains
        call PRC_abort
     end if
 
+    call PROF_rapstart('FILE_Read', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
+
     if ( present(existed) ) then
        suppress = .true.
     else
@@ -2514,6 +2670,8 @@ contains
     else
        if ( present(existed) ) existed = .true.
     end if
+
+    call PROF_rapend  ('FILE_Read', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
 
     return
   end subroutine FILE_get_attribute_int_fid_ary
@@ -2621,6 +2779,8 @@ contains
        call PRC_abort
     end if
 
+    call PROF_rapstart('FILE_Read', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
+
     if ( present(existed) ) then
        suppress = .true.
     else
@@ -2640,6 +2800,8 @@ contains
     else
        if ( present(existed) ) existed = .true.
     end if
+
+    call PROF_rapend  ('FILE_Read', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
 
     return
   end subroutine FILE_get_attribute_float_fid_ary
@@ -2745,6 +2907,8 @@ contains
        call PRC_abort
     end if
 
+    call PROF_rapstart('FILE_Read', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
+
     if ( present(existed) ) then
        suppress = .true.
     else
@@ -2764,6 +2928,8 @@ contains
     else
        if ( present(existed) ) existed = .true.
     end if
+
+    call PROF_rapend  ('FILE_Read', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
 
     return
   end subroutine FILE_get_attribute_double_fid_ary
@@ -2867,6 +3033,8 @@ contains
        call PRC_abort
     end if
 
+    call PROF_rapstart('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
+
     error = file_set_attribute_text_c( FILE_files(fid)%fid,    & ! (in)
                                        cstr(vname), cstr(key), & ! (in)
                                        cstr(val)               ) ! (in)
@@ -2874,6 +3042,8 @@ contains
        LOG_ERROR("FILE_set_attribute_text",*) 'failed to set text attribute for '//trim(vname)//': '//trim(key)
        call PRC_abort
     end if
+
+    call PROF_rapend  ('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
 
     return
   end subroutine FILE_set_attribute_text
@@ -2922,6 +3092,8 @@ contains
        call PRC_abort
     end if
 
+    call PROF_rapstart('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
+
     error = file_set_attribute_int_c( FILE_files(fid)%fid,    & ! (in)
                                       cstr(vname), cstr(key), & ! (in)
                                       val(:), size(val(:))    ) ! (in)
@@ -2929,6 +3101,8 @@ contains
        LOG_ERROR("FILE_set_attribute_int",*) 'failed to set integer attribute for '//trim(vname)//': '//trim(key)
        call PRC_abort
     end if
+
+    call PROF_rapend  ('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
 
     return
   end subroutine FILE_set_attribute_int_ary
@@ -2968,6 +3142,8 @@ contains
        call PRC_abort
     end if
 
+    call PROF_rapstart('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
+
     error = file_set_attribute_float_c( FILE_files(fid)%fid,    & ! (in)
                                             cstr(vname), cstr(key), & ! (in)
                                             val(:), size(val(:))    ) ! (in)
@@ -2975,6 +3151,8 @@ contains
        LOG_ERROR("FILE_set_attribute_float",*) 'failed to set float attribute for '//trim(vname)//': '//trim(key)
        call PRC_abort
     end if
+
+    call PROF_rapend  ('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
 
     return
   end subroutine FILE_set_attribute_float_ary
@@ -3013,6 +3191,8 @@ contains
        call PRC_abort
     end if
 
+    call PROF_rapstart('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
+
     error = file_set_attribute_double_c( FILE_files(fid)%fid,    & ! (in)
                                             cstr(vname), cstr(key), & ! (in)
                                             val(:), size(val(:))    ) ! (in)
@@ -3020,6 +3200,8 @@ contains
        LOG_ERROR("FILE_set_attribute_double",*) 'failed to set double attribute for '//trim(vname)//': '//trim(key)
        call PRC_abort
     end if
+
+    call PROF_rapend  ('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
 
     return
   end subroutine FILE_set_attribute_double_ary
@@ -3101,6 +3283,8 @@ contains
        call PRC_abort
     end if
 
+    call PROF_rapstart('FILE_Read', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
+
     if ( present(error) ) then
        suppress = .true.
     else
@@ -3113,6 +3297,7 @@ contains
                                   cstr(varname),       & ! (in)
                                   1, suppress          ) ! (in)
 
+    call PROF_rapend  ('FILE_Read', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
 
     !--- verify
     if ( ierror /= FILE_SUCCESS_CODE ) then
@@ -3160,6 +3345,8 @@ contains
        call PRC_abort
     end if
 
+    call PROF_rapstart('FILE_Read', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
+
     ierror = file_get_step_size_c( len,                               & ! (out)
                                    FILE_files(fid)%fid, cstr(varname) ) ! (in)
     if ( ierror /= FILE_SUCCESS_CODE .and. ierror /= FILE_ALREADY_EXISTED_CODE ) then
@@ -3172,6 +3359,8 @@ contains
     else
        if ( present(error) ) error = .false.
     end if
+
+    call PROF_rapend  ('FILE_Read', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
 
     return
   end subroutine FILE_get_stepSize
@@ -3243,6 +3432,8 @@ contains
        call PRC_abort
     end if
 
+    call PROF_rapstart('FILE_Read', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
+
     call FILE_get_attribute( fid, 'global', 'title',       title       )
     call FILE_get_attribute( fid, 'global', 'source',      source      )
     call FILE_get_attribute( fid, 'global', 'institution', institution )
@@ -3252,6 +3443,8 @@ contains
     do v = 1, nvars
        call FILE_get_var_name( fid, v, varname(v) )
     enddo
+
+    call PROF_rapend  ('FILE_Read', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
 
     return
   end subroutine FILE_get_commonInfo_fid
@@ -3392,12 +3585,16 @@ contains
        call PRC_abort
     end if
 
+    call PROF_rapstart('FILE_Read', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
+
     !--- get data information
     error = file_get_datainfo_c( dinfo,               & ! [OUT]
                                  FILE_files(fid)%fid, & ! [IN]
                                  cstr(varname),       & ! [IN]
                                  istep_,              & ! [IN]
                                  suppress             ) ! [IN]
+
+    call PROF_rapend  ('FILE_Read', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
 
     !--- verify and exit
     if ( error /= FILE_SUCCESS_CODE ) then
@@ -3409,6 +3606,8 @@ contains
           call PRC_abort
        end if
     endif
+
+    call PROF_rapstart('FILE_Read', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
 
     if ( present(existed) ) existed = .true.
 
@@ -3487,6 +3686,8 @@ contains
           time_end = dinfo%time_end
        end if
     endif
+
+    call PROF_rapend  ('FILE_Read', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
 
     return
   end subroutine FILE_get_dataInfo_fid
@@ -3605,6 +3806,8 @@ contains
        call PRC_abort
     end if
 
+    call PROF_rapstart('FILE_Read', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
+
     ! initialize
     description   = ""
     units         = ""
@@ -3680,6 +3883,8 @@ contains
           step_nmax = istep - 1
        end if
     end if
+
+    call PROF_rapend  ('FILE_Read', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
 
     return
   end subroutine FILE_get_all_dataInfo_fid
@@ -4019,6 +4224,8 @@ contains
        call PRC_abort
     end if
 
+    call PROF_rapstart('FILE_Read', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
+
     if ( present(step) ) then
        step_ = step
     else
@@ -4124,6 +4331,8 @@ contains
 
     !$acc update device(var) if(acc_is_present(var))
 
+    call PROF_rapend  ('FILE_Read', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
+
     return
   end subroutine FILE_read_var_realSP_1D
   subroutine FILE_read_var_realDP_1D( &
@@ -4168,6 +4377,8 @@ contains
        LOG_ERROR("FILE_read_var_realDP_1D",*) 'File is not opened. fid = ', fid
        call PRC_abort
     end if
+
+    call PROF_rapstart('FILE_Read', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
 
     if ( present(step) ) then
        step_ = step
@@ -4274,6 +4485,8 @@ contains
 
     !$acc update device(var) if(acc_is_present(var))
 
+    call PROF_rapend  ('FILE_Read', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
+
     return
   end subroutine FILE_read_var_realDP_1D
   subroutine FILE_read_var_realSP_2D( &
@@ -4318,6 +4531,8 @@ contains
        LOG_ERROR("FILE_read_var_realSP_2D",*) 'File is not opened. fid = ', fid
        call PRC_abort
     end if
+
+    call PROF_rapstart('FILE_Read', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
 
     if ( present(step) ) then
        step_ = step
@@ -4424,6 +4639,8 @@ contains
 
     !$acc update device(var) if(acc_is_present(var))
 
+    call PROF_rapend  ('FILE_Read', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
+
     return
   end subroutine FILE_read_var_realSP_2D
   subroutine FILE_read_var_realDP_2D( &
@@ -4468,6 +4685,8 @@ contains
        LOG_ERROR("FILE_read_var_realDP_2D",*) 'File is not opened. fid = ', fid
        call PRC_abort
     end if
+
+    call PROF_rapstart('FILE_Read', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
 
     if ( present(step) ) then
        step_ = step
@@ -4574,6 +4793,8 @@ contains
 
     !$acc update device(var) if(acc_is_present(var))
 
+    call PROF_rapend  ('FILE_Read', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
+
     return
   end subroutine FILE_read_var_realDP_2D
   subroutine FILE_read_var_realSP_3D( &
@@ -4618,6 +4839,8 @@ contains
        LOG_ERROR("FILE_read_var_realSP_3D",*) 'File is not opened. fid = ', fid
        call PRC_abort
     end if
+
+    call PROF_rapstart('FILE_Read', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
 
     if ( present(step) ) then
        step_ = step
@@ -4724,6 +4947,8 @@ contains
 
     !$acc update device(var) if(acc_is_present(var))
 
+    call PROF_rapend  ('FILE_Read', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
+
     return
   end subroutine FILE_read_var_realSP_3D
   subroutine FILE_read_var_realDP_3D( &
@@ -4768,6 +4993,8 @@ contains
        LOG_ERROR("FILE_read_var_realDP_3D",*) 'File is not opened. fid = ', fid
        call PRC_abort
     end if
+
+    call PROF_rapstart('FILE_Read', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
 
     if ( present(step) ) then
        step_ = step
@@ -4874,6 +5101,8 @@ contains
 
     !$acc update device(var) if(acc_is_present(var))
 
+    call PROF_rapend  ('FILE_Read', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
+
     return
   end subroutine FILE_read_var_realDP_3D
   subroutine FILE_read_var_realSP_4D( &
@@ -4918,6 +5147,8 @@ contains
        LOG_ERROR("FILE_read_var_realSP_4D",*) 'File is not opened. fid = ', fid
        call PRC_abort
     end if
+
+    call PROF_rapstart('FILE_Read', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
 
     if ( present(step) ) then
        step_ = step
@@ -5024,6 +5255,8 @@ contains
 
     !$acc update device(var) if(acc_is_present(var))
 
+    call PROF_rapend  ('FILE_Read', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
+
     return
   end subroutine FILE_read_var_realSP_4D
   subroutine FILE_read_var_realDP_4D( &
@@ -5068,6 +5301,8 @@ contains
        LOG_ERROR("FILE_read_var_realDP_4D",*) 'File is not opened. fid = ', fid
        call PRC_abort
     end if
+
+    call PROF_rapstart('FILE_Read', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
 
     if ( present(step) ) then
        step_ = step
@@ -5174,6 +5409,8 @@ contains
 
     !$acc update device(var) if(acc_is_present(var))
 
+    call PROF_rapend  ('FILE_Read', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
+
     return
   end subroutine FILE_read_var_realDP_4D
 
@@ -5218,6 +5455,8 @@ contains
        LOG_ERROR("FILE_write_realSP_1D",*) 'File is not opened. fid = ', fid
        call PRC_abort
     end if
+
+    call PROF_rapstart('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
 
     if ( present(ndims) ) then
        ! history variable has been reshaped to 1D
@@ -5273,6 +5512,8 @@ contains
        call PRC_abort
     end if
 
+    call PROF_rapend  ('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
+
     return
   end subroutine FILE_write_realSP_1D
   subroutine FILE_write_realDP_1D( &
@@ -5313,6 +5554,8 @@ contains
        LOG_ERROR("FILE_write_realDP_1D",*) 'File is not opened. fid = ', fid
        call PRC_abort
     end if
+
+    call PROF_rapstart('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
 
     if ( present(ndims) ) then
        ! history variable has been reshaped to 1D
@@ -5368,6 +5611,8 @@ contains
        call PRC_abort
     end if
 
+    call PROF_rapend  ('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
+
     return
   end subroutine FILE_write_realDP_1D
   subroutine FILE_write_realSP_2D( &
@@ -5405,6 +5650,8 @@ contains
        call PRC_abort
     end if
 
+    call PROF_rapstart('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
+
        ! this is for restart variable which keeps its original shape
        if ( present(start) ) then
           start_(:) = start(:)
@@ -5436,6 +5683,8 @@ contains
        LOG_ERROR("FILE_write_realSP_2D",*) 'failed to write data: ', trim(FILE_vars(vid)%name)
        call PRC_abort
     end if
+
+    call PROF_rapend  ('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
 
     return
   end subroutine FILE_write_realSP_2D
@@ -5474,6 +5723,8 @@ contains
        call PRC_abort
     end if
 
+    call PROF_rapstart('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
+
        ! this is for restart variable which keeps its original shape
        if ( present(start) ) then
           start_(:) = start(:)
@@ -5505,6 +5756,8 @@ contains
        LOG_ERROR("FILE_write_realDP_2D",*) 'failed to write data: ', trim(FILE_vars(vid)%name)
        call PRC_abort
     end if
+
+    call PROF_rapend  ('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
 
     return
   end subroutine FILE_write_realDP_2D
@@ -5543,6 +5796,8 @@ contains
        call PRC_abort
     end if
 
+    call PROF_rapstart('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
+
        ! this is for restart variable which keeps its original shape
        if ( present(start) ) then
           start_(:) = start(:)
@@ -5574,6 +5829,8 @@ contains
        LOG_ERROR("FILE_write_realSP_3D",*) 'failed to write data: ', trim(FILE_vars(vid)%name)
        call PRC_abort
     end if
+
+    call PROF_rapend  ('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
 
     return
   end subroutine FILE_write_realSP_3D
@@ -5612,6 +5869,8 @@ contains
        call PRC_abort
     end if
 
+    call PROF_rapstart('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
+
        ! this is for restart variable which keeps its original shape
        if ( present(start) ) then
           start_(:) = start(:)
@@ -5643,6 +5902,8 @@ contains
        LOG_ERROR("FILE_write_realDP_3D",*) 'failed to write data: ', trim(FILE_vars(vid)%name)
        call PRC_abort
     end if
+
+    call PROF_rapend  ('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
 
     return
   end subroutine FILE_write_realDP_3D
@@ -5681,6 +5942,8 @@ contains
        call PRC_abort
     end if
 
+    call PROF_rapstart('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
+
        ! this is for restart variable which keeps its original shape
        if ( present(start) ) then
           start_(:) = start(:)
@@ -5712,6 +5975,8 @@ contains
        LOG_ERROR("FILE_write_realSP_4D",*) 'failed to write data: ', trim(FILE_vars(vid)%name)
        call PRC_abort
     end if
+
+    call PROF_rapend  ('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
 
     return
   end subroutine FILE_write_realSP_4D
@@ -5750,6 +6015,8 @@ contains
        call PRC_abort
     end if
 
+    call PROF_rapstart('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
+
        ! this is for restart variable which keeps its original shape
        if ( present(start) ) then
           start_(:) = start(:)
@@ -5782,6 +6049,8 @@ contains
        call PRC_abort
     end if
 
+    call PROF_rapend  ('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
+
     return
   end subroutine FILE_write_realDP_4D
 
@@ -5797,6 +6066,8 @@ contains
 
     if ( .not. FILE_opened(fid) ) return
 
+    call PROF_rapstart('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
+
     error = file_enddef_c( FILE_files(fid)%fid )
 
     if ( error == FILE_SUCCESS_CODE ) then
@@ -5809,6 +6080,8 @@ contains
        LOG_ERROR("FILE_enddef",*) 'failed to exit define mode'
        call PRC_abort
     end if
+
+    call PROF_rapend  ('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
 
     return
   end subroutine FILE_enddef
@@ -5825,6 +6098,8 @@ contains
 
     if ( .not. FILE_opened(fid) ) return
 
+    call PROF_rapstart('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
+
     error = file_redef_c( FILE_files(fid)%fid )
 
     if ( error == FILE_SUCCESS_CODE ) then
@@ -5837,6 +6112,8 @@ contains
        LOG_ERROR("FILE_redef",*) 'failed to enter to define mode'
        call PRC_abort
     end if
+
+    call PROF_rapend  ('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
 
     return
   end subroutine FILE_redef
@@ -5860,6 +6137,8 @@ contains
        call FILE_detach_buffer(fid)
     end if
 
+    call PROF_rapstart('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
+
     error = file_attach_buffer_c( FILE_files(fid)%fid, buf_amount )
 
     if ( error /= FILE_SUCCESS_CODE ) then
@@ -5873,6 +6152,8 @@ contains
             ', size = ', buf_amount
 
     FILE_files(fid)%buffer_size = buf_amount
+
+    call PROF_rapend  ('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
 
     return
   end subroutine FILE_attach_buffer
@@ -5893,6 +6174,8 @@ contains
 
     if ( FILE_files(fid)%buffer_size < 0 ) return ! not attached
 
+    call PROF_rapstart('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
+
     error = file_detach_buffer_c( FILE_files(fid)%fid )
 
     if ( error /= FILE_SUCCESS_CODE ) then
@@ -5905,6 +6188,8 @@ contains
             'Detach buffer : No.', fid, ', name = ', trim(FILE_files(fid)%name)
 
     FILE_files(fid)%buffer_size = -1
+
+    call PROF_rapend  ('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
 
     return
   end subroutine FILE_detach_buffer
@@ -5923,6 +6208,8 @@ contains
 
     if ( FILE_files(fid)%fid < 0 ) return  ! already closed
 
+    call PROF_rapstart('FILE', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
+
     error = file_flush_c( FILE_files(fid)%fid )
 
     if ( error == FILE_SUCCESS_CODE ) then
@@ -5935,6 +6222,8 @@ contains
        LOG_ERROR("FILE_flush",*) 'failed to flush data to netcdf file'
        call PRC_abort
     end if
+
+    call PROF_rapend  ('FILE', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
 
     return
   end subroutine FILE_flush
@@ -5953,6 +6242,8 @@ contains
     if ( .not. FILE_opened(fid) ) return
 
     if ( FILE_files(fid)%fid < 0 ) return  ! already closed
+
+    call PROF_rapstart('FILE', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
 
     if ( present(abort) ) then
        abort_ = abort
@@ -5984,6 +6275,8 @@ contains
           FILE_vars(n)%name = ''
        end if
     end do
+
+    call PROF_rapend  ('FILE', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
 
     return
   end subroutine FILE_close
@@ -6043,6 +6336,7 @@ contains
       single,    &
       fid,       &
       existed,   &
+      allnodes,  &
       aggregate, &
       postfix    )
     use scale_prc, only: &
@@ -6058,6 +6352,7 @@ contains
     integer,          intent(out) :: fid
     logical,          intent(out) :: existed
 
+    logical,          intent( in), optional :: allnodes
     logical,          intent( in), optional :: aggregate
     character(len=*), intent( in), optional :: postfix
 
@@ -6067,6 +6362,7 @@ contains
     character(len=FILE_HLONG) :: fname
     integer                   :: n
 
+    logical :: allnodes_
     logical :: aggregate_
     integer :: cfid
     integer :: error
@@ -6074,6 +6370,12 @@ contains
     !---------------------------------------------------------------------------
 
     !--- check aggregate (parallel I/O on a single shared netCDF file)
+
+    if ( present(allnodes) ) then
+       allnodes_ = allnodes
+    else
+       allnodes_ = .true.
+    end if
 
     ! check to do PnetCDF I/O
     if ( present(aggregate) ) then
@@ -6112,6 +6414,8 @@ contains
        return
     end if
 
+    call PROF_rapstart('FILE', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
+
     error = file_open_c( cfid,                       & ! (out)
                          cstr(fname), mode, mpi_comm ) ! (in)
 
@@ -6127,6 +6431,7 @@ contains
     FILE_files(fid)%fid       = cfid
     FILE_files(fid)%aggregate = aggregate_
     FILE_files(fid)%single    = single
+    FILE_files(fid)%allnodes  = allnodes_ .and. (.not. single)
     FILE_files(fid)%buffer_size = -1
 
     LOG_NEWLINE
@@ -6134,6 +6439,8 @@ contains
     'Registration (', trim(rwname(mode)), ') : No.', fid, ', name = ', trim(fname)
 
     existed = .false.
+
+    call PROF_rapend  ('FILE', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
 
     return
   end subroutine FILE_get_fid

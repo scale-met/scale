@@ -759,9 +759,10 @@ contains
     dinfo%basename = parent_basename
 
     if ( PRC_IsMaster ) then
-       call FILE_open( PARENT_BASENAME, & ! (in)
-                       fid,                     & ! (out)
-                       aggregate = .false.      ) ! (in)
+       call FILE_open( PARENT_BASENAME,     & ! (in)
+                       fid,                 & ! (out)
+                       aggregate = .false., & ! (in)
+                       allnodes  = .false.  ) ! (in)
 
        call FILE_get_attribute( fid, "global", "scale_atmos_grid_cartesC_index_imaxg", &
                                 imaxg(:), existed=existed                        )
@@ -933,6 +934,7 @@ contains
              call FILE_open( PARENT_BASENAME,     & ! (in)
                              fid,                 & ! (out)
                              aggregate = .false., & ! (in)
+                             allnodes  = .false., & ! (in)
                              rankid    = n-1      ) ! (in)
 
              call FILE_get_shape( fid, "xh", dims(:) )
