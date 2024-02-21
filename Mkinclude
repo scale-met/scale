@@ -116,6 +116,10 @@ else
    SDMDIR          =
 endif
 
+# Data Assimilation
+ifeq ($(SCALE_ENABLE_DA),T)
+   FFLAGS += -DDA
+endif
 
 # JMA Physic Process Library
 ifeq ($(SCALE_ENABLE_JMAPPLIB),T)

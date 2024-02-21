@@ -29,6 +29,7 @@ module scale_random
   public :: RANDOM_uniform
   public :: RANDOM_normal
   public :: RANDOM_finalize
+  public :: RANDOM_Knuth_shuffle
 
   interface RANDOM_uniform
      module procedure RANDOM_uniform_1D
@@ -234,6 +235,28 @@ contains
 
     return
   end subroutine RANDOM_finalize
+
+  subroutine RANDOM_Knuth_shuffle( num, a )
+    implicit none
+    integer, intent(in) :: num
+    integer, intent(out) :: a(num)
+    integer :: i, randpos, tmp
+    real(DP) :: r
+
+    do i = 1, num
+      a(i) = i
+    end do
+
+    do i = num, 2, -1
+      call random_number(r)
+      randpos = int(r * i) + 1
+      tmp = a(randpos)
+      a(randpos) = a(i)
+      a(i) = tmp
+    end do
+
+    return
+  end subroutine RANDOM_Knuth_shuffle
 
   ! private
 

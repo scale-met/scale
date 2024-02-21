@@ -51,6 +51,8 @@ module scale_matrix
      module procedure MATRIX_SOLVER_tridiagonal_3D
   end interface MATRIX_SOLVER_tridiagonal
 
+  public :: MATRIX_SOLVER_eigenvalue_decomposition
+
   !-----------------------------------------------------------------------------
   !
   !++ Public parameters & variables
@@ -869,5 +871,174 @@ contains
 
     return
   end subroutine MATRIX_SOLVER_tridiagonal_3D
+
+  !-----------------------------------------------------------------------------
+  !  eigenvalue decomposition
+  !-----------------------------------------------------------------------------
+  subroutine MATRIX_SOLVER_eigenvalue_decomposition(n,a,eival,eivec,simdlen)
+    use scale_prc, only: &
+      PRC_abort
+    implicit none
+
+    integer,  intent(in)  :: n            ! dimension of matrix
+    real(RP), intent(in)  :: a    (n,n)   ! input matrix
+    real(RP), intent(out) :: eival(n)     ! eiven values in decending order. i.e. eival(1) is the largest
+    real(RP), intent(out) :: eivec(n,n)   ! eiven vectors
+
+    integer, intent(in), optional :: simdlen
+
+    real(RP) :: eival_inc
+
+    real(RP), allocatable :: b    (:,:)
+    real(RP), allocatable :: w    (:)
+    real(RP), allocatable :: work (:)     ! working array, size is lwork  = 2*n*n + 6*n + 1
+    integer,  allocatable :: iwork(:)     ! working array, size is liwork = 5*n + 3
+
+    integer :: simdlen_
+    integer :: nrank_eff
+    integer :: lda
+    integer :: lwork
+    integer :: liwork
+
+    integer :: iblk, jblk
+    integer :: imax, jmax
+    integer :: ivec, jvec
+
+    integer :: i, j, ierr
+    !---------------------------------------------------------------------------
+
+#ifdef DA
+    if( present(simdlen) ) then
+      simdlen_ = simdlen
+    else
+      simdlen_ = 64
+    end if
+
+    lda = n
+
+    lwork  = 2*n*n + 6*n + 1
+    liwork = 5*n + 3
+
+    allocate( b    (lda,n)  )
+    allocate( w    (lda)    )
+    allocate( work (lwork)  )
+    allocate( iwork(liwork) )
+
+    do jblk = 1, n, simdlen_
+       jmax = min( n-jblk+1, simdlen_ )
+       do iblk = 1, n, simdlen_
+          imax = min( n-iblk+1, simdlen_ )
+
+          do jvec = 1, jmax
+             j = jblk + jvec - 1
+             do ivec = 1, imax
+                i = iblk + ivec - 1
+
+                b(i,j) = 0.5_RP * ( a(i,j) + a(j,i) )
+             end do
+          end do
+       end do
+    end do
+
+    ! use the SSYEVD/DSYEVD subroutine in LAPACK
+    if( RP == SP ) then
+       call ssyevd("V","L",n,b,lda,w,work,lwork,iwork,liwork,ierr)
+    else
+       call dsyevd("V","L",n,b,lda,w,work,lwork,iwork,liwork,ierr)
+    end if
+
+    if( ierr /= 0 ) then
+       LOG_INFO('MATRIX_SOLVER_eigenvalue_decomposition',*) 'LAPACK/SYEVD error code is ', ierr
+       LOG_INFO('MATRIX_SOLVER_eigenvalue_decomposition',*) 'input a'
+       do j = 1, n
+          LOG_INFO('MATRIX_SOLVER_eigenvalue_decomposition',*) j ,a(:,j)
+       enddo
+       LOG_INFO('MATRIX_SOLVER_eigenvalue_decomposition',*) 'output eival'
+       LOG_INFO('MATRIX_SOLVER_eigenvalue_decomposition',*) w(:)
+       LOG_INFO('MATRIX_SOLVER_eigenvalue_decomposition',*) 'output eivec'
+       do j = 1, n
+          LOG_INFO('MATRIX_SOLVER_eigenvalue_decomposition',*) j, b(:,j)
+       enddo
+       LOG_INFO('MATRIX_SOLVER_eigenvalue_decomposition',*) 'Try to use LAPACK/SYEV ...'
+
+       ! Temporary treatment because of the instability of SYEVD
+       do jblk = 1, n, simdlen_
+          jmax = min( n-jblk+1, simdlen_ )
+          do iblk = 1, n, simdlen_
+             imax = min( n-iblk+1, simdlen_ )
+
+             do jvec = 1, jmax
+                j = jblk + jvec - 1
+                do ivec = 1, imax
+                   i = iblk + ivec - 1
+
+                   b(i,j) = 0.5_RP * ( a(i,j) + a(j,i) )
+                end do
+             end do
+          end do
+       end do
+
+       ! use SSYEV/DSYEV subroutine in LAPACK
+       if( RP == SP ) then
+          call ssyev("V","L",n,b,lda,w,work,lwork,ierr)
+       else
+          call dsyev("V","L",n,b,lda,w,work,lwork,ierr)
+       end if
+
+       if ( ierr /= 0 ) then
+          LOG_ERROR('MATRIX_SOLVER_eigenvalue_decomposition',*) 'LAPACK/SYEV error code is ', ierr, '! STOP.'
+          call PRC_abort
+       endif
+    endif
+
+    if( w(1) < 0.0_RP ) then
+       eival_inc = w(n) / ( 1.E+5_RP - 1.0_RP )
+       do i = 1, n
+          w(i) = w(i) + eival_inc
+       enddo
+    else if( w(n)/1.E+5_RP > w(1) ) then
+       eival_inc = ( w(n) - w(1)*1.E+5_RP ) / ( 1.E+5_RP - 1.0_RP )
+       do i = 1, n
+          w(i) = w(i) + eival_inc
+       end do
+    end if
+
+    ! reverse order
+    do i = 1, n
+       eival(i) = w(i)
+    enddo
+    do j = 1, n
+    do i = 1, n
+       eivec(i,j) = b(i,j)
+    enddo
+    enddo
+
+    nrank_eff = n
+
+    if( eival(n) > 0.0_RP ) then
+       do i = 1, n
+          if( eival(i) < abs(eival(n))*sqrt(epsilon(eival)) ) then
+             nrank_eff = nrank_eff - 1
+             eival(i) = 0.0_RP
+             eivec(:,i) = 0.0_RP
+          end if
+       end do
+    else
+       ! check zero
+       LOG_ERROR('MATRIX_SOLVER_eigenvalue_decomposition',*) 'All eigenvalues are below 0! STOP.'
+       call PRC_abort
+    endif
+
+    deallocate( b )
+    deallocate( w )
+    deallocate( work )
+    deallocate( iwork )
+#else
+    LOG_ERROR('MATRIX_SOLVER_eigenvalue_decomposition',*) 'Binary not compiled for DA! STOP.'
+    call PRC_abort
+#endif
+
+    return
+  end subroutine MATRIX_SOLVER_eigenvalue_decomposition
 
 end module scale_matrix

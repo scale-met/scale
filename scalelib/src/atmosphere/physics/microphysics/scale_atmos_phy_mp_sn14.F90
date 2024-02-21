@@ -3,7 +3,7 @@
 !!
 !! @par Description
 !!          Cloud Microphysics by 6 water category, double moment bulk scheme
-!!          Seiki and Nakajima(2014) J. Atmos. Sci., 71, 833–853
+!!          Seiki and Nakajima(2014) J. Atmos. Sci., 71, 833-853
 !!
 !!          Reference:  -- Journals
 !!                       Seifert and Beheng(2006)  : Meteorol.Atmos.Phys.,vol.92,pp.45-66

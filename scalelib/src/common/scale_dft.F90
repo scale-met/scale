@@ -323,7 +323,7 @@ contains
     enddo
     !$acc end kernels
 
-    ! ∂v/∂x
+    ! dv/dx
     !$acc kernels
     do m = 0, 2*mm
       do l = 1, lm
@@ -335,7 +335,7 @@ contains
     enddo
     !$acc end kernels
 
-    ! + (- ∂u/∂y)
+    ! + (- du/dy)
     !$acc kernels
     do m = 1, mm
       do l = 0, 2*lm
@@ -390,7 +390,7 @@ contains
 
     ! divergence free 2D vector
 
-    ! ∂ψ/∂y
+    ! dphi/dy
     !$acc kernels
     do l = 1, 2*lm
       do k = KS, KE
@@ -409,7 +409,7 @@ contains
     enddo
     !$acc end kernels
 
-    ! -∂ψ/∂x
+    ! -dphi/dx
     !$acc kernels
     do m = 1, 2*mm
       do k = KS, KE
