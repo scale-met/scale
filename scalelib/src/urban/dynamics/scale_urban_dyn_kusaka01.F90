@@ -1061,6 +1061,7 @@ contains
     real(RP) :: HR, EVPR, ELER, G0R, BETR
     real(RP) :: HB, EVPB, ELEB, G0B, BETB
     real(RP) :: HG, EVPG, ELEG, G0G, BETG
+    real(RP) :: EVPRp, EVPBp, EVPGp
 
     real(RP) :: Z
     real(RP) :: QS0R, QS0B, QS0G
@@ -1246,8 +1247,7 @@ contains
     EVPR = 0.0
     BETRP = 0.0_RP
     XXXR = 0.0_RP
-    dTR = 1.0e10_RP
-    dTRp = 0.0_RP
+    dTRp = 1.0e10_RP
     fact1 = 1.0_RP
     !$acc loop seq
     do iteration = 1, itr_max
@@ -1263,7 +1263,7 @@ contains
 
        RAINR = max( RAINRP - EVPR * dt_RP, 0.0_RP )
        call cal_beta(BETR, BETR_CONST, RAINR, STRGR)
-       dBETR = ( BETR - BETRP ) / sign( max(abs(dTR), 1E-10_RP), dTR )
+       dBETR = ( BETR - BETRP ) / sign( max(abs(dTRp), 1E-10_RP), dTRp )
        BETRP = BETR
 
        RR  = EPSR * ( rflux_LW - STB * (TR**4)  )
@@ -1320,9 +1320,10 @@ contains
        end if
        tmp = TR
        TR = max( TR + dTR * fact1, 100.0_RP )
-       dTR = TR - tmp
-       dTRp = dTR
+       dTRp = TR - tmp
 
+       EVPR = ( EVPRp + EVPR ) * 0.5_RP
+       EVPRp = EVPR
     enddo
 
 #ifdef DEBUG_KUSAKA01
@@ -1451,12 +1452,9 @@ contains
      XXXC = 0.0_RP
      ALPHACp = ( ALPHAB + ALPHAG ) * 0.5_RP
      ALPHAC = ALPHACp
-     dTB = 1.0e10_RP
-     dTG = 1.0e10_RP
-     dAC = 1.0_RP
-     dTBp = 0.0_RP
-     dTGp = 0.0_RP
-     dACp = 0.0_RP
+     dTBp = 1.0e10_RP
+     dTGp = 1.0e10_RP
+     dACp = 1.0_RP
      fact1 = 1.0_RP
      fact2 = 1.0_RP
      fact3 = 1.0_RP
@@ -1527,8 +1525,8 @@ contains
         RAING = max( ( RAINGP - EVPG * dt_RP ), 0.0_RP )
         call cal_beta(BETB, BETB_CONST, RAINB, STRGB)
         call cal_beta(BETG, BETG_CONST, RAING, STRGG)
-        dBETB = ( BETB - BETBP ) / sign( max(abs(dTB),1E-10_RP), dTB )
-        dBETG = ( BETG - BETGP ) / sign( max(abs(dTG),1E-10_RP), dTG )
+        dBETB = ( BETB - BETBP ) / sign( max(abs(dTBp),1E-10_RP), dTBp )
+        dBETG = ( BETG - BETGP ) / sign( max(abs(dTGp),1E-10_RP), dTGp )
         BETBP = BETB
         BETGP = BETG
 
@@ -1691,14 +1689,14 @@ contains
 
         tmp = TB
         TB = max( TB + dTB * fact1, 100.0_RP )
-        dTB = TB - tmp
+        dTBp = TB - tmp
         tmp = TG
         TG = max( TG + dTG * fact2, 100.0_RP )
-        dTG = TG - tmp
+        dTGp = TG - tmp
         ALPHAC = max( ALPHACp + dAC * fact3, EPS )
-        dAC = ALPHAC - ALPHACp
+        dACp = ALPHAC - ALPHACp
 
-        if ( abs(dTB) < threshold .AND. abs(dTG) < threshold .AND. abs(dAC) < threshold ) then
+        if ( abs(dTBp) < threshold .AND. abs(dTGp) < threshold .AND. abs(dACp) < threshold ) then
            TB = TBL(1)
            TG = TGL(1)
            TB = max( TBP - DTS_MAX_onestep, min( TBP + DTS_MAX_onestep, TB ) )
@@ -1707,9 +1705,12 @@ contains
         endif
 
         ALPHACp = ALPHAC
-        dTBp = dTB
-        dTGp = dTG
-        dACp = dAC
+
+        EVPB = ( EVPBp + EVPB ) * 0.5_RP
+        EVPBp = EVPB
+
+        EVPG = ( EVPGp + EVPG ) * 0.5_RP
+        EVPGp = EVPG
 
      enddo
 
