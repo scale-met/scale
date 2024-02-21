@@ -796,6 +796,7 @@ contains
        TEM00 => CONST_TEM00, &
        EPS   => CONST_EPS
     use scale_file_grads, only: &
+       FILE_GrADS_varcheck,  &
        FILE_GrADS_get_shape, &
        FILE_GrADS_read
     implicit none
@@ -820,7 +821,7 @@ contains
     integer :: start(3), count(3), shape(2)
     logical :: exist
 
-
+    integer :: vid
     integer :: i, j, k
     !---------------------------------------------------------------------------
 
@@ -910,25 +911,30 @@ contains
 
 
     ! topo_sfc, topo, SGP
+
     call read2d( start(2:), count(2:), topo_org(:,:), "topo_sfc", file_id_lnd, basename_num, exist=exist, step=nt )
     if ( .not. exist ) then
-       call read2d( start(2:), count(2:), topo_org(:,:), "topo", file_id_lnd, basename_num, exist=exist )
+       call FILE_GrADS_varcheck( file_id_lnd, "topo", & ! (in)
+                                 exist                ) ! (out)
        if ( exist ) then
           call FILE_GrADS_get_shape( file_id_lnd, "topo", & ! (in)
                                      shape(:)             ) ! (out)
           if ( ldims(2).ne.shape(1) .or. ldims(3).ne.shape(2) ) then
              LOG_WARN_CONT(*) 'dimension of "topo" is different! ', ldims(2), shape(1), ldims(3), shape(2)
           end if
+          call read2d( start(2:), count(2:), topo_org(:,:), "topo", file_id_lnd, basename_num, exist=exist )
        end if
     end if
     if ( .not. exist ) then
-       call read2d( start(2:), count(2:), topo_org(:,:), "SGP", file_id_lnd, basename_num, exist=exist )
+       call FILE_GrADS_varcheck( file_id_lnd, "SGP", & ! (in)
+                                 exist               ) ! (out)
        if ( exist ) then
           call FILE_GrADS_get_shape( file_id_lnd, "SGP", & ! (in)
                                      shape(:)            ) ! (out)
           if ( ldims(2).ne.shape(1) .or. ldims(3).ne.shape(2) ) then
              LOG_WARN_CONT(*) 'dimension of "SGP" is different! ', ldims(2), shape(1), ldims(3), shape(2)
           end if
+          call read2d( start(2:), count(2:), topo_org(:,:), "SGP", file_id_lnd, basename_num, exist=exist )
           !$omp parallel do
           do j = 1, JA_org
           do i = 1, IA_org

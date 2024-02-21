@@ -25,6 +25,7 @@ module scale_file_grads
   !
   public :: FILE_GrADS_open
   public :: FILE_GrADS_varid
+  public :: FILE_GrADS_varcheck
   public :: FILE_GrADS_isOneD
   public :: FILE_GrADS_get_shape
   public :: FILE_GrADS_read
@@ -325,6 +326,35 @@ contains
 
     return
   end subroutine FILE_GrADS_varid
+
+  subroutine FILE_GrADS_varcheck( &
+       file_id,  &
+       var_name, &
+       exist     )
+    use scale_prc, only: &
+       PRC_abort
+    implicit none
+    integer,          intent(in)  :: file_id
+    character(len=*), intent(in)  :: var_name
+    logical,          intent(out) :: exist
+
+    integer :: var_id
+
+    if ( file_id < 0 ) then
+       LOG_ERROR("FILE_GrADS_varcheck",*) 'file_id is invalid: ', file_id
+       call PRC_abort
+    end if
+
+    exist = .true.
+
+    call FILE_GrADS_varid( file_id, var_name, & ! (in)
+                           var_id             ) ! (out)
+    if ( var_id < 0 ) then
+       exist = .false.
+    end if
+
+    return
+  end subroutine FILE_GrADS_varcheck
 
   function FILE_GrADS_isOneD( &
        file_id,  &
