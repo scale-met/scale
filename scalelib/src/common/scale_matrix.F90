@@ -986,7 +986,7 @@ contains
        end if
 
        if ( ierr /= 0 ) then
-          LOG_INFO('MATRIX_SOLVER_eigenvalue_decomposition',*) 'LAPACK/SYEV error code is ', ierr, '! STOP.'
+          LOG_ERROR('MATRIX_SOLVER_eigenvalue_decomposition',*) 'LAPACK/SYEV error code is ', ierr, '! STOP.'
           call PRC_abort
        endif
     endif
@@ -1025,7 +1025,7 @@ contains
        end do
     else
        ! check zero
-       LOG_INFO('MATRIX_SOLVER_eigenvalue_decomposition',*) 'All eigenvalues are below 0! STOP.'
+       LOG_ERROR('MATRIX_SOLVER_eigenvalue_decomposition',*) 'All eigenvalues are below 0! STOP.'
        call PRC_abort
     endif
 
@@ -1034,7 +1034,7 @@ contains
     deallocate( work )
     deallocate( iwork )
 #else
-    LOG_INFO('MATRIX_SOLVER_eigenvalue_decomposition',*) 'Binary not compiled for DA! STOP.'
+    LOG_ERROR('MATRIX_SOLVER_eigenvalue_decomposition',*) 'Binary not compiled for DA! STOP.'
     call PRC_abort
 #endif
 
