@@ -2270,7 +2270,7 @@ contains
 
        dpsat_dT = psat * lhv / ( Rvap * Tdew**2 )
        dTdew = ( psat - pvap ) / dpsat_dT
-       if ( dTdew < criteria ) then
+       if ( abs(dTdew) < criteria .or. abs(psat-pvap) < criteria ) then
           converged = .true.
           exit
        end if
