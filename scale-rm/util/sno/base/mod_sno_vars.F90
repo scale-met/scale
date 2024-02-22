@@ -941,6 +941,8 @@ contains
     integer  :: writerank
     !---------------------------------------------------------------------------
 
+    call PROF_rapstart('FILE_Write', 2)
+
     if ( output_grads ) then
        call SNO_grads_write( dirpath,  & ! [IN]
                              nowstep,  & ! [IN]
@@ -951,7 +953,6 @@ contains
                              dinfo,    & ! [IN]
                              debug     ) ! [IN]
     else
-       call PROF_rapstart('FILE_O_NetCDF', 2)
 
        if ( update_axis ) then
           if( allocated( ainfo_out ) ) deallocate( ainfo_out )
@@ -1003,11 +1004,11 @@ contains
                                       ainfo_out(:),               & ! [IN]
                                       dinfo_out,                  & ! [IN]
                                       debug                       ) ! [IN]
-
        endif
 
-       call PROF_rapend('FILE_O_NetCDF', 2)
     endif
+
+    call PROF_rapend('FILE_Write', 2)
 
     return
   end subroutine SNO_vars_write
