@@ -28,6 +28,7 @@ module scale_urban_dyn_kusaka01
   !++ Public procedure
   !
   public :: URBAN_DYN_kusaka01_setup
+  public :: URBAN_DYN_kusaka01_finalize
   public :: URBAN_DYN_kusaka01
 
   !-----------------------------------------------------------------------------
@@ -58,9 +59,14 @@ module scale_urban_dyn_kusaka01
   ! from namelist
   real(RP), private :: DTS_MAX    =    0.1_RP ! maximum dT during one step [K/step]
                                               ! DTS_MAX * dt
-  integer , private :: BOUND      =    1      ! Boundary Condition for Roof, Wall, Ground Layer Temp
+  integer,  private :: BOUND      =    1      ! Boundary Condition for Roof, Wall, Ground Layer Temp
                                               !       [1: Zero-Flux, 2: T = Constant]
-  !$acc declare create(DTS_MAX,BOUND)
+#ifdef DEBUG_KUSAKA01
+  logical,  private :: debug      = .true.
+#else
+  logical,  private :: debug      = .false.
+#endif
+  !$acc declare create(DTS_MAX,BOUND,debug)
 
   ! urban parameters
   real(RP), private :: ZR         =   10.0_RP ! roof level (building height) [m]
@@ -114,6 +120,13 @@ module scale_urban_dyn_kusaka01
   integer, private :: I_GHR, I_GHB, I_GHG
   integer, private :: I_RNR, I_RNB, I_RNG, I_RNgrd
 
+#ifdef DEBUG_KUSAKA01
+  integer, private :: cnt_num1, cnt_num2
+  integer, private :: cnt_itr1, cnt_itr2
+  integer, private :: max_itr1, max_itr2
+  !$acc declare create(cnt_num1,cnt_num2,cnt_itr1,cnt_itr2,max_itr1,max_itr2)
+#endif
+
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
@@ -158,6 +171,7 @@ contains
     namelist / PARAM_URBAN_DYN_KUSAKA01 /          &
        DTS_MAX,                                    &
        BOUND,                                      &
+       debug,                                      &
        URBAN_DYN_KUSAKA01_PARAM_IN_FILENAME,       &
        URBAN_DYN_KUSAKA01_GRIDDED_Z0M_IN_FILENAME, &
        URBAN_DYN_KUSAKA01_GRIDDED_Z0H_IN_FILENAME, &
@@ -362,12 +376,52 @@ contains
     !$acc update device(Z0M, Z0H, Z0E, ZD, AH_URB, AHL_URB)
     !$acc end data
 
-    !$acc update device(DTS_MAX,BOUND)
+    !$acc update device(DTS_MAX,BOUND,debug)
     !$acc update device(ZR,BETR_CONST,BETB_CONST,BETG_CONST,STRGR,STRGB,STRGG,CAPR,CAPB,CAPG,AKSR,AKSB,AKSG,ALBR,ALBB,ALBG,EPSR,EPSB,EPSG,Z0R,TRLEND,TBLEND,TGLEND)
     !$acc update device(R,RW,HGT,Z0HR,Z0HB,Z0HG,SVF)
 
+#ifdef DEBUG_KUSAKA01
+    cnt_num1 = 0
+    cnt_num2 = 0
+    cnt_itr1 = 0
+    cnt_itr2 = 0
+    max_itr1 = 0
+    max_itr2 = 0
+    !$acc update device(cnt_num1,cnt_num2,cnt_itr1,cnt_itr2,max_itr1,max_itr2)
+#endif
+
     return
   end subroutine URBAN_DYN_kusaka01_setup
+
+  !-----------------------------------------------------------------------------
+  !> Finalize
+  subroutine URBAN_DYN_kusaka01_finalize
+    use mpi
+    use scale_prc, only: &
+       PRC_LOCAL_COMM_WORLD, &
+       PRC_IsMaster
+    implicit none
+
+#ifdef DEBUG_KUSAKA01
+    integer :: iwork1(4), iwork2(2), ierr
+    !$acc update host(cnt_num1,cnt_num2,cnt_itr1,cnt_itr2,max_itr1,max_itr2)
+    iwork1(1) = cnt_num1
+    iwork1(2) = cnt_num2
+    iwork1(3) = cnt_itr1
+    iwork1(4) = cnt_itr2
+    call MPI_Reduce( MPI_IN_PLACE, iwork1, 4, MPI_INTEGER, MPI_SUM, 0, PRC_LOCAL_COMM_WORLD, ierr)
+    iwork2(1) = max_itr1
+    iwork2(2) = max_itr2
+    call MPI_Reduce( MPI_IN_PLACE, iwork2, 2, MPI_INTEGER, MPI_MAX, 0, PRC_LOCAL_COMM_WORLD, ierr)
+
+    if ( PRC_IsMaster ) then
+       LOG_INFO("URBAN_DYN_kusaka01_finalize",*) "Averaged iteration count"
+       LOG_INFO_CONT(*) "TR:    ", real(iwork1(3),DP) / iwork1(1), ", (max ", iwork2(1), ")"
+       LOG_INFO_CONT(*) "TB/TG: ", real(iwork1(4),DP) / iwork1(2), ", (max ", iwork2(2), ")"
+    end if
+#endif
+
+  end subroutine URBAN_DYN_kusaka01_finalize
 
   !-----------------------------------------------------------------------------
   !> Main routine for land submodel
@@ -530,6 +584,10 @@ contains
 
     logical :: converged
 
+#ifdef DEBUG_KUSAKA01
+    integer :: cn1, cn2, ci1, ci2, mi1, mi2
+#endif
+
     integer :: k, i, j
     !---------------------------------------------------------------------------
 
@@ -549,11 +607,21 @@ contains
 
     converged = .true.
 
+#ifdef DEBUG_KUSAKA01
+    cn1 = 0; cn2 = 0; ci1 = 0; ci2 = 0; mi1 = 0; mi2 = 0
+#endif
+
     !$omp parallel do schedule(dynamic) collapse(2) &
+#ifdef DEBUG_KUSAKA01
+    !$omp reduction(+:cn1,cn2,ci1,ci2) reduction(max:mi1,mi2) &
+#endif
     !$omp private(w,Uabs,TR,TB,TG,TC,QC,UC,TRL,TBL,TGL,RAINR,RAINB,RAING,ALBD_LW,ALBD_SW,MFLX,SWDt,LWDt, &
     !$omp         TRLP,TBLP,TGLP,A,B,C,D,P,Q)
     !$acc parallel
     !$acc loop gang collapse(2) reduction(.and.: converged) independent &
+#ifdef DEBUG_KUSAKA01
+    !$acc reduction(+:cn1,cn2,ci1,ci2) reduction(max:mi1,mi2) &
+#endif
     !$acc private(w,Uabs,TR,TB,TG,TC,QC,UC,TRL,TBL,TGL,RAINR,RAINB,RAING,ALBD_LW,ALBD_SW,MFLX,SWDt,LWDt, &
     !$acc         TRLP,TBLP,TGLP,A,B,C,D,P,Q)
     do j = UJS, UJE
@@ -650,6 +718,9 @@ contains
                       DZG(:), DZB(:),     & ! [IN]
                       dt,                 & ! [IN]
                       i, j,               & ! [IN]
+#ifdef DEBUG_KUSAKA01
+                      cn1, cn2, ci1, ci2, mi1, mi2, & ! [INOUT]
+#endif
                       TRLP(:), TBLP(:), TGLP(:), & ! (work)
                       A(:), B(:), C(:), D(:),    & ! (work)
                       P(:), Q(:)                 ) ! (work)
@@ -738,6 +809,15 @@ contains
 
     !$acc end data
 
+#ifdef DEBUG_KUSAKA01
+    cnt_num1 = cnt_num1 + cn1
+    cnt_num2 = cnt_num2 + cn2
+    cnt_itr1 = cnt_itr1 + ci1
+    cnt_itr2 = cnt_itr2 + ci2
+    max_itr1 = max(max_itr1, mi1)
+    max_itr2 = max(max_itr2, mi2)
+#endif
+
     return
   end subroutine URBAN_DYN_kusaka01
 
@@ -808,6 +888,11 @@ contains
         DZR, DZB, DZG, & ! (in)
         dt,           & ! (in)
         i, j,         & ! (in)
+#ifdef DEBUG_KUSAKA01
+        cnt_num1, cnt_num2, & ! (inout)
+        cnt_itr1, cnt_itr2, & ! (inout)
+        max_itr1, max_itr2, & ! (inout)
+#endif
         TRLP, TBLP, TGLP, &
         A, B, C, D, P, Q )
     !$acc routine seq
@@ -901,6 +986,12 @@ contains
 
     integer,  intent(in)    :: i, j
 
+#ifdef DEBUG_KUSAKA01
+    integer, intent(inout) :: cnt_num1, cnt_num2
+    integer, intent(inout) :: cnt_itr1, cnt_itr2
+    integer, intent(inout) :: max_itr1, max_itr2
+#endif
+
     ! work
     real(RP), intent(out) :: TRLP(UKA)    ! Layer temperature at previous step  [K]
     real(RP), intent(out) :: TBLP(UKA)    ! Layer temperature at previous step  [K]
@@ -925,7 +1016,7 @@ contains
     real(RP), parameter     :: rain_rate_B = 0.1_RP
     real(RP), parameter     :: rain_rate_G = 0.9_RP
 
-    integer, parameter :: itr_max = 200
+    integer, parameter :: itr_max = 100
 
     !-- Local variables
 !    logical  :: SHADOW = .false.
@@ -970,6 +1061,7 @@ contains
     real(RP) :: HR, EVPR, ELER, G0R, BETR
     real(RP) :: HB, EVPB, ELEB, G0B, BETB
     real(RP) :: HG, EVPG, ELEG, G0G, BETG
+    real(RP) :: EVPRp, EVPBp, EVPGp
 
     real(RP) :: Z
     real(RP) :: QS0R, QS0B, QS0G
@@ -996,12 +1088,12 @@ contains
     integer  :: iteration
     real(RP) :: DTS_MAX_onestep ! DTS_MAX * dt
     real(RP) :: resi1, resi2, resi3 ! residual
-    real(RP) :: fact
+    real(RP) :: fact1, fact2, fact3
     real(RP) :: threshold
 
     ! for Newton method
     real(RP) :: dTR, dTB, dTG, dAC
-    real(RP) :: dTBp, dTGp, dACp
+    real(RP) :: dTRp, dTBp, dTGp, dACp
     real(RP) :: dr1dTR
     real(RP) :: dr1dTB, dr1dTG, dr1dAC, dr2dTB, dr2dTG, dr2dAC, dr3dTB, dr3dTG, dr3dAC
     real(RP) :: dTRdG0R, dTBdG0B, dTGdG0G
@@ -1155,7 +1247,8 @@ contains
     EVPR = 0.0
     BETRP = 0.0_RP
     XXXR = 0.0_RP
-    dTR = 1.0e10_RP
+    dTRp = 1.0e10_RP
+    fact1 = 1.0_RP
     !$acc loop seq
     do iteration = 1, itr_max
 
@@ -1170,7 +1263,7 @@ contains
 
        RAINR = max( RAINRP - EVPR * dt_RP, 0.0_RP )
        call cal_beta(BETR, BETR_CONST, RAINR, STRGR)
-       dBETR = ( BETR - BETRP ) / dTR
+       dBETR = ( BETR - BETRP ) / sign( max(abs(dTRp), 1E-10_RP), dTRp )
        BETRP = BETR
 
        RR  = EPSR * ( rflux_LW - STB * (TR**4)  )
@@ -1216,13 +1309,31 @@ contains
        dr1dTR = dTRdG0R * dG0RdTR - 1.0_RP
 
        dTR = - resi1 / dr1dTR
+       dTR = sign( min(abs(dTR), 5.0_RP), dTR )
 
-       TR = TR + dTR
+       if ( iteration > 50 ) then
+          if ( dTR*dTRp < 0.0_RP ) then
+             fact1 = max( fact1 * 0.5_RP, 0.01_RP )
+          else
+             fact1 = min( fact1 * 1.5_RP, 1.1_RP )
+          end if
+       end if
+       tmp = TR
+       TR = max( TR + dTR * fact1, 100.0_RP )
+       dTRp = TR - tmp
 
+       EVPR = ( EVPRp + EVPR ) * 0.5_RP
+       EVPRp = EVPR
     enddo
 
+#ifdef DEBUG_KUSAKA01
+    cnt_num1 = cnt_num1 + 1
+    cnt_itr1 = cnt_itr1 + iteration - 1
+    max_itr1 = max(max_itr1, iteration - 1)
+#endif
+
     ! output for debug
-    if ( iteration > itr_max ) then
+    if ( iteration > itr_max .and. debug ) then
        LOG_WARN("URBAN_DYN_kusaka01_SLC_main",*) 'iteration for TR was not converged',PRC_myrank,i,j
        LOG_WARN_CONT(*) '---------------------------------------------------------------------------------'
        LOG_WARN_CONT(*) 'DEBUG Message --- Residual                                          [K] :', resi1
@@ -1341,13 +1452,12 @@ contains
      XXXC = 0.0_RP
      ALPHACp = ( ALPHAB + ALPHAG ) * 0.5_RP
      ALPHAC = ALPHACp
-     dTB = 1.0e10_RP
-     dTG = 1.0e10_RP
-     dAC = 1.0_RP
-     dTBp = 0.0_RP
-     dTGp = 0.0_RP
-     dACp = 0.0_RP
-     fact = 1.0_RP
+     dTBp = 1.0e10_RP
+     dTGp = 1.0e10_RP
+     dACp = 1.0_RP
+     fact1 = 1.0_RP
+     fact2 = 1.0_RP
+     fact3 = 1.0_RP
      !$acc loop seq
      do iteration = 1, itr_max
 
@@ -1415,8 +1525,8 @@ contains
         RAING = max( ( RAINGP - EVPG * dt_RP ), 0.0_RP )
         call cal_beta(BETB, BETB_CONST, RAINB, STRGB)
         call cal_beta(BETG, BETG_CONST, RAING, STRGG)
-        dBETB = ( BETB - BETBP ) / sign( max(abs(dTB),1E-10_RP), dTB )
-        dBETG = ( BETG - BETGP ) / sign( max(abs(dTG),1E-10_RP), dTG )
+        dBETB = ( BETB - BETBP ) / sign( max(abs(dTBp),1E-10_RP), dTBp )
+        dBETG = ( BETG - BETGP ) / sign( max(abs(dTGp),1E-10_RP), dTGp )
         BETBP = BETB
         BETGP = BETG
 
@@ -1555,24 +1665,38 @@ contains
                 + ( dr1dTB * dr3dTG - dr1dTG * dr3dTB ) * resi2 &
                 - ( dr1dTB * dr2dTG - dr1dTG * dr2dTB ) * resi3 ) * rdet
 
+        dTB = sign( min(abs(dTB), 5.0_RP), dTB )
+        dTG = sign( min(abs(dTG), 5.0_RP), dTG )
+        dAC = sign( min(abs(dAC), 50.0_RP), dAC )
+
         if ( iteration > 50 ) then
-           if ( dTB*dTBp < 0.0_RP .or. dTG*dTGp < 0.0_RP .or. dAC*dACp < 0.0_RP ) then
-              fact = max( fact * 0.5_RP, 0.01_RP )
+           if ( dTB*dTBp < 0.0_RP ) then
+              fact1 = max( fact1 * 0.5_RP, 1E-10_RP )
            else
-              fact = min( fact * 1.1_RP, 1.1_RP )
+              fact1 = min( fact1 * 1.5_RP, 1.1_RP )
+           end if
+           if ( dTG*dTGp < 0.0_RP ) then
+              fact2 = max( fact2 * 0.5_RP, 1E-10_RP )
+           else
+              fact2 = min( fact2 * 1.5_RP, 1.1_RP )
+           end if
+           if ( dAC*dACp < 0.0_RP ) then
+              fact3 = max( fact3 * 0.5_RP, 1E-10_RP )
+           else
+              fact3 = min( fact3 * 1.5_RP, 1.1_RP )
            end if
         end if
 
         tmp = TB
-        TB = max( TB + dTB * fact, 100.0_RP )
-        dTB = TB - tmp
+        TB = max( TB + dTB * fact1, 100.0_RP )
+        dTBp = TB - tmp
         tmp = TG
-        TG = max( TG + dTG * fact, 100.0_RP )
-        dTG = TG - tmp
-        ALPHAC = max( ALPHACp + dAC * fact, EPS )
-        dAC = ALPHAC - ALPHACp
+        TG = max( TG + dTG * fact2, 100.0_RP )
+        dTGp = TG - tmp
+        ALPHAC = max( ALPHACp + dAC * fact3, EPS )
+        dACp = ALPHAC - ALPHACp
 
-        if ( abs(dTB) < threshold .AND. abs(dTG) < threshold .AND. abs(dAC) < threshold ) then
+        if ( abs(dTBp) < threshold .AND. abs(dTGp) < threshold .AND. abs(dACp) < threshold ) then
            TB = TBL(1)
            TG = TGL(1)
            TB = max( TBP - DTS_MAX_onestep, min( TBP + DTS_MAX_onestep, TB ) )
@@ -1581,14 +1705,23 @@ contains
         endif
 
         ALPHACp = ALPHAC
-        dTBp = dTB
-        dTGp = dTG
-        dACp = dAC
+
+        EVPB = ( EVPBp + EVPB ) * 0.5_RP
+        EVPBp = EVPB
+
+        EVPG = ( EVPGp + EVPG ) * 0.5_RP
+        EVPGp = EVPG
 
      enddo
 
+#ifdef DEBUG_KUSAKA01
+     cnt_num2 = cnt_num2 + 1
+     cnt_itr2 = cnt_itr2 + iteration - 1
+     max_itr2 = max(max_itr2, iteration - 1)
+#endif
+
      ! output for debug
-     if ( iteration > itr_max ) then
+     if ( iteration > itr_max .and. debug ) then
        LOG_WARN("URBAN_DYN_Kusaka01_main",*) 'iteration for TB/TG was not converged',PRC_myrank,i,j
        LOG_WARN_CONT(*) '---------------------------------------------------------------------------------'
        LOG_WARN_CONT(*) 'DEBUG Message --- Residual                                        [K] :', resi1, resi2, resi3

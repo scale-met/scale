@@ -118,6 +118,8 @@ contains
        URBAN_do, &
        URBAN_DYN_TYPE, &
        URBAN_SFC_TYPE
+    use scale_urban_dyn_kusaka01, only: &
+       URBAN_DYN_kusaka01_finalize
     implicit none
     !---------------------------------------------------------------------------
 
@@ -128,6 +130,7 @@ contains
 
        select case ( URBAN_DYN_TYPE )
        case ( 'KUSAKA01' )
+          call URBAN_DYN_kusaka01_finalize
        end select
 
        select case ( URBAN_SFC_TYPE )

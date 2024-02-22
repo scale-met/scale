@@ -41,6 +41,8 @@ module scale_cpl_phy_sfc_skin
   !
   !++ Private parameters & variables
   !
+  logical,  private :: debug = .false.
+
   integer,  private :: CPL_PHY_SFC_SKIN_itr_max ! maximum iteration number
 
   real(RP), private :: CPL_PHY_SFC_SKIN_dTS_max ! maximum delta surface temperature [K/s]
@@ -59,6 +61,7 @@ contains
     implicit none
 
     namelist / PARAM_CPL_PHY_SFC_SKIN / &
+       debug, &
        CPL_PHY_SFC_SKIN_itr_max, &
        CPL_PHY_SFC_SKIN_dTS_max, &
        CPL_PHY_SFC_SKIN_res_min, &
@@ -278,7 +281,7 @@ contains
 #ifndef __GFORTRAN__
     !$omp default(none) &
     !$omp shared(IO_UNIVERSALRANK,IO_LOCALRANK,IO_JOBID,IO_DOMAINID) &
-    !$omp shared(IS,IE,JS,JE,EPS,UNDEF,Rdry,CPdry,PRC_myrank,IO_FID_LOG,IO_L,model_name,bulkflux, &
+    !$omp shared(IS,IE,JS,JE,EPS,UNDEF,Rdry,CPdry,PRC_myrank,IO_FID_LOG,IO_L,model_name,debug,bulkflux, &
     !$omp        CPL_PHY_SFC_SKIN_itr_max,CPL_PHY_SFC_SKIN_dTS_max,CPL_PHY_SFC_SKIN_err_min,CPL_PHY_SFC_SKIN_res_min, &
     !$omp        calc_flag,dt,olddts0,QVA,QVS,TMPA,TMPS,PRSA,RHOA,WA,UA,VA,LH,Z1,PBL, &
     !$omp        TG,PRSS,RHOS,TMPS1,WSTR,QVEF,Z0M,Z0H,Z0E,Rb,TC_dZ,ALBEDO,RFLXD, &
@@ -398,7 +401,7 @@ contains
                                  TMPS (i,j) - CPL_PHY_SFC_SKIN_dTS_max * dt ), &
                                  TMPS (i,j) + CPL_PHY_SFC_SKIN_dTS_max * dt )
 
-          if ( n > CPL_PHY_SFC_SKIN_itr_max ) then
+          if ( n > CPL_PHY_SFC_SKIN_itr_max .and. debug ) then
              ! surface temperature was not converged
 #ifdef _OPENACC
              LOG_WARN("CPL_PHY_SFC_skin",*) 'surface tempearture was not converged. '
