@@ -110,7 +110,7 @@ contains
   !> Reset random seed
   subroutine RANDOM_reset
     use scale_prc, only: &
-       PRC_myrank
+       PRC_UNIVERSAL_myrank
     implicit none
 
     integer  :: time1(8) ! date and time information
@@ -133,7 +133,7 @@ contains
        call cpu_time(time2)
     endif
 
-    RANDOM_seedvar(:) = PRC_myrank                     &
+    RANDOM_seedvar(:) = PRC_UNIVERSAL_myrank           &
                       + ( time1(1) - 1970 ) * 32140800 &
                       + time1(2) * 2678400             &
                       + time1(3) * 86400               &

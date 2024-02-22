@@ -6414,7 +6414,7 @@ contains
        return
     end if
 
-    call PROF_rapstart('FILE', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
+    call PROF_rapstart('FILE', 2, disable_barrier = ( .not. allnodes_ ) .or. single )
 
     error = file_open_c( cfid,                       & ! (out)
                          cstr(fname), mode, mpi_comm ) ! (in)
