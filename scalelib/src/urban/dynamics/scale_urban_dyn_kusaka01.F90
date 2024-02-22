@@ -1245,6 +1245,7 @@ contains
     dTRdG0R = dTRdG0R * 0.5_RP
 
     EVPR = 0.0
+    EVPRp = 0.0
     BETRP = 0.0_RP
     XXXR = 0.0_RP
     dTRp = 1.0e10_RP
@@ -1446,7 +1447,9 @@ contains
      dTGdG0G = dTGdG0G * 0.5_RP
 
      EVPB = 0.0_RP
+     EVPBp = 0.0_RP
      EVPG = 0.0_RP
+     EVPGp = 0.0_RP
      BETBP = 0.0_RP
      BETGP = 0.0_RP
      XXXC = 0.0_RP

@@ -1136,7 +1136,7 @@ contains
 
 
     ! tentative
-    timelen = 0
+    timelen = 1
 
     return
   end subroutine ParentOceanSetupGrADS
