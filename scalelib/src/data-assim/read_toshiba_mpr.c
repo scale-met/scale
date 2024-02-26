@@ -18,7 +18,11 @@ FUNCTION: int read_toshiba_mpr
 #include <stdint.h>
 #include <inttypes.h>
 #include <limits.h>
+#ifdef __APPLE__
+#include <machine/endian.h>
+#else
 #include <endian.h>
+#endif
 #include <zlib.h>
 #include "read_toshiba_mpr.h"
 
