@@ -12,7 +12,11 @@ FUNCTION: int read_toshiba
 #include <stdlib.h>
 #include <stdint.h>
 #include <limits.h>
+#ifdef MacOSX
+#include <machine/endian.h>
+#else
 #include <endian.h>
+#endif
 #include "read_toshiba.h"
 
 int16_t char2int16(void *input)
