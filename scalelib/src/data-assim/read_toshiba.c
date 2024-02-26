@@ -12,7 +12,7 @@ FUNCTION: int read_toshiba
 #include <stdlib.h>
 #include <stdint.h>
 #include <limits.h>
-#ifdef MacOSX
+#ifdef __APPLE__
 #include <machine/endian.h>
 #else
 #include <endian.h>
