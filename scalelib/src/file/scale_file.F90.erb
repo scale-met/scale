@@ -3037,7 +3037,7 @@ contains
             'Close : No.', fid, ', name = ', trim(FILE_files(fid)%name)
 
     elseif( error /= FILE_ALREADY_CLOSED_CODE ) then
-       LOG_ERROR("FILE_close",*) 'failed to close file'
+       LOG_ERROR("FILE_close",*) 'failed to close file: ', trim(FILE_files(fid)%name)
        if ( .not. abort_ ) call PRC_abort
     end if
 

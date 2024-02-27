@@ -178,6 +178,9 @@ module scale_file_cartesC
   logical,    private :: File_haszcoord   (0:FILE_FILE_MAX-1)          ! z-coordinates exist?
   integer(8), private :: write_buf_amount (0:FILE_FILE_MAX-1)          ! sum of write buffer amounts
 
+  integer,    private :: nfiles = 0
+  integer,    private :: fids(FILE_FILE_MAX)
+
   ! global star and count
   integer,  private, target :: startXY   (3), countXY   (3)
   integer,  private, target :: startZX   (2), countZX   (2)
@@ -315,7 +318,14 @@ contains
   !> deallocate buffers
   subroutine FILE_CARTESC_finalize
     implicit none
+
+    integer :: n
     !---------------------------------------------------------------------------
+
+    do n = 1, nfiles
+       call FILE_CARTESC_close( fids(nfiles) )
+    end do
+    nfiles = 0
 
     deallocate( AXIS_HGT    )
     deallocate( AXIS_HGTWXY )
@@ -897,6 +907,9 @@ contains
 
 
     if ( fid > 0 .and. (.not. fileexisted) ) then ! do below only once when file is created
+
+       nfiles = nfiles + 1
+       fids(nfiles) = fid
 
        File_axes_written(fid) = .false.  ! indicating axes have not been written yet
 
@@ -3648,7 +3661,7 @@ contains
     character(len=*), intent(in)  :: dim_type !< axis type (Z/X/Y)
     logical,          intent(in), optional :: fill_halo !< switch whether include halo data or not (default=false)
 
-    real(RP)              :: varhalo( size(var(:,1)), size(var(1,:)) )
+    real(RP), allocatable :: buf(:,:)
 
     integer               :: dim1_S, dim1_E
     integer               :: dim2_S, dim2_E
@@ -3709,45 +3722,54 @@ contains
     endif
 
     if ( exec ) then
+
        !$acc update host(var) if(acc_is_present(var))
+
+       allocate( buf(dim1_S:dim1_E,dim2_S:dim2_E) )
+
        if ( fill_halo_ ) then ! fill halo cells with RMISS
           do j = JS, JE
           do i = IS, IE
-             varhalo(i,j) = var(i,j)
+             buf(i,j) = var(i,j)
           end do
           end do
 
           ! W halo
-          do j = 1, JA
-          do i = 1, IS-1
-             varhalo(i,j) = RMISS
+          do j = dim2_S, dim2_E
+          do i = dim1_S, IS-1
+             buf(i,j) = RMISS
           enddo
           enddo
           ! E halo
-          do j = 1, JA
-          do i = IE+1, IA
-             varhalo(i,j) = RMISS
+          do j = dim2_S, dim2_E
+          do i = IE+1,   dim1_E
+             buf(i,j) = RMISS
           enddo
           enddo
           ! S halo
-          do j = 1, JS-1
-          do i = 1, IA
-             varhalo(i,j) = RMISS
+          do j = dim2_S, JS-1
+          do i = dim1_S, dim1_E
+             buf(i,j) = RMISS
           enddo
           enddo
           ! N halo
-          do j = JE+1, JA
-          do i = 1, IA
-             varhalo(i,j) = RMISS
+          do j = JE+1,   dim2_E
+          do i = dim1_S, dim1_E
+             buf(i,j) = RMISS
           enddo
           enddo
-
-          call FILE_Write( vid, varhalo(dim1_S:dim1_E,dim2_S:dim2_E), &
-                           NOWDAYSEC, NOWDAYSEC, start                ) ! [IN]
        else
-          call FILE_Write( vid, var(dim1_S:dim1_E,dim2_S:dim2_E), &
-                           NOWDAYSEC, NOWDAYSEC, start            ) ! [IN]
-       endif
+          do j = dim2_S, dim2_E
+          do i = dim1_S, dim1_E
+             buf(i,j) = var(i,j)
+          end do
+          end do
+       end if
+
+       call FILE_Write( vid, buf(:,:), NOWDAYSEC, NOWDAYSEC, start ) ! [IN]
+       call FILE_CARTESC_flush( fid )
+
+       deallocate( buf )
 
     endif
 
@@ -3791,9 +3813,9 @@ contains
 
     logical,          intent(in), optional :: fill_halo !< include halo data?
 
-    real(RP) :: varhalo( size(var(:,1,1)), size(var(1,:,1)), size(var(1,1,:)) )
+    real(RP), allocatable :: buf(:,:,:)
 
-    integer  :: dim1_S, dim1_E, dim1_max
+    integer  :: dim1_S, dim1_E
     integer  :: dim2_S, dim2_E
     integer  :: dim3_S, dim3_E
 
@@ -3821,25 +3843,20 @@ contains
          .OR. dim_type == 'ZXHY'  &
          .OR. dim_type == 'ZXYH'  &
          .OR. dim_type == 'ZXHYH' ) then
-       dim1_max = KMAX
        dim1_S   = KS
        dim1_E   = KE
     elseif (  dim_type == 'ZHXY'  &
          .OR. dim_type == 'ZHXHY' &
          .OR. dim_type == 'ZHXYH' ) then
-       dim1_max = KMAX+1
        dim1_S   = KS-1
        dim1_E   = KE
     elseif( dim_type == 'OXY' ) then
-       dim1_max = OKMAX
        dim1_S   = OKS
        dim1_E   = OKE
     elseif( dim_type == 'LXY' ) then
-       dim1_max = LKMAX
        dim1_S   = LKS
        dim1_E   = LKE
     elseif( dim_type == 'UXY' ) then
-       dim1_max = UKMAX
        dim1_S   = UKS
        dim1_E   = UKE
     else
@@ -3861,56 +3878,68 @@ contains
 
     !$acc update host(var) if(acc_is_present(var))
 
+    allocate( buf(dim1_S:dim1_E,dim2_S:dim2_E,dim3_S:dim3_E) )
+
     if ( fill_halo_ ) then
 
        !$omp parallel do
        do j = JS, JE
        do i = IS, IE
-       do k = 1, dim1_max
-          varhalo(k,i,j) = var(k,i,j)
+       do k = dim1_S, dim1_E
+          buf(k,i,j) = var(k,i,j)
        enddo
        enddo
        enddo
 
        ! W halo
-       do j = 1, JA
-       do i = 1, IS-1
-       do k = 1, dim1_max
-          varhalo(k,i,j) = RMISS
+       do j = dim3_S, dim3_E
+       do i = dim2_S, IS-1
+       do k = dim1_S, dim1_E
+          buf(k,i,j) = RMISS
        enddo
        enddo
        enddo
        ! E halo
-       do j = 1, JA
-       do i = IE+1, IA
-       do k = 1, dim1_max
-          varhalo(k,i,j) = RMISS
+       do j = dim3_S, dim3_E
+       do i = IE+1,   dim2_E
+       do k = dim1_S, dim1_E
+          buf(k,i,j) = RMISS
        enddo
        enddo
        enddo
        ! S halo
-       do j = 1, JS-1
-       do i = 1, IA
-       do k = 1, dim1_max
-          varhalo(k,i,j) = RMISS
+       do j = dim3_S, JS-1
+       do i = dim2_S, dim2_E
+       do k = dim1_S, dim1_E
+          buf(k,i,j) = RMISS
        enddo
        enddo
        enddo
        ! N halo
-       do j = JE+1, JA
-       do i = 1, IA
-       do k = 1, dim1_max
-          varhalo(k,i,j) = RMISS
+       do j = JE+1,   dim3_E
+       do i = dim2_S, dim2_E
+       do k = dim1_S, dim1_E
+          buf(k,i,j) = RMISS
        enddo
        enddo
        enddo
 
-       call FILE_Write( vid, varhalo(dim1_S:dim1_E,dim2_S:dim2_E,dim3_S:dim3_E), &
-                        NOWDAYSEC, NOWDAYSEC, start                              ) ! [IN]
     else
-       call FILE_Write( vid, var(dim1_S:dim1_E,dim2_S:dim2_E,dim3_S:dim3_E), &
-                        NOWDAYSEC, NOWDAYSEC, start                          ) ! [IN]
-    endif
+
+       do j = dim3_S, dim3_E
+       do i = dim2_S, dim2_E
+       do k = dim1_S, dim1_E
+          buf(k,i,j) = var(k,i,j)
+       enddo
+       enddo
+       enddo
+
+    end if
+
+    call FILE_Write( vid, buf(:,:,:), NOWDAYSEC, NOWDAYSEC, start ) ! [IN]
+    call FILE_CARTESC_flush( fid )
+
+    deallocate( buf )
 
     call PROF_rapend('FILE_Write', 2, disable_barrier = .not. FILE_allnodes(fid) )
 
@@ -3956,7 +3985,7 @@ contains
     real(DP),         intent(in), optional :: timeofs   !< offset time     (optional)
     logical,          intent(in), optional :: fill_halo !< include halo data?
 
-    real(RP) :: varhalo( size(var(:,1,1)), size(var(1,:,1)) )
+    real(RP), allocatable :: buf(:,:)
 
     integer  :: dim1_S, dim1_E
     integer  :: dim2_S, dim2_E
@@ -4008,6 +4037,8 @@ contains
     start(2) = JSGA
     ! start(3) time dimension will be set in file_write_data()
 
+    allocate( buf(dim1_S:dim1_E,dim2_S:dim2_E) )
+
     if ( present(timetarg) ) then
        nowtime = timeofs_ + (timetarg-1) * time_interval
 
@@ -4017,41 +4048,48 @@ contains
 
           do j = JS, JE
           do i = IS, IE
-             varhalo(i,j) = var(i,j,timetarg)
+             buf(i,j) = var(i,j,timetarg)
           end do
           end do
 
           ! W halo
-          do j = 1, JA
-          do i = 1, IS-1
-             varhalo(i,j) = RMISS
+          do j = dim2_S, dim2_E
+          do i = dim1_S, IS-1
+             buf(i,j) = RMISS
           enddo
           enddo
           ! E halo
-          do j = 1, JA
-          do i = IE+1, IA
-             varhalo(i,j) = RMISS
+          do j = dim2_S, dim2_E
+          do i = IE+1,   dim1_E
+             buf(i,j) = RMISS
           enddo
           enddo
           ! S halo
-          do j = 1, JS-1
-          do i = 1, IA
-             varhalo(i,j) = RMISS
+          do j = dim2_S, JS-1
+          do i = dim1_S, dim1_E
+             buf(i,j) = RMISS
           enddo
           enddo
           ! N halo
-          do j = JE+1, JA
-          do i = 1, IA
-             varhalo(i,j) = RMISS
+          do j = JE+1,   dim2_E
+          do i = dim1_S, dim1_E
+             buf(i,j) = RMISS
           enddo
           enddo
 
-          call FILE_Write( vid, varhalo(dim1_S:dim1_E,dim2_S:dim2_E), &
-                           nowtime, nowtime, start                    ) ! [IN]
        else
-          call FILE_Write( vid, var(dim1_S:dim1_E,dim2_S:dim2_E,timetarg), &
-                           nowtime, nowtime, start                         ) ! [IN]
-       endif
+
+          do j = dim2_S, dim2_E
+          do i = dim1_S, dim1_E
+             buf(i,j) = var(i,j,timetarg)
+          enddo
+          enddo
+
+       end if
+
+       call FILE_Write( vid, buf(:,:), nowtime, nowtime, start ) ! [IN]
+       call FILE_CARTESC_flush( fid )
+
     else
        nowtime = timeofs_
 
@@ -4062,44 +4100,53 @@ contains
 
              do j = JS, JE
              do i = IS, IE
-                varhalo(i,j) = var(i,j,n)
+                buf(i,j) = var(i,j,n)
              end do
              end do
 
              ! W halo
-             do j = 1, JA
-             do i = 1, IS-1
-                varhalo(i,j) = RMISS
+             do j = dim2_S, dim2_E
+             do i = dim1_S, IS-1
+                buf(i,j) = RMISS
              enddo
              enddo
              ! E halo
-             do j = 1, JA
-             do i = IE+1, IA
-                varhalo(i,j) = RMISS
+             do j = dim2_S, dim2_E
+             do i = IE+1,   dim1_E
+                buf(i,j) = RMISS
              enddo
              enddo
              ! S halo
-             do j = 1, JS-1
-             do i = 1, IA
-                varhalo(i,j) = RMISS
+             do j = dim2_S, JS-1
+             do i = dim1_S, dim1_E
+                buf(i,j) = RMISS
              enddo
              enddo
              ! N halo
-             do j = JE+1, JA
-             do i = 1, IA
-                varhalo(i,j) = RMISS
+             do j = JE+1,   dim2_E
+             do i = dim1_S, dim1_E
+                buf(i,j) = RMISS
              enddo
              enddo
 
-             call FILE_Write( vid, varhalo(dim1_S:dim1_E,dim2_S:dim2_E), &
-                              nowtime, nowtime, start                    ) ! [IN]
           else
-             call FILE_Write( vid, var(dim1_S:dim1_E,dim2_S:dim2_E,n), &
-                              nowtime, nowtime, start                  ) ! [IN]
-          endif
+
+             do j = dim2_S, dim2_E
+             do i = dim1_S, dim1_E
+                buf(i,j) = var(i,j,n)
+             enddo
+             enddo
+
+          end if
+
+          call FILE_Write( vid, buf(:,:), nowtime, nowtime, start ) ! [IN]
+          call FILE_CARTESC_flush( fid )
+
           nowtime = nowtime + time_interval
        enddo
     endif
+
+    deallocate( buf )
 
     call PROF_rapend('FILE_Write', 2, disable_barrier = .not. FILE_allnodes(fid) )
 
@@ -4124,8 +4171,7 @@ contains
        FILE_get_AGGREGATE, &
        FILE_opened, &
        FILE_allnodes, &
-       FILE_Write, &
-       FILE_Flush
+       FILE_Write
     use scale_prc, only: &
        PRC_myrank,     &
        PRC_abort
@@ -4146,9 +4192,9 @@ contains
     real(DP),         intent(in), optional :: timeofs   !< offset time     (optional)
     logical,          intent(in), optional :: fill_halo !< include halo data?
 
-    real(RP) :: varhalo( size(var(:,1,1,1)), size(var(1,:,1,1)), size(var(1,1,:,1)) )
+    real(RP), allocatable :: buf(:,:,:)
 
-    integer  :: dim1_S, dim1_E, dim1_max
+    integer  :: dim1_S, dim1_E
     integer  :: dim2_S, dim2_E
     integer  :: dim3_S, dim3_E
 
@@ -4198,41 +4244,35 @@ contains
     if (      dim_type == 'ZXYT'  &
          .OR. dim_type == 'ZXHYT' &
          .OR. dim_type == 'ZXYHT' ) then
-       dim1_max = KMAX
        dim1_S   = KS
        dim1_E   = KE
     elseif ( dim_type == 'ZHXYT' ) then
-       dim1_max = KMAX+1
        dim1_S   = KS-1
        dim1_E   = KE
     elseif( dim_type == 'OXYT' ) then
-       dim1_max = OKMAX
        dim1_S   = OKS
        dim1_E   = OKE
     elseif( dim_type == 'OHXYT' ) then
-       dim1_max = OKMAX+1
        dim1_S   = OKS-1
        dim1_E   = OKE
     elseif( dim_type == 'LXYT' ) then
-       dim1_max = LKMAX
        dim1_S   = LKS
        dim1_E   = LKE
     elseif( dim_type == 'LHXYT' ) then
-       dim1_max = LKMAX+1
        dim1_S   = LKS-1
        dim1_E   = LKE
     elseif( dim_type == 'UXYT' ) then
-       dim1_max = UKMAX
        dim1_S   = UKS
        dim1_E   = UKE
     elseif( dim_type == 'UHXYT' ) then
-       dim1_max = UKMAX+1
        dim1_S   = UKS-1
        dim1_E   = UKE
     else
        LOG_ERROR("FILE_CARTESC_write_var_4D",*) 'unsupported dimension type. Check! dim_type:', trim(dim_type), ', item:',trim(varname)
        call PRC_abort
     endif
+
+    allocate( buf(dim1_S:dim1_E,dim2_S:dim2_E,dim3_S:dim3_E) )
 
     !$acc update host(var) if(acc_is_present(var))
 
@@ -4243,51 +4283,60 @@ contains
 
           do j = JS, JE
           do i = IS, IE
-          do k = 1, dim1_max
-             varhalo(k,i,j) = var(k,i,j,timetarg)
+          do k = dim1_S, dim1_E
+             buf(k,i,j) = var(k,i,j,timetarg)
           end do
           end do
           end do
 
           ! W halo
-          do j = 1, JA
-          do i = 1, IS-1
-          do k = 1, dim1_max
-             varhalo(k,i,j) = RMISS
+          do j = dim3_S, dim3_E
+          do i = dim2_S, IS-1
+          do k = dim1_S, dim1_E
+             buf(k,i,j) = RMISS
           enddo
           enddo
           enddo
           ! E halo
-          do j = 1, JA
-          do i = IE+1, IA
-          do k = 1, dim1_max
-             varhalo(k,i,j) = RMISS
+          do j = dim3_S, dim3_E
+          do i = IE+1,   dim2_E
+          do k = dim1_S, dim1_E
+             buf(k,i,j) = RMISS
           enddo
           enddo
           enddo
           ! S halo
-          do j = 1, JS-1
-          do i = 1, IA
-          do k = 1, dim1_max
-             varhalo(k,i,j) = RMISS
+          do j = dim3_S, JS-1
+          do i = dim2_S, dim2_E
+          do k = dim1_S, dim1_E
+             buf(k,i,j) = RMISS
           enddo
           enddo
           enddo
           ! N halo
-          do j = JE+1, JA
-          do i = 1, IA
-          do k = 1, dim1_max
-             varhalo(k,i,j) = RMISS
+          do j = JE+1,   dim3_E
+          do i = dim2_S, dim2_E
+          do k = dim1_S, dim1_E
+             buf(k,i,j) = RMISS
           enddo
           enddo
           enddo
 
-          call FILE_Write( vid, varhalo(dim1_S:dim1_E,dim2_S:dim2_E,dim3_S:dim3_E), &
-                           nowtime, nowtime, start                                  ) ! [IN]
        else
-          call FILE_Write( vid, var(dim1_S:dim1_E,dim2_S:dim2_E,dim3_S:dim3_E,timetarg), &
-                           nowtime, nowtime, start                                       ) ! [IN]
-       endif
+
+          do j = dim3_S, dim3_E
+          do i = dim2_S, dim2_E
+          do k = dim1_S, dim1_E
+             buf(k,i,j) = var(k,i,j,timetarg)
+          enddo
+          enddo
+          enddo
+
+       end if
+
+       call FILE_Write( vid, buf(:,:,:), nowtime, nowtime, start ) ! [IN]
+       call FILE_CARTESC_flush( fid )
+
     else
        nowtime = timeofs_
        do n = 1, step
@@ -4295,55 +4344,66 @@ contains
 
              do j = JS, JE
              do i = IS, IE
-             do k = 1, dim1_max
-                varhalo(k,i,j) = var(k,i,j,n)
+             do k = dim1_S, dim1_E
+                buf(k,i,j) = var(k,i,j,n)
              end do
              end do
              end do
 
              ! W halo
-             do j = 1, JA
-             do i = 1, IS-1
-             do k = 1, dim1_max
-                varhalo(k,i,j) = RMISS
+             do j = dim3_S, dim3_E
+             do i = dim2_S, IS-1
+             do k = dim1_S, dim1_E
+                buf(k,i,j) = RMISS
              enddo
              enddo
              enddo
              ! E halo
-             do j = 1, JA
-             do i = IE+1, IA
-             do k = 1, dim1_max
-                varhalo(k,i,j) = RMISS
+             do j = dim3_S, dim3_E
+             do i = IE+1,   dim2_E
+             do k = dim1_S, dim1_E
+                buf(k,i,j) = RMISS
              enddo
              enddo
              enddo
              ! S halo
-             do j = 1, JS-1
-             do i = 1, IA
-             do k = 1, dim1_max
-                varhalo(k,i,j) = RMISS
+             do j = dim3_S, JS-1
+             do i = dim2_S, dim2_E
+             do k = dim1_S, dim1_E
+                buf(k,i,j) = RMISS
              enddo
              enddo
              enddo
              ! N halo
-             do j = JE+1, JA
-             do i = 1, IA
-             do k = 1, dim1_max
-                varhalo(k,i,j) = RMISS
+             do j = JE+1,   dim3_E
+             do i = dim2_S, dim2_E
+             do k = dim1_S, dim1_E
+                buf(k,i,j) = RMISS
              enddo
              enddo
              enddo
 
-             call FILE_Write( vid, varhalo(dim1_S:dim1_E,dim2_S:dim2_E,dim3_S:dim3_E), &
-                              nowtime, nowtime, start                                  ) ! [IN]
           else
-             call FILE_Write( vid, var(dim1_S:dim1_E,dim2_S:dim2_E,dim3_S:dim3_E,n), &
-                              nowtime, nowtime, start                                ) ! [IN]
-          endif
-          call FILE_Flush( fid )
+
+             do j = dim3_S, dim3_E
+             do i = dim2_S, dim2_E
+             do k = dim1_S, dim1_E
+                buf(k,i,j) = var(k,i,j,n)
+             enddo
+             enddo
+             enddo
+
+          end if
+
+          call FILE_Write( vid, buf(:,:,:), nowtime, nowtime, start ) ! [IN]
+          call FILE_CARTESC_flush( fid )
+
           nowtime = nowtime + time_interval
+
        enddo
     endif
+
+    deallocate( buf )
 
     call PROF_rapend('FILE_Write', 2, disable_barrier = .not. FILE_allnodes(fid) )
 
