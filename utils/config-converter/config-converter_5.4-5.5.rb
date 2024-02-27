@@ -45,7 +45,7 @@ params.each do |param|
   param_name  = param[0].strip
   param_items = param[1]
 
-  # atmos boundary
+  # Atmos boundary
   if /^&PARAM_ATMOS_BOUNDARY$/i =~ param_name
     print param_name, "\n"
     param_items.each do |item|
@@ -54,6 +54,70 @@ params.each do |param|
       end
     end
     print "/\n"
+    next
+  end
+
+  # Comm cartesc nest
+  if /^&PARAM_COMM_CARTESC_NEST$/i =~ param_name
+    print param_name, "\n"
+    param_items.each do |item|
+      if /OFFLINE_PARENT_/i !~ item && /LATLON_CATALOGUE_FNAME/i !~ item
+        print item, "\n"
+      end
+    end
+    print "/\n"
+    next
+  end
+
+  # LATLON catalogue
+  if /^&PARAM_DOMAIN_CATALOGUE$/i =~ param_name
+    next
+  end
+
+  # History
+  if /^&PARAM_FILE_HISTORY$/i =~ param_name
+    print param_name, "\n"
+    param_items.each do |item|
+      if /^(\s*)FILE_HISTORY_DEFAULT_TAVERAGE\s*=\s*([^,]+)/i =~ item
+        pre = $1
+        if /\.true\./i =~ $2
+          print pre, "FILE_HISTORY_TSTATS_OP = 'average',\n"
+        end
+      else
+        print item, "\n"
+      end
+    end
+    print "/\n"
+    next
+  end
+  if /^&HISTORY_ITEM$/i =~ param_name
+    print param_name, "\n"
+    param_item.each do |item|
+      if /^(\s*)TAVERAGE\s*=\s*([^,]+)/i =~ item
+        pre = $1
+        if /\.true\./i =~ $2
+          print pre, "TSTATS_OP = 'average',\n"
+        end
+      else
+        print item, "\n"
+      end
+    end
+    print "/\n"
+    next
+  elsif /^&HISTORY_ITEM(.*)\/\s*$/i =~ param_name
+    print "&HISTORY_ITEM"
+    ary = []
+    $1.split(",").each do |item|
+      if /^(\s*)TAVERAGE\s*=\s*([^,]+)/i =~ item
+        pre = $1
+        if /\.true\./i =~ $2
+          ary.push "#{pre}TSTATS_OP = 'average'"
+        end
+      else
+        ary.push item
+      end
+    end
+    print ary.join(","), "/\n"
     next
   end
 
