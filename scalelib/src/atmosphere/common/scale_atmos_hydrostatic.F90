@@ -758,7 +758,8 @@ contains
        converged     )
     !$acc routine seq
     use scale_const, only: &
-       UNDEF => CONST_UNDEF
+       UNDEF => CONST_UNDEF, &
+       EPS   => CONST_EPS
     use scale_prc, only: &
        PRC_abort
     use scale_atmos_hydrometeor, only: &
@@ -831,7 +832,7 @@ contains
           dgrd = - CPovCV(k) * pres(k) / dens_s / dz(k-1) &
                  - GRAV * 0.5_RP
 
-          dens(k) = dens_s - dhyd/dgrd
+          dens(k) = max( dens_s - dhyd/dgrd, dens(k-1) * EPS )
 
           if ( dens(k)*0.0_RP /= 0.0_RP ) exit
        enddo
