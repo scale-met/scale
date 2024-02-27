@@ -1592,7 +1592,7 @@ contains
     end do
     AXIS_name = (/'xh', 'y ', 'zh'/)
     call FILE_HISTORY_Set_AssociatedCoordinate( 'cell_area_uyw_x', 'area of grid cell face (half level uyw, normal x)', 'm2', &
-                                                AXIS_name(1:3), AXIS(1:imh,1:jmh,0:), start=start(:,2)                        )
+                                                AXIS_name(1:3), AXIS(1:imh,1:jm,0:), start=start(:,2)                        )
     do k = 0, FILE_HISTORY_CARTESC_MODEL_nlayer
     do j = 1, jmh
     do i = 1, im
