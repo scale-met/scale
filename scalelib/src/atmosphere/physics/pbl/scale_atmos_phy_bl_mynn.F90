@@ -2312,6 +2312,7 @@ contains
              exit
           end if
        end do
+       kmax = max(kmax, KS)
     else
        kmax = KE_PBL
     end if
@@ -3064,7 +3065,6 @@ contains
        Z, CDZ, F2H, &
        mflux, tflux, qflux, uflux, vflux, eflux, &
        tlh, tvh, qh, uh, vh, wh, eh, dh )
-
     !$acc routine vector
     use scale_const, only: &
        GRAV    => CONST_GRAV, &
