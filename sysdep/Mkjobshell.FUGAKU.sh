@@ -109,20 +109,17 @@ export PLE_MPI_STD_EMPTYFILE=off
 export OMP_WAIT_POLICY=active
 export FLIB_BARRIER=HARD
 
-. /vol0004/apps/oss/spack/share/spack/setup-env.sh
-spack load --first netcdf-c%fj
-spack load --first netcdf-fortran%fj
-spack load --first parallel-netcdf%fj
+llio_transfer /home/apps/oss/scale/llio.list
+. /home/apps/oss/scale/setup_ldlpath.sh
 
-export LD_LIBRARY_PATH=\`/home/system/tool/sort_libp\`
 
-/home/system/tool/sort_libp -s
-if [ \$? -eq 0 ]; then
-    :
-else
-    echo "[ERROR] Error in sort_libp."
-#    exit 1
-fi
+#. /vol0004/apps/oss/spack/share/spack/setup-env.sh
+#spack load --first netcdf-c%fj
+#spack load --first netcdf-fortran%fj
+#spack load --first parallel-netcdf%fj
+
+#export LD_LIBRARY_PATH=\`/home/system/tool/sort_libp\`
+#/home/system/tool/sort_libp -s
 
 EOF1
 
