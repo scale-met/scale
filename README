@@ -14,22 +14,22 @@ License
 -------
 - License: The BSD 2-Clause License
 
-Build
+Build and Run
 -----
 - set SCALE_SYS environmental variable (see the sysdef directory)
  % export SCALE_SYS=Linux64-gnu-ompi (example)
 
 - set NetCDF library environmental variables
- % export SCALE_NETCDF_INCLUDE="-I/ap/netcdf4-fortran/4.4.2/include"
- % export SCALE_NETCDF_LIBS="-L/ap/netcdf4-fortran/4.4.2/lib -L/ap/HDF5/1.8.16/lib -L/ap/netcdf4/4.3.3.1/lib -lnetcdff -lnetcdf"
+ % export SCALE_NETCDF_INCLUDE="-I/opt/netcdf4-fortran/x.x.x/include"
+ % export SCALE_NETCDF_LIBS="-L/opt/netcdf4-fortran/x.x.x/lib -L/ap/netcdf4/y.y.y/lib -L/ap/HDF5/z.z.z/lib  -lnetcdff -lnetcdf -lhdf5_hl -lhdf5"
 
-- build the execution binary files in the directory of the test cases of scale-rm
+- build the execution binary files 
  e.g.,
- % make
+ % make -j 4
 
 - generate the initial files and run the integration
  e.g.,
- % cd rootdir/scale-rm/test/tutorial/ideal
+ % cd scale-top-dir/scale-rm/test/tutorial/ideal
  % ln -s ../../../../bin/scale-rm_init ./
  % mpirun -n 2 ./scale-rm_init init_R20kmDX500m.conf
  % ln -s ../../../../bin/scale-rm      ./
@@ -43,14 +43,12 @@ You can enable options below by setting as environment variables, for example,
  % export OPTION_NAME=T
 Switch options will be activated only when the value is "T"
 
-* SCALE_DISABLE_MPI     : Disable to use MPI library (only for util tools)
 * SCALE_DEBUG           : Activate debug option
 * SCALE_QUICKDEBUG      : Activate quick debug option (fast optimization option + fp trap)
 * SCALE_USE_SINGLEFP    : Use single floating-point precision
 * SCALE_ENABLE_OPENMP   : Enable to use OpenMP
 * SCALE_ENABLE_OPENACC  : Enable to use OpenACC
 * SCALE_USE_AGRESSIVEOPT: Use agressive options of optimization for some compilers
-* SCALE_DISABLE_INTELVEC: Disable to use vectorization for intel compiler
 * SCALE_ENABLE_PNETCDF  : Enable to use parallel NetCDF
 * SCALE_COMPAT_NETCDF3  : Keep compatibility with NetCDF3
 * SCALE_ENABLE_MATHLIB  : Enable to use MATH library
