@@ -229,7 +229,8 @@ contains
        USER_mkinit
     use mod_atmos_driver, only: &
        ATMOS_SURFACE_GET, &
-       ATMOS_driver_setup
+       ATMOS_driver_setup, &
+       ATMOS_driver_finalize
     use mod_ocean_driver, only: &
        OCEAN_SURFACE_SET
     use mod_land_driver, only: &
@@ -487,6 +488,9 @@ contains
 
     ! finalize mkinit
     call MKINIT_finalize
+
+    ! finalize atmosphere
+    if ( ATMOS_do ) call ATMOS_driver_finalize( .true. )
 
     ! finalize variable container
     if ( ATMOS_do ) call ATMOS_vars_finalize
