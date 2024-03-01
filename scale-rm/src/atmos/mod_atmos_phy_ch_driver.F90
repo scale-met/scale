@@ -28,6 +28,7 @@ module mod_atmos_phy_ch_driver
   !
   public :: ATMOS_PHY_CH_driver_tracer_setup
   public :: ATMOS_PHY_CH_driver_setup
+  public :: ATMOS_PHY_CH_driver_finalize
   public :: ATMOS_PHY_CH_driver_calc_tendency
   public :: ATMOS_PHY_CH_driver_OCEAN_flux
   public :: ATMOS_PHY_CH_driver_LAND_flux

@@ -117,8 +117,7 @@ contains
     use mod_atmos_bnd_driver, only: &
        ATMOS_BOUNDARY_driver_setup
     use mod_atmos_dyn_driver, only: &
-       ATMOS_DYN_driver_setup, &
-       ATMOS_DYN_driver_finalize
+       ATMOS_DYN_driver_setup
     use mod_atmos_phy_mp_driver, only: &
        ATMOS_PHY_MP_driver_setup
     use mod_atmos_phy_mp_vars, only: &
@@ -520,11 +519,10 @@ contains
 
   !-----------------------------------------------------------------------------
   !> Finalize
-  subroutine ATMOS_driver_finalize
+  subroutine ATMOS_driver_finalize( init )
     use scale_atmos_refstate, only: &
        ATMOS_REFSTATE_finalize
     use mod_atmos_bnd_driver, only: &
-       ATMOS_BOUNDARY_UPDATE_FLAG, &
        ATMOS_BOUNDARY_driver_finalize
     use mod_atmos_dyn_driver, only: &
        ATMOS_DYN_driver_finalize
@@ -534,6 +532,8 @@ contains
        ATMOS_PHY_MP_driver_finalize
     use mod_atmos_phy_ae_driver, only: &
        ATMOS_PHY_AE_driver_finalize
+    use mod_atmos_phy_ch_driver, only: &
+       ATMOS_PHY_CH_driver_finalize
     use mod_atmos_phy_rd_driver, only: &
        ATMOS_PHY_RD_driver_finalize
     use mod_atmos_phy_tb_driver, only: &
@@ -543,26 +543,30 @@ contains
     use mod_atmos_phy_cp_driver, only: &
        ATMOS_PHY_CP_driver_finalize
     implicit none
+    logical, intent(in), optional :: init
+    logical :: not_init
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
     LOG_INFO("ATMOS_driver_finalize",*) 'Finalize'
 
-    call ATMOS_DYN_driver_finalize
-    call ATMOS_PHY_LT_driver_finalize
-    call ATMOS_PHY_MP_driver_finalize
-    call ATMOS_PHY_AE_driver_finalize
-    call ATMOS_PHY_RD_driver_finalize
-    !call ATMOS_PHY_SF_driver_finalize
-    call ATMOS_PHY_TB_driver_finalize
-    call ATMOS_PHY_BL_driver_finalize
-    call ATMOS_PHY_CP_driver_finalize
+    not_init = .true.
+    if ( present(init) ) not_init = .not. init
+
+    if ( not_init ) call ATMOS_DYN_driver_finalize
+    if ( not_init ) call ATMOS_PHY_LT_driver_finalize
+                    call ATMOS_PHY_MP_driver_finalize
+    if ( not_init ) call ATMOS_PHY_AE_driver_finalize
+    if ( not_init ) call ATMOS_PHY_CH_driver_finalize
+    if ( not_init ) call ATMOS_PHY_RD_driver_finalize
+    !if ( not_init ) call ATMOS_PHY_SF_driver_finalize
+    if ( not_init ) call ATMOS_PHY_TB_driver_finalize
+                    call ATMOS_PHY_BL_driver_finalize
+    if ( not_init )call ATMOS_PHY_CP_driver_finalize
+
+    if ( not_init ) call ATMOS_BOUNDARY_driver_finalize
 
     call ATMOS_REFSTATE_finalize
-
-    if ( ATMOS_BOUNDARY_UPDATE_FLAG ) then
-       call ATMOS_BOUNDARY_driver_finalize
-    endif
 
     return
   end subroutine ATMOS_driver_finalize

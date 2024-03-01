@@ -1379,6 +1379,8 @@ contains
     deallocate( kgrd  )
     deallocate( vfact )
 
+    deallocate( rotc_org )
+
     deallocate( LON_org )
     deallocate( LAT_org )
     deallocate( CZ_org  )
