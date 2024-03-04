@@ -84,24 +84,24 @@ module mod_admin_time
   integer,  private :: TIME_ENDDAY
   real(DP), private :: TIME_ENDSEC
 
-  integer,  private :: TIME_RES_ATMOS_DYN     = 0
-  integer,  private :: TIME_RES_ATMOS_PHY_CP  = 0
-  integer,  private :: TIME_RES_ATMOS_PHY_MP  = 0
-  integer,  private :: TIME_RES_ATMOS_PHY_RD  = 0
-  integer,  private :: TIME_RES_ATMOS_PHY_SF  = 0
-  integer,  private :: TIME_RES_ATMOS_PHY_TB  = 0
-  integer,  private :: TIME_RES_ATMOS_PHY_BL  = 0
-  integer,  private :: TIME_RES_ATMOS_PHY_CH  = 0
-  integer,  private :: TIME_RES_ATMOS_PHY_AE  = 0
-  integer,  private :: TIME_RES_ATMOS_PHY_LT  = 0
-  integer,  private :: TIME_RES_ATMOS_RESTART = 0
-  integer,  private :: TIME_RES_OCEAN         = 0
-  integer,  private :: TIME_RES_OCEAN_RESTART = 0
-  integer,  private :: TIME_RES_LAND          = 0
-  integer,  private :: TIME_RES_LAND_RESTART  = 0
-  integer,  private :: TIME_RES_URBAN         = 0
-  integer,  private :: TIME_RES_URBAN_RESTART = 0
-  integer,  private :: TIME_RES_DA            = 0
+  integer,  private :: TIME_RES_ATMOS_DYN
+  integer,  private :: TIME_RES_ATMOS_PHY_CP
+  integer,  private :: TIME_RES_ATMOS_PHY_MP
+  integer,  private :: TIME_RES_ATMOS_PHY_RD
+  integer,  private :: TIME_RES_ATMOS_PHY_SF
+  integer,  private :: TIME_RES_ATMOS_PHY_TB
+  integer,  private :: TIME_RES_ATMOS_PHY_BL
+  integer,  private :: TIME_RES_ATMOS_PHY_CH
+  integer,  private :: TIME_RES_ATMOS_PHY_AE
+  integer,  private :: TIME_RES_ATMOS_PHY_LT
+  integer,  private :: TIME_RES_ATMOS_RESTART
+  integer,  private :: TIME_RES_OCEAN
+  integer,  private :: TIME_RES_OCEAN_RESTART
+  integer,  private :: TIME_RES_LAND
+  integer,  private :: TIME_RES_LAND_RESTART
+  integer,  private :: TIME_RES_URBAN
+  integer,  private :: TIME_RES_URBAN_RESTART
+  integer,  private :: TIME_RES_DA
   integer,  private :: TIME_RES_RESUME
 
   real(DP), private :: TIME_WALLCLOCK_START             ! Start time of wall clock             [sec]
@@ -717,6 +717,25 @@ contains
        TIME_DSTEP_URBAN_RESTART = nint( TIME_DTSEC_URBAN_RESTART / TIME_DTSEC )
        TIME_DSTEP_DA            = nint( TIME_DTSEC_DA            / TIME_DTSEC )
        TIME_DSTEP_RESUME        = nint( TIME_DTSEC_RESUME        / TIME_DTSEC )
+
+       TIME_RES_ATMOS_DYN     = 0
+       TIME_RES_ATMOS_PHY_CP  = 0
+       TIME_RES_ATMOS_PHY_MP  = 0
+       TIME_RES_ATMOS_PHY_RD  = 0
+       TIME_RES_ATMOS_PHY_SF  = 0
+       TIME_RES_ATMOS_PHY_TB  = 0
+       TIME_RES_ATMOS_PHY_BL  = 0
+       TIME_RES_ATMOS_PHY_CH  = 0
+       TIME_RES_ATMOS_PHY_AE  = 0
+       TIME_RES_ATMOS_PHY_LT  = 0
+       TIME_RES_ATMOS_RESTART = 0
+       TIME_RES_OCEAN         = 0
+       TIME_RES_OCEAN_RESTART = 0
+       TIME_RES_LAND          = 0
+       TIME_RES_LAND_RESTART  = 0
+       TIME_RES_URBAN         = 0
+       TIME_RES_URBAN_RESTART = 0
+       TIME_RES_DA            = 0
 
        TIME_RES_RESUME = TIME_DSTEP_RESUME - 1
 
