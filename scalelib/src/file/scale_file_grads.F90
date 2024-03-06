@@ -23,6 +23,7 @@ module scale_file_grads
   !
   !++ Public procedure
   !
+  public :: FILE_GrADS_finalize
   public :: FILE_GrADS_open
   public :: FILE_GrADS_varid
   public :: FILE_GrADS_varcheck
@@ -156,12 +157,14 @@ contains
     integer :: n
     !---------------------------------------------------------------------------
 
+    call IO_get_fname(fname, file_name)
+
     LOG_NEWLINE
-    LOG_INFO("FILE_GrADS_open",*) 'open namelist file :', trim(file_name)
+    LOG_INFO("FILE_GrADS_open",*) 'open namelist file :', trim(fname)
 
     ! check exist
     do n = 1, nnmls
-       if ( nmls(n)%fname == file_name ) then
+       if ( nmls(n)%fname == fname ) then
           ! alread read
           file_id = n
           return
@@ -170,7 +173,6 @@ contains
 
 
     fid = IO_get_available_fid()
-    call IO_get_fname(fname, file_name)
     !--- open namelist
     open( fid, &
           file   = fname,       &
@@ -195,6 +197,10 @@ contains
 
 
     nnmls = nnmls + 1
+    if ( nnmls > nmls_max ) then
+       LOG_ERROR("FILE_GrADS_open",*) 'Number of GrADS file to be open is exceeded the maximum', nmls_max
+       call PRC_abort
+    end if
     file_id = nnmls
 
     nmls(file_id)%fname = file_name
@@ -271,6 +277,10 @@ contains
        nmls(file_id)%vars(n)%dd      = dd
        nmls(file_id)%vars(n)%lnum    = lnum
        if ( lnum > 0 ) then
+          if ( lnum > lvars_max ) then
+             LOG_ERROR("FILE_GrADS_open",*) 'lnum exceeds the limit', lvars_max
+             call PRC_abort
+          end if
           allocate( nmls(file_id)%vars(n)%lvars(lnum) )
           nmls(file_id)%vars(n)%lvars(:) = lvars(1:lnum)
        end if
@@ -686,6 +696,17 @@ contains
     return
   end subroutine FILE_GrADS_read_3D_id
 
+  subroutine FILE_GrADS_finalize
+    integer :: n
+
+    do n = 1, nnmls
+       call FILE_GrADS_close(n)
+    end do
+    nnmls = 0
+
+    return
+  end subroutine FILE_GrADS_finalize
+
   !-----------------------------------------------------------------------------
   subroutine FILE_GrADS_close( &
        file_id )
@@ -871,6 +892,10 @@ contains
        end do
        if ( fid < 0 ) then
           nfiles = nfiles + 1
+          if ( nfiles > vars_max ) then
+             LOG_ERROR("FILE_GrADS_read_data",*) 'The number of files exceeds the limit', vars_max
+             call PRC_abort
+          end if
           fid = nfiles
           files(fid)%fname   = var_info%fname
           files(fid)%postfix = ""
