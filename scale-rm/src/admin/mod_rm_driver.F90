@@ -145,6 +145,8 @@ contains
     use scale_file_cartesC, only: &
        FILE_CARTESC_setup, &
        FILE_CARTESC_finalize
+    use scale_file_grads, only: &
+       FILE_GrADS_finalize
     use scale_comm_cartesC, only: &
        COMM_setup,  &
        COMM_regist, &
@@ -625,6 +627,7 @@ contains
     call FILE_HISTORY_CARTESC_finalize
     call FILE_HISTORY_finalize
     call FILE_CARTESC_finalize
+    call FILE_GrADS_finalize
     call FILE_Close_All
     call FILE_finalize
     call PROF_rapend  ('File', 1)

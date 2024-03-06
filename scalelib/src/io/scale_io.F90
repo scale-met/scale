@@ -331,6 +331,11 @@ contains
   end subroutine IO_LOG_setup
 
   subroutine IO_finalize
+    implicit none
+
+    integer :: fid      !< file ID
+    logical :: i_opened !< file ID is opened?
+    !---------------------------------------------------------------------------
 
     LOG_NEWLINE
     LOG_PROGRESS(*) 'Closing LOG file'
@@ -349,6 +354,11 @@ contains
        close( IO_FID_NML )
        IO_FID_NML = -1
     end if
+
+    do fid = IO_MINFID, IO_MAXFID
+       inquire(fid,OPENED=i_opened)
+       if ( i_opened ) close(fid)
+    enddo
 
     IO_L   = .false.
     IO_NML = .false.
