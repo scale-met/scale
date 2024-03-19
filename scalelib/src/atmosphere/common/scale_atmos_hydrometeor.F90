@@ -28,8 +28,11 @@ module scale_atmos_hydrometeor
   public :: ATMOS_HYDROMETEOR_finalize
   public :: ATMOS_HYDROMETEOR_regist
   public :: ATMOS_HYDROMETEOR_LHV
+  public :: ATMOS_HYDROMETEOR_LHV_para
   public :: ATMOS_HYDROMETEOR_LHS
+  public :: ATMOS_HYDROMETEOR_LHS_para
   public :: ATMOS_HYDROMETEOR_LHF
+  public :: ATMOS_HYDROMETEOR_LHF_para
   public :: ATMOS_HYDROMETEOR_entr
   public :: ATMOS_HYDROMETEOR_entr2temp
 
@@ -44,6 +47,10 @@ module scale_atmos_hydrometeor
      module procedure ATMOS_HYDROMETEOR_LHV_3D
   end interface ATMOS_HYDROMETEOR_LHV
 
+  interface ATMOS_HYDROMETEOR_LHV_para
+     module procedure ATMOS_HYDROMETEOR_LHV_1D_para
+  end interface ATMOS_HYDROMETEOR_LHV_para
+
   interface ATMOS_HYDROMETEOR_LHS
      module procedure ATMOS_HYDROMETEOR_LHS_0D
      module procedure ATMOS_HYDROMETEOR_LHS_1D
@@ -51,12 +58,20 @@ module scale_atmos_hydrometeor
      module procedure ATMOS_HYDROMETEOR_LHS_3D
   end interface ATMOS_HYDROMETEOR_LHS
 
+  interface ATMOS_HYDROMETEOR_LHS_para
+     module procedure ATMOS_HYDROMETEOR_LHS_1D_para
+  end interface ATMOS_HYDROMETEOR_LHS_para
+
   interface ATMOS_HYDROMETEOR_LHF
      module procedure ATMOS_HYDROMETEOR_LHF_0D
      module procedure ATMOS_HYDROMETEOR_LHF_1D
      module procedure ATMOS_HYDROMETEOR_LHF_2D
      module procedure ATMOS_HYDROMETEOR_LHF_3D
   end interface ATMOS_HYDROMETEOR_LHF
+
+  interface ATMOS_HYDROMETEOR_LHF_para
+     module procedure ATMOS_HYDROMETEOR_LHF_1D_para
+  end interface ATMOS_HYDROMETEOR_LHF_para
 
   interface ATMOS_HYDROMETEOR_entr
      module procedure ATMOS_HYDROMETEOR_entr_0D
@@ -413,6 +428,31 @@ contains
   end subroutine ATMOS_HYDROMETEOR_LHV_1D
 
   !-----------------------------------------------------------------------------
+  subroutine ATMOS_HYDROMETEOR_LHV_1D_para( &
+       KA, KS, KE, &
+       temp, &
+       lhv   )
+    implicit none
+    integer,  intent(in)  :: KA, KS, KE
+
+    real(RP), intent(in)  :: temp(KA) !< temperature                 [K]
+
+    real(RP), intent(out) :: lhv (KA) !< latent heat of vaporization [J/kg]
+
+    integer :: k
+    !---------------------------------------------------------------------------
+
+    !$omp parallel do
+    !$acc kernels copyin(temp) copyout(lhv)
+    do k = KS, KE
+       call ATMOS_HYDROMETEOR_LHV_0D( temp(k), lhv(k) )
+    enddo
+    !$acc end kernels
+
+    return
+  end subroutine ATMOS_HYDROMETEOR_LHV_1D_para
+
+  !-----------------------------------------------------------------------------
   subroutine ATMOS_HYDROMETEOR_LHV_2D( &
        IA, IS, IE, JA, JS, JE, &
        temp, &
@@ -513,6 +553,31 @@ contains
   end subroutine ATMOS_HYDROMETEOR_LHS_1D
 
   !-----------------------------------------------------------------------------
+  subroutine ATMOS_HYDROMETEOR_LHS_1D_para( &
+       KA, KS, KE, &
+       temp, &
+       lhs   )
+    implicit none
+    integer, intent(in) :: KA, KS, KE
+
+    real(RP), intent(in)  :: temp(KA) !< temperature                [K]
+
+    real(RP), intent(out) :: lhs (KA) !< latent heat of sublimation [J/kg]
+
+    integer :: k
+    !---------------------------------------------------------------------------
+
+    !$omp parallel do
+    !$acc kernels copyin(temp) copyout(lhs)
+    do k = KS, KE
+       call ATMOS_HYDROMETEOR_LHS( temp(k), lhs(k) )
+    enddo
+    !$acc end kernels
+
+    return
+  end subroutine ATMOS_HYDROMETEOR_LHS_1D_para
+
+  !-----------------------------------------------------------------------------
   subroutine ATMOS_HYDROMETEOR_LHS_2D( &
        IA, IS, IE, JA, JS, JE, &
        temp, &
@@ -610,6 +675,30 @@ contains
 
     return
   end subroutine ATMOS_HYDROMETEOR_LHF_1D
+
+  !-----------------------------------------------------------------------------
+  subroutine ATMOS_HYDROMETEOR_LHF_1D_para( &
+       KA, KS, KE, &
+       temp, &
+       lhf   )
+    implicit none
+    integer, intent(in) :: KA, KS, KE
+
+    real(RP), intent(in)  :: temp(KA) !< temperature           [K]
+    real(RP), intent(out) :: lhf (KA) !< latent heat of fusion [J/kg]
+
+    integer :: k
+    !---------------------------------------------------------------------------
+
+    !$omp parallel do
+    !$acc kernels copyin(temp) copyout(lhf)
+    do k = KS, KE
+       call ATMOS_HYDROMETEOR_LHF( temp(k), lhf(k) )
+    enddo
+    !$acc end kernels
+
+    return
+  end subroutine ATMOS_HYDROMETEOR_LHF_1D_para
 
   !-----------------------------------------------------------------------------
   subroutine ATMOS_HYDROMETEOR_LHF_2D( &
