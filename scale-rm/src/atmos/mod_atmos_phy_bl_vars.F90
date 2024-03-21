@@ -28,6 +28,7 @@ module mod_atmos_phy_bl_vars
   !++ Public procedure
   !
   public :: ATMOS_PHY_BL_vars_setup
+  public :: ATMOS_PHY_BL_vars_finalize
   public :: ATMOS_PHY_BL_vars_fillhalo
   public :: ATMOS_PHY_BL_vars_restart_read
   public :: ATMOS_PHY_BL_vars_restart_write
@@ -55,16 +56,19 @@ module mod_atmos_phy_bl_vars
   character(len=H_MID),   public :: ATMOS_PHY_BL_RESTART_OUT_TITLE             = 'ATMOS_PHY_BL restart' !< title    of the output file
   character(len=H_SHORT), public :: ATMOS_PHY_BL_RESTART_OUT_DTYPE             = 'DEFAULT'              !< REAL4 or REAL8
 
+  logical,                public :: ATMOS_PHY_BL_MIX_TRACERS                   = .true.
+
   real(RP), public, allocatable :: ATMOS_PHY_BL_RHOU_t(:,:,:)   ! tendency RHOU [kg/m2/s2]
   real(RP), public, allocatable :: ATMOS_PHY_BL_RHOV_t(:,:,:)   ! tendency RHOV [kg/m2/s2]
   real(RP), public, allocatable :: ATMOS_PHY_BL_RHOT_t(:,:,:)   ! tendency RHOT [K*kg/m3/s]
 
   real(RP), public, allocatable, target :: ATMOS_PHY_BL_RHOQ_t(:,:,:,:) ! tendency rho*QTRC [kg/kg/s]
 
-  real(RP), public, allocatable :: ATMOS_PHY_BL_Zi    (:,:)     ! depth of the PBL
+  real(RP), public, allocatable :: ATMOS_PHY_BL_Zi       (:,:)  ! depth of the PBL
+  real(RP), public, allocatable :: ATMOS_PHY_BL_SFLX_BUOY(:,:)  ! surface flux of buoyancy
 
   real(RP), public, allocatable :: ATMOS_PHY_BL_QL    (:,:,:)   ! liquid water content in partial condensation
-  real(RP), public, allocatable :: ATMOS_PHY_BL_cldfrac(:,:,:)   ! cloud fraction in partial condensation
+  real(RP), public, allocatable :: ATMOS_PHY_BL_cldfrac(:,:,:)  ! cloud fraction in partial condensation
 
   !-----------------------------------------------------------------------------
   !
@@ -109,7 +113,8 @@ contains
        ATMOS_PHY_BL_RESTART_OUT_AGGREGATE,         &
        ATMOS_PHY_BL_RESTART_OUT_POSTFIX_TIMELABEL, &
        ATMOS_PHY_BL_RESTART_OUT_TITLE,             &
-       ATMOS_PHY_BL_RESTART_OUT_DTYPE
+       ATMOS_PHY_BL_RESTART_OUT_DTYPE,             &
+       ATMOS_PHY_BL_MIX_TRACERS
 
     integer :: ierr
     integer :: iv
@@ -126,14 +131,21 @@ contains
     ATMOS_PHY_BL_RHOV_t(:,:,:)   = UNDEF
     ATMOS_PHY_BL_RHOT_t(:,:,:)   = UNDEF
     ATMOS_PHY_BL_RHOQ_t(:,:,:,:) = UNDEF
+    !$acc enter data create(ATMOS_PHY_BL_RHOU_t,ATMOS_PHY_BL_RHOV_t,ATMOS_PHY_BL_RHOT_t,ATMOS_PHY_BL_RHOQ_t)
 
-    allocate( ATMOS_PHY_BL_Zi(IA,JA) )
-    ATMOS_PHY_BL_Zi(:,:) = UNDEF
+    allocate( ATMOS_PHY_BL_Zi      (IA,JA) )
+    ATMOS_PHY_BL_Zi      (:,:) = UNDEF
+    !$acc enter data create(ATMOS_PHY_BL_Zi)
+
+    allocate( ATMOS_PHY_BL_SFLX_BUOY(IA,JA) )
+    ATMOS_PHY_BL_SFLX_BUOY(:,:) = UNDEF
+    !$acc enter data create(ATMOS_PHY_BL_SFLX_BUOY)
 
     allocate( ATMOS_PHY_BL_QL     (KA,IA,JA) )
     allocate( ATMOS_PHY_BL_cldfrac(KA,IA,JA) )
     ATMOS_PHY_BL_QL     (:,:,:) = UNDEF
     ATMOS_PHY_BL_cldfrac(:,:,:) = UNDEF
+    !$acc enter data create(ATMOS_PHY_BL_QL,ATMOS_PHY_BL_cldfrac)
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -174,6 +186,34 @@ contains
 
     return
   end subroutine ATMOS_PHY_BL_vars_setup
+
+  !-----------------------------------------------------------------------------
+  !> Finalize
+  subroutine ATMOS_PHY_BL_vars_finalize
+    implicit none
+    !---------------------------------------------------------------------------
+
+    LOG_NEWLINE
+    LOG_INFO("ATMOS_PHY_BL_vars_finalize",*) 'Finalize'
+
+    !$acc exit data delete(ATMOS_PHY_BL_RHOU_t,ATMOS_PHY_BL_RHOV_t,ATMOS_PHY_BL_RHOT_t,ATMOS_PHY_BL_RHOQ_t)
+    deallocate( ATMOS_PHY_BL_RHOU_t )
+    deallocate( ATMOS_PHY_BL_RHOV_t )
+    deallocate( ATMOS_PHY_BL_RHOT_t )
+    deallocate( ATMOS_PHY_BL_RHOQ_t )
+
+    !$acc exit data delete(ATMOS_PHY_BL_Zi)
+    deallocate( ATMOS_PHY_BL_Zi )
+
+    !$acc exit data delete(ATMOS_PHY_BL_SFLX_BUOY)
+    deallocate( ATMOS_PHY_BL_SFLX_BUOY )
+
+    !$acc exit data delete(ATMOS_PHY_BL_QL,ATMOS_PHY_BL_cldfrac)
+    deallocate( ATMOS_PHY_BL_QL      )
+    deallocate( ATMOS_PHY_BL_cldfrac )
+
+    return
+  end subroutine ATMOS_PHY_BL_vars_finalize
 
   !-----------------------------------------------------------------------------
   !> HALO Communication
@@ -247,6 +287,7 @@ contains
 
        if ( FILE_get_AGGREGATE(restart_fid) ) then
           call FILE_CARTESC_flush( restart_fid ) ! X/Y halos have been read from file
+          !$acc update device(ATMOS_PHY_BL_Zi)
        else
           call ATMOS_PHY_BL_vars_fillhalo
        end if
@@ -303,9 +344,9 @@ contains
        FILE_CARTESC_enddef
     implicit none
 
-!    if ( restart_fid /= -1 ) then
-!       call FILE_CARTESC_enddef( restart_fid ) ! [IN]
-!    endif
+    if ( restart_fid /= -1 ) then
+       call FILE_CARTESC_enddef( restart_fid ) ! [IN]
+    endif
 
     return
   end subroutine ATMOS_PHY_BL_vars_restart_enddef
@@ -336,14 +377,17 @@ contains
     use scale_file_cartesC, only: &
        FILE_CARTESC_def_var
     implicit none
+    integer :: iv
     !---------------------------------------------------------------------------
 
     if ( restart_fid /= -1 ) then
 
-       call FILE_CARTESC_def_var( restart_fid,     & ! [IN]
-            VAR_NAME(1), VAR_DESC(1), VAR_UNIT(1), & ! [IN]
-            'XY', ATMOS_PHY_BL_RESTART_OUT_DTYPE,  & ! [IN]
-            VAR_ID(1)                              ) ! [OUT]
+       do iv = 1, VMAX
+          call FILE_CARTESC_def_var( restart_fid,        & ! [IN]
+               VAR_NAME(iv), VAR_DESC(iv), VAR_UNIT(iv), & ! [IN]
+               'XY', ATMOS_PHY_BL_RESTART_OUT_DTYPE,     & ! [IN]
+               VAR_ID(iv)                                ) ! [OUT]
+       end do
 
     endif
 

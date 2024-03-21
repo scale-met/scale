@@ -39,7 +39,8 @@ def parse(deps, pros, srcdir, dir="")
           pros[mod] = pro
         when /^\s*use (\w+)/
           mod = $1
-          next if /(dc_types|dc_log|mpi|netcdf|scale_|gadg|rng|NAME)/ =~ mod
+          dep[:depends].push(mod) if ( "mod_netcdf" == mod &&  !dep[:depends].include?(mod) )
+          next if /(dc_types|dc_log|mpi|netcdf|scale_|gadg|rng|iso_c_binding|NAME)/ =~ mod
           dep[:depends].push(mod) unless dep[:depends].include?(mod)
         end
       end

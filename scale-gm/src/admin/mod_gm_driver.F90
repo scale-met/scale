@@ -51,10 +51,10 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine gm_driver( &
-       comm_world,       &
-       intercomm_parent, &
-       intercomm_child,  &
-       cnf_fname         )
+       comm_world, &
+       cnf_fname,  &
+       path,       &
+       add_path    )
     use scale_file, only: &
        FILE_Close_All
     use scale_prc, only: &
@@ -106,6 +106,8 @@ contains
        BULKFLUX_setup
     use mod_fio, only: &
        FIO_setup
+    use mod_gm_topography, only: &
+       TOPOGRAPHY_setup
     use mod_grd, only: &
        GRD_setup
     use mod_gmtr, only: &
@@ -145,8 +147,6 @@ contains
     use mod_embudget, only: &
        embudget_setup, &
        embudget_monitor
-    use mod_gm_topography, only: &
-       TOPO_setup
     use mod_atmos_vars, only: &
        ATMOS_vars_setup
     use mod_atmos_phy_driver, only: &
@@ -181,9 +181,9 @@ contains
     implicit none
 
     integer,          intent(in) :: comm_world
-    integer,          intent(in) :: intercomm_parent
-    integer,          intent(in) :: intercomm_child
     character(len=*), intent(in) :: cnf_fname
+    character(len=*), intent(in) :: path
+    logical,          intent(in) :: add_path
 
     integer :: myrank
     integer :: fpm_counter
@@ -197,7 +197,11 @@ contains
     !########## Initial setup ##########
 
     ! setup standard I/O
-    call IO_setup( MODELNAME, cnf_fname )
+    if ( add_path .and. path /= "" ) then
+       call IO_setup( MODELNAME, trim(path)//cnf_fname, prefix=path )
+    else
+       call IO_setup( MODELNAME, trim(path)//cnf_fname )
+    end if
 
     ! setup MPI
     call PRC_LOCAL_setup( comm_world, & ! [IN]
@@ -267,6 +271,9 @@ contains
     !---< comm module setup >---
     call COMM_setup
 
+    !---< topography module setup >---
+    call TOPOGRAPHY_setup
+
     !---< grid module setup >---
     call GRD_setup
 
@@ -291,9 +298,6 @@ contains
 
     !---< nhm_runconf module setup >---
     call runconf_setup
-
-    !---< topography module setup >---
-    call TOPO_setup
 
     !---< landuse module setup >---
     call LANDUSE_setup( .false., .false., .false. )

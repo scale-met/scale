@@ -39,6 +39,7 @@ module mod_atmos_vars
   public :: ATMOS_vars_calc_diagnostics
   public :: ATMOS_vars_get_diagnostic
   public :: ATMOS_vars_monitor
+  public :: ATMOS_vars_finalize
 
   public :: ATMOS_vars_restart_create
   public :: ATMOS_vars_restart_open
@@ -537,6 +538,7 @@ contains
     allocate( MOMY(KA,IA,JA)    )
     allocate( RHOT(KA,IA,JA)    )
     allocate( QTRC(KA,IA,JA,max(QA,1)) )
+    !$acc enter data create(DENS, MOMZ, MOMX, MOMY, RHOT, QTRC)
 
     if ( ATMOS_USE_AVERAGE ) then
        allocate( DENS_avw(KA,IA,JA)    )
@@ -545,6 +547,7 @@ contains
        allocate( MOMY_avw(KA,IA,JA)    )
        allocate( RHOT_avw(KA,IA,JA)    )
        allocate( QTRC_avw(KA,IA,JA,max(QA,1)) )
+       !$acc enter data create(DENS_avw, MOMZ_avw, MOMX_avw, MOMY_avw, RHOT_avw, QTRC_avw)
 
        DENS_av => DENS_avw
        MOMZ_av => MOMZ_avw
@@ -568,13 +571,17 @@ contains
     allocate( RHOT_tp(KA,IA,JA)    )
     allocate( RHOH_p (KA,IA,JA)    )
     allocate( RHOQ_tp(KA,IA,JA,max(QA,1)) )
+    !$acc enter data create(DENS_tp, MOMZ_tp, RHOU_tp, RHOV_tp, RHOT_tp, RHOH_p, RHOQ_tp)
 
     allocate( W(KA,IA,JA) )
     allocate( U(KA,IA,JA) )
     allocate( V(KA,IA,JA) )
+    !$omp parallel workshare
     W(:,:,:) = UNDEF
     U(:,:,:) = UNDEF
     V(:,:,:) = UNDEF
+    !$omp end parallel workshare
+    !$acc enter data create(W, U, V)
 
     allocate( POTT (KA,IA,JA) )
     allocate( TEMP (KA,IA,JA) )
@@ -582,38 +589,55 @@ contains
     allocate( EXNER(KA,IA,JA) )
     allocate( PHYD (KA,IA,JA) )
     allocate( PHYDH(0:KA,IA,JA) )
+    !$omp parallel workshare
     POTT (:,:,:) = UNDEF
     TEMP (:,:,:) = UNDEF
     PRES (:,:,:) = UNDEF
     EXNER(:,:,:) = UNDEF
     PHYD (:,:,:) = UNDEF
     PHYDH(:,:,:) = UNDEF
+    !$omp end parallel workshare
+    !$acc enter data create(POTT, TEMP, PRES, EXNER, PHYD, PHYDH)
 
     allocate( Qdry (KA,IA,JA) )
     allocate( Rtot (KA,IA,JA) )
     allocate( CVtot(KA,IA,JA) )
     allocate( CPtot(KA,IA,JA) )
+    !$omp parallel workshare
     Qdry (:,:,:) = UNDEF
     Rtot (:,:,:) = UNDEF
     CVtot(:,:,:) = UNDEF
     CPtot(:,:,:) = UNDEF
+    !$omp end parallel workshare
+    !$acc enter data create(Qdry, Rtot, CVtot, CPtot)
 
     allocate( PREC     (IA,JA) )
     allocate( PREC_ENGI(IA,JA) )
+    !$omp parallel workshare
     PREC     (:,:) = UNDEF
     PREC_ENGI(:,:) = UNDEF
+    !$omp end parallel workshare
+    !$acc enter data create(PREC, PREC_ENGI)
 
     ! obsolute
     allocate( MOMX_tp(KA,IA,JA)    )
     allocate( MOMY_tp(KA,IA,JA)    )
+    !$acc enter data create(MOMX_tp, MOMY_tp)
 
 
+    !$omp parallel workshare
+    !$acc kernels
     MOMZ(1:KS-1,:,:) = 0.0_RP
+    !$acc end kernels
+    !$acc kernels
     MOMZ(KE:KA,:,:) = 0.0_RP
+    !$acc end kernels
+    !$omp end parallel workshare
 
     allocate( WORK3D(KA,IA,JA) )
     allocate( WORK2D(   IA,JA) )
     allocate( WORK1D(KA      ) )
+    !$acc enter data create(WORK3D, WORK2D, WORK1D)
 
 
     !--- read namelist
@@ -694,8 +718,13 @@ contains
     ! water content
     if ( ATMOS_HYDROMETEOR_dry ) then
        allocate( ZERO(KA,IA,JA) )
+       !$acc enter data create(ZERO)
+       !$omp parallel workshare
+       !$acc kernels
 !OCL XFILL
        ZERO(:,:,:) = 0.0_RP
+       !$acc end kernels
+       !$omp end parallel workshare
 
        QV => ZERO
        QC => ZERO
@@ -708,8 +737,11 @@ contains
        moist = .false.
     else
        allocate( Qe(KA,IA,JA,N_HYD) )
+       !$omp parallel workshare
 !OCL XFILL
        Qe(:,:,:,:) = UNDEF
+       !$omp end parallel workshare
+       !$acc enter data create(Qe)
 
        QV => QTRC_av(:,:,:,I_QV)
        QC => Qe(:,:,:,I_HC)
@@ -858,7 +890,9 @@ contains
     FILL_BND_ = .false.
     if ( present(FILL_BND) ) FILL_BND_ = FILL_BND
 
+#ifdef QUICKDEBUG
     !$omp parallel do private(i,j) OMP_SCHEDULE_ collapse(2)
+    !$acc kernels
     do j  = JSB, JEB
     do i  = ISB, IEB
        DENS(   1:KS-1,i,j) = DENS(KS,i,j)
@@ -873,8 +907,10 @@ contains
        RHOT(KE+1:KA,  i,j) = RHOT(KE,i,j)
     enddo
     enddo
+    !$acc end kernels
 
     !$omp parallel do private(i,j,iq) OMP_SCHEDULE_ collapse(3)
+    !$acc kernels
     do iq = 1, QA
     do j  = JSB, JEB
     do i  = ISB, IEB
@@ -883,6 +919,8 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
+#endif
 
     call COMM_vars8( DENS(:,:,:), 1 )
     call COMM_vars8( MOMZ(:,:,:), 2 )
@@ -960,6 +998,8 @@ contains
     LOG_NEWLINE
     LOG_INFO("ATMOS_vars_restart_open",*) 'Open restart file (ATMOS) '
 
+    call PROF_rapstart('ATM_Restart', 1)
+
     if ( ATMOS_RESTART_IN_BASENAME /= '' ) then
 
        if ( ATMOS_RESTART_IN_POSTFIX_TIMELABEL ) then
@@ -983,12 +1023,26 @@ contains
     endif
 
     if ( ATMOS_USE_AVERAGE ) then
+       !$omp workshare
+       !$acc kernels
        DENS_av(:,:,:)   = DENS(:,:,:)
+       !$acc end kernels
+       !$acc kernels
        MOMZ_av(:,:,:)   = MOMZ(:,:,:)
+       !$acc end kernels
+       !$acc kernels
        MOMX_av(:,:,:)   = MOMX(:,:,:)
+       !$acc end kernels
+       !$acc kernels
        MOMY_av(:,:,:)   = MOMY(:,:,:)
+       !$acc end kernels
+       !$acc kernels
        RHOT_av(:,:,:)   = RHOT(:,:,:)
+       !$acc end kernels
+       !$acc kernels
        QTRC_av(:,:,:,:) = QTRC(:,:,:,:)
+       !$acc end kernels
+       !$omp end workshare
     endif
 
     if( ATMOS_sw_dyn )    call ATMOS_DYN_vars_restart_open
@@ -1001,6 +1055,8 @@ contains
     if( ATMOS_sw_phy_bl ) call ATMOS_PHY_BL_vars_restart_open
     if( ATMOS_sw_phy_cp ) call ATMOS_PHY_CP_vars_restart_open
     if( ATMOS_sw_phy_lt ) call ATMOS_PHY_LT_vars_restart_open
+
+    call PROF_rapend('ATM_Restart', 1)
 
     return
   end subroutine ATMOS_vars_restart_open
@@ -1054,6 +1110,8 @@ contains
     integer  :: i, j, iq
     !---------------------------------------------------------------------------
 
+    call PROF_rapstart('ATM_Restart', 1)
+
     if ( restart_fid /= -1 ) then
        LOG_NEWLINE
        LOG_INFO("ATMOS_vars_restart_read",*) 'Read from restart file (ATMOS) '
@@ -1076,7 +1134,10 @@ contains
 
        if ( FILE_get_AGGREGATE(restart_fid) ) then
           call FILE_CARTESC_flush( restart_fid ) ! X/Y halos have been read from file
+          !$acc update device(DENS, MOMZ, MOMX, MOMY, RHOT, QTRC)
+#ifdef QUICKDEBUG
           ! fill k halos
+          !$acc kernels
           do j  = 1, JA
           do i  = 1, IA
              DENS(   1:KS-1,i,j) = DENS(KS,i,j)
@@ -1095,6 +1156,8 @@ contains
              end do
           enddo
           enddo
+          !$acc end kernels
+#endif
        else
           call ATMOS_vars_fillhalo
        end if
@@ -1107,12 +1170,26 @@ contains
     endif
 
     if ( ATMOS_USE_AVERAGE ) then
+       !$omp parallel workshare
+       !$acc kernels
        DENS_av(:,:,:)   = DENS(:,:,:)
+       !$acc end kernels
+       !$acc kernels
        MOMZ_av(:,:,:)   = MOMZ(:,:,:)
+       !$acc end kernels
+       !$acc kernels
        MOMX_av(:,:,:)   = MOMX(:,:,:)
+       !$acc end kernels
+       !$acc kernels
        MOMY_av(:,:,:)   = MOMY(:,:,:)
+       !$acc end kernels
+       !$acc kernels
        RHOT_av(:,:,:)   = RHOT(:,:,:)
+       !$acc end kernels
+       !$acc kernels
        QTRC_av(:,:,:,:) = QTRC(:,:,:,:)
+       !$acc end kernels
+       !$omp end parallel workshare
     endif
 
     if ( ATMOS_sw_dyn )    call ATMOS_DYN_vars_restart_read
@@ -1125,6 +1202,8 @@ contains
     if ( ATMOS_sw_phy_bl ) call ATMOS_PHY_BL_vars_restart_read
     if ( ATMOS_sw_phy_cp ) call ATMOS_PHY_CP_vars_restart_read
     if ( ATMOS_sw_phy_lt ) call ATMOS_PHY_LT_vars_restart_read
+
+    call PROF_rapend('ATM_Restart', 1)
 
     return
   end subroutine ATMOS_vars_restart_read
@@ -1146,6 +1225,9 @@ contains
     real(RP) :: SFC_PRES(IA,JA)
     !---------------------------------------------------------------------------
 
+    call PROF_rapstart('ATM_History', 1)
+
+    !$acc data create(SFC_TEMP, SFC_DENS, SFC_PRES)
     call BOTTOM_estimate( KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
                           DENS_av(:,:,:), PRES(:,:,:), QV(:,:,:), & ! [IN]
                           SFC_TEMP(:,:),                          & ! [IN]
@@ -1155,6 +1237,10 @@ contains
     call FILE_HISTORY_CARTESC_set_pres( PHYD    (:,:,:), & ! [IN]
                                         PHYDH   (:,:,:), & ! [IN]
                                         SFC_PRES(:,:)    ) ! [IN]
+
+    !$acc end data
+
+    call PROF_rapend('ATM_History', 1)
 
     return
   end subroutine ATMOS_vars_history_setpres
@@ -1209,6 +1295,7 @@ contains
 
     call FILE_CARTESC_close( fid ) ! [IN]
 
+    !$acc update host(DENS)
     do k = KS, KE
     do j = JS, JE
     do i = IS, IE
@@ -1221,6 +1308,7 @@ contains
     enddo
     enddo
 
+    !$acc update host(MOMZ)
     do k = KS-1, KE
     do j = JS, JE
     do i = IS, IE
@@ -1233,6 +1321,7 @@ contains
     enddo
     enddo
 
+    !$acc update host(MOMX)
     do k = KS, KE
     do j = JS, JE
     do i = IS, IE
@@ -1245,6 +1334,7 @@ contains
     enddo
     enddo
 
+    !$acc update host(MOMY)
     do k = KS, KE
     do j = JS, JE
     do i = IS, IE
@@ -1257,6 +1347,7 @@ contains
     enddo
     enddo
 
+    !$acc update host(RHOT)
     do k = KS, KE
     do j = JS, JE
     do i = IS, IE
@@ -1269,6 +1360,7 @@ contains
     enddo
     enddo
 
+    !$acc update host(QTRC)
     do iq = 1, QA
        do k = KS, KE
        do j = JS, JE
@@ -1425,6 +1517,8 @@ contains
     logical  :: check
     !---------------------------------------------------------------------------
 
+    !$acc data create(RHOQ, WORK)
+
     if ( present(force) ) then
        check = force
     else
@@ -1445,12 +1539,18 @@ contains
                       RHOT(:,:,:),    0.0_RP, 1000.0_RP, PV_info(I_RHOT)%NAME, __FILE__, __LINE__ )
 
        !$omp parallel workshare
+       !$acc kernels
 !OCL XFILL
        WORK(:,:,:,1) = W(:,:,:)
+       !$acc end kernels
+       !$acc kernels
 !OCL XFILL
        WORK(:,:,:,2) = U(:,:,:)
+       !$acc end kernels
+       !$acc kernels
 !OCL XFILL
        WORK(:,:,:,3) = V(:,:,:)
+       !$acc end kernels
        !$omp end parallel workshare
 
        WNAME(1) = "W"
@@ -1491,7 +1591,9 @@ contains
                               ATMOS_GRID_CARTESC_REAL_TOTVOL        ) ! (in)
 
        do iq = 1, QA
+          !$acc kernels
           RHOQ(KS:KE,IS:IE,JS:JE) = DENS(KS:KE,IS:IE,JS:JE) * QTRC(KS:KE,IS:IE,JS:JE,iq)
+          !$acc end kernels
 
           call STATISTICS_total( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
                                  RHOQ(:,:,:), TRACER_NAME(iq),       & ! (in)
@@ -1502,13 +1604,17 @@ contains
        call ATMOS_vars_calc_diagnostics
 
 
+       !$acc kernels
        RHOQ(KS:KE,IS:IE,JS:JE) = DENS(KS:KE,IS:IE,JS:JE) * QDRY (KS:KE,IS:IE,JS:JE)
+       !$acc end kernels
        call STATISTICS_total( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
                               RHOQ(:,:,:), 'QDRY',                & ! (in)
                               ATMOS_GRID_CARTESC_REAL_VOL(:,:,:), & ! (in)
                               ATMOS_GRID_CARTESC_REAL_TOTVOL      ) ! (in)
 
+       !$acc kernels
        RHOQ(KS:KE,IS:IE,JS:JE) = DENS(KS:KE,IS:IE,JS:JE) * ( 1.0_RP - QDRY (KS:KE,IS:IE,JS:JE) ) ! Qtotal
+       !$acc end kernels
        call STATISTICS_total( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
                               RHOQ(:,:,:), 'QTOT',                & ! (in)
                               ATMOS_GRID_CARTESC_REAL_VOL(:,:,:), & ! (in)
@@ -1543,11 +1649,14 @@ contains
     if (       ( ATMOS_DYN_TYPE /= 'OFF' .AND. ATMOS_DYN_TYPE /= 'NONE' )                   &
          .AND. ( ATMOS_VARS_CHECKCFL_SOFT > 0.0_RP .OR. ATMOS_VARS_CHECKCFL_HARD > 0.0_RP ) ) then
        !$omp parallel workshare
+       !$acc kernels
 !OCL XFILL
        WORK(:,:,:,:) = 0.0_RP
+       !$acc end kernels
        !$omp end parallel workshare
 
        !$omp parallel do
+       !$acc kernels
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
@@ -1558,15 +1667,19 @@ contains
        enddo
        enddo
        enddo
+       !$acc end kernels
        if ( PRC_TwoD ) then
           !$omp parallel do
+          !$acc kernels
           do j = JS, JE
           do k = KS, KE
              WORK(k,IS,j,2) = 0.0_RP
           enddo
           enddo
+          !$acc end kernels
        else
           !$omp parallel do
+          !$acc kernels
           do j = JS, JE
           do i = IS, IE
           do k = KS, KE
@@ -1575,15 +1688,28 @@ contains
           enddo
           enddo
           enddo
+          !$acc end kernels
        end if
 
-       CFLMAX = maxval( WORK(:,:,:,:) )
+       CFLMAX = -999e10_RP
+       !$omp parallel do collapse(3) reduction(max:CFLMAX)
+       !$acc kernels loop reduction(max:CFLMAX)
+       do iq = 1, 3
+       do j = 1, JA
+       do i = 1, IA
+       do k = 1, KA
+          CFLMAX = max( CFLMAX, WORK(k,i,j,iq) )
+       end do
+       end do
+       end do
+       end do
+       !$acc end kernels
 
        if ( ATMOS_VARS_CHECKCFL_HARD > 0.0_RP .AND. CFLMAX > ATMOS_VARS_CHECKCFL_HARD ) then
           LOG_INFO("ATMOS_vars_check",*) "Courant number =", CFLMAX, " exceeded the hard limit =", ATMOS_VARS_CHECKCFL_HARD
-          LOG_ERROR("ATMOS_vars_check",*)                     "Courant number =", CFLMAX, " exceeded the hard limit =", ATMOS_VARS_CHECKCFL_HARD
-          LOG_ERROR_CONT(*)                     "Rank =", PRC_myrank
-          LOG_ERROR_CONT(*)                     "Please set ATMOS_VARS_CHECKCFL_HARD in the namelist PARAM_ATMOS_VARS when you want to change the limit."
+          LOG_ERROR("ATMOS_vars_check",*)"Courant number =", CFLMAX, " exceeded the hard limit =", ATMOS_VARS_CHECKCFL_HARD
+          LOG_ERROR_CONT(*)              "Rank =", PRC_myrank
+          LOG_ERROR_CONT(*)              "Please set ATMOS_VARS_CHECKCFL_HARD in the namelist PARAM_ATMOS_VARS when you want to change the limit."
 
           WNAME(1) = "Courant num. Z"
           WNAME(2) = "Courant num. X"
@@ -1610,6 +1736,7 @@ contains
 
     endif
 
+    !$acc end data
 
     return
   end subroutine ATMOS_vars_check
@@ -1640,6 +1767,8 @@ contains
     implicit none
 
     integer :: iq
+
+    call PROF_rapstart('ATM_Diag', 1)
 
     call ATMOS_THERMODYN_specific_heat( &
          KA, KS, KE, IA, 1, IA, JA, 1, JA, QA, &
@@ -1681,6 +1810,8 @@ contains
 
     ! reset diagnostic variables
     DV_calculated(:) = .false.
+
+    call PROF_rapend('ATM_Diag', 1)
 
     return
   end subroutine ATMOS_vars_calc_diagnostics
@@ -1739,39 +1870,85 @@ contains
 
     integer :: k, i, j, iq
 
+    !$acc data copyout(var) create(UH, VH, WORK)
+
     select case ( vname )
     case ( 'W' )
+       !$omp parallel workshare
+       !$acc kernels
        var(:,:,:) = W(:,:,:)
+       !$acc end kernels
+       !$omp end parallel workshare
 
     case ( 'U' )
+       !$omp parallel workshare
+       !$acc kernels
        var(:,:,:) = U(:,:,:)
+       !$acc end kernels
+       !$omp end parallel workshare
 
     case ( 'V' )
+       !$omp parallel workshare
+       !$acc kernels
        var(:,:,:) = V(:,:,:)
+       !$acc end kernels
+       !$omp end parallel workshare
 
     case ( 'PT' )
+       !$omp parallel workshare
+       !$acc kernels
        var(:,:,:) = POTT(:,:,:)
+       !$acc end kernels
+       !$omp end parallel workshare
 
     case ( 'T' )
+       !$omp parallel workshare
+       !$acc kernels
        var(:,:,:) = TEMP(:,:,:)
+       !$acc end kernels
+       !$omp end parallel workshare
 
     case ( 'EXNER' )
+       !$omp parallel workshare
+       !$acc kernels
        var(:,:,:) = EXNER(:,:,:)
+       !$acc end kernels
+       !$omp end parallel workshare
 
     case ( 'PHYD' )
+       !$omp parallel workshare
+       !$acc kernels
        var(:,:,:) = PHYD(:,:,:)
+       !$acc end kernels
+       !$omp end parallel workshare
 
     case ( 'QDRY' )
+       !$omp parallel workshare
+       !$acc kernels
        var(:,:,:) = QDRY(:,:,:)
+       !$acc end kernels
+       !$omp end parallel workshare
 
     case ( 'RTOT' )
+       !$omp parallel workshare
+       !$acc kernels
        var(:,:,:) = RTOT(:,:,:)
+       !$acc end kernels
+       !$omp end parallel workshare
 
     case ( 'CVTOT' )
+       !$omp parallel workshare
+       !$acc kernels
        var(:,:,:) = CVTOT(:,:,:)
+       !$acc end kernels
+       !$omp end parallel workshare
 
     case ( 'CPTOT' )
+       !$omp parallel workshare
+       !$acc kernels
        var(:,:,:) = CPTOT(:,:,:)
+       !$acc end kernels
+       !$omp end parallel workshare
 
     case ( 'LHV' )
        if ( .not. DV_calculated(I_LHV) ) then
@@ -1782,7 +1959,11 @@ contains
                LHV(:,:,:)   ) ! (out)
           DV_calculated(I_LHV) = .true.
        end if
+       !$omp parallel workshare
+       !$acc kernels
        var(KS:KE,:,:) = LHV(KS:KE,:,:)
+       !$acc end kernels
+       !$omp end parallel workshare
 
     case ( 'LHS' )
        if ( .not. DV_calculated(I_LHS) ) then
@@ -1793,7 +1974,11 @@ contains
                LHS(:,:,:)   ) ! (out)
           DV_calculated(I_LHS) = .true.
        end if
+       !$omp parallel workshare
+       !$acc kernels
        var(KS:KE,:,:) = LHS(KS:KE,:,:)
+       !$acc end kernels
+       !$omp end parallel workshare
 
     case ( 'LHF' )
        if ( .not. DV_calculated(I_LHF) ) then
@@ -1804,7 +1989,11 @@ contains
                LHF(:,:,:)   ) ! (out)
           DV_calculated(I_LHF) = .true.
        end if
+       !$omp parallel workshare
+       !$acc kernels
        var(KS:KE,:,:) = LHF(KS:KE,:,:)
+       !$acc end kernels
+       !$omp end parallel workshare
 
     case ( 'POTV' )
        if ( .not. DV_calculated(I_POTV) ) then
@@ -1815,7 +2004,11 @@ contains
                POTV(:,:,:)               ) ! (out)
           DV_calculated(I_POTV) = .true.
        end if
+       !$omp parallel workshare
+       !$acc kernels
        var(KS:KE,:,:) = POTV(KS:KE,:,:)
+       !$acc end kernels
+       !$omp end parallel workshare
 
     case ( 'TEML' )
        if ( .not. DV_calculated(I_TEML) ) then
@@ -1831,7 +2024,12 @@ contains
                TEML(:,:,:)                          ) ! (out)
           DV_calculated(I_TEML) = .true.
        end if
+       !$omp parallel workshare
+       !$acc kernels
        var(KS:KE,:,:) = TEML(KS:KE,:,:)
+       !$acc end kernels
+
+       !$omp end parallel workshare
 
     case ( 'POTL' )
        if ( .not. DV_calculated(I_POTL) ) then
@@ -1842,6 +2040,8 @@ contains
           !$omp private(i,j,k) &
           !$omp shared(POTL,TEML,EXNER) &
           !$omp shared(KS,KE,IA,JA)
+          !$acc kernels
+          !$acc loop collapse(3) independent
           do j = 1, JA
           do i = 1, IA
           do k = KS, KE
@@ -1849,9 +2049,14 @@ contains
           enddo
           enddo
           enddo
+          !$acc end kernels
           DV_calculated(I_POTL) = .true.
        end if
+       !$omp parallel workshare
+       !$acc kernels
        var(KS:KE,:,:) = POTL(KS:KE,:,:)
+       !$acc end kernels
+       !$omp end parallel workshare
 
     case ( 'POTE' )
        if ( .not. DV_calculated(I_POTE) ) then
@@ -1861,7 +2066,12 @@ contains
                DENS(:,:,:), POTT(:,:,:), TEMP(:,:,:), QV(:,:,:), & ! [IN]
                POTE(:,:,:)                                       ) ! [OUT]
        end if
+       !$omp parallel workshare
+       !$acc kernels
        var(KS:KE,:,:) = POTE(KS:KE,:,:)
+       !$acc end kernels
+       !$omp end parallel workshare
+
     case ( 'QTOT' )
        if ( .not. DV_calculated(I_QTOT) ) then
           call allocate_3D( QTOT )
@@ -1872,6 +2082,8 @@ contains
              !$omp private(i,j,k) &
              !$omp shared(QTOT,QV,QHYD) &
              !$omp shared(KS,KE,IA,JA)
+             !$acc kernels
+             !$acc loop collapse(3) independent
              do j = 1, JA
              do i = 1, IA
              do k = KS, KE
@@ -1879,12 +2091,14 @@ contains
              enddo
              enddo
              enddo
+             !$acc end kernels
           else
 !OCL XFILL
              !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
              !$omp private(i,j,k) &
              !$omp shared(QTOT) &
              !$omp shared(KS,KE,IA,JA)
+             !$acc kernels
              do j = 1, JA
              do i = 1, IA
              do k = KS, KE
@@ -1892,10 +2106,15 @@ contains
              enddo
              enddo
              enddo
+             !$acc end kernels
           end if
           DV_calculated(I_QTOT) = .true.
        end if
+       !$omp parallel workshare
+       !$acc kernels
        var(KS:KE,:,:) = QTOT(KS:KE,:,:)
+       !$acc end kernels
+       !$omp end parallel workshare
 
     case ( 'QHYD' )
        if ( .not. DV_calculated(I_QHYD) ) then
@@ -1908,6 +2127,8 @@ contains
              !$omp private(i,j,k) &
              !$omp shared(QHYD,QLIQ,QICE) &
              !$omp shared(KS,KE,IA,JA)
+             !$acc kernels
+             !$acc loop collapse(3) independent
              do j = 1, JA
              do i = 1, IA
              do k = KS, KE
@@ -1915,12 +2136,14 @@ contains
              enddo
              enddo
              enddo
+             !$acc end kernels
           else
 !OCL XFILL
              !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
              !$omp private(i,j,k) &
              !$omp shared(QHYD) &
              !$omp shared(KS,KE,IA,JA)
+             !$acc kernels
              do j = 1, JA
              do i = 1, IA
              do k = KS, KE
@@ -1928,10 +2151,15 @@ contains
              enddo
              enddo
              enddo
+             !$acc end kernels
           end if
           DV_calculated(I_QHYD) = .true.
        end if
+       !$omp parallel workshare
+       !$acc kernels
        var(KS:KE,:,:) = QHYD(KS:KE,:,:)
+       !$acc end kernels
+       !$omp end parallel workshare
 
     case ( 'QLIQ' )
        if ( .not. DV_calculated(I_QLIQ) ) then
@@ -1941,6 +2169,8 @@ contains
           !$omp private(i,j,k) &
           !$omp shared(QLIQ,QC,QR) &
           !$omp shared(KS,KE,IA,JA)
+          !$acc kernels
+          !$acc loop collapse(3) independent
           do j = 1, JA
           do i = 1, IA
           do k = KS, KE
@@ -1948,9 +2178,14 @@ contains
           enddo
           enddo
           enddo
+          !$acc end kernels
           DV_calculated(I_QLIQ) = .true.
        end if
+       !$omp parallel workshare
+       !$acc kernels
        var(KS:KE,:,:) = QLIQ(KS:KE,:,:)
+       !$acc end kernels
+       !$omp end parallel workshare
 
     case ( 'QICE' )
        if ( .not. DV_calculated(I_QICE) ) then
@@ -1960,6 +2195,8 @@ contains
           !$omp private(i,j,k) &
           !$omp shared(QICE,QI,QS,QG,QH) &
           !$omp shared(KS,KE,IA,JA)
+          !$acc kernels
+          !$acc loop collapse(3) independent
           do j = 1, JA
           do i = 1, IA
           do k = KS, KE
@@ -1967,9 +2204,14 @@ contains
           enddo
           enddo
           enddo
+          !$acc end kernels
           DV_calculated(I_QICE) = .true.
        end if
+       !$omp parallel workshare
+       !$acc kernels
        var(KS:KE,:,:) = QICE(KS:KE,:,:)
+       !$acc end kernels
+       !$omp end parallel workshare
 
     case ( 'QSAT' )
        if ( .not. DV_calculated(I_QSAT) ) then
@@ -1980,7 +2222,11 @@ contains
                QSAT(:,:,:)                  ) ! (out)
           DV_calculated(I_QSAT) = .true.
        end if
+       !$omp parallel workshare
+       !$acc kernels
        var(KS:KE,:,:) = QSAT(KS:KE,:,:)
+       !$acc end kernels
+       !$omp end parallel workshare
 
     case ( 'RHA' )
        if ( .not. DV_calculated(I_RHA) ) then
@@ -1995,6 +2241,8 @@ contains
              !$omp private(i,j,k) &
              !$omp shared(RHA,DENS_av,QV,WORK,TEMP) &
              !$omp shared(KS,KE,IA,JA)
+             !$acc kernels
+             !$acc loop collapse(3) independent
              do j = 1, JA
              do i = 1, IA
              do k = KS, KE
@@ -2004,12 +2252,14 @@ contains
              enddo
              enddo
              enddo
+             !$acc end kernels
           else
 !OCL XFILL
              !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
              !$omp private(i,j,k) &
              !$omp shared(RHA) &
              !$omp shared(KS,KE,IA,JA)
+             !$acc kernels
              do j = 1, JA
              do i = 1, IA
              do k = KS, KE
@@ -2017,10 +2267,15 @@ contains
              enddo
              enddo
              enddo
+             !$acc end kernels
           end if
           DV_calculated(I_RHA) = .true.
        end if
+       !$omp parallel workshare
+       !$acc kernels
        var(KS:KE,:,:) = RHA(KS:KE,:,:)
+       !$acc end kernels
+       !$omp end parallel workshare
 
     case ( 'RHL', 'RH' )
        if ( .not. DV_calculated(I_RHL) ) then
@@ -2035,6 +2290,8 @@ contains
              !$omp private(i,j,k) &
              !$omp shared(RHL,DENS_av,QV,WORK,TEMP) &
              !$omp shared(KS,KE,IA,JA)
+             !$acc kernels
+             !$acc loop collapse(3) independent
              do j = 1, JA
              do i = 1, IA
              do k = KS, KE
@@ -2044,12 +2301,14 @@ contains
              enddo
              enddo
              enddo
+             !$acc end kernels
           else
 !OCL XFILL
              !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
              !$omp private(i,j,k) &
              !$omp shared(RHL) &
              !$omp shared(KS,KE,IA,JA)
+             !$acc kernels
              do j = 1, JA
              do i = 1, IA
              do k = KS, KE
@@ -2057,10 +2316,15 @@ contains
              enddo
              enddo
              enddo
+             !$acc end kernels
           end if
           DV_calculated(I_RHL) = .true.
        end if
+       !$omp parallel workshare
+       !$acc kernels
        var(KS:KE,:,:) = RHL(KS:KE,:,:)
+       !$acc end kernels
+       !$omp end parallel workshare
 
     case ( 'RHI' )
        if ( .not. DV_calculated(I_RHI) ) then
@@ -2075,6 +2339,8 @@ contains
              !$omp private(i,j,k) &
              !$omp shared(RHI,DENS_av,QV,WORK,TEMP) &
              !$omp shared(KS,KE,IA,JA)
+             !$acc kernels
+             !$acc loop collapse(3) independent
              do j = 1, JA
              do i = 1, IA
              do k = KS, KE
@@ -2084,12 +2350,14 @@ contains
              enddo
              enddo
              enddo
+             !$acc end kernels
           else
 !OCL XFILL
              !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
              !$omp private(i,j,k) &
              !$omp shared(RHI) &
              !$omp shared(KS,KE,IA,JA)
+             !$acc kernels
              do j = 1, JA
              do i = 1, IA
              do k = KS, KE
@@ -2097,10 +2365,15 @@ contains
              enddo
              enddo
              enddo
+             !$acc end kernels
           end if
           DV_calculated(I_RHI) = .true.
        end if
+       !$omp parallel workshare
+       !$acc kernels
        var(KS:KE,:,:) = RHI(KS:KE,:,:)
+       !$acc end kernels
+       !$omp end parallel workshare
 
     case ( 'VOR' )
        if ( .not. DV_calculated(I_VOR) ) then
@@ -2110,6 +2383,7 @@ contains
           ! at u, y, layer
           if ( PRC_TwoD ) then
              !$omp parallel do private(j,k) OMP_SCHEDULE_
+             !$acc kernels
 !OCL XFILL
              do j = 1, JA-1
              do k = KS, KE
@@ -2117,20 +2391,26 @@ contains
                            / ( DENS_av(k,IS,j) + DENS_av(k,IS,j+1) )
              enddo
              enddo
+             !$acc end kernels
              !$omp parallel do private(j,k) OMP_SCHEDULE_
+             !$acc kernels
 !OCL XFILL
              do j = 2, JA-1
              do k = KS, KE
                 VOR(k,IS,j) = - ( UH(k,IS,j) - UH(k,IS,j-1) ) * RCDY(j)
              enddo
              enddo
+             !$acc end kernels
              !$omp parallel do private(k) OMP_SCHEDULE_
+             !$acc kernels
              do k = KS, KE
                 VOR(k,IS,1 ) = VOR(k,IS,2   )
                 VOR(k,IS,JA) = VOR(k,IS,JA-1)
              enddo
+             !$acc end kernels
           else
              !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+             !$acc kernels
 !OCL XFILL
              do j = 1, JA-1
              do i = 2, IA
@@ -2141,7 +2421,9 @@ contains
              enddo
              enddo
              enddo
+             !$acc end kernels
              !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+             !$acc kernels
 !OCL XFILL
              do j = 2, JA
              do i = 1, IA-1
@@ -2152,7 +2434,9 @@ contains
              enddo
              enddo
              enddo
+             !$acc end kernels
              !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+             !$acc kernels
 !OCL XFILL
              do j = 2, JA-1
              do i = 2, IA-1
@@ -2162,26 +2446,35 @@ contains
              enddo
              enddo
              enddo
+             !$acc end kernels
              !$omp parallel do private(j,k) OMP_SCHEDULE_
+             !$acc kernels
              do j = 1, JA
              do k = KS, KE
                 VOR(k,1 ,j) = VOR(k,2   ,j)
                 VOR(k,IA,j) = VOR(k,IA-1,j)
              enddo
              enddo
+             !$acc end kernels
              !$omp parallel do private(i,k) OMP_SCHEDULE_
+             !$acc kernels
              do i = 1, IA
              do k = KS, KE
                 VOR(k,i,1 ) = VOR(k,i,2   )
                 VOR(k,i,JA) = VOR(k,i,JA-1)
              enddo
              enddo
+             !$acc end kernels
           end if
           DV_calculated(I_VOR) = .true.
        end if
        call COMM_vars8( VOR(:,:,:), 1 )
        call COMM_wait ( VOR(:,:,:), 1, .false. )
+       !$omp parallel workshare
+       !$acc kernels
        var(KS:KE,:,:) = VOR(KS:KE,:,:)
+       !$acc end kernels
+       !$omp end parallel workshare
 
     case ( 'DIV' )
        if ( .not. DV_calculated(I_DIV) ) then
@@ -2189,7 +2482,9 @@ contains
           call ATMOS_vars_get_diagnostic( 'HDIV', WORK3D(:,:,:) )
           !!!! to move to grid !!!!
           !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+          !$acc kernels
 !OCL XFILL
+          !$acc loop collapse(3) independent
           do j = 1, JA
           do i = 1, IA
           do k = KS, KE
@@ -2198,9 +2493,14 @@ contains
           enddo
           enddo
           enddo
+          !$acc end kernels
           DV_calculated(I_DIV) = .true.
        end if
+       !$omp parallel workshare
+       !$acc kernels
        var(KS:KE,:,:) = DIV(KS:KE,:,:)
+       !$acc end kernels
+       !$omp end parallel workshare
 
     case ( 'HDIV' )
        if ( .not. DV_calculated(I_HDIV) ) then
@@ -2208,19 +2508,26 @@ contains
           !!!! to move to grid !!!!
           if ( PRC_TwoD ) then
              !$omp parallel do private(j,k) OMP_SCHEDULE_
+             !$acc kernels
 !OCL XFILL
+             !$acc loop collapse(2) independent
              do j = 2, JA
              do k = KS, KE
                 HDIV(k,IS,j) = ( MOMY_av(k,IS,j) - MOMY_av(k  ,IS,j-1) ) * RCDY(j)
              enddo
              enddo
+             !$acc end kernels
              !$omp parallel do private(k) OMP_SCHEDULE_
+             !$acc kernels
              do k = KS, KE
                 HDIV(k,IS,1) = HDIV(k,IS,2)
              enddo
+             !$acc end kernels
           else
              !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+             !$acc kernels
 !OCL XFILL
+             !$acc loop collapse(3) independent
              do j = 2, JA
              do i = 2, IA
              do k = KS, KE
@@ -2229,30 +2536,41 @@ contains
              enddo
              enddo
              enddo
+             !$acc end kernels
              !$omp parallel do private(i,k) OMP_SCHEDULE_
+             !$acc kernels
              do i = 1, IA
              do k = KS, KE
                 HDIV(k,i,1) = HDIV(k,i,2)
              enddo
              enddo
+             !$acc end kernels
              !$omp parallel do private(j,k) OMP_SCHEDULE_
+             !$acc kernels
              do j = 1, JA
              do k = KS, KE
                 HDIV(k,1,j) = HDIV(k,2,j)
              enddo
              enddo
+             !$acc end kernels
           end if
           call COMM_vars8( HDIV(:,:,:), 1 )
           call COMM_wait ( HDIV(:,:,:), 1, .false. )
           DV_calculated(I_HDIV) = .true.
        end if
+       !$omp parallel workshare
+       !$acc kernels
        var(KS:KE,:,:) = HDIV(KS:KE,:,:)
+       !$acc end kernels
+       !$omp end parallel workshare
 
     case ( 'Uabs' )
        if ( .not. DV_calculated(I_Uabs) ) then
           call allocate_3D( Uabs )
 !OCL XFILL
           !$omp parallel do private(k,i,j) OMP_SCHEDULE_ collapse(2)
+          !$acc kernels
+          !$acc loop collapse(3) independent
           do j = 1, JA
           do i = 1, IA
           do k = KS, KE
@@ -2260,9 +2578,14 @@ contains
           enddo
           enddo
           enddo
+          !$acc end kernels
           DV_calculated(I_Uabs) = .true.
        end if
+       !$omp parallel workshare
+       !$acc kernels
        var(KS:KE,:,:) = Uabs(KS:KE,:,:)
+       !$acc end kernels
+       !$omp end parallel workshare
 
     case ( 'N2' )
        if ( .not. DV_calculated(I_N2) ) then
@@ -2275,7 +2598,11 @@ contains
                N2(:,:,:)                       ) ! (out)
           DV_calculated(I_N2) = .true.
        end if
+       !$omp parallel workshare
+       !$acc kernels
        var(KS:KE,:,:) = N2(KS:KE,:,:)
+       !$acc end kernels
+       !$omp end parallel workshare
 
     case ( 'MSE' )
        if ( .not. DV_calculated(I_MSE) ) then
@@ -2283,6 +2610,8 @@ contains
           call ATMOS_vars_get_diagnostic( 'LHV', WORK3D(:,:,:) )
 !OCL XFILL
           !$omp parallel do private(k,i,j) OMP_SCHEDULE_ collapse(2)
+          !$acc kernels
+          !$acc loop collapse(3) independent
           do j = 1, JA
           do i = 1, IA
           do k = KS, KE
@@ -2292,9 +2621,14 @@ contains
           enddo
           enddo
           enddo
+          !$acc end kernels
           DV_calculated(I_MSE) = .true.
        end if
+       !$omp parallel workshare
+       !$acc kernels
        var(KS:KE,:,:) = MSE(KS:KE,:,:)
+       !$acc end kernels
+       !$omp end parallel workshare
 
     case ( 'TDEW' )
        if ( .not. DV_calculated(I_TDEW) ) then
@@ -2304,12 +2638,18 @@ contains
                                           TDEW(:,:,:)                          ) ! [OUT]
           DV_calculated(I_TDEW) = .true.
        end if
+       !$omp parallel workshare
+       !$acc kernels
        var(KS:KE,:,:) = TDEW(KS:KE,:,:)
+       !$acc end kernels
+       !$omp end parallel workshare
 
     case ( 'ENGP' )
        if ( .not. DV_calculated(I_ENGP) ) then
           call allocate_3D( ENGP )
           !$omp parallel do private(k,i,j) OMP_SCHEDULE_ collapse(2)
+          !$acc kernels
+          !$acc loop collapse(3) independent
           do j = 1, JA
           do i = 1, IA
           do k = KS, KE
@@ -2317,14 +2657,21 @@ contains
           end do
           end do
           end do
+          !$acc end kernels
           DV_calculated(I_ENGP) = .true.
        end if
+       !$omp parallel workshare
+       !$acc kernels
        var(KS:KE,:,:) = ENGP(KS:KE,:,:)
+       !$acc end kernels
+       !$omp end parallel workshare
 
     case ( 'ENGK' )
        if ( .not. DV_calculated(I_ENGK) ) then
           call allocate_3D( ENGK )
           !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+          !$acc kernels
+          !$acc loop collapse(3) independent
           do j = 1, JA
           do i = 1, IA
           do k = KS, KE
@@ -2333,18 +2680,26 @@ contains
           end do
           end do
           end do
-             DV_calculated(I_ENGK) = .true.
+          !$acc end kernels
+          DV_calculated(I_ENGK) = .true.
        end if
+       !$omp parallel workshare
+       !$acc kernels
        var(KS:KE,:,:) = ENGK(KS:KE,:,:)
+       !$acc end kernels
+       !$omp end parallel workshare
 
     case ( 'ENGI' )
        if ( .not. DV_calculated(I_ENGI) ) then
           call allocate_3D( ENGI )
           !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+          !$acc kernels
+          !$acc loop collapse(3) independent
           do j = 1, JA
           do i = 1, IA
           do k = KS, KE
              ENGI(k,i,j) = DENS_av(k,i,j) * QDRY(k,i,j) * TEMP(k,i,j) * CVdry
+             !$acc loop seq
              do iq = 1, QA
                 ENGI(k,i,j) = ENGI(k,i,j) &
                             + DENS_av(k,i,j) * QTRC_av(k,i,j,iq) * ( TEMP(k,i,j) * TRACER_CV(iq) + TRACER_ENGI0(iq) )
@@ -2352,9 +2707,14 @@ contains
           end do
           end do
           end do
+          !$acc end kernels
           DV_calculated(I_ENGI) = .true.
        end if
+       !$omp parallel workshare
+       !$acc kernels
        var(KS:KE,:,:) = ENGI(KS:KE,:,:)
+       !$acc end kernels
+       !$omp end parallel workshare
 
     case ( 'ENGT' )
        if ( .not. DV_calculated(I_ENGT) ) then
@@ -2363,6 +2723,8 @@ contains
           call ATMOS_vars_get_diagnostic( 'ENGK', WORK3D(:,:,:) )
           call ATMOS_vars_get_diagnostic( 'ENGI', WORK3D(:,:,:) )
           !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+          !$acc kernels
+          !$acc loop collapse(3) independent
           do j = 1, JA
           do i = 1, IA
           do k = KS, KE
@@ -2370,9 +2732,14 @@ contains
           enddo
           enddo
           enddo
+          !$acc end kernels
           DV_calculated(I_ENGT) = .true.
        end if
+       !$omp parallel workshare
+       !$acc kernels
        var(KS:KE,:,:) = ENGT(KS:KE,:,:)
+       !$acc end kernels
+       !$omp end parallel workshare
 
     case ( 'DENS_PRIM' )
        if ( .not. DV_calculated(I_DENS_PRIM) ) then
@@ -2380,6 +2747,8 @@ contains
           call ATMOS_vars_get_diagnostic( 'DENS_MEAN', WORK1D(:) )
 !OCL XFILL
           !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+          !$acc kernels
+          !$acc loop collapse(3) independent
           do j = 1, JA
           do i = 1, IA
           do k = KS, KE
@@ -2387,9 +2756,14 @@ contains
           enddo
           enddo
           enddo
+          !$acc end kernels
           DV_calculated(I_DENS_PRIM) = .true.
        end if
+       !$omp parallel workshare
+       !$acc kernels
        var(KS:KE,:,:) = DENS_PRIM(KS:KE,:,:)
+       !$acc end kernels
+       !$omp end parallel workshare
 
     case ( 'W_PRIM' )
        if ( .not. DV_calculated(I_W_PRIM) ) then
@@ -2397,6 +2771,8 @@ contains
           call ATMOS_vars_get_diagnostic( 'W_MEAN', WORK1D(:) )
 !OCL XFILL
           !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+          !$acc kernels
+          !$acc loop collapse(3) independent
           do j = 1, JA
           do i = 1, IA
           do k = KS, KE
@@ -2404,9 +2780,14 @@ contains
           enddo
           enddo
           enddo
+          !$acc end kernels
           DV_calculated(I_W_PRIM) = .true.
        end if
+       !$omp parallel workshare
+       !$acc kernels
        var(KS:KE,:,:) = W_PRIM(KS:KE,:,:)
+       !$acc end kernels
+       !$omp end parallel workshare
 
     case ( 'U_PRIM' )
        if ( .not. DV_calculated(I_U_PRIM) ) then
@@ -2414,6 +2795,8 @@ contains
           call ATMOS_vars_get_diagnostic( 'U_MEAN', WORK1D(:) )
 !OCL XFILL
           !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+          !$acc kernels
+          !$acc loop collapse(3) independent
           do j = 1, JA
           do i = 1, IA
           do k = KS, KE
@@ -2421,9 +2804,14 @@ contains
           enddo
           enddo
           enddo
+          !$acc end kernels
           DV_calculated(I_U_PRIM) = .true.
        end if
+       !$omp parallel workshare
+       !$acc kernels
        var(KS:KE,:,:) = U_PRIM(KS:KE,:,:)
+       !$acc end kernels
+       !$omp end parallel workshare
 
     case ( 'V_PRIM' )
        if ( .not. DV_calculated(I_V_PRIM) ) then
@@ -2431,6 +2819,8 @@ contains
           call ATMOS_vars_get_diagnostic( 'V_MEAN', WORK1D(:) )
 !OCL XFILL
           !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+          !$acc kernels
+          !$acc loop collapse(3) independent
           do j = 1, JA
           do i = 1, IA
           do k = KS, KE
@@ -2438,9 +2828,14 @@ contains
           enddo
           enddo
           enddo
+          !$acc end kernels
           DV_calculated(I_V_PRIM) = .true.
        end if
+       !$omp parallel workshare
+       !$acc kernels
        var(KS:KE,:,:) = V_PRIM(KS:KE,:,:)
+       !$acc end kernels
+       !$omp end parallel workshare
 
     case ( 'PT_PRIM' )
        if ( .not. DV_calculated(I_PT_PRIM) ) then
@@ -2448,6 +2843,8 @@ contains
           call ATMOS_vars_get_diagnostic( 'PT_MEAN', WORK1D(:) )
 !OCL XFILL
           !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+          !$acc kernels
+          !$acc loop collapse(3) independent
           do j = 1, JA
           do i = 1, IA
           do k = KS, KE
@@ -2455,9 +2852,14 @@ contains
           enddo
           enddo
           enddo
+          !$acc end kernels
           DV_calculated(I_PT_PRIM) = .true.
        end if
+       !$omp parallel workshare
+       !$acc kernels
        var(KS:KE,:,:) = PT_PRIM(KS:KE,:,:)
+       !$acc end kernels
+       !$omp end parallel workshare
 
     case ( 'W_PRIM2' )
        if ( .not. DV_calculated(I_W_PRIM2) ) then
@@ -2465,6 +2867,8 @@ contains
           call ATMOS_vars_get_diagnostic( 'W_PRIM', WORK3D(:,:,:) )
 !OCL XFILL
           !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+          !$acc kernels
+          !$acc loop collapse(3) independent
           do j = 1, JA
           do i = 1, IA
           do k = KS, KE
@@ -2472,9 +2876,14 @@ contains
           enddo
           enddo
           enddo
+          !$acc end kernels
           DV_calculated(I_W_PRIM2) = .true.
        end if
+       !$omp parallel workshare
+       !$acc kernels
        var(KS:KE,:,:) = W_PRIM2(KS:KE,:,:)
+       !$acc end kernels
+       !$omp end parallel workshare
 
     case ( 'PT_W_PRIM' )
        if ( .not. DV_calculated(I_PT_W_PRIM) ) then
@@ -2482,6 +2891,8 @@ contains
           call ATMOS_vars_get_diagnostic( 'W_PRIM',  WORK3D(:,:,:) )
           call ATMOS_vars_get_diagnostic( 'PT_PRIM', WORK3D(:,:,:) )
           !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+          !$acc kernels
+          !$acc loop collapse(3) independent
           do j = 1, JA
           do i = 1, IA
           do k = KS, KE
@@ -2489,9 +2900,14 @@ contains
           enddo
           enddo
           enddo
+          !$acc end kernels
           DV_calculated(I_PT_W_PRIM) = .true.
        end if
+       !$omp parallel workshare
+       !$acc kernels
        var(KS:KE,:,:) = PT_W_PRIM(KS:KE,:,:)
+       !$acc end kernels
+       !$omp end parallel workshare
 
     case ( 'W_PRIM3' )
        if ( .not. DV_calculated(I_W_PRIM3) ) then
@@ -2499,6 +2915,8 @@ contains
           call ATMOS_vars_get_diagnostic( 'W_PRIM', WORK3D(:,:,:) )
 !OCL XFILL
           !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+          !$acc kernels
+          !$acc loop collapse(3) independent
           do j = 1, JA
           do i = 1, IA
           do k = KS, KE
@@ -2506,9 +2924,14 @@ contains
           enddo
           enddo
           enddo
+          !$acc end kernels
           DV_calculated(I_W_PRIM3) = .true.
        end if
+       !$omp parallel workshare
+       !$acc kernels
        var(KS:KE,:,:) = W_PRIM3(KS:KE,:,:)
+       !$acc end kernels
+       !$omp end parallel workshare
 
     case ( 'TKE_RS' )
        if ( .not. DV_calculated(I_TKE_RS) ) then
@@ -2518,6 +2941,8 @@ contains
           call ATMOS_vars_get_diagnostic( 'V_PRIM', WORK3D(:,:,:) )
 !OCL XFILL
           !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+          !$acc kernels
+          !$acc loop collapse(3) independent
           do j = 1, JA
           do i = 1, IA
           do k = KS, KE
@@ -2525,27 +2950,40 @@ contains
           enddo
           enddo
           enddo
+          !$acc end kernels
           DV_calculated(I_TKE_RS) = .true.
        end if
+       !$omp parallel workshare
+       !$acc kernels
        var(KS:KE,:,:) = TKE_RS(KS:KE,:,:)
+       !$acc end kernels
+       !$omp end parallel workshare
 
     case ( 'VELZ' )
        if ( .not. DV_calculated(I_VELZ) ) then
           call allocate_3D( VELZ )
 !OCL XFILL
           !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+          !$acc kernels
+          !$acc loop collapse(2) independent
           do j = 1, JA
           do i = 1, IA
              VELZ(KS-1,i,j) = 0.0_RP
+             !$acc loop independent
              do k = KS, KE-1
                 VELZ(k,i,j) = MOMZ(k,i,j) * 2.0_RP / ( DENS(k,i,j) + DENS(k+1,i,j) )
              end do
              VELZ(KE,i,j) = 0.0_RP
           enddo
           enddo
+          !$acc end kernels
           DV_calculated(I_VELZ) = .true.
        end if
+       !$omp parallel workshare
+       !$acc kernels
        var(KS-1:KE,:,:) = VELZ(KS-1:KE,:,:)
+       !$acc end kernels
+       !$omp end parallel workshare
 
     case ( 'VELX' )
        if ( .not. DV_calculated(I_VELX) ) then
@@ -2553,14 +2991,19 @@ contains
           if ( PRC_TwoD ) then
 !OCL XFILL
              !$omp parallel do private(j,k) OMP_SCHEDULE_
+             !$acc kernels
+             !$acc loop collapse(2) independent
              do j = 1, JA
              do k = KS, KE
                 VELX(k,IS,j) = MOMX(k,IS,j) / DENS(k,IS,j)
              enddo
              enddo
+             !$acc end kernels
           else
              !OCL XFILL
              !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+             !$acc kernels
+             !$acc loop collapse(3) independent
              do j = 1, JA
              do i = 1, IA-1
              do k = KS, KE
@@ -2568,25 +3011,35 @@ contains
              enddo
              enddo
              enddo
+             !$acc end kernels
 !OCL XFILL
              !$omp parallel do private(j,k) OMP_SCHEDULE_
+             !$acc kernels
+             !$acc loop collapse(2) independent
              do j = 1, JA
              do k = KS, KE
                 VELX(k,IA,j) = MOMX(k,IA,j) / DENS(k,IA,j)
              enddo
              enddo
+             !$acc end kernels
              call COMM_vars8( VELX(:,:,:), 1 )
              call COMM_wait ( VELX(:,:,:), 1, .false. )
           end if
           DV_calculated(I_VELX) = .true.
        end if
+       !$omp parallel workshare
+       !$acc kernels
        var(KS:KE,:,:) = VELX(KS:KE,:,:)
+       !$acc end kernels
+       !$omp end parallel workshare
 
     case ( 'VELY' )
        if ( .not. DV_calculated(I_VELY) ) then
           call allocate_3D( VELY )
 !OCL XFILL
           !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+          !$acc kernels
+          !$acc loop collapse(3) independent
           do j = 1, JA-1
           do i = 1, IA
           do k = KS, KE
@@ -2594,24 +3047,34 @@ contains
           enddo
           enddo
           enddo
+          !$acc end kernels
 !OCL XFILL
           !$omp parallel do private(i,k) OMP_SCHEDULE_
+          !$acc kernels
+          !$acc loop collapse(2) independent
           do i = 1, IA
           do k = KS, KE
              VELY(k,i,JA) = MOMY(k,i,JA) / DENS(k,i,JA)
           enddo
           enddo
+          !$acc end kernels
           call COMM_vars8( VELY(:,:,:), 1 )
           call COMM_wait ( VELY(:,:,:), 1, .false. )
           DV_calculated(I_VELY) = .true.
        end if
+       !$omp parallel workshare
+       !$acc kernels
        var(KS:KE,:,:) = VELY(KS:KE,:,:)
+       !$acc end kernels
+       !$omp end parallel workshare
 
     case ( 'Umet' )
        if ( .not. DV_calculated(I_UMET) ) then
           call allocate_3D( Umet )
 !OCL XFILL
           !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+          !$acc kernels
+          !$acc loop collapse(3) independent
           do j = 1, JA
           do i = 1, IA
           do k = KS, KE
@@ -2619,15 +3082,22 @@ contains
           end do
           end do
           end do
+          !$acc end kernels
           DV_calculated(I_UMET) = .true.
        end if
+       !$omp parallel workshare
+       !$acc kernels
        var(KS:KE,:,:) = Umet(KS:KE,:,:)
+       !$acc end kernels
+       !$omp end parallel workshare
 
     case ( 'Vmet' )
        if ( .not. DV_calculated(I_VMET) ) then
           call allocate_3D( Vmet )
 !OCL XFILL
           !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+          !$acc kernels
+          !$acc loop collapse(3) independent
           do j = 1, JA
           do i = 1, IA
           do k = KS, KE
@@ -2635,15 +3105,21 @@ contains
           end do
           end do
           end do
+          !$acc end kernels
           DV_calculated(I_VMET) = .true.
        end if
+       !$omp parallel workshare
+       !$acc kernels
        var(KS:KE,:,:) = Vmet(KS:KE,:,:)
+       !$acc end kernels
+       !$omp end parallel workshare
 
     case default
        LOG_ERROR("ATMOS_vars_calc_diagnostics",*) 'name is invalid for ATMOS_vars_get_diagnostic_3D: ', trim(vname)
        call PRC_abort
     end select
 
+    !$acc end data
 
     return
   end subroutine ATMOS_vars_get_diagnostic_3D
@@ -2671,9 +3147,11 @@ contains
     character(len=*), intent(in)  :: vname
     real(RP),         intent(out) :: var(:,:)
 
-    real(RP) :: fact
+    real(RP) :: fact, sum
     integer  :: k, i, j
     !---------------------------------------------------------------------------
+
+    !$acc data copyout(var)
 
     select case ( vname )
     case ( 'LWP' )
@@ -2681,62 +3159,88 @@ contains
           call allocate_2D( LWP )
           call ATMOS_vars_get_diagnostic( 'QLIQ', WORK3D(:,:,:) )
           !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
-          !$omp private(i,j,k) &
+          !$omp private(i,j,k,sum) &
           !$omp shared(LWP,QLIQ,DENS_av,REAL_FZ) &
           !$omp shared(KS,KE,IA,JA)
+          !$acc kernels
+          !$acc loop collapse(2) independent
           do j = 1, JA
           do i = 1, IA
-             LWP(i,j) = 0.0_RP
+             sum = 0.0_RP
              do k  = KS, KE
-                LWP(i,j) = LWP(i,j) &
-                         + QLIQ(k,i,j) * DENS_av(k,i,j) * ( REAL_FZ(k,i,j)-REAL_FZ(k-1,i,j) ) * 1.E3_RP ! [kg/m2->g/m2]
+                sum = sum &
+                    + QLIQ(k,i,j) * DENS_av(k,i,j) * ( REAL_FZ(k,i,j)-REAL_FZ(k-1,i,j) ) * 1.E3_RP ! [kg/m2->g/m2]
              enddo
+             LWP(i,j) = sum
           enddo
           enddo
+          !$acc end kernels
           DV_calculated(I_LWP) = .true.
        end if
+       !$omp parallel workshare
+       !$acc kernels
        var(:,:) = LWP(:,:)
+       !$acc end kernels
+       !$omp end parallel workshare
 
     case ( 'IWP' )
        if ( .not. DV_calculated(I_IWP) ) then
           call allocate_2D( IWP )
           call ATMOS_vars_get_diagnostic( 'QICE', WORK3D(:,:,:) )
           !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
-          !$omp private(i,j,k) &
+          !$omp private(i,j,k,sum) &
           !$omp shared(IWP,QICE,DENS_av,REAL_FZ) &
           !$omp shared(KS,KE,IA,JA)
+          !$acc kernels
+          !$acc loop collapse(2) independent
           do j = 1, JA
           do i = 1, IA
-             IWP(i,j) = 0.0_RP
+             sum = 0.0_RP
+             !$acc loop reduction(+:sum)
              do k  = KS, KE
-                IWP(i,j) = IWP(i,j) &
-                         + QICE(k,i,j) * DENS_av(k,i,j) * ( REAL_FZ(k,i,j)-REAL_FZ(k-1,i,j) ) * 1.E3_RP ! [kg/m2->g/m2]
+                sum = sum &
+                    + QICE(k,i,j) * DENS_av(k,i,j) * ( REAL_FZ(k,i,j)-REAL_FZ(k-1,i,j) ) * 1.E3_RP ! [kg/m2->g/m2]
              enddo
+             IWP(i,j) = sum
           enddo
           enddo
+          !$acc end kernels
           DV_calculated(I_IWP) = .true.
        end if
+       !$omp parallel workshare
+       !$acc kernels
        var(:,:) = IWP(:,:)
+       !$acc end kernels
+       !$omp end parallel workshare
 
     case ( 'PW' )
        if ( .not. DV_calculated(I_PW) ) then
           call allocate_2D( PW )
           !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
-          !$omp private(i,j,k) &
+          !$omp private(i,j,k,sum) &
           !$omp shared(PW,QV,DENS_av,REAL_FZ) &
           !$omp shared(KS,KE,IA,JA)
+          !$acc kernels
+          !$acc loop collapse(2) independent
           do j = 1, JA
           do i = 1, IA
-             PW(i,j) = 0.0_RP
+             sum = 0.0_RP
+             !$acc loop reduction(+:sum)
              do k  = KS, KE
-                PW(i,j) = PW(i,j) &
-                        + QV(k,i,j) * DENS_av(k,i,j) * ( REAL_FZ(k,i,j)-REAL_FZ(k-1,i,j) ) * 1.E3_RP ! [kg/m2->g/m2]
+                sum = sum &
+                    + QV(k,i,j) * DENS_av(k,i,j) * ( REAL_FZ(k,i,j)-REAL_FZ(k-1,i,j) ) * 1.E3_RP ! [kg/m2->g/m2]
              enddo
+             PW(i,j) = sum
           enddo
           enddo
+          !$acc end kernels
           DV_calculated(I_PW) = .true.
        end if
+       !$omp parallel workshare
+       !$acc kernels
        var(:,:) = PW(:,:)
+       !$acc end kernels
+       !$omp end parallel workshare
 
     case ( 'PBLH' )
        if ( .not. DV_calculated(I_PBLH) ) then
@@ -2747,7 +3251,10 @@ contains
           !$omp private(fact) &
           !$omp shared(PBLH,POTV,REAL_CZ,REAL_FZ) &
           !$omp shared(KS,KE,IA,JA)
+          !$acc kernels
+          !$acc loop independent
           do j = 1, JA
+          !$acc loop independent
           do i = 1, IA
              PBLH(i,j) = REAL_CZ(KS,i,j) - REAL_FZ(KS-1,i,j)
              do k = KS+1, KE
@@ -2762,9 +3269,14 @@ contains
              enddo
           enddo
           enddo
+          !$acc end kernels
           DV_calculated(I_PBLH) = .true.
        end if
+       !$omp parallel workshare
+       !$acc kernels
        var(:,:) = PBLH(:,:)
+       !$acc end kernels
+       !$omp end parallel workshare
 
     case ( 'CAPE', 'CIN', 'LCL', 'LFC', 'LNB' )
        if ( .not. DV_calculated(I_CAPE) ) then
@@ -2786,77 +3298,96 @@ contains
        select case ( vname )
        case ( 'CAPE' )
           !$omp parallel do private(i,j) OMP_SCHEDULE_
+          !$acc kernels
           do j = JS, JE
           do i = IS, IE
              var(i,j) = CAPE(i,j)
           end do
           end do
+          !$acc end kernels
        case ( 'CIN' )
           !$omp parallel do private(i,j) OMP_SCHEDULE_
+          !$acc kernels
           do j = JS, JE
           do i = IS, IE
              var(i,j) = CIN(i,j)
           end do
           end do
+          !$acc end kernels
        case ( 'LCL' )
           !$omp parallel do private(i,j) OMP_SCHEDULE_
+          !$acc kernels
           do j = JS, JE
           do i = IS, IE
              var(i,j) = LCL(i,j)
           end do
           end do
+          !$acc end kernels
        case ( 'LFC' )
           !$omp parallel do private(i,j) OMP_SCHEDULE_
+          !$acc kernels
           do j = JS, JE
           do i = IS, IE
              var(i,j) = LFC(i,j)
           end do
           end do
+          !$acc end kernels
        case ( 'LNB' )
           !$omp parallel do private(i,j) OMP_SCHEDULE_
+          !$acc kernels
           do j = JS, JE
           do i = IS, IE
              var(i,j) = LNB(i,j)
           end do
           end do
+          !$acc end kernels
        end select
 
     case ( 'PREC' )
        !$omp parallel do private(i,j) OMP_SCHEDULE_
+       !$acc kernels
        do j = JS, JE
        do i = IS, IE
           var(i,j) = PREC(i,j)
        end do
        end do
+       !$acc end kernels
 
     case ( 'RAIN', 'SNOW' )
        if ( .not. DV_calculated(I_RAIN) ) then
           call allocate_2D( RAIN )
           call allocate_2D( SNOW )
           !$omp parallel do private(i,j) OMP_SCHEDULE_
+          !$acc kernels
+          !$acc loop collapse(2) independent
           do j = JS, JE
           do i = IS, IE
              RAIN(i,j) = SFLX_rain_MP(i,j) + SFLX_rain_CP(i,j)
              SNOW(i,j) = SFLX_snow_MP(i,j) + SFLX_snow_CP(i,j)
           enddo
           enddo
+          !$acc end kernels
           DV_calculated(I_RAIN) = .true.
        end if
        select case (vname)
        case ( 'RAIN' )
           !$omp parallel do private(i,j) OMP_SCHEDULE_
+          !$acc kernels
           do j = JS, JE
           do i = IS, IE
              var(i,j) = RAIN(i,j)
           end do
           end do
+          !$acc end kernels
        case ( 'SNOW' )
           !$omp parallel do private(i,j) OMP_SCHEDULE_
+          !$acc kernels
           do j = JS, JE
           do i = IS, IE
              var(i,j) = SNOW(i,j)
           end do
           end do
+          !$acc end kernels
        end select
 
     case default
@@ -2864,6 +3395,7 @@ contains
        call PRC_abort
     end select
 
+    !$acc end data
 
     return
   end subroutine ATMOS_vars_get_diagnostic_2D
@@ -2890,6 +3422,8 @@ contains
     integer  :: k, i, j
     !---------------------------------------------------------------------------
 
+    !$acc data copyout(var) create(WORK)
+
     select case ( vname )
     case ( 'DENS_MEAN' )
        if ( .not. DV_calculated(I_DENS_MEAN) ) then
@@ -2898,7 +3432,9 @@ contains
                                            DENS(:,:,:), AREA(:,:), DENS_MEAN(:) )
           DV_calculated(I_DENS_MEAN) = .true.
        end if
+       !$acc kernels
        var(:) = DENS_MEAN(:)
+       !$acc end kernels
 
     case ( 'W_MEAN' )
        if ( .not. DV_calculated(I_W_MEAN) ) then
@@ -2906,6 +3442,7 @@ contains
           call ATMOS_vars_get_diagnostic( 'DENS_MEAN', WORK1D(:) )
 !OCL XFILL
           !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+          !$acc kernels
           do j = JSB, JEB
           do i = ISB, IEB
           do k = KS, KE
@@ -2913,14 +3450,20 @@ contains
           enddo
           enddo
           enddo
+          !$acc end kernels
           call STATISTICS_horizontal_mean( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
                                            WORK(:,:,:), AREA(:,:), W_MEAN(:) )
+          !$acc kernels
+          !$acc loop independent
           do k = KS, KE
              W_MEAN(k) = W_MEAN(k) / DENS_MEAN(k)
           enddo
+          !$acc end kernels
           DV_calculated(I_W_MEAN) = .true.
        end if
+       !$acc kernels
        var(:) = W_MEAN(:)
+       !$acc end kernels
 
     case ( 'U_MEAN' )
        if ( .not. DV_calculated(I_U_MEAN) ) then
@@ -2928,6 +3471,7 @@ contains
           call ATMOS_vars_get_diagnostic( 'DENS_MEAN', WORK1D(:) )
 !OCL XFILL
           !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+          !$acc kernels
           do j = JSB, JEB
           do i = ISB, IEB
           do k = KS, KE
@@ -2935,14 +3479,20 @@ contains
           enddo
           enddo
           enddo
+          !$acc end kernels
           call STATISTICS_horizontal_mean( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
                                            WORK(:,:,:), AREA(:,:), U_MEAN(:) )
+          !$acc kernels
+          !$acc loop independent
           do k = KS, KE
              U_MEAN(k) = U_MEAN(k) / DENS_MEAN(k)
           enddo
+          !$acc end kernels
           DV_calculated(I_U_MEAN) = .true.
        end if
+       !$acc kernels
        var(:) = U_MEAN(:)
+       !$acc end kernels
 
     case ( 'V_MEAN' )
        if ( .not. DV_calculated(I_V_MEAN) ) then
@@ -2950,6 +3500,7 @@ contains
           call ATMOS_vars_get_diagnostic( 'DENS_MEAN', WORK1D(:) )
 !OCL XFILL
           !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+          !$acc kernels
           do j = JSB, JEB
           do i = ISB, IEB
           do k = KS, KE
@@ -2957,14 +3508,20 @@ contains
           enddo
           enddo
           enddo
+          !$acc end kernels
           call STATISTICS_horizontal_mean( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
                                            WORK(:,:,:), AREA(:,:), V_MEAN(:) )
+          !$acc kernels
+          !$acc loop independent
           do k = KS, KE
              V_MEAN(k) = V_MEAN(k) / DENS_MEAN(k)
           enddo
+          !$acc end kernels
           DV_calculated(I_V_MEAN) = .true.
        end if
+       !$acc kernels
        var(:) = V_MEAN(:)
+       !$acc end kernels
 
     case ( 'PT_MEAN' )
        if ( .not. DV_calculated(I_PT_MEAN) ) then
@@ -2972,12 +3529,17 @@ contains
           call ATMOS_vars_get_diagnostic( 'DENS_MEAN', WORK1D(:) )
           call STATISTICS_horizontal_mean( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
                                            RHOT(:,:,:), AREA(:,:), PT_MEAN(:) )
+          !$acc kernels
+          !$acc loop independent
           do k = KS, KE
              PT_MEAN(k) = PT_MEAN(k) / DENS_MEAN(k)
           enddo
+          !$acc end kernels
           DV_calculated(I_PT_MEAN) = .true.
        end if
+       !$acc kernels
        var(:) = PT_MEAN(:)
+       !$acc end kernels
 
     case ( 'T_MEAN' )
        if ( .not. DV_calculated(I_T_MEAN) ) then
@@ -2985,6 +3547,7 @@ contains
           call ATMOS_vars_get_diagnostic( 'DENS_MEAN', WORK1D(:) )
 !OCL XFILL
           !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+          !$acc kernels
           do j = JSB, JEB
           do i = ISB, IEB
           do k = KS, KE
@@ -2992,14 +3555,20 @@ contains
           enddo
           enddo
           enddo
+          !$acc end kernels
           call STATISTICS_horizontal_mean( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
                                            WORK(:,:,:), AREA(:,:), T_MEAN(:) )
+          !$acc kernels
+          !$acc loop independent
           do k = KS, KE
              T_MEAN(k) = T_MEAN(k) / DENS_MEAN(k)
           enddo
+          !$acc end kernels
           DV_calculated(I_T_MEAN) = .true.
        end if
+       !$acc kernels
        var(:) = T_MEAN(:)
+       !$acc end kernels
 
     case ( 'QV_MEAN' )
        if ( .not. DV_calculated(I_QV_MEAN) ) then
@@ -3008,6 +3577,7 @@ contains
              call ATMOS_vars_get_diagnostic( 'DENS_MEAN', WORK1D(:) )
 !OCL XFILL
              !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+             !$acc kernels
              do j = JSB, JEB
              do i = ISB, IEB
              do k = KS, KE
@@ -3015,20 +3585,28 @@ contains
              enddo
              enddo
              enddo
+             !$acc end kernels
              call STATISTICS_horizontal_mean( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
                                               WORK(:,:,:), AREA(:,:), QV_MEAN(:) )
+             !$acc kernels
+             !$acc loop independent
              do k = KS, KE
                 QV_MEAN(k) = QV_MEAN(k) / DENS_MEAN(k)
              enddo
+             !$acc end kernels
           else
              !$omp parallel do private(k) OMP_SCHEDULE_
+             !$acc kernels
              do k = KS, KE
                 QV_MEAN(k) = 0.0_RP
              enddo
+             !$acc end kernels
           end if
           DV_calculated(I_QV_MEAN) = .true.
        end if
+       !$acc kernels
        var(:) = QV_MEAN(:)
+       !$acc end kernels
 
     case ( 'QHYD_MEAN' )
        if ( .not. DV_calculated(I_QHYD_MEAN) ) then
@@ -3037,6 +3615,7 @@ contains
           call ATMOS_vars_get_diagnostic( 'QHYD', WORK3D(:,:,:) )
 !OCL XFILL
           !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+          !$acc kernels
           do j = JSB, JEB
           do i = ISB, IEB
           do k = KS, KE
@@ -3044,14 +3623,20 @@ contains
           enddo
           enddo
           enddo
+          !$acc end kernels
           call STATISTICS_horizontal_mean( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
                                            WORK(:,:,:), AREA(:,:), QHYD_MEAN(:) )
+          !$acc kernels
+          !$acc loop independent
           do k = KS, KE
              QHYD_MEAN(k) = QHYD_MEAN(k) / DENS_MEAN(k)
           enddo
+          !$acc end kernels
           DV_calculated(I_QHYD_MEAN) = .true.
        end if
+       !$acc kernels
        var(:) = QHYD_MEAN(:)
+       !$acc end kernels
 
     case ( 'QLIQ_MEAN' )
        if ( .not. DV_calculated(I_QLIQ_MEAN) ) then
@@ -3060,6 +3645,7 @@ contains
           call ATMOS_vars_get_diagnostic( 'QLIQ', WORK3D(:,:,:) )
 !OCL XFILL
           !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+          !$acc kernels
           do j = JSB, JEB
           do i = ISB, IEB
           do k = KS, KE
@@ -3067,14 +3653,20 @@ contains
           enddo
           enddo
           enddo
+          !$acc end kernels
           call STATISTICS_horizontal_mean( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
                                            WORK(:,:,:), AREA(:,:), QLIQ_MEAN(:) )
+          !$acc kernels
+          !$acc loop independent
           do k = KS, KE
              QLIQ_MEAN(k) = QLIQ_MEAN(k) / DENS_MEAN(k)
           enddo
+          !$acc end kernels
           DV_calculated(I_QLIQ_MEAN) = .true.
        end if
+       !$acc kernels
        var(:) = QLIQ_MEAN(:)
+       !$acc end kernels
 
     case ( 'QICE_MEAN' )
        if ( .not. DV_calculated(I_QICE_MEAN) ) then
@@ -3083,6 +3675,7 @@ contains
           call ATMOS_vars_get_diagnostic( 'QICE', WORK3D(:,:,:) )
 !OCL XFILL
           !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+          !$acc kernels
           do j = JSB, JEB
           do i = ISB, IEB
           do k = KS, KE
@@ -3090,20 +3683,27 @@ contains
           enddo
           enddo
           enddo
+          !$acc end kernels
           call STATISTICS_horizontal_mean( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
                                            WORK(:,:,:), AREA(:,:), QICE_MEAN(:) )
+          !$acc kernels
+          !$acc loop independent
           do k = KS, KE
              QICE_MEAN(k) = QICE_MEAN(k) / DENS_MEAN(k)
           enddo
+          !$acc end kernels
           DV_calculated(I_QICE_MEAN) = .true.
        end if
+       !$acc kernels
        var(:) = QICE_MEAN(:)
+       !$acc end kernels
 
     case default
        LOG_ERROR("ATMOS_vars_calc_diagnostics",*) 'name is invalid for ATMOS_vars_get_diagnostic_1D: ', trim(vname)
        call PRC_abort
     end select
 
+    !$acc end data
 
     return
   end subroutine ATMOS_vars_get_diagnostic_1D
@@ -3140,6 +3740,8 @@ contains
     integer  :: k, i, j, iq
     !---------------------------------------------------------------------------
 
+    !$acc data create(RHOQ, ENGFLXT, SFLX_RD_net, TFLX_RD_net)
+
     call MONITOR_put( PV_MONIT_id(I_DENS), DENS(:,:,:) )
     call MONITOR_put( PV_MONIT_id(I_MOMZ), MOMZ(:,:,:) )
     call MONITOR_put( PV_MONIT_id(I_MOMX), MOMX(:,:,:) )
@@ -3150,6 +3752,7 @@ contains
 
     do iq = 1, QA
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+       !$acc kernels
 !OCL XFILL
        do j = JS, JE
        do i = IS, IE
@@ -3158,6 +3761,7 @@ contains
        enddo
        enddo
        enddo
+       !$acc end kernels
 
        call MONITOR_put( QP_MONIT_id(iq), RHOQ(:,:,:) )
     enddo
@@ -3165,6 +3769,7 @@ contains
     ! total dry airmass
     if ( DV_MONIT_id(IM_QDRY) > 0 ) then
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+       !$acc kernels
 !OCL XFILL
        do j = JS, JE
        do i = IS, IE
@@ -3173,6 +3778,7 @@ contains
        enddo
        enddo
        enddo
+       !$acc end kernels
        call MONITOR_put( DV_MONIT_id(IM_QDRY), RHOQ(:,:,:) )
     end if
 
@@ -3180,6 +3786,7 @@ contains
     if ( DV_MONIT_id(IM_QTOT) > 0 ) then
        call ATMOS_vars_get_diagnostic( 'QTOT', WORK3D(:,:,:) )
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+       !$acc kernels
 !OCL XFILL
        do j = JS, JE
        do i = IS, IE
@@ -3188,6 +3795,7 @@ contains
        enddo
        enddo
        enddo
+       !$acc end kernels
        call MONITOR_put( DV_MONIT_id(IM_QTOT), RHOQ(:,:,:) )
     end if
 
@@ -3222,6 +3830,7 @@ contains
     ! radiation flux
 !OCL XFILL
     !$omp parallel do private(i,j) OMP_SCHEDULE_ collapse(2)
+    !$acc kernels
     do j = JS, JE
     do i = IS, IE
        SFLX_RD_net(i,j) = ( SFLX_LW_up(i,j) - SFLX_LW_dn(i,j) ) &
@@ -3235,6 +3844,7 @@ contains
                         + SFLX_RD_net(i,j) - TFLX_RD_net(i,j)
     enddo
     enddo
+    !$acc end kernels
 
     call MONITOR_put( DV_MONIT_id(IM_ENGFLXT),      ENGFLXT     (:,:) )
 
@@ -3255,8 +3865,132 @@ contains
     call MONITOR_put( DV_MONIT_id(IM_ENGTOM_SW_up), TOMFLX_SW_up(:,:) )
     call MONITOR_put( DV_MONIT_id(IM_ENGTOM_SW_dn), TOMFLX_SW_dn(:,:) )
 
+    !$acc end data
+
     return
   end subroutine ATMOS_vars_monitor
+
+  !-----------------------------------------------------------------------------
+  !> finalize
+  subroutine ATMOS_vars_finalize
+    use scale_atmos_hydrometeor, only: &
+       ATMOS_HYDROMETEOR_dry
+    use mod_atmos_admin, only: &
+       ATMOS_USE_AVERAGE
+    use mod_atmos_dyn_vars, only: &
+       ATMOS_DYN_vars_finalize
+    use mod_atmos_phy_mp_vars, only: &
+       ATMOS_PHY_MP_vars_finalize
+    use mod_atmos_phy_ae_vars, only: &
+       ATMOS_PHY_AE_vars_finalize
+    use mod_atmos_phy_ch_vars, only: &
+       ATMOS_PHY_CH_vars_finalize
+    use mod_atmos_phy_rd_vars, only: &
+       ATMOS_PHY_RD_vars_finalize
+    use mod_atmos_phy_sf_vars, only: &
+       ATMOS_PHY_SF_vars_finalize
+    use mod_atmos_phy_tb_vars, only: &
+       ATMOS_PHY_TB_vars_finalize
+    use mod_atmos_phy_bl_vars, only: &
+       ATMOS_PHY_BL_vars_finalize
+    use mod_atmos_phy_cp_vars, only: &
+       ATMOS_PHY_CP_vars_finalize
+    use mod_atmos_phy_lt_vars, only: &
+       ATMOS_PHY_LT_vars_finalize
+    implicit none
+    !---------------------------------------------------------------------------
+
+    LOG_NEWLINE
+    LOG_INFO("ATMOS_vars_finalize",*) 'Finalize'
+
+    if ( ATMOS_USE_AVERAGE ) then
+       !$acc exit data delete(DENS_avw, MOMZ_avw, MOMX_avw, MOMY_avw, RHOT_avw, QTRC_avw)
+       deallocate( DENS_avw )
+       deallocate( MOMZ_avw )
+       deallocate( MOMX_avw )
+       deallocate( MOMY_avw )
+       deallocate( RHOT_avw )
+       deallocate( QTRC_avw )
+    endif
+
+    !$acc exit data delete(DENS, MOMZ, MOMX, MOMY, RHOT, QTRC)
+    deallocate( DENS )
+    deallocate( MOMZ )
+    deallocate( MOMX )
+    deallocate( MOMY )
+    deallocate( RHOT )
+    deallocate( QTRC )
+
+    !$acc exit data delete(DENS_tp, MOMZ_tp, RHOU_tp, RHOV_tp, RHOT_tp, RHOH_p, RHOQ_tp)
+    deallocate( DENS_tp )
+    deallocate( MOMZ_tp )
+    deallocate( RHOU_tp )
+    deallocate( RHOV_tp )
+    deallocate( RHOT_tp )
+    deallocate( RHOH_p  )
+    deallocate( RHOQ_tp )
+    ! obsolute
+    !$acc exit data delete(MOMX_tp, MOMY_tp)
+    deallocate( MOMX_tp )
+    deallocate( MOMY_tp )
+
+
+    !$acc exit data delete(W, U, V)
+    deallocate( W )
+    deallocate( U )
+    deallocate( V )
+
+    !$acc exit data delete(POTT, TEMP, PRES, EXNER, PHYD, PHYDH)
+    deallocate( POTT  )
+    deallocate( TEMP  )
+    deallocate( PRES  )
+    deallocate( EXNER )
+    deallocate( PHYD  )
+    deallocate( PHYDH )
+
+    !$acc exit data delete(Qdry, Rtot, CVtot, CPtot)
+    deallocate( Qdry )
+    deallocate( Rtot )
+    deallocate( CVtot)
+    deallocate( CPtot)
+
+    !$acc exit data delete(PREC, PREC_ENGI)
+    deallocate( PREC      )
+    deallocate( PREC_ENGI )
+
+    !$acc exit data delete(WORK3D, WORK2D, WORK1D)
+    deallocate( WORK3D )
+    deallocate( WORK2D )
+    deallocate( WORK1D )
+
+    call ATMOS_DYN_vars_finalize
+    call ATMOS_PHY_MP_vars_finalize
+    call ATMOS_PHY_AE_vars_finalize
+    call ATMOS_PHY_CH_vars_finalize
+    call ATMOS_PHY_RD_vars_finalize
+    call ATMOS_PHY_SF_vars_finalize
+    call ATMOS_PHY_TB_vars_finalize
+    call ATMOS_PHY_BL_vars_finalize
+    call ATMOS_PHY_CP_vars_finalize
+    call ATMOS_PHY_LT_vars_finalize
+
+
+    ! water content
+    if ( ATMOS_HYDROMETEOR_dry ) then
+       !$acc exit data delete(ZERO)
+       deallocate( ZERO )
+
+    else
+       !$acc exit data delete(Qe)
+       deallocate( Qe )
+    end if
+
+    !-----< history output finalize >-----
+    deallocate( QP_HIST_id  )
+    deallocate( QP_MONIT_id )
+
+    return
+  end subroutine ATMOS_vars_finalize
 
   !-----------------------------------------------------------------------------
   !> Create atmospheric restart file
@@ -3311,6 +4045,8 @@ contains
     character(len=H_LONG) :: basename
     !---------------------------------------------------------------------------
 
+    call PROF_rapstart('ATM_Restart', 1)
+
 #ifdef SDM
     if( sd_rest_flg_out ) then
        LOG_INFO("ATMOS_vars_restart_create",*) 'Output random number for SDM '
@@ -3350,6 +4086,8 @@ contains
     if( ATMOS_sw_phy_bl ) call ATMOS_PHY_BL_vars_restart_create
     if( ATMOS_sw_phy_cp ) call ATMOS_PHY_CP_vars_restart_create
     if( ATMOS_sw_phy_lt ) call ATMOS_PHY_LT_vars_restart_create
+
+    call PROF_rapend('ATM_Restart', 1)
 
     return
   end subroutine ATMOS_vars_restart_create
@@ -3401,6 +4139,8 @@ contains
 
     !---------------------------------------------------------------------------
 
+    call PROF_rapstart('ATM_Restart', 1)
+
 #ifdef SDM
     if( sd_rest_flg_out ) then
        call ATMOS_PHY_MP_sdm_restart_enddef
@@ -3421,6 +4161,8 @@ contains
     if( ATMOS_sw_phy_bl ) call ATMOS_PHY_BL_vars_restart_enddef
     if( ATMOS_sw_phy_cp ) call ATMOS_PHY_CP_vars_restart_enddef
     if( ATMOS_sw_phy_lt ) call ATMOS_PHY_LT_vars_restart_enddef
+
+    call PROF_rapend('ATM_Restart', 1)
 
     return
   end subroutine ATMOS_vars_restart_enddef
@@ -3471,6 +4213,8 @@ contains
     implicit none
     !---------------------------------------------------------------------------
 
+    call PROF_rapstart('ATM_Restart', 1)
+
 #ifdef SDM
     if( sd_rest_flg_out ) then
        call ATMOS_PHY_MP_sdm_restart_close
@@ -3498,6 +4242,8 @@ contains
     if( ATMOS_sw_phy_bl ) call ATMOS_PHY_BL_vars_restart_close
     if( ATMOS_sw_phy_cp ) call ATMOS_PHY_CP_vars_restart_close
     if( ATMOS_sw_phy_lt ) call ATMOS_PHY_LT_vars_restart_close
+
+    call PROF_rapend('ATM_Restart', 1)
 
     return
   end subroutine ATMOS_vars_restart_close
@@ -3550,6 +4296,8 @@ contains
     integer iq
     !---------------------------------------------------------------------------
 
+    call PROF_rapstart('ATM_Restart', 1)
+
 #ifdef SDM
     if( sd_rest_flg_out ) then
        call ATMOS_PHY_MP_sdm_restart_def_var
@@ -3590,6 +4338,8 @@ contains
     if( ATMOS_sw_phy_bl ) call ATMOS_PHY_BL_vars_restart_def_var
     if( ATMOS_sw_phy_cp ) call ATMOS_PHY_CP_vars_restart_def_var
     if( ATMOS_sw_phy_lt ) call ATMOS_PHY_LT_vars_restart_def_var
+
+    call PROF_rapend('ATM_Restart', 1)
 
     return
   end subroutine ATMOS_vars_restart_def_var
@@ -3642,6 +4392,8 @@ contains
     integer iq
     !---------------------------------------------------------------------------
 
+    call PROF_rapstart('ATM_Restart', 1)
+
 #ifdef SDM
     if( sd_rest_flg_out ) then
        call ATMOS_PHY_MP_sdm_restart_write
@@ -3677,6 +4429,8 @@ contains
     if( ATMOS_sw_phy_cp ) call ATMOS_PHY_CP_vars_restart_write
     if( ATMOS_sw_phy_lt ) call ATMOS_PHY_LT_vars_restart_write
 
+    call PROF_rapend('ATM_Restart', 1)
+
     return
   end subroutine ATMOS_vars_restart_write
 
@@ -3690,6 +4444,7 @@ contains
     if ( .not. allocated(ary) ) then
        allocate( ary(KA,IA,JA) )
        ary(:,:,:) = UNDEF
+       !$acc enter data create(ary)
     end if
 
     return
@@ -3703,6 +4458,7 @@ contains
     if ( .not. allocated(ary) ) then
        allocate( ary(IA,JA) )
        ary(:,:) = UNDEF
+       !$acc enter data create(ary)
     end if
 
     return
@@ -3716,6 +4472,7 @@ contains
     if ( .not. allocated(ary) ) then
        allocate( ary(KA) )
        ary(:) = UNDEF
+       !$acc enter data create(ary)
     end if
 
     return

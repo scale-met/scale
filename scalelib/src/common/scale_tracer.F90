@@ -26,6 +26,7 @@ module scale_tracer
   !
   public :: TRACER_regist
   public :: TRACER_inq_id
+  public :: TRACER_finalize
 
   !-----------------------------------------------------------------------------
   !
@@ -44,6 +45,8 @@ module scale_tracer
   real(RP),               public :: TRACER_ENGI0(QA_MAX) !> internal energy offset at 0K
   logical,                public :: TRACER_ADVC (QA_MAX) !> to be advected in the dynamical core
   real(RP),               public :: TRACER_MASS (QA_MAX) !> 1 for tracers with mass, otherwise 0
+
+  !$acc declare create(QA, TRACER_CV, TRACER_CP, TRACER_R, TRACER_ENGI0, TRACER_ADVC, TRACER_MASS)
 
   !-----------------------------------------------------------------------------
   !
@@ -164,8 +167,16 @@ contains
     QS = QA + 1
     QA = QA + NQ
 
+    !$acc update device(QA, TRACER_CV(QS:QA), TRACER_CP(QS:QA), TRACER_R(QS:QA), TRACER_ENGI0(QS:QA), TRACER_ADVC(QS:QA), TRACER_MASS(QS:QA))
+
     return
   end subroutine TRACER_regist
+
+  subroutine TRACER_finalize
+    QA = 0
+
+    return
+  end subroutine TRACER_finalize
 
   !-----------------------------------------------------------------------------
   !> Inquire tracer ID

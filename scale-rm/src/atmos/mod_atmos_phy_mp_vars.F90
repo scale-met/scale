@@ -28,6 +28,7 @@ module mod_atmos_phy_mp_vars
   !++ Public procedure
   !
   public :: ATMOS_PHY_MP_vars_setup
+  public :: ATMOS_PHY_MP_vars_finalize
   public :: ATMOS_PHY_MP_vars_fillhalo
   public :: ATMOS_PHY_MP_vars_restart_read
   public :: ATMOS_PHY_MP_vars_restart_write
@@ -164,6 +165,7 @@ contains
     allocate( ATMOS_PHY_MP_RHOH     (KA,IA,JA)    )
     allocate( ATMOS_PHY_MP_EVAPORATE(KA,IA,JA)    )
     ! tentative approach
+
     ATMOS_PHY_MP_DENS_t   (:,:,:)   = 0.0_RP
     ATMOS_PHY_MP_MOMZ_t   (:,:,:)   = 0.0_RP
     ATMOS_PHY_MP_RHOU_t   (:,:,:)   = 0.0_RP
@@ -172,6 +174,7 @@ contains
     ATMOS_PHY_MP_RHOQ_t   (:,:,:,:) = 0.0_RP
     ATMOS_PHY_MP_RHOH     (:,:,:)   = 0.0_RP
     ATMOS_PHY_MP_EVAPORATE(:,:,:)   = 0.0_RP
+    !$acc enter data copyin(ATMOS_PHY_MP_DENS_t, ATMOS_PHY_MP_MOMZ_t, ATMOS_PHY_MP_RHOU_t, ATMOS_PHY_MP_RHOV_t, ATMOS_PHY_MP_RHOT_t, ATMOS_PHY_MP_RHOQ_t, ATMOS_PHY_MP_RHOH, ATMOS_PHY_MP_EVAPORATE)
 
     allocate( ATMOS_PHY_MP_SFLX_rain(IA,JA) )
     allocate( ATMOS_PHY_MP_SFLX_snow(IA,JA) )
@@ -179,6 +182,7 @@ contains
     ATMOS_PHY_MP_SFLX_rain(:,:) = UNDEF
     ATMOS_PHY_MP_SFLX_snow(:,:) = UNDEF
     ATMOS_PHY_MP_SFLX_ENGI(:,:) = UNDEF
+    !$acc enter data create(ATMOS_PHY_MP_SFLX_rain, ATMOS_PHY_MP_SFLX_snow, ATMOS_PHY_MP_SFLX_ENGI)
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -234,6 +238,7 @@ contains
     DIAG_Re      = .false.
     DIAG_Qe      = .false.
     DIAG_Ne      = .false.
+    !$acc enter data create(ATMOS_PHY_MP_CLDFRAC, ATMOS_PHY_MP_Re, ATMOS_PHY_MP_Qe, ATMOS_PHY_MP_Ne)
 
     ! history
     allocate( HIST_Re_id(N_HYD) )
@@ -262,6 +267,46 @@ contains
 
     return
   end subroutine ATMOS_PHY_MP_vars_setup
+
+  !-----------------------------------------------------------------------------
+  !> Finalize
+  subroutine ATMOS_PHY_MP_vars_finalize
+    implicit none
+    !---------------------------------------------------------------------------
+
+    LOG_NEWLINE
+    LOG_INFO("ATMOS_PHY_MP_vars_finalize",*) 'Finalize'
+
+    !$acc exit data delete(ATMOS_PHY_MP_DENS_t,ATMOS_PHY_MP_MOMZ_t,ATMOS_PHY_MP_RHOU_t,ATMOS_PHY_MP_RHOV_t,ATMOS_PHY_MP_RHOT_t,ATMOS_PHY_MP_RHOH,ATMOS_PHY_MP_EVAPORATE)
+    deallocate( ATMOS_PHY_MP_DENS_t     )
+    deallocate( ATMOS_PHY_MP_MOMZ_t     )
+    deallocate( ATMOS_PHY_MP_RHOU_t     )
+    deallocate( ATMOS_PHY_MP_RHOV_t     )
+    deallocate( ATMOS_PHY_MP_RHOT_t     )
+    deallocate( ATMOS_PHY_MP_RHOQ_t     )
+    deallocate( ATMOS_PHY_MP_RHOH       )
+    deallocate( ATMOS_PHY_MP_EVAPORATE  )
+
+    !$acc exit data delete(ATMOS_PHY_MP_SFLX_rain,ATMOS_PHY_MP_SFLX_snow,ATMOS_PHY_MP_SFLX_ENGI)
+    deallocate( ATMOS_PHY_MP_SFLX_rain )
+    deallocate( ATMOS_PHY_MP_SFLX_snow )
+    deallocate( ATMOS_PHY_MP_SFLX_ENGI )
+
+    ! diagnostices
+    !$acc exit data delete(ATMOS_PHY_MP_CLDFRAC,ATMOS_PHY_MP_Re,ATMOS_PHY_MP_Qe,ATMOS_PHY_MP_Ne)
+    deallocate( ATMOS_PHY_MP_CLDFRAC )
+    deallocate( ATMOS_PHY_MP_Re      )
+    deallocate( ATMOS_PHY_MP_Qe      )
+    deallocate( ATMOS_PHY_MP_Ne      )
+
+
+    ! history
+    deallocate( HIST_Re_id )
+    deallocate( HIST_Qe_id )
+    deallocate( HIST_Ne_id )
+
+    return
+  end subroutine ATMOS_PHY_MP_vars_finalize
 
   !-----------------------------------------------------------------------------
   !> HALO Communication
@@ -338,6 +383,7 @@ contains
 !!$
 !!$       if ( FILE_get_AGGREGATE(restart_fid) ) then
 !!$          call FILE_CARTESC_flush( restart_fid ) ! X/Y halos have been read from file
+!!$          !$acc update device(ATMOS_PHY_MP_hoge)
 !!$       else
 !!$          call ATMOS_PHY_MP_vars_fillhalo
 !!$       end if
@@ -487,6 +533,8 @@ contains
     integer  :: ih
     !---------------------------------------------------------------------------
 
+    !$acc data create(WORK)
+
     if ( HIST_CLDFRAC_id > 0 ) then
        call FILE_HISTORY_query( HIST_CLDFRAC_id, do_put )
 
@@ -514,7 +562,9 @@ contains
           do ih = 1, N_HYD
              if ( HIST_Re_id(ih) > 0 ) then
                 call FILE_HISTORY_query( HIST_Re_id(ih), do_put )
-                if ( do_put ) call FILE_HISTORY_put( HIST_Re_id(ih), WORK(:,:,:,ih) )
+                if ( do_put ) then
+                   call FILE_HISTORY_put( HIST_Re_id(ih), WORK(:,:,:,ih) )
+                end if
              end if
           end do
        end if
@@ -536,7 +586,9 @@ contains
           do ih = 1, N_HYD
              if ( HIST_Qe_id(ih) > 0 ) then
                 call FILE_HISTORY_query( HIST_Qe_id(ih), do_put )
-                if( do_put ) call FILE_HISTORY_put( HIST_Qe_id(ih), WORK(:,:,:,ih) )
+                if( do_put ) then
+                   call FILE_HISTORY_put( HIST_Qe_id(ih), WORK(:,:,:,ih) )
+                end if
              end if
           end do
        end if
@@ -558,11 +610,15 @@ contains
           do ih = 1, N_HYD
              if ( HIST_Ne_id(ih) > 0 ) then
                 call FILE_HISTORY_query( HIST_Ne_id(ih), do_put )
-                if( do_put ) call FILE_HISTORY_put( HIST_Ne_id(ih), WORK(:,:,:,ih) )
+                if( do_put ) then
+                   call FILE_HISTORY_put( HIST_Ne_id(ih), WORK(:,:,:,ih) )
+                end if
              end if
           end do
        end if
     end if
+
+    !$acc end data
 
     return
   end subroutine ATMOS_PHY_MP_vars_history
@@ -611,35 +667,45 @@ contains
     integer :: k, i, j, ih
 
     if ( present(CLDFRAC) ) then
+       !$acc data copyout(CLDFRAC)
        if ( .not. DIAG_CLDFRAC ) then
           select case ( ATMOS_PHY_MP_TYPE )
           case ( 'KESSLER' )
+             !$acc update host(QTRC(:,:,:,QS_MP+1:QE_MP))
              call ATMOS_PHY_MP_kessler_cloud_fraction( &
                   KA, KS, KE, IA, IS, IE, JA, JS, JE, &
                   QTRC(:,:,:,QS_MP+1:QE_MP), ATMOS_PHY_MP_cldfrac_thleshold, & ! [IN]
                   ATMOS_PHY_MP_CLDFRAC(:,:,:)                                ) ! [OUT]
+             !$acc update device(ATMOS_PHY_MP_CLDFRAC)
           case ( 'TOMITA08' )
              call ATMOS_PHY_MP_tomita08_cloud_fraction( &
                   KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
                   QTRC(:,:,:,QS_MP+1:QE_MP), ATMOS_PHY_MP_cldfrac_thleshold, & ! [IN]
                   ATMOS_PHY_MP_CLDFRAC(:,:,:)                                ) ! [OUT]
           case ( 'SN14' )
+             !$acc update host(QTRC(:,:,:,QS_MP+1:QE_MP))
              call ATMOS_PHY_MP_sn14_cloud_fraction( &
                   KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
                   QTRC(:,:,:,QS_MP+1:QE_MP), ATMOS_PHY_MP_cldfrac_thleshold, & ! [IN]
                   ATMOS_PHY_MP_CLDFRAC(:,:,:)                                ) ! [OUT]
+             !$acc update device(ATMOS_PHY_MP_CLDFRAC)
           case ( 'SUZUKI10' )
+             !$acc update host(QTRC(:,:,:,QS_MP+1:QE_MP))
              call ATMOS_PHY_MP_suzuki10_cloud_fraction( &
                   KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
                   QTRC(:,:,:,QS_MP+1:QE_MP), ATMOS_PHY_MP_cldfrac_thleshold, & ! [IN]
                   ATMOS_PHY_MP_CLDFRAC(:,:,:)                                ) ! [OUT]
+             !$acc update device(ATMOS_PHY_MP_CLDFRAC)
           case default
 !OCL XFILL
+             !$acc kernels
              ATMOS_PHY_MP_CLDFRAC(:,:,:) = 0.0_RP
+             !$acc end kernels
           end select
           DIAG_CLDFRAC = .true.
        end if
 !OCL XFILL
+       !$acc kernels
        do j = JSB, JEB
        do i = ISB, IEB
        do k = KS, KE
@@ -647,38 +713,51 @@ contains
        end do
        end do
        end do
+       !$acc end kernels
+
+       !$acc end data
     end if
 
     if ( present(Re) ) then
+       !$acc data copyout(Re)
        if ( .not. DIAG_Re ) then
           select case ( ATMOS_PHY_MP_TYPE )
           case ( 'KESSLER' )
+             !$acc update host(QTRC(:,:,:,QS_MP+1:QE_MP))
              call ATMOS_PHY_MP_kessler_effective_radius( &
                   KA, KS, KE, IA, IS, IE, JA, JS, JE, &
                   DENS(:,:,:), TEMP(:,:,:), QTRC(:,:,:,QS_MP+1:QE_MP), & ! [IN]
                   ATMOS_PHY_MP_Re(:,:,:,:)                             ) ! [OUT]
+             !$acc update device(ATMOS_PHY_MP_Re)
           case ( 'TOMITA08' )
              call ATMOS_PHY_MP_tomita08_effective_radius( &
                   KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
                   DENS(:,:,:), TEMP(:,:,:), QTRC(:,:,:,QS_MP+1:QE_MP), & ! [IN]
                   ATMOS_PHY_MP_Re(:,:,:,:)                             ) ! [OUT]
           case ( 'SN14' )
+             !$acc update host(QTRC(:,:,:,QS_MP+1:QE_MP))
              call ATMOS_PHY_MP_sn14_effective_radius( &
                   KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
                   DENS(:,:,:), TEMP(:,:,:), QTRC(:,:,:,QS_MP+1:QE_MP), & ! [IN]
                   ATMOS_PHY_MP_Re(:,:,:,:)                             ) ! [OUT]
+             !$acc update device(ATMOS_PHY_MP_Re)
           case ( 'SUZUKI10' )
+             !$acc update host(QTRC(:,:,:,QS_MP+1:QE_MP))
              call ATMOS_PHY_MP_suzuki10_effective_radius( &
                   KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
                   DENS(:,:,:), TEMP(:,:,:), QTRC(:,:,:,QS_MP+1:QE_MP), & ! [IN]
                   ATMOS_PHY_MP_Re(:,:,:,:)                             ) ! [OUT]
+             !$acc update device(ATMOS_PHY_MP_Re)
           case default
 !OCL XFILL
+             !$acc kernels
              ATMOS_PHY_MP_Re(:,:,:,:) = 0.0_RP
+             !$acc end kernels
           end select
           DIAG_Re = .true.
        end if
 !OCL XFILL
+       !$acc kernels
        do ih = 1, N_HYD
        do j = JSB, JEB
        do i = ISB, IEB
@@ -688,38 +767,51 @@ contains
        end do
        end do
        end do
+       !$acc end kernels
+
+       !$acc end data
     end if
 
     if ( present(Qe) ) then
+       !$acc data copyout(Qe)
        if ( .not. DIAG_Qe ) then
           select case ( ATMOS_PHY_MP_TYPE )
           case ( 'KESSLER' )
+             !$acc update host(QTRC(:,:,:,QS_MP+1:QE_MP))
              call ATMOS_PHY_MP_kessler_qtrc2qhyd( &
                   KA, KS, KE, IA, IS, IE, JA, JS, JE, &
                   QTRC(:,:,:,QS_MP+1:QE_MP), & ! [IN]
                   ATMOS_PHY_MP_Qe(:,:,:,:)   ) ! [OUT]
+             !$acc update device(ATMOS_PHY_MP_Qe)
           case ( 'TOMITA08' )
              call ATMOS_PHY_MP_tomita08_qtrc2qhyd( &
                   KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
                   QTRC(:,:,:,QS_MP+1:QE_MP), & ! [IN]
                   ATMOS_PHY_MP_Qe(:,:,:,:)   ) ! [OUT]
           case ( 'SN14' )
+             !$acc update host(QTRC(:,:,:,QS_MP+1:QE_MP))
              call ATMOS_PHY_MP_sn14_qtrc2qhyd( &
                   KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
                   QTRC(:,:,:,QS_MP+1:QE_MP), & ! [IN]
                   ATMOS_PHY_MP_Qe(:,:,:,:)   ) ! [OUT]
+             !$acc update device(ATMOS_PHY_MP_Qe)
           case ( 'SUZUKI10' )
+             !$acc update host(QTRC(:,:,:,QS_MP+1:QE_MP))
              call ATMOS_PHY_MP_suzuki10_qtrc2qhyd( &
                   KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
                   QTRC(:,:,:,QS_MP+1:QE_MP), & ! [IN]
                   ATMOS_PHY_MP_Qe(:,:,:,:)   ) ! [OUT]
+             !$acc update device(ATMOS_PHY_MP_Qe)
           case default
 !OCL XFILL
+             !$acc kernels
              ATMOS_PHY_MP_Qe(:,:,:,:) = 0.0_RP
+             !$acc end kernels
           end select
           DIAG_Qe = .true.
        end if
 !OCL XFILL
+       !$acc kernels
        do ih = 1, N_HYD
        do j = JSB, JEB
        do i = ISB, IEB
@@ -729,27 +821,36 @@ contains
        end do
        end do
        end do
+       !$acc end kernels
+
+       !$acc end data
     end if
 
     if ( present(Ne) ) then
+       !$acc data copyout(Ne)
        if ( .not. DIAG_Ne ) then
           select case ( ATMOS_PHY_MP_TYPE )
           case ( 'KESSLER', 'TOMITA08' )
              ! do nothing
           case ( 'SN14' )
+             !$acc update host(QTRC(:,:,:,QS_MP+1:QE_MP))
              call ATMOS_PHY_MP_sn14_qtrc2nhyd( &
                   KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
                   QTRC(:,:,:,QS_MP+1:QE_MP), & ! [IN]
                   ATMOS_PHY_MP_Ne(:,:,:,:)   ) ! [OUT]
+             !$acc update device(ATMOS_PHY_MP_Ne)
           case ( 'SUZUKI10' )
+             !$acc update host(QTRC(:,:,:,QS_MP+1:QE_MP))
              call ATMOS_PHY_MP_suzuki10_qtrc2nhyd( &
                   KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
                   DENS(:,:,:), QTRC(:,:,:,QS_MP+1:QE_MP), & ! [IN]
                   ATMOS_PHY_MP_Ne(:,:,:,:)                ) ! [OUT]
+             !$acc update device(ATMOS_PHY_MP_Ne)
           end select
           DIAG_Ne = .true.
        end if
 !OCL XFILL
+       !$acc kernels
        do ih = 1, N_HYD
        do j = JSB, JEB
        do i = ISB, IEB
@@ -759,6 +860,9 @@ contains
        end do
        end do
        end do
+       !$acc end kernels
+
+       !$acc end data
     end if
 
     return

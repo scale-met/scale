@@ -27,12 +27,10 @@ module mod_realinput_grads
   !++ Public procedure
   !
   public :: ParentAtmosSetupGrADS
-  public :: ParentAtmosOpenGrADS
   public :: ParentAtmosInputGrADS
   public :: ParentLandSetupGrADS
   public :: ParentLandInputGrADS
   public :: ParentOceanSetupGrADS
-  public :: ParentOceanOpenGrADS
   public :: ParentOceanInputGrADS
 
   !-----------------------------------------------------------------------------
@@ -47,88 +45,6 @@ module mod_realinput_grads
   !
   !++ Private parameters & variables
   !
-  integer,  parameter    :: num_item_list_atom  = 25
-  integer,  parameter    :: num_item_list_land  = 12
-  integer,  parameter    :: num_item_list_ocean = 10
-  character(len=H_SHORT) :: item_list_atom (num_item_list_atom)
-  character(len=H_SHORT) :: item_list_land (num_item_list_land)
-  character(len=H_SHORT) :: item_list_ocean(num_item_list_ocean)
-  data item_list_atom  /'lon','lat','plev','DENS','U','V','W','T','HGT','QV','QC','QR','QI','QS','QG','RH', &
-                        'MSLP','PSFC','U10','V10','T2','Q2','RH2','topo','RN222' /
-  data item_list_land  /'lsmask','lon','lat','lon_sfc','lat_sfc','llev', &
-                        'STEMP','SMOISVC','SMOISDS','SKINT','topo','topo_sfc' /
-  data item_list_ocean /'lsmask','lsmask_sst','lon','lat','lon_sfc','lat_sfc','lon_sst','lat_sst','SKINT','SST'/
-
-  integer,  parameter    :: num_item_list = 25 ! max of num_item_list_(atom|land|ocean)
-  integer                :: var_id(num_item_list,3) ! 1:atom, 2:land, 3:ocean
-
-  integer,  parameter   :: Ia_lon    = 1
-  integer,  parameter   :: Ia_lat    = 2
-  integer,  parameter   :: Ia_p      = 3  ! Pressure (Pa)
-  integer,  parameter   :: Ia_dens   = 4
-  integer,  parameter   :: Ia_u      = 5
-  integer,  parameter   :: Ia_v      = 6
-  integer,  parameter   :: Ia_w      = 7
-  integer,  parameter   :: Ia_t      = 8
-  integer,  parameter   :: Ia_hgt    = 9  ! Geopotential height (m)
-  integer,  parameter   :: Ia_qv     = 10
-  integer,  parameter   :: Ia_qc     = 11
-  integer,  parameter   :: Ia_qr     = 12
-  integer,  parameter   :: Ia_qi     = 13
-  integer,  parameter   :: Ia_qs     = 14
-  integer,  parameter   :: Ia_qg     = 15
-  integer,  parameter   :: Ia_rh     = 16 ! Percentage (%)
-  integer,  parameter   :: Ia_slp    = 17 ! Sea level pressure (Pa)
-  integer,  parameter   :: Ia_ps     = 18 ! Surface pressure (Pa)
-  integer,  parameter   :: Ia_u10    = 19
-  integer,  parameter   :: Ia_v10    = 20
-  integer,  parameter   :: Ia_t2     = 21
-  integer,  parameter   :: Ia_q2     = 22
-  integer,  parameter   :: Ia_rh2    = 23 ! Percentage (%)
-  integer,  parameter   :: Ia_topo   = 24
-  integer,  parameter   :: Ia_rn222  = 25
-
-  integer,  parameter   :: Il_lsmask  = 1
-  integer,  parameter   :: Il_lon     = 2
-  integer,  parameter   :: Il_lat     = 3
-  integer,  parameter   :: Il_lon_sfc = 4
-  integer,  parameter   :: Il_lat_sfc = 5
-  integer,  parameter   :: Il_lz      = 6  ! Level(depth) of stemp & smois (m)
-  integer,  parameter   :: Il_stemp   = 7
-  integer,  parameter   :: Il_smoisvc = 8  ! soil moisture (vormetric water content)
-  integer,  parameter   :: Il_smoisds = 9  ! soil moisture (degree of saturation)
-  integer,  parameter   :: Il_skint   = 10
-  integer,  parameter   :: Il_topo    = 11
-  integer,  parameter   :: Il_topo_sfc= 12
-
-  integer,  parameter   :: Io_lsmask     = 1
-  integer,  parameter   :: Io_lsmask_sst = 2
-  integer,  parameter   :: Io_lon        = 3
-  integer,  parameter   :: Io_lat        = 4
-  integer,  parameter   :: Io_lon_sfc    = 5
-  integer,  parameter   :: Io_lat_sfc    = 6
-  integer,  parameter   :: Io_lon_sst    = 7
-  integer,  parameter   :: Io_lat_sst    = 8
-  integer,  parameter   :: Io_skint      = 9
-  integer,  parameter   :: Io_sst        = 10
-
-  character(len=H_SHORT) :: upper_qv_type = "ZERO" !< how qv is given at higher level than outer model
-                                                   !< "ZERO": 0
-                                                   !< "COPY": copy values from the highest level of outer model
-
-
-  ! atmos data
-  integer :: outer_nx     = -1
-  integer :: outer_ny     = -1
-  integer :: outer_nz     = -1 ! number of atmos layers
-  integer :: outer_nl     = -1 ! number of land layers
-  ! surface data
-  integer :: outer_nx_sfc = -1
-  integer :: outer_ny_sfc = -1
-  ! sst data
-  integer :: outer_nx_sst = -1
-  integer :: outer_ny_sst = -1
-
   integer :: file_id_atm, file_id_ocn, file_id_lnd
 
   !-----------------------------------------------------------------------------
@@ -136,233 +52,120 @@ contains
   !-----------------------------------------------------------------------------
   !> Atmos Setup
   subroutine ParentAtmosSetupGrADS( &
-      dims,    &
-      basename )
+      dims,      &
+      timelen,   &
+      qtrc_flag, &
+      LON_all,   &
+      LAT_all,   &
+      basename_org, &
+      basename_num  )
+    use scale_const, only: &
+       D2R => CONST_D2R
     use scale_file_grads, only: &
-       FILE_GrADS_open, &
-       FILE_GrADS_get_shape, &
-       FILE_GrADS_varid
+       FILE_GrADS_open,  &
+       FILE_GrADS_varid, &
+       FILE_GrADS_get_shape
+    use mod_atmos_phy_mp_vars, only: &
+       QS_MP, &
+       QE_MP
     implicit none
-    integer,          intent(out) :: dims(6)
-    character(len=*), intent(in)  :: basename
+    integer,           intent(out) :: dims(6)
+    integer,           intent(out) :: timelen
+    logical,           intent(out) :: qtrc_flag(QA)
+    real(RP), allocatable, intent(out) :: LON_all(:,:)
+    real(RP), allocatable, intent(out) :: LAT_all(:,:)
 
-    namelist / PARAM_MKINIT_REAL_GrADS / &
-        upper_qv_type
+    character(len=*), intent(in)  :: basename_org
+    character(len=*), intent(in)  :: basename_num
 
-    integer                :: shape(3)
-    integer                :: ielem
-    character(len=H_SHORT) :: item
+!    namelist / PARAM_MKINIT_REAL_GrADS /
 
+    integer :: var_id
+    real(RP), allocatable :: lon1d(:), lat1d(:)
+
+
+    integer :: i, j, iq
     integer :: ierr
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
     LOG_INFO("ParentAtmosSetupGrADS",*) 'Setup'
 
-    !--- read namelist
-    rewind(IO_FID_CONF)
-    read(IO_FID_CONF,nml=PARAM_MKINIT_REAL_GrADS,iostat=ierr)
+!!$    !--- read namelist
+!!$    rewind(IO_FID_CONF)
+!!$    read(IO_FID_CONF,nml=PARAM_MKINIT_REAL_GrADS,iostat=ierr)
+!!$
+!!$    if( ierr > 0 ) then
+!!$       LOG_ERROR("ParentAtmosSetupGrADS",*) 'Not appropriate names in namelist PARAM_MKINIT_REAL_GrADS. Check!'
+!!$       call PRC_abort
+!!$    endif
+!!$    LOG_NML(PARAM_MKINIT_REAL_GrADS)
 
-    if( ierr > 0 ) then
-       LOG_ERROR("ParentAtmosSetupGrADS",*) 'Not appropriate names in namelist PARAM_MKINIT_REAL_GrADS. Check!'
+
+    if ( basename_org == "" ) then
+       LOG_ERROR("ParentAtmosSetupGrADS",*) '"BASENAME_ORG" is not specified in "PARAM_MKINIT_REAL_ATMOS"!', trim(basename_org)
        call PRC_abort
     endif
-    LOG_NML(PARAM_MKINIT_REAL_GrADS)
 
+    call FILE_GrADS_open( basename_org, & ! (in)
+                          file_id_atm   ) ! (out)
 
-    if ( basename == "" ) then
-       LOG_ERROR("ParentAtmosSetupGrADS",*) '"BASENAME_ORG" is not specified in "PARAM_MKINIT_ATMOS_GRID_CARTESC_REAL_ATMOS"!', trim(basename)
-       call PRC_abort
-    endif
-
-    call FILE_GrADS_open( basename,   & ! (in)
-                          file_id_atm ) ! (out)
+#ifdef QUICKDEBUG
+    qtrc_flag(:) = .false.
+#endif
+    do iq = 1, QA
+       if ( iq >= QS_MP .and. iq <= QE_MP ) cycle
+       call FILE_GrADS_varid( file_id_atm, TRACER_NAME(iq), var_id )
+       qtrc_flag(iq) =  var_id > 0
+    end do
 
     call FILE_GrADS_get_shape( file_id_atm, "U", & ! (in)
-                               shape(:)          ) ! (out)
+                               dims(:3)          ) ! (out)
 
-    ! full level
-    dims(1) = shape(1) ! bottom_top
-    dims(2) = shape(2) ! west_east
-    dims(3) = shape(3) ! south_north
     ! half level
-    dims(4) = shape(1) ! bottom_top_stag
-    dims(5) = shape(2) ! west_east for 2dim data
-    dims(6) = shape(3) ! south_north for 2dim data
+    dims(4) = dims(1)
+    dims(5) = dims(2)
+    dims(6) = dims(3)
 
 
-    ! check existence
-    ! var_id > 0 : exist
-    ! var_id < 0 : not exist
-    do ielem = 1, num_item_list_atom
-       item  = item_list_atom(ielem)
-       call FILE_GrADS_varid( file_id_atm, item, & ! (in)
-                              var_id(ielem,1)    ) ! (out)
-    end do
+    allocate( lon_all(dims(2), dims(3)) )
+    allocate( lat_all(dims(2), dims(3)) )
 
-    ! check necessary data
-    do ielem = 1, num_item_list_atom
-       item  = item_list_atom(ielem)
-       !--- check data
-       select case(item)
-       case('DENS','W','QC','QR','QI','QS','QG','MSLP','PSFC','U10','V10','T2','topo','RN222')
-          if ( var_id(ielem,1) < 0 ) then
-             LOG_WARN("ParentAtmosSetupGrADS",*) trim(item),' is not found & will be estimated.'
-          endif
-          cycle
-       case('QV', 'RH')
-          if ( var_id(Ia_qv,1) < 0 ) then
-             if( var_id(Ia_rh,1) > 0 ) then
-                if ( var_id(Ia_t,1) < 0 .or. var_id(Ia_p,1) < 0 ) then
-                   LOG_ERROR("ParentAtmosSetupGrADS",*) 'Temperature and pressure are required to convert from RH to QV ! '
-                   call PRC_abort
-                endif
-             else
-                LOG_ERROR("ParentAtmosSetupGrADS",*) 'Not found in grads namelist! : QV and RH'
-                call PRC_abort
-             endif
-          else
-             var_id(Ia_rh,1) = -1
-          endif
-          cycle
-       case('Q2', 'RH2')
-          if ( var_id(Ia_q2,1) < 0 ) then
-             if ( var_id(Ia_rh2,1) > 0 ) then
-                if ( var_id(Ia_t2,1) < 0 .or.  var_id(Ia_ps,1) < 0 ) then
-                   LOG_WARN("ParentAtmosSetupGrADS",*) 'T2 and PSFC are required to convert from RH2 to Q2 !'
-                   LOG_INFO_CONT(*)                    'Q2 will be copied from data at above level.'
-                   var_id(Ia_rh2,1) = -1
-                endif
-             else
-                LOG_WARN("ParentAtmosSetupGrADS",*) 'Q2 and RH2 are not found, Q2 will be estimated.'
-             endif
-          else
-             var_id(Ia_rh2,1) = -1
-          end if
-          cycle
-       case default ! lon, lat, plev, U, V, T, HGT
-          if ( var_id(ielem,1) < 0 ) then
-             LOG_ERROR("ParentAtmosSetupGrADS",*) 'Not found in grads namelist! : ',trim(item_list_atom(ielem))
-             call PRC_abort
-          endif
-       end select
 
-    end do
+    call read2d( (/1,1/), dims(2:3), lon_all(:,:), "lon", file_id_atm, basename_num, oneD=1 )
+    lon_all(:,:) = lon_all(:,:) * D2R
+
+    call read2d( (/1,1/), dims(2:3), lat_all(:,:), "lat", file_id_atm, basename_num, oneD=2 )
+    lat_all(:,:) = lat_all(:,:) * D2R
+
+    ! tentative
+    timelen = 1
 
     return
   end subroutine ParentAtmosSetupGrADS
 
   !-----------------------------------------------------------------------------
-  subroutine ParentAtmosOpenGrADS( &
-       lon_org,  &
-       lat_org,  &
-       basename_num,  &
-       dims )
-    use scale_const, only: &
-       D2R => CONST_D2R
-    use scale_file_grads, only: &
-       FILE_GrADS_isOneD, &
-       FILE_GrADS_read
-    implicit none
-
-    real(RP),         intent(out) :: lon_org(:,:)
-    real(RP),         intent(out) :: lat_org(:,:)
-    character(len=*), intent(in)  :: basename_num
-    integer,          intent(in)  :: dims(6)
-
-    real(RP) :: lon1D(dims(2)), lat1D(dims(3))
-
-    character(len=H_SHORT) :: item
-
-    integer  :: i, j, ielem
-    !---------------------------------------------------------------------------
-
-    !--- read grads data
-    loop_InputAtmosGrADS : do ielem = 1, num_item_list_atom
-
-       if ( var_id(ielem,1) < 0 ) cycle
-
-       item = item_list_atom(ielem)
-
-       ! read data
-       select case(item)
-       case("lon")
-
-          if( FILE_GrADS_isOneD( file_id_atm, var_id(ielem,1) ) ) then
-             call FILE_GrADS_read( file_id_atm, var_id(ielem,1), & ! (in)
-                                   lon1d(:)                      ) ! (out)
-             !$omp parallel do collapse(2)
-             do j = 1, dims(3)
-             do i = 1, dims(2)
-                lon_org(i,j) = lon1d(i) * D2R
-             enddo
-             enddo
-          else
-             call FILE_GrADS_read( file_id_atm, var_id(ielem,1), & ! (in)
-                                   lon_org(:,:),                 & ! (out)
-                                   postfix = basename_num        ) ! (in)
-             !$omp parallel do collapse(2)
-             do j = 1, dims(3)
-             do i = 1, dims(2)
-                lon_org(i,j) = lon_org(i,j) * D2R
-             enddo
-             enddo
-          end if
-
-       case("lat")
-
-          if( FILE_GrADS_isOneD( file_id_atm, var_id(ielem,1) ) ) then
-             call FILE_GrADS_read( file_id_atm, var_id(ielem,1), & ! (in)
-                                   lat1d(:)                      ) ! (out)
-             !$omp parallel do collapse(2)
-             do j = 1, dims(3)
-             do i = 1, dims(2)
-                lat_org(i,j) = lat1d(j) * D2R
-             enddo
-             enddo
-          else
-             call FILE_GrADS_read( file_id_atm, var_id(ielem,1), & ! (in)
-                                   lat_org(:,:),                 & ! (out)
-                                   postfix = basename_num        ) ! (in)
-             !$omp parallel do collapse(2)
-             do j = 1, dims(3)
-             do i = 1, dims(2)
-                lat_org(i,j) = lat_org(i,j) * D2R
-             enddo
-             enddo
-          end if
-
-       end select
-    enddo loop_InputAtmosGrADS
-
-    return
-  end subroutine ParentAtmosOpenGrADS
-
-  !-----------------------------------------------------------------------------
   subroutine ParentAtmosInputGrADS( &
-       velz_org, &
-       velx_org, &
-       vely_org, &
+       KA_org, KS_org, KE_org, &
+       IA_org, IS_org, IE_org, &
+       JA_org, JS_org, JE_org, &
+       QA,     &
+       w_org, &
+       u_org, &
+       v_org, &
        pres_org, &
        dens_org, &
+       pt_org, &
        temp_org, &
        qv_org,   &
+       rh_org,   &
        qhyd_org, &
-       RN222_org,&
+       qtrc_org,&
        cz_org,   &
+       nopres, nodens, &
+       temp2pt, rh2qv, &
        basename_num,  &
        sfc_diagnoses, &
-       under_sfc,     &
-       KA_org, &
-       KS_org, &
-       KE_org, &
-       IA_org, &
-       IS_org, &
-       IE_org, &
-       JA_org, &
-       JS_org, &
-       JE_org, &
-       dims, &
        nt )
     use scale_const, only: &
        UNDEF   => CONST_UNDEF, &
@@ -376,34 +179,12 @@ contains
        Rdry    => CONST_Rdry, &
        CPdry   => CONST_CPdry
     use scale_atmos_hydrometeor, only: &
-       N_HYD, &
-       I_HC, &
-       I_HR, &
-       I_HI, &
-       I_HS, &
-       I_HG
-    use scale_atmos_saturation, only: &
-       psat => ATMOS_SATURATION_psat_liq
-    use scale_file_grads, only: &
-       FILE_GrADS_isOneD,    &
-       FILE_GrADS_get_shape, &
-       FILE_GrADS_read
+       HYD_NAME, &
+       N_HYD
+    use mod_atmos_phy_mp_vars, only: &
+       QS_MP, &
+       QE_MP
     implicit none
-
-
-    real(RP),         intent(out) :: velz_org(:,:,:)
-    real(RP),         intent(out) :: velx_org(:,:,:)
-    real(RP),         intent(out) :: vely_org(:,:,:)
-    real(RP),         intent(out) :: pres_org(:,:,:)
-    real(RP),         intent(out) :: dens_org(:,:,:)
-    real(RP),         intent(out) :: temp_org(:,:,:)
-    real(RP),         intent(out) :: qv_org  (:,:,:)
-    real(RP),         intent(out) :: qhyd_org(:,:,:,:)
-    real(RP),         intent(out) :: RN222_org(:,:,:)
-    real(RP),         intent(out) :: cz_org(:,:,:)
-    character(len=*), intent(in)  :: basename_num
-    logical,          intent(in)  :: sfc_diagnoses
-    logical,          intent(in)  :: under_sfc
     integer,          intent(in)  :: KA_org
     integer,          intent(in)  :: KS_org
     integer,          intent(in)  :: KE_org
@@ -413,872 +194,441 @@ contains
     integer,          intent(in)  :: JA_org
     integer,          intent(in)  :: JS_org
     integer,          intent(in)  :: JE_org
-    integer,          intent(in)  :: dims(6)
+    integer,          intent(in)  :: QA
+    real(RP),         intent(out) :: w_org(KA_org,IA_org,JA_org)
+    real(RP),         intent(out) :: u_org(KA_org,IA_org,JA_org)
+    real(RP),         intent(out) :: v_org(KA_org,IA_org,JA_org)
+    real(RP),         intent(out) :: pres_org(KA_org,IA_org,JA_org)
+    real(RP),         intent(out) :: dens_org(KA_org,IA_org,JA_org)
+    real(RP),         intent(out) :: pt_org(KA_org,IA_org,JA_org)
+    real(RP),         intent(out) :: temp_org(KA_org,IA_org,JA_org)
+    real(RP),         intent(out) :: qv_org(KA_org,IA_org,JA_org)
+    real(RP),         intent(out) :: rh_org(KA_org,IA_org,JA_org)
+    real(RP),         intent(out) :: qhyd_org(KA_org,IA_org,JA_org,N_HYD)
+    real(RP),         intent(out) :: qtrc_org(KA_org,IA_org,JA_org,QA)
+    real(RP),         intent(out) :: cz_org(KA_org,IA_org,JA_org)
+    logical,          intent(out) :: nopres
+    logical,          intent(out) :: nodens
+    logical,          intent(out) :: temp2pt
+    logical,          intent(out) :: rh2qv
+    character(len=*), intent(in)  :: basename_num
+    logical,          intent(in)  :: sfc_diagnoses
     integer,          intent(in)  :: nt
 
     character(len=H_SHORT) :: item
 
-    integer  :: lm_layer( IA_org, JA_org )
+    integer  :: lm_layer(IA_org,JA_org)
 
-    integer  :: dummy = 1
-    real(RP) :: work( dims(1), dims(2), dims(3) )
+    real(RP) :: work(KA_org-2,IA_org,JA_org)
+    real(RP) :: work2d(IA_org,JA_org)
+    real(RP) :: coef
+    integer  :: start(3), count(3)
 
-    logical  :: pressure_coordinates
-    real(RP) :: p_sat, qm, dz
-    real(RP) :: rh( IA_org, JA_org )
-    real(RP) :: Rtot
+    logical :: exist
 
-    integer  :: shape(3)
-    integer  :: i, j, k, iq, ielem
+    integer  :: i, j, k, iq
     !---------------------------------------------------------------------------
 
-    !$omp parallel do collapse(3)
-    do j = 1, JA_org
-    do i = 1, IA_org
-    do k = 1, KA_org
-       dens_org (k,i,j)   = UNDEF
-       pres_org (k,i,j)   = UNDEF
-       velz_org (k,i,j)   = 0.0_RP
-       qv_org   (k,i,j)   = 0.0_RP
-       qhyd_org (k,i,j,:) = 0.0_RP
-       RN222_org(k,i,j )  = 0.0_RP
-    end do
-    end do
-    end do
-
-    !--- read grads data
-    loop_InputAtmosGrADS : do ielem = 1, num_item_list_atom
-
-       if ( var_id(ielem,1) < 0 ) cycle
-
-       item = item_list_atom(ielem)
-
-       ! read data
-       select case(item)
-       case("plev")
-
-          call FILE_GrADS_get_shape( file_id_atm, var_id(ielem,1), & ! (in)
-                                     shape(:)                      ) ! (out)
-          if ( KA_org-2 .ne. shape(1) ) then
-             LOG_ERROR("ParentAtmosInputGrADS",*) '"nz" must be equal to the default nz for ',trim(item), shape(1), KA_org-2
-             call PRC_abort
-          endif
-
-          if( FILE_GrADS_isOneD( file_id_atm, var_id(ielem,1) ) ) then
-             pressure_coordinates = .true. ! use pressure coordinate in the input data
-             call FILE_GrADS_get_shape( file_id_atm, var_id(ielem,1), & ! (in)
-                                        shape(:)                      ) ! (out)
-             if ( KA_org-2 .ne. shape(1) ) then
-                LOG_ERROR("ParentAtmosInputGrADS",*) 'lnum must be same as the nz for plev! ',shape(1), KA_org-2
-                call PRC_abort
-             endif
-             call FILE_GrADS_read( file_id_atm, var_id(ielem,1), & ! (in)
-                                   work(:,dummy,dummy)           ) ! (out)
-             !$omp parallel do collapse(3)
-             do j = 1, JA_org
-             do i = 1, IA_org
-             do k = 1, KA_org-2
-                pres_org(k+2,i,j) = work(k,dummy,dummy)
-             enddo
-             enddo
-             enddo
-          else
-             pressure_coordinates = .false.
-             call FILE_GrADS_read( file_id_atm, var_id(ielem,1), & ! (in)
-                                   work(:,:,:),                  & ! (out)
-                                   step = nt,                    & ! (in)
-                                   postfix = basename_num        ) ! (in)
-             !$omp parallel do collapse(3)
-             do j = 1, JA_org
-             do i = 1, IA_org
-             do k = 1, KA_org-2
-                pres_org(k+2,i,j) = work(k,i-1+IS_org,j-1+JS_org)
-             enddo
-             enddo
-             enddo
-          endif
-       case('DENS')
-
-          call FILE_GrADS_get_shape( file_id_atm, var_id(ielem,1), & ! (in)
-                                     shape(:)                      ) ! (out)
-          if ( KA_org-2 .ne. shape(1) ) then
-             LOG_ERROR("ParentAtmosInputGrADS",*) '"nz" must be equal to the default nz for ',trim(item),'. nz:',shape(1),'> outer_nz:',KA_org-2
-             call PRC_abort
-          endif
-
-          call FILE_GrADS_read( file_id_atm, var_id(ielem,1), & ! (in)
-                                work(:,:,:),                  & ! (out)
-                                step = nt,                    & ! (in)
-                                postfix = basename_num        ) ! (in)
-          !$omp parallel do collapse(3)
-          do j = 1, JA_org
-          do i = 1, IA_org
-          do k = 1, KA_org-2
-             dens_org(k+2,i,j) = work(k,i-1+IS_org,j-1+JS_org)
-          enddo
-          enddo
-          enddo
-
-       case('U')
-
-          call FILE_GrADS_get_shape( file_id_atm, var_id(ielem,1), & ! (in)
-                                     shape(:)                      ) ! (out)
-          if ( KA_org-2 .ne. shape(1) ) then
-             LOG_ERROR("ParentAtmosInputGrADS",*) '"nz" must be equal to the default nz for ',trim(item),'. nz:',shape(1),'> outer_nz:',KA_org-2
-             call PRC_abort
-          endif
-
-          call FILE_GrADS_read( file_id_atm, var_id(ielem,1), & ! (in)
-                                work(:,:,:),                  & ! (out)
-                                step = nt,                    & ! (in)
-                                postfix = basename_num        ) ! (in)
-          !$omp parallel do collapse(2)
-          do j = 1, JA_org
-          do i = 1, IA_org
-             do k = 1, KA_org-2
-                velx_org(k+2,i,j) = work(k,i-1+IS_org,j-1+JS_org)
-             enddo
-             velx_org(1:2,i,j) = 0.0_RP
-          enddo
-          enddo
-
-       case('V')
-
-          call FILE_GrADS_get_shape( file_id_atm, var_id(ielem,1), & ! (in)
-                                     shape(:)                      ) ! (out)
-          if ( KA_org-2 .ne. shape(1) ) then
-             LOG_ERROR("ParentAtmosInputGrADS",*) '"nz" must be equal to the default nz for ',trim(item),'. nz:',shape(1),'> outer_nz:',KA_org-2
-             call PRC_abort
-          endif
-
-          call FILE_GrADS_read( file_id_atm, var_id(ielem,1), & ! (in)
-                                work(:,:,:),                  & ! (out)
-                                step = nt,                    & ! (in)
-                                postfix = basename_num        ) ! (in)
-          !$omp parallel do collapse(2)
-          do j = 1, JA_org
-          do i = 1, IA_org
-             do k = 1, KA_org-2
-                vely_org(k+2,i,j) = work(k,i-1+IS_org,j-1+JS_org)
-             enddo
-             vely_org(1:2,i,j) = 0.0_RP
-          enddo
-          enddo
-
-       case('W')
-
-          call FILE_GrADS_get_shape( file_id_atm, var_id(ielem,1), & ! (in)
-                                     shape(:)                      ) ! (out)
-          if ( KA_org-2 .ne. shape(1) ) then
-             LOG_ERROR("ParentAtmosInputGrADS",*) '"nz" must be equal to the default nz for ',trim(item),'. nz:',shape(1),'> outer_nz:',KA_org-2
-             call PRC_abort
-          endif
-
-          call FILE_GrADS_read( file_id_atm, var_id(ielem,1), & ! (in)
-                                work(:,:,:),                  & ! (out)
-                                step = nt,                    & ! (in)
-                                postfix = basename_num        ) ! (in)
-          !$omp parallel do collapse(2)
-          do j = 1, JA_org
-          do i = 1, IA_org
-             do k = 1, KA_org-2
-                velz_org(k+2,i,j) = work(k,i-1+IS_org,j-1+JS_org)
-             enddo
-             velz_org(1:2,i,j) = 0.0_RP
-          enddo
-          enddo
-
-       case('T')
-
-          call FILE_GrADS_get_shape( file_id_atm, var_id(ielem,1), & ! (in)
-                                     shape(:)                      ) ! (out)
-          if ( KA_org-2 .ne. shape(1) ) then
-             LOG_ERROR("ParentAtmosInputGrADS",*) '"nz" must be equal to the default nz for ',trim(item),'. nz:',shape(1),'> outer_nz:',KA_org-2
-             call PRC_abort
-          endif
-
-          call FILE_GrADS_read( file_id_atm, var_id(ielem,1), & ! (in)
-                                work(:,:,:),                  & ! (out)
-                                step = nt,                    & ! (in)
-                                postfix = basename_num        ) ! (in)
-          !$omp parallel do collapse(3)
-          do j = 1, JA_org
-          do i = 1, IA_org
-          do k = 1, KA_org-2
-             temp_org(k+2,i,j) = work(k,i-1+IS_org,j-1+JS_org)
-          enddo
-          enddo
-          enddo
-
-       case('HGT')
-
-          call FILE_GrADS_get_shape( file_id_atm, var_id(ielem,1), & ! (in)
-                                     shape(:)                      ) ! (out)
-          if ( KA_org-2 .ne. shape(1) ) then
-             LOG_ERROR("ParentAtmosInputGrADS",*) '"nz" must be equal to the default nz for ',trim(item),'. nz:',shape(1),'> outer_nz:',KA_org-2
-             call PRC_abort
-          endif
-
-          if( FILE_GrADS_isOneD( file_id_atm, var_id(ielem,1) ) ) then
-             call FILE_GrADS_get_shape( file_id_atm, var_id(ielem,1), & ! (in)
-                                        shape(:)                      ) ! (out)
-             if ( KA_org-2 .ne. shape(1) ) then
-                LOG_ERROR("ParentAtmosInputGrADS",*) 'lnum must be same as the nz for HGT! ',KA_org-2, shape(1)
-                call PRC_abort
-             endif
-             call FILE_GrADS_read( file_id_atm, var_id(ielem,1), & ! (in)
-                                   work(:,dummy,dummy)           ) ! (out)
-             !$omp parallel do collapse(2)
-             do j = 1, JA_org
-             do i = 1, IA_org
-                cz_org(1,i,j) = 0.0_RP
-                do k = 1, KA_org-2
-                   cz_org(k+2,i,j) = work(k,dummy,dummy)
-                enddo
-             enddo
-             enddo
-          else
-             pressure_coordinates = .false.
-             call FILE_GrADS_read( file_id_atm, var_id(ielem,1), & ! (in)
-                                   work(:,:,:),                  & ! (out)
-                                   step = nt,                    & ! (in)
-                                   postfix = basename_num        ) ! (in)
-             !$omp parallel do collapse(2)
-             do j = 1, JA_org
-             do i = 1, IA_org
-                do k = 1, KA_org-2
-                   cz_org(k+2,i,j) = work(k,i-1+IS_org,j-1+JS_org)
-                enddo
-                cz_org(1,i,j) = 0.0_RP
-             enddo
-             enddo
-          endif
-
-       case('QV')
-
-          call FILE_GrADS_get_shape( file_id_atm, var_id(ielem,1), & ! (in)
-                                     shape(:)                      ) ! (out)
-
-          call FILE_GrADS_read( file_id_atm, var_id(ielem,1), & ! (in)
-                                work(:shape(1),:,:),          & ! (out)
-                                step = nt,                    & ! (in)
-                                postfix = basename_num        ) ! (in)
-          !$omp parallel do collapse(3)
-          do j = 1, JA_org
-          do i = 1, IA_org
-          do k = 1, shape(1)
-             qv_org(k+2,i,j) = work(k,i-1+IS_org,j-1+JS_org)
-          enddo
-          enddo
-          enddo
-
-          if( KA_org-2 > shape(1) ) then
-             select case( upper_qv_type )
-             case("COPY")
-                !$omp parallel do collapse(2)
-                do j = 1, JA_org
-                do i = 1, IA_org
-                do k = shape(1)+1, KA_org-2
-                   qv_org(k+2,i,j) = qv_org(shape(1)+2,i,j)
-                enddo
-                enddo
-                enddo
-             case("ZERO")
-                ! do nothing
-             case default
-                LOG_ERROR("ParentAtmosInputGrADS",*) 'upper_qv_type in PARAM_MKINIT_REAL_GrADS is invalid! ', upper_qv_type
-                call PRC_abort
-             end select
-          endif
-
-       case('QC')
-
-          call FILE_GrADS_get_shape( file_id_atm, var_id(ielem,1), & ! (in)
-                                     shape(:)                      ) ! (out)
-
-          call FILE_GrADS_read( file_id_atm, var_id(ielem,1), & ! (in)
-                                work(:shape(1),:,:),          & ! (out)
-                                step = nt,                    & ! (in)
-                                postfix = basename_num        ) ! (in)
-          !$omp parallel do collapse(3)
-          do j = 1, JA_org
-          do i = 1, IA_org
-          do k = 1, shape(1)
-             qhyd_org(k+2,i,j,I_HC) = work(k,i-1+IS_org,j-1+JS_org)
-          enddo
-          enddo
-          enddo
-
-          ! if shape(1)>knum, QC is assumed to be zero.
-
-       case('QR')
-
-          call FILE_GrADS_get_shape( file_id_atm, var_id(ielem,1), & ! (in)
-                                     shape(:)                      ) ! (out)
-
-          call FILE_GrADS_read( file_id_atm, var_id(ielem,1), & ! (in)
-                                work(:shape(1),:,:),          & ! (out)
-                                step = nt,                    & ! (in)
-                                postfix = basename_num        ) ! (in)
-          !$omp parallel do collapse(3)
-          do j = 1, JA_org
-          do i = 1, IA_org
-          do k = 1, shape(1)
-             qhyd_org(k+2,i,j,I_HR) = work(k,i-1+IS_org,j-1+JS_org)
-          enddo
-          enddo
-          enddo
-
-          ! if shape(1)>knum, QR is assumed to be zero.
-
-       case('QI')
-
-          call FILE_GrADS_get_shape( file_id_atm, var_id(ielem,1), & ! (in)
-                                     shape(:)                      ) ! (out)
-
-          call FILE_GrADS_read( file_id_atm, var_id(ielem,1), & ! (in)
-                                work(:shape(1),:,:),          & ! (out)
-                                step = nt,                    & ! (in)
-                                postfix = basename_num        ) ! (in)
-          !$omp parallel do collapse(3)
-          do j = 1, JA_org
-          do i = 1, IA_org
-          do k = 1, shape(1)
-             qhyd_org(k+2,i,j,I_HI) = work(k,i-1+IS_org,j-1+JS_org)
-          enddo
-          enddo
-          enddo
-
-          ! if shape(1)>knum, QI is assumed to be zero.
-
-       case('QS')
-
-          call FILE_GrADS_get_shape( file_id_atm, var_id(ielem,1), & ! (in)
-                                     shape(:)                      ) ! (out)
-
-          call FILE_GrADS_read( file_id_atm, var_id(ielem,1), & ! (in)
-                                work(:shape(1),:,:),          & ! (out)
-                                step = nt,                    & ! (in)
-                                postfix = basename_num        ) ! (in)
-          !$omp parallel do collapse(3)
-          do j = 1, JA_org
-          do i = 1, IA_org
-          do k = 1, shape(1)
-             qhyd_org(k+2,i,j,I_HS) = work(k,i-1+IS_org,j-1+JS_org)
-          enddo
-          enddo
-          enddo
-
-          ! if shape(1)>knum, QS is assumed to be zero.
-
-       case('QG')
-
-          call FILE_GrADS_get_shape( file_id_atm, var_id(ielem,1), & ! (in)
-                                     shape(:)                      ) ! (out)
-
-          call FILE_GrADS_read( file_id_atm, var_id(ielem,1), & ! (in)
-                                work(:shape(1),:,:),          & ! (out)
-                                step = nt,                    & ! (in)
-                                postfix = basename_num        ) ! (in)
-          !$omp parallel do collapse(3)
-          do j = 1, JA_org
-          do i = 1, IA_org
-          do k = 1, shape(1)
-             qhyd_org(k+2,i,j,I_HG) = work(k,i-1+IS_org,j-1+JS_org)
-          enddo
-          enddo
-          enddo
-
-          ! if shape(1)>knum, QG is assumed to be zero.
-
-       case('RH')
-
-          call FILE_GrADS_get_shape( file_id_atm, var_id(ielem,1), & ! (in)
-                                     shape(:)                      ) ! (out)
-
-          call FILE_GrADS_read( file_id_atm, var_id(ielem,1), & ! (in)
-                                work(:shape(1),:,:),          & ! (out)
-                                step = nt,                    & ! (in)
-                                postfix = basename_num        ) ! (in)
-          !$omp parallel do collapse(3)
-          do j = 1, JA_org
-          do i = 1, IA_org
-          do k = 1, shape(1)
-             qv_org(k+2,i,j) = work(k,i-1+IS_org,j-1+JS_org)
-          enddo
-          enddo
-          enddo
-
-          !$omp parallel do collapse(3) &
-          !$omp private(qm,p_sat)
-          do j = 1, JA_org
-          do i = 1, IA_org
-          do k = 1, shape(1)
-             if( qv_org(k+1,i,j) .ne. UNDEF ) then
-                rh(i,j) = qv_org(k+2,i,j) / 100.0_RP         ! relative humidity
-                call psat( temp_org(k+2,i,j), p_sat )   ! satulation pressure
-                qm = EPSvap * rh(i,j) * p_sat &
-                   / ( pres_org(k+2,i,j) - rh(i,j) * p_sat ) ! mixing ratio
-                qv_org(k+2,i,j) = qm / ( 1.0_RP + qm )  ! specific humidity
-             end if
-          enddo
-          enddo
-          enddo
-          if( KA_org-2 > shape(1) ) then
-             select case( upper_qv_type )
-             case("COPY")
-                !$omp parallel do &
-                !$omp private(qm,p_sat)
-                do j = 1, JA_org
-                do i = 1, IA_org
-                do k = shape(1)+1, KA_org-2
-                   call psat( temp_org(k+2,i,j), p_sat )   ! satulated specific humidity
-                   qm = EPSvap * rh(i,j) * p_sat &
-                      / ( pres_org(k+2,i,j) - rh(i,j) * p_sat ) ! mixing ratio
-                   qv_org(k+2,i,j) = qm / ( 1.0_RP + qm )  ! specific humidity
-                   qv_org(k+2,i,j) = min(qv_org(k+2,i,j),qv_org(k+1,i,j))
-                enddo
-                enddo
-                enddo
-             case("ZERO")
-                ! do nothing
-             case default
-                LOG_ERROR("ParentAtmosInputGrADS",*) 'upper_qv_type in PARAM_MKINIT_REAL_GrADS is invalid! ', upper_qv_type
-                call PRC_abort
-             end select
-          endif
-
-       case('MSLP')
-
-          call FILE_GrADS_read( file_id_atm, var_id(ielem,1), & ! (in)
-                                work(dummy,:,:),              & ! (out)
-                                step = nt,                    & ! (in)
-                                postfix = basename_num        ) ! (in)
-          !$omp parallel do collapse(2)
-          do j = 1, JA_org
-          do i = 1, IA_org
-             pres_org(1,i,j) = work(dummy,i-1+IS_org,j-1+JS_org)
-          enddo
-          enddo
-
-       case('PSFC')
-
-          call FILE_GrADS_read( file_id_atm, var_id(ielem,1), & ! (in)
-                                work(dummy,:,:),              & ! (out)
-                                step = nt,                    & ! (in)
-                                postfix = basename_num        ) ! (in)
-          !$omp parallel do collapse(2)
-          do j = 1, JA_org
-          do i = 1, IA_org
-             pres_org(2,i,j) = work(dummy,i-1+IS_org,j-1+JS_org)
-          enddo
-          enddo
-
-       case('U10')
-
-          if ( sfc_diagnoses ) then
-             call FILE_GrADS_read( file_id_atm, var_id(ielem,1), & ! (in)
-                                   work(dummy,:,:),              & ! (out)
-                                   step = nt,                    & ! (in)
-                                   postfix = basename_num        ) ! (in)
-             !$omp parallel do collapse(2)
-             do j = 1, JA_org
-             do i = 1, IA_org
-                velx_org(2,i,j) = work(dummy,i-1+IS_org,j-1+JS_org)
-             enddo
-             enddo
-          end if
-
-       case('V10')
-
-          if ( sfc_diagnoses ) then
-             call FILE_GrADS_read( file_id_atm, var_id(ielem,1), & ! (in)
-                                   work(dummy,:,:),              & ! (out)
-                                   step = nt,                    & ! (in)
-                                   postfix = basename_num        ) ! (in)
-             !$omp parallel do collapse(2)
-             do j = 1, JA_org
-             do i = 1, IA_org
-                vely_org(2,i,j) = work(dummy,i-1+IS_org,j-1+JS_org)
-             enddo
-             enddo
-          end if
-
-       case('T2')
-
-          if ( sfc_diagnoses ) then
-             call FILE_GrADS_read( file_id_atm, var_id(ielem,1), & ! (in)
-                                   work(dummy,:,:),              & ! (out)
-                                   step = nt,                    & ! (in)
-                                   postfix = basename_num        ) ! (in)
-             !$omp parallel do collapse(2)
-             do j = 1, JA_org
-             do i = 1, IA_org
-                temp_org(2,i,j) = work(dummy,i-1+IS_org,j-1+JS_org)
-             enddo
-             enddo
-          end if
-
-       case('Q2')
-
-          if ( sfc_diagnoses ) then
-             call FILE_GrADS_read( file_id_atm, var_id(ielem,1), & ! (in)
-                                   work(dummy,:,:),              & ! (out)
-                                   step = nt,                    & ! (in)
-                                   postfix = basename_num        ) ! (in)
-             !$omp parallel do collapse(2)
-             do j = 1, JA_org
-             do i = 1, IA_org
-                qv_org(2,i,j) = work(dummy,i-1+IS_org,j-1+JS_org)
-             enddo
-             enddo
-          end if
-
-       case('RH2')
-
-          if ( sfc_diagnoses ) then
-             call FILE_GrADS_read( file_id_atm, var_id(ielem,1), & ! (in)
-                                   work(dummy,:,:),              & ! (out)
-                                   step = nt,                    & ! (in)
-                                   postfix = basename_num        ) ! (in)
-             !$omp parallel do collapse(2)
-             do j = 1, JA_org
-             do i = 1, IA_org
-                qv_org(2,i,j) = work(dummy,i-1+IS_org,j-1+JS_org)
-             enddo
-             enddo
-             !$omp parallel do collapse(2) &
-             !$omp private (qm,p_sat)
-             do j = 1, JA_org
-             do i = 1, IA_org
-                rh(i,j) = qv_org(2,i,j) / 100.0_RP
-                call psat( temp_org(2,i,j), p_sat )   ! satulation pressure
-                qm = EPSvap * rh(i,j) * p_sat &
-                   / ( pres_org(2,i,j) - rh(i,j) * p_sat ) ! mixing ratio
-                qv_org(2,i,j) = qm / ( 1.0_RP + qm )  ! specific humidity
-             enddo
-             enddo
-          end if
-
-       case('topo')
-
-          call FILE_GrADS_read( file_id_atm, var_id(ielem,1), & ! (in)
-                                work(dummy,:,:),              & ! (out)
-                                postfix = basename_num        ) ! (in)
-          !$omp parallel do collapse(2)
-          do j = 1, JA_org
-          do i = 1, IA_org
-             cz_org(2,i,j) = work(dummy,i-1+IS_org,j-1+JS_org)
-          enddo
-          enddo
-
-       case('RN222')
-
-          call FILE_GrADS_get_shape( file_id_atm, var_id(ielem,1), & ! (in)
-                                     shape(:)                      ) ! (out)
-
-          call FILE_GrADS_read( file_id_atm, var_id(ielem,1),    & ! (in)
-                                work(:shape(1),:,:),             & ! (out)
-                                step = nt,                       & ! (in)
-                                postfix = basename_num           ) ! (in)
-          !$omp parallel do collapse(3)
-          do j = 1, JA_org
-          do i = 1, IA_org
-          do k = 1, shape(1)
-             RN222_org(k+2,i,j) = work(k,i-1+IS_org,j-1+JS_org)
-          enddo
-          enddo
-          enddo
-
-       end select
-    enddo loop_InputAtmosGrADS
-
-    lm_layer(:,:) = 3
-
-    !$omp parallel do
-    do j = 1, JA_org
-    do i = 1, IA_org
-       do k = 3, KA_org
-          ! search the lowermost layer excluding UNDEF
-          if( abs( pres_org(k,i,j) - UNDEF ) < EPS ) then
-             lm_layer(i,j) = k + 1
-          else
-             exit
-          end if
-       end do
-    end do
-    end do
-
-    ! density
-    if ( var_id(Ia_dens,1) < 0 ) then
-       !$omp parallel do &
-       !$omp private (Rtot)
+    start(:) = (/1,IS_org,JS_org/)
+    count(:) = (/KA_org-2,IA_org,JA_org/)
+
+    ! pressure
+    nopres = .false.
+    call read3d( start(:), count(:), work(:,:,:), "pressure", file_id_atm, basename_num, exist=exist, step=nt )
+    if ( .not. exist ) then
+       call read3d( start(:), count(:), work(:,:,:), "plev", file_id_atm, basename_num, exist=exist, step=nt )
+       if ( .not. exist ) nopres = .true.
+    end if
+    if ( .not. nopres ) then
+       !$omp parallel do collapse(2)
        do j = 1, JA_org
        do i = 1, IA_org
-       do k = lm_layer(i,j), KA_org
-          Rtot = Rdry * ( 1.0_RP + EPSTvap * qv_org(k,i,j) )
-          dens_org(k,i,j) = pres_org(k,i,j) / ( Rtot * temp_org(k,i,j) )
-       end do
-       end do
-       end do
+       do k = 1, KA_org-2
+          pres_org(k+2,i,j) = work(k,i,j)
+       enddo
+       enddo
+       enddo
     end if
 
+
+    ! dens
+    call read3d( start(:), count(:), work(:,:,:), "DENS", file_id_atm, basename_num, exist=exist, step=nt )
+    if ( exist ) then
+       !$omp parallel do collapse(2)
+       do j = 1, JA_org
+       do i = 1, IA_org
+       do k = 1, KA_org-2
+          dens_org(k+2,i,j) = work(k,i,j)
+       enddo
+       enddo
+       enddo
+       nodens = .false.
+    else
+       nodens = .true.
+    end if
+
+    ! W
+    call read3d( start(:), count(:), work(:,:,:), "W", file_id_atm, basename_num, exist=exist, step=nt )
+    if ( exist ) then
+       !$omp parallel do collapse(2)
+       do j = 1, JA_org
+       do i = 1, IA_org
+       do k = 1, KA_org-2
+          W_org(k+2,i,j) = work(k,i,j)
+       enddo
+       enddo
+       enddo
+    else
+       !$omp parallel do collapse(2)
+       do j = 1, JA_org
+       do i = 1, IA_org
+       do k = 1, KA_org-2
+          W_org(k+2,i,j) = 0.0_RP
+       enddo
+       enddo
+       enddo
+    end if
+
+    ! U
+    call read3d( start(:), count(:), work(:,:,:), "U", file_id_atm, basename_num, exist=exist, step=nt )
+    if ( exist ) then
+       !$omp parallel do collapse(2)
+       do j = 1, JA_org
+       do i = 1, IA_org
+       do k = 1, KA_org-2
+          U_org(k+2,i,j) = work(k,i,j)
+       enddo
+       enddo
+       enddo
+    else
+       LOG_ERROR("ParentAtmosInputGrADS",*) '"U" is requierd'
+       call PRC_abort
+    end if
+
+    ! V
+    call read3d( start(:), count(:), work(:,:,:), "V", file_id_atm, basename_num, exist=exist, step=nt )
+    if ( exist ) then
+       !$omp parallel do collapse(2)
+       do j = 1, JA_org
+       do i = 1, IA_org
+       do k = 1, KA_org-2
+          V_org(k+2,i,j) = work(k,i,j)
+       enddo
+       enddo
+       enddo
+    else
+       LOG_ERROR("ParentAtmosInputGrADS",*) '"V" is requierd'
+       call PRC_abort
+    end if
+
+    ! T
+    call read3d( start(:), count(:), work(:,:,:), "PT", file_id_atm, basename_num, exist=exist, step=nt )
+    if ( exist ) then
+       !$omp parallel do collapse(2)
+       do j = 1, JA_org
+       do i = 1, IA_org
+       do k = 1, KA_org-2
+          PT_org(k+2,i,j) = work(k,i,j)
+       enddo
+       enddo
+       enddo
+       temp2pt = .false.
+    else
+       call read3d( start(:), count(:), work(:,:,:), "T", file_id_atm, basename_num, exist=exist, step=nt )
+       if ( exist ) then
+          !$omp parallel do collapse(2)
+          do j = 1, JA_org
+          do i = 1, IA_org
+          do k = 1, KA_org-2
+             temp_org(k+2,i,j) = work(k,i,j)
+          enddo
+          enddo
+          enddo
+          temp2pt = .true.
+       else
+          LOG_ERROR("ParentAtmosInputGrADS",*) '"PT" or "T" is requierd'
+          call PRC_abort
+       end if
+    end if
+
+    ! height
+    coef = 1.0_RP
+    call read3d( start(:), count(:), work(:,:,:), "height", file_id_atm, basename_num, exist=exist, step=nt )
+    if ( .not. exist ) then
+       call read3d( start(:), count(:), work(:,:,:), "HGT", file_id_atm, basename_num, exist=exist, step=nt )
+       if ( .not. exist ) then
+          ! geopotential to height
+          coef = 1.0_RP / GRAV
+          call read3d( start(:), count(:), work(:,:,:), "GP", file_id_atm, basename_num, exist=exist, step=nt )
+          if ( .not. exist ) then
+             LOG_ERROR("ParentAtmosInputGrADS",*) '"height", "HGT", or "GP" is requierd'
+             call PRC_abort
+          end if
+       end if
+    end if
+    !$omp parallel do collapse(2)
+    do j = 1, JA_org
+    do i = 1, IA_org
+    do k = 1, KA_org-2
+       cz_org(k+2,i,j) = work(k,i,j) * coef
+    enddo
+    enddo
+    enddo
+
+    ! QV
+    call read3d( start(:), count(:), work(:,:,:), "QV", file_id_atm, basename_num, exist=exist, step=nt )
+    if ( exist ) then
+       !$omp parallel do collapse(2)
+       do j = 1, JA_org
+       do i = 1, IA_org
+       do k = 1, KA_org-2
+          qv_org(k+2,i,j) = work(k,i,j)
+       enddo
+       enddo
+       enddo
+       rh2qv = .false.
+    else
+       call read3d( start(:), count(:), work(:,:,:), "RH", file_id_atm, basename_num, exist=exist, step=nt )
+       if ( exist ) then
+          !$omp parallel do collapse(2)
+          do j = 1, JA_org
+          do i = 1, IA_org
+          do k = 1, KA_org-2
+             rh_org(k+2,i,j) = work(k,i,j)
+          enddo
+          enddo
+          enddo
+          rh2qv = .true.
+       else
+          !$omp parallel do collapse(2)
+          do j = 1, JA_org
+          do i = 1, IA_org
+          do k = 1, KA_org-2
+             qv_org(k+2,i,j) = 0.0_RP
+          enddo
+          enddo
+          enddo
+          rh2qv = .false.
+       end if
+    end if
+    
+    ! QC, QR, QI, QS, QG, QH
+    do iq = 1, N_HYD
+       call read3d( start(:), count(:), work(:,:,:), HYD_NAME(iq), file_id_atm, basename_num, exist=exist, step=nt )
+       if ( exist ) then
+          !$omp parallel do collapse(2)
+          do j = 1, JA_org
+          do i = 1, IA_org
+          do k = 1, KA_org-2
+             qhyd_org(k+2,i,j,iq) = work(k,i,j)
+          enddo
+          enddo
+          enddo
+       else
+          !$omp parallel do collapse(2)
+          do j = 1, JA_org
+          do i = 1, IA_org
+          do k = 1, KA_org-2
+             qhyd_org(k+2,i,j,iq) = 0.0_RP
+          enddo
+          enddo
+          enddo
+       end if
+#ifdef QUICKDEBUG
+       !$omp parallel do collapse(2)
+       do j = 1, JA_org
+       do i = 1, IA_org
+       do k = 1, 2
+          qhyd_org(k,i,j,iq) = UNDEF
+       enddo
+       enddo
+       enddo
+#endif
+    end do
+    
+    ! QTRC
+    do iq = 1, QA
+       if ( iq >= QS_MP .and. iq <= QE_MP ) cycle
+       call read3d( start(:), count(:), work(:,:,:), TRACER_NAME(iq), file_id_atm, basename_num, exist=exist, step=nt )
+       if ( exist ) then
+          !$omp parallel do collapse(2)
+          do j = 1, JA_org
+          do i = 1, IA_org
+          do k = 1, KA_org-2
+             qtrc_org(k+2,i,j,iq) = work(k,i,j)
+          enddo
+          enddo
+          enddo
+       else
+          !$omp parallel do collapse(2)
+          do j = 1, JA_org
+          do i = 1, IA_org
+          do k = 1, KA_org-2
+             qtrc_org(k+2,i,j,iq) = UNDEF
+          enddo
+          enddo
+          enddo
+       end if
+    end do
+
+
     if ( sfc_diagnoses ) then
-       ! surface
-       if ( var_id(Ia_topo,1) > 0 ) then
-          if ( .not. under_sfc ) then
+
+       ! MSLP
+       call read2d( start(2:), count(2:), work2d(:,:), "MSLP", file_id_atm, basename_num, exist=exist, step=nt )
+       if ( exist ) then
+          !$omp parallel do
+          do j = 1, JA_org
+          do i = 1, IA_org
+             pres_org(1,i,j) = work2d(i,j)
+          enddo
+          enddo
+       else
+          !$omp parallel do
+          do j = 1, JA_org
+          do i = 1, IA_org
+             pres_org(1,i,j) = UNDEF
+          enddo
+          enddo
+       end if
+
+       ! SFC_PRES, PSFC
+       call read2d( start(2:), count(2:), work2d(:,:), "SFC_PRES", file_id_atm, basename_num, exist=exist, step=nt )
+       if ( .not. exist ) then
+          call read2d( start(2:), count(2:), work2d(:,:), "PSFC", file_id_atm, basename_num, exist=exist, step=nt )
+       end if
+       if ( exist ) then
+          !$omp parallel do
+          do j = 1, JA_org
+          do i = 1, IA_org
+             pres_org(2,i,j) = work2d(i,j)
+          enddo
+          enddo
+       else
+          !$omp parallel do
+          do j = 1, JA_org
+          do i = 1, IA_org
+             pres_org(2,i,j) = UNDEF
+          enddo
+          enddo
+       end if
+
+       ! U10
+       call read2d( start(2:), count(2:), work2d(:,:), "U10", file_id_atm, basename_num, exist=exist, step=nt )
+       if ( exist ) then
+          !$omp parallel do
+          do j = 1, JA_org
+          do i = 1, IA_org
+             U_org(2,i,j) = work2d(i,j)
+          enddo
+          enddo
+       else
+          !$omp parallel do
+          do j = 1, JA_org
+          do i = 1, IA_org
+             U_org(2,i,j) = UNDEF
+          enddo
+          enddo
+       end if
+
+       ! V10
+       call read2d( start(2:), count(2:), work2d(:,:), "V10", file_id_atm, basename_num, exist=exist, step=nt )
+       if ( exist ) then
+          !$omp parallel do
+          do j = 1, JA_org
+          do i = 1, IA_org
+             V_org(2,i,j) = work2d(i,j)
+          enddo
+          enddo
+       else
+          !$omp parallel do
+          do j = 1, JA_org
+          do i = 1, IA_org
+             V_org(2,i,j) = UNDEF
+          enddo
+          enddo
+       end if
+
+       ! T2
+       call read2d( start(2:), count(2:), work2d(:,:), "T2", file_id_atm, basename_num, exist=exist, step=nt )
+       if ( exist ) then
+          !$omp parallel do
+          do j = 1, JA_org
+          do i = 1, IA_org
+             temp_org(2,i,j) = work2d(i,j)
+          enddo
+          enddo
+       else
+          !$omp parallel do
+          do j = 1, JA_org
+          do i = 1, IA_org
+             temp_org(2,i,j) = UNDEF
+          enddo
+          enddo
+       end if
+
+       ! Q2, RH2
+       if ( rh2qv ) then
+          call read2d( start(2:), count(2:), work2d(:,:), "RH2", file_id_atm, basename_num, exist=exist, step=nt )
+          if ( exist ) then
              !$omp parallel do
              do j = 1, JA_org
              do i = 1, IA_org
-                do k = lm_layer(i,j), KA_org
-                   if ( cz_org(k,i,j) > cz_org(2,i,j) ) then
-                      lm_layer(i,j) = k
-                      exit
-                   end if
-                end do
-             end do
-             end do
-          end if
-          if ( var_id(Ia_t2,1) > 0 .and. var_id(Ia_ps,1) > 0 ) then
-             !$omp parallel do &
-             !$omp private (Rtot)
-             do j = 1, JA_org
-             do i = 1, IA_org
-                Rtot = Rdry * ( 1.0_RP + EPSTvap * qv_org(2,i,j) )
-                dens_org(2,i,j) = pres_org(2,i,j) / ( Rtot * temp_org(2,i,j) )
-             end do
-             end do
-          else if ( var_id(Ia_ps,1) > 0 ) then
-             !$omp parallel do &
-             !$omp private (k,dz,Rtot)
-             do j = 1, JA_org
-             do i = 1, IA_org
-                k = lm_layer(i,j)
-                dz = cz_org(k,i,j) - cz_org(2,i,j)
-                dens_org(2,i,j) = - ( pres_org(k,i,j) - pres_org(2,i,j) ) * 2.0_RP / ( GRAV * dz ) &
-                                  - dens_org(k,i,j)
-                Rtot = Rdry * ( 1.0_RP + EPSTvap * qv_org(2,i,j) )
-                temp_org(2,i,j) = pres_org(2,i,j) / ( Rtot * dens_org(2,i,j) )
-             end do
-             end do
-          else if ( var_id(Ia_t2,1) > 0 ) then
-             !$omp parallel do &
-             !$omp private (k,dz,Rtot)
-             do j = 1, JA_org
-             do i = 1, IA_org
-                k = lm_layer(i,j)
-                dz = cz_org(k,i,j) - cz_org(2,i,j)
-                Rtot = Rdry * ( 1.0_RP + EPSTvap * qv_org(2,i,j) )
-                dens_org(2,i,j) = ( pres_org(k,i,j) + GRAV * dens_org(k,i,j) * dz * 0.5_RP ) &
-                                / ( Rtot * temp_org(2,i,j) - GRAV * dz * 0.5_RP )
-                pres_org(2,i,j) = dens_org(2,i,j) * Rtot * temp_org(2,i,j)
-             end do
-             end do
+                rh_org(2,i,j) = work2d(i,j)
+             enddo
+             enddo
           else
-             !$omp parallel do &
-             !$omp private(k,dz,Rtot)
+             !$omp parallel do
              do j = 1, JA_org
              do i = 1, IA_org
-                k = lm_layer(i,j)
-                dz = cz_org(k,i,j) - cz_org(2,i,j)
-                temp_org(2,i,j) = temp_org(k,i,j) + LAPS * dz
-                Rtot = Rdry * ( 1.0_RP + EPSTvap * qv_org(2,i,j) )
-                dens_org(2,i,j) = ( pres_org(k,i,j) + GRAV * dens_org(k,i,j) * dz * 0.5_RP ) &
-                                / ( Rtot * temp_org(2,i,j) - GRAV * dz * 0.5_RP )
-                pres_org(2,i,j) = dens_org(2,i,j) * Rtot * temp_org(2,i,j)
-             end do
-             end do
+                rh_org(2,i,j) = UNDEF
+             enddo
+             enddo
           end if
        else
-          !$omp parallel do &
-          !$omp private(k)
-          do j = 1, JA_org
-          do i = 1, IA_org
-             k = lm_layer(i,j)
-             ! ignore surface variables
-             cz_org  (2,i,j)   = cz_org  (k,i,j)
-             velz_org(2,i,j)   = velz_org(k,i,j)
-             velx_org(2,i,j)   = velx_org(k,i,j)
-             vely_org(2,i,j)   = vely_org(k,i,j)
-             pres_org(2,i,j)   = pres_org(k,i,j)
-             temp_org(2,i,j)   = temp_org(k,i,j)
-             dens_org(2,i,j)   = dens_org(k,i,j)
-             qv_org  (2,i,j)   = qv_org  (k,i,j)
-             qhyd_org(2,i,j,:) = qhyd_org(k,i,j,:)
-             RN222_org(2,i,j)  = RN222_org(k,i,j)
-!!$          ! guess surface height (elevation)
-!!$          if ( pres_org(2,i,j) < pres_org(1,i,j) ) then
-!!$             lp2 = log( pres_org(2,i,j) / pres_org(1,i,j) )
-!!$          else
-!!$             lp2 = -1.0_RP
-!!$          end if
-!!$          if ( pres_org(k,i,j) < pres_org(1,i,j) ) then
-!!$             lp3 = log( pres_org(k,i,j) / pres_org(1,i,j) )
-!!$          else
-!!$             lp3 = -1.0_RP
-!!$          end if
-!!$          cz_org(2,i,j) = cz_org(k,i,j) * lp2 / lp3
-!!$          if ( cz_org(2,i,j) < 0.0_RP ) cz_org(2,i,j) = cz_org(k,i,j)
-          end do
-          end do
+          call read2d( start(2:), count(2:), work2d(:,:), "Q2", file_id_atm, basename_num, exist=exist, step=nt )
+          if ( exist ) then
+             !$omp parallel do
+             do j = 1, JA_org
+             do i = 1, IA_org
+                qv_org(2,i,j) = work2d(i,j)
+             enddo
+             enddo
+          else
+             !$omp parallel do
+             do j = 1, JA_org
+             do i = 1, IA_org
+                qv_org(2,i,j) = UNDEF
+             enddo
+             enddo
+          end if
+
        end if
 
-       if ( var_id(Ia_q2,1) < 0 .and. var_id(Ia_rh2,1) < 0 ) then
-          !$omp parallel do private(k)
-          do j = 1, JA_org
-          do i = 1, IA_org
-             k = lm_layer(i,j)
-             qv_org(2,i,j) = qv_org(k,i,j)
-          end do
-          end do
+       ! topo
+       coef = 1.0_RP
+       call read2d( start(2:), count(2:), work2d(:,:), "topo", file_id_atm, basename_num, exist=exist, step=nt )
+       if ( .not. exist ) then
+          ! surface geopotential
+          coef = 1.0_RP / GRAV
+          call read2d( start(2:), count(2:), work2d(:,:), "SGP", file_id_atm, basename_num, exist=exist, step=nt )
        end if
-       !$omp parallel do private(k)
-       do j = 1, JA_org
-       do i = 1, IA_org
-          k = lm_layer(i,j)
-          qv_org   (1,i,j)   = qv_org   (k,i,j)
-          qhyd_org (1,i,j,:) = qhyd_org (k,i,j,:)
-          qhyd_org (2,i,j,:) = qhyd_org (k,i,j,:)
-          RN222_org(1,i,j)   = RN222_org(k,i,j)
-          RN222_org(2,i,j)   = RN222_org(k,i,j)
-       end do
-       end do
-
-       ! sea level
-       !$omp parallel do
-       do j = 1, JA_org
-       do i = 1, IA_org
-          temp_org(1,i,j) = temp_org(2,i,j) + LAPS * cz_org(2,i,j)
-       end do
-       end do
-       if ( var_id(Ia_slp,1) > 0 ) then
+       if ( exist ) then
           !$omp parallel do
           do j = 1, JA_org
           do i = 1, IA_org
-             dens_org(1,i,j) = pres_org(1,i,j) / ( Rdry * temp_org(1,i,j) )
-          end do
-          end do
-       else
-          !$omp parallel do
-          do j = 1, JA_org
-          do i = 1, IA_org
-             dens_org(1,i,j) = ( pres_org(2,i,j) + GRAV * dens_org(2,i,j) * cz_org(2,i,j) * 0.5_RP ) &
-                             / ( Rdry * temp_org(1,i,j) - GRAV * cz_org(2,i,j) * 0.5_RP )
-             pres_org(1,i,j) = dens_org(1,i,j) * Rdry * temp_org(1,i,j)
-          end do
-          end do
-       end if
-
-    else
-       !$omp parallel do
-       do j = 1, JA_org
-       do i = 1, IA_org
-          velz_org(1:2,i,j)   = UNDEF
-          velx_org(1:2,i,j)   = UNDEF
-          vely_org(1:2,i,j)   = UNDEF
-          dens_org(1:2,i,j)   = UNDEF
-          temp_org(1:2,i,j)   = UNDEF
-          qv_org  (1:2,i,j)   = UNDEF
-          qhyd_org(1:2,i,j,:) = UNDEF
-          RN222_org(1:2,i,j)  = UNDEF
-          pres_org(1  ,i,j)   = UNDEF
-          cz_org  (1  ,i,j)   = UNDEF
-       end do
-       end do
-    end if
-
-    ! check verticaly extrapolated data in outer model
-    if( pressure_coordinates .and. var_id(Ia_ps,1) > 0 ) then
-       !$omp parallel do private(k)
-       do j = 1, JA_org
-       do i = 1, IA_org
-          if ( under_sfc ) then
-             k = lm_layer(i,j)
-             if ( pres_org(1,i,j) < pres_org(k,i,j) ) then
-                pres_org(1,i,j) = UNDEF
-                cz_org  (1,i,j) = UNDEF
-             end if
-             if ( pres_org(2,i,j) < pres_org(k,i,j) ) then
-                pres_org(2,i,j) = pres_org(1,i,j)
-                cz_org  (2,i,j) = cz_org(1,i,j)
-             end if
-             cycle
-          end if
-          do k = 3, KA_org
-             if( pres_org(k,i,j) > pres_org(2,i,j) ) then ! if Pressure is larger than Surface pressure
-                if ( sfc_diagnoses ) then
-                   velz_org(k,i,j)   = velz_org(2,i,j)
-                   velx_org(k,i,j)   = velx_org(2,i,j)
-                   vely_org(k,i,j)   = vely_org(2,i,j)
-                   pres_org(k,i,j)   = pres_org(2,i,j)
-                   dens_org(k,i,j)   = dens_org(2,i,j)
-                   temp_org(k,i,j)   = temp_org(2,i,j)
-                   qv_org  (k,i,j)   = qv_org  (2,i,j)
-                   qhyd_org(k,i,j,:) = qhyd_org(2,i,j,:)
-                   cz_org  (k,i,j)   = cz_org  (2,i,j)
-                   RN222_org(k,i,j)  = RN222_org(2,i,j)
-                else
-                   velz_org(k,i,j)   = UNDEF
-                   velx_org(k,i,j)   = UNDEF
-                   vely_org(k,i,j)   = UNDEF
-                   pres_org(k,i,j)   = UNDEF
-                   dens_org(k,i,j)   = UNDEF
-                   temp_org(k,i,j)   = UNDEF
-                   qv_org  (k,i,j)   = UNDEF
-                   qhyd_org(k,i,j,:) = UNDEF
-                   cz_org  (k,i,j)   = UNDEF
-                   RN222_org(k,i,j)  = UNDEF
-                end if
-             end if
+             cz_org(2,i,j) = work2d(i,j) * coef
           enddo
-       enddo
-       enddo
-    else if ( var_id(Ia_topo,1) > 0 ) then
-       !$omp parallel do private(k)
-       do j = 1, JA_org
-       do i = 1, IA_org
-          if ( under_sfc ) then
-             k = lm_layer(i,j)
-             if ( cz_org(1,i,j) < cz_org(k,i,j) ) then
-                pres_org(1,i,j) = UNDEF
-                cz_org  (1,i,j) = UNDEF
-             end if
-             if ( cz_org(1,i,j) < cz_org(k,i,j) ) then
-                pres_org(2,i,j) = pres_org(1,i,j)
-                cz_org  (2,i,j) = cz_org(1,i,j)
-             end if
-             cycle
-          end if
+          enddo
+       else
+          !$omp parallel do
+          do j = 1, JA_org
+          do i = 1, IA_org
+             cz_org(2,i,j) = UNDEF
+          enddo
+          enddo
+       end if
 
-       do k = 3, KA_org
-          if( cz_org(k,i,j) < cz_org(2,i,j) ) then
-             if ( sfc_diagnoses ) then
-                velz_org(k,i,j)   = velz_org(2,i,j)
-                velx_org(k,i,j)   = velx_org(2,i,j)
-                vely_org(k,i,j)   = vely_org(2,i,j)
-                pres_org(k,i,j)   = pres_org(2,i,j)
-                dens_org(k,i,j)   = dens_org(2,i,j)
-                temp_org(k,i,j)   = temp_org(2,i,j)
-                qv_org  (k,i,j)   = qv_org  (2,i,j)
-                qhyd_org(k,i,j,:) = qhyd_org(2,i,j,:)
-                cz_org  (k,i,j)   = cz_org  (2,i,j)
-                RN222_org(k,i,j)  = 0.0_RP
-             else
-                velz_org(k,i,j)   = UNDEF
-                velx_org(k,i,j)   = UNDEF
-                vely_org(k,i,j)   = UNDEF
-                pres_org(k,i,j)   = UNDEF
-                dens_org(k,i,j)   = UNDEF
-                temp_org(k,i,j)   = UNDEF
-                qv_org  (k,i,j)   = UNDEF
-                qhyd_org(k,i,j,:) = UNDEF
-                cz_org  (k,i,j)   = UNDEF
-                RN222_org(k,i,j)  = UNDEF
-             end if
-          endif
-       enddo
-       enddo
-       enddo
     end if
 
     return
@@ -1287,344 +637,319 @@ contains
   !-----------------------------------------------------------------------------
   !> Land Setup
   subroutine ParentLandSetupGrADS( &
-       ldims,                       & ! (out)
-       use_waterratio,              & ! (out)
-       use_file_landwater,          & ! (in)
-       basename                     )
+       ldims,            &
+       timelen,          &
+       lon_all, lat_all, &
+       basename,         &
+       basename_num      )
+    use scale_const, only: &
+       D2R => CONST_D2R
     use scale_file_grads, only: &
        FILE_GrADS_open, &
        FILE_GrADS_get_shape, &
-       FILE_GrADS_varid
+       FILE_GrADS_varid, &
+       FILE_GrADS_isOneD
     implicit none
-    integer,          intent(out) :: ldims(3)
-    logical,          intent(out) :: use_waterratio
-    logical,          intent(in)  :: use_file_landwater ! use landwater data from files
-    character(len=*), intent(in)  :: basename
+    integer,           intent(out) :: ldims(3)
+    integer,           intent(out) :: timelen
+    real(RP), allocatable, intent(out) :: lon_all(:,:)
+    real(RP), allocatable, intent(out) :: lat_all(:,:)
 
-    character(len=H_SHORT) :: item
-    integer                :: ielem
+    character(len=*), intent(in)  :: basename
+    character(len=*), intent(in)  :: basename_num
+
+    character(len=7) :: vname
+    integer :: vid
+    integer :: shape(2)
+    logical :: exist
     !---------------------------------------------------------------------------
 
     LOG_INFO("ParentLandSetupGrADS",*) 'Real Case/Land Input File Type: GrADS format'
 
-    !--- initialization
-    use_waterratio = .false.
 
     if ( basename == "" ) then
-       LOG_ERROR("ParentLandSetupGrADS",*) '"BASEMAAME" is not specified in "PARAM_MKINIT_ATMOS_GRID_CARTESC_REAL_ATOMS"!', trim(basename)
+       LOG_ERROR("ParentLandSetupGrADS",*) '"BASENAME_ORG" is not specified in "PARAM_MKINIT_REAL_LAND"!', trim(basename)
        call PRC_abort
     endif
 
+    ! open
     call FILE_GrADS_open( basename,   & ! (in)
                           file_id_lnd ) ! (out)
 
-    call FILE_GrADS_get_shape( file_id_lnd, "STEMP", & ! (in)
-                               ldims(:)              ) ! (out)
+    ! get shape
+    call FILE_GrADS_varid( file_id_lnd, "LAND_SFC_TEMP", & ! (in)
+                           vid                           ) ! (out)
+    if ( vid < 0 ) then
+       call FILE_GrADS_varid( file_id_lnd, "LAND_TEMP", & ! (in)
+                              vid                       ) ! (out)
+    end if
+    if ( vid < 0 ) then
+       call FILE_GrADS_varid( file_id_lnd, "SFC_TEMP", & ! (in)
+                              vid                      ) ! (out)
+    end if
+    if ( vid < 0 ) then
+       call FILE_GrADS_varid( file_id_lnd, "STEMP", & ! (in)
+                              vid                   ) ! (out)
+    end if
+    if ( vid < 0 ) then
+       LOG_ERROR("ParentLandSetupGrADS",*) '"LAND_SFC_TEMP", "LAND_TEMP", "SFC_TEMP" or "STEMP" is necessary'
+       call PRC_abort
+    end if
+    call FILE_GrADS_get_shape( file_id_lnd, vid, & ! (in)
+                               ldims(:)          ) ! (out)
 
 
-    ! check existence
-    do ielem = 1, num_item_list_land
-       item  = item_list_land(ielem)
-       call FILE_GrADS_varid( file_id_lnd, item, & ! (in)
-                              var_id(ielem,2)    ) ! (out)
-    end do
+    ! get lon, lat
+    allocate( lon_all(ldims(2), ldims(3)) )
+    allocate( lat_all(ldims(2), ldims(3)) )
 
-    ! check necessary data
-    do ielem = 1, num_item_list_land
-       item  = item_list_land(ielem)
 
-       select case(item)
-       case('lsmask')
-          if ( var_id(ielem,2) < 0 ) then
-             LOG_WARN("ParentLandSetupGrADS",*) trim(item),' is not found & not used.'
-          endif
-          cycle
-       case('topo','topo_sfc')
-          if ( var_id(Il_topo_sfc,2) < 0 ) then
-             if ( var_id(Il_topo,2) < 0 ) then
-                LOG_WARN("ParentLandSetupGrADS",*) '"topo" and "topo_sfc" are not found & not used.'
-             end if
-          else
-             var_id(Il_topo,2) = -1
-          end if
-          cycle
-       case('lon', 'lat', 'lon_sfc', 'lat_sfc')
-          if ( var_id(Il_lon_sfc,2) < 0 ) then
-             if ( var_id(Il_lon,2) < 0 ) then
-                LOG_ERROR("ParentLandSetupGrADS",*) 'either lon or lon_sfc is required'
-                call PRC_abort
-             end if
-          else
-             var_id(Il_lon,2) = -1
-          end if
-          if ( var_id(Il_lat_sfc,2) < 0 ) then
-             if ( var_id(Il_lat,2) < 0 ) then
-                LOG_ERROR("ParentLandSetupGrADS",*) 'either lat or lat_sfc is required'
-                call PRC_abort
-             end if
-          else
-             var_id(Il_lat,2) = -1
-          end if
-          cycle
-       case('SMOISVC', 'SMOISDS')
-          if ( use_file_landwater ) then
-             if ( var_id(Il_smoisvc,2) < 0 .and. var_id(Il_smoisds,2) < 0 ) then
-                LOG_ERROR("ParentLandSetupGrADS",*) 'Not found in grads namelist! : ',trim(item_list_land(ielem))
-                call PRC_abort
-             end if
-             if ( var_id(Il_smoisds,2) > 0 ) then
-                use_waterratio = .true.
-                var_id(Il_smoisvc,2) = -1
-             end if
-          else
-             var_id(Il_smoisvc,2) = -1
-             var_id(Il_smoisds,2) = -1
-          end if
-          cycle
-       case default ! llev, SKINT, STEMP
-          if ( var_id(ielem,2) < 0 ) then
-             LOG_ERROR("ParentLandSetupGrADS",*) 'Not found in grads namelist! : ',trim(item_list_land(ielem))
+    call FILE_GrADS_varid( file_id_lnd, "lon_sfc", & ! (in)
+                           vid                     ) ! (out)
+    if ( vid > 0 ) then
+       vname = "lon_sfc"
+    else
+       call FILE_GrADS_varid( file_id_lnd, "lon", & ! (in)
+                              vid                 ) ! (out)
+       if ( vid < 0 ) then
+          LOG_ERROR("ParentLandSetupGrADS",*) '"lon_sfc" or "lon" is necessary'
+          call PRC_abort
+       end if
+       call FILE_GrADS_get_shape( file_id_lnd, vid, & ! (in)
+                                  shape(:)          ) ! (out)
+       if ( FILE_GrADS_isOneD( file_id_lnd, vid ) ) then
+          if ( ldims(2) .ne. shape(1) .and. shape(1) .ne. -1 ) then
+             LOG_ERROR("ParentLandSetupGrADS",*) 'dimension of "lon" is different! ', ldims(2), shape(1)
              call PRC_abort
-          endif
-       end select
+          end if
+       else
+          if ( ldims(2) .ne. shape(1) .or. ldims(3) .ne. shape(2) ) then
+             LOG_ERROR("ParentLandSetupGrADS",*) 'dimension of "lon" is different! ', ldims(2), shape(1), ldims(3), shape(2)
+             call PRC_abort
+          end if
+       end if
+       vname = "lon"
+    end if
+    call read2d( (/1,1/), ldims(2:3), lon_all(:,:), vname, file_id_lnd, basename_num, oneD=1 )
+    lon_all(:,:) = lon_all(:,:) * D2R
 
-    end do
+
+    call FILE_GrADS_varid( file_id_lnd, "lat_sfc", & ! (in)
+                           vid                    ) ! (out)
+    if ( vid > 0 ) then
+       vname = "lat_sfc"
+    else
+       call FILE_GrADS_varid( file_id_lnd, "lat", & ! (in)
+                              vid                 ) ! (out)
+       if ( vid < 0 ) then
+          LOG_ERROR("ParentLandSetupGrADS",*) '"lat_sfc" or "lat" is necessary'
+          call PRC_abort
+       end if
+       call FILE_GrADS_get_shape( file_id_lnd, vid, & ! (in)
+                                  shape(:)          ) ! (out)
+       if ( FILE_GrADS_isOneD( file_id_lnd, vid ) ) then
+          if ( ldims(3) .ne. shape(1) .and. shape(1) .ne. -1 ) then
+             LOG_ERROR("ParentLandSetupGrADS",*) 'dimension of "lat" is different! ', ldims(2), shape(1)
+             call PRC_abort
+          end if
+       else
+          if ( ldims(2) .ne. shape(1) .or. ldims(3) .ne. shape(2) ) then
+             LOG_ERROR("ParentLandSetupGrADS",*) 'dimension of "lat" is different! ', ldims(2), shape(1), ldims(3), shape(2)
+             call PRC_abort
+          end if
+       end if
+       vname = "lat"
+    end if
+    call read2d( (/1,1/), ldims(2:3), lat_all(:,:), vname, file_id_atm, basename_num, oneD=2 )
+    lat_all(:,:) = lat_all(:,:) * D2R
+
+
+    ! tentative
+    timelen = 1
+
 
     return
   end subroutine ParentLandSetupGrADS
 
   subroutine ParentLandInputGrADS( &
-      tg_org,             & ! (out)
-      strg_org,           & ! (out)
-      smds_org,           & ! (out)
-      lst_org,            & ! (out)
-      llon_org,           & ! (out)
-      llat_org,           & ! (out)
-      lz_org,             & ! (out)
-      topo_org,           & ! (out)
-      lmask_org,          & ! (out)
-      basename_num,       & ! (in)
-      ldims,              & ! (in)
-      use_file_landwater, & ! (in)
-      nt                  ) ! (in)
+       KA_org, KS_org, KE_org, &
+       IA_org, IS_org, IE_org, &
+       JA_org, JS_org, JE_org, &
+       tg_org,             & ! (out)
+       strg_org,           & ! (out)
+       smds_org,           & ! (out)
+       lst_org,            & ! (out)
+       lz_org,             & ! (out)
+       topo_org,           & ! (out)
+       lmask_org,          & ! (out)
+       use_waterratio,     & ! (out)
+       ldims,              & ! (in)
+       basename_num,       & ! (in)
+       use_file_landwater, & ! (in)
+       nt                  ) ! (in)
     use scale_prc, only: &
        PRC_abort
     use scale_const, only: &
        UNDEF => CONST_UNDEF, &
        D2R   => CONST_D2R,   &
+       GRAV  => CONST_GRAV,  &
        TEM00 => CONST_TEM00, &
        EPS   => CONST_EPS
     use scale_file_grads, only: &
-       FILE_GrADS_isOneD,    &
+       FILE_GrADS_varcheck,  &
        FILE_GrADS_get_shape, &
        FILE_GrADS_read
     implicit none
+    integer, intent(in) :: KA_org, KS_org, KE_org
+    integer, intent(in) :: IA_org, IS_org, IE_org
+    integer, intent(in) :: JA_org, JS_org, JE_org
 
-    real(RP),         intent(out) :: tg_org   (:,:,:)
-    real(RP),         intent(out) :: strg_org (:,:,:)
-    real(RP),         intent(out) :: smds_org (:,:,:)
-    real(RP),         intent(out) :: lst_org  (:,:)
-    real(RP),         intent(out) :: llon_org (:,:)
-    real(RP),         intent(out) :: llat_org (:,:)
-    real(RP),         intent(out) :: lz_org   (:)
-    real(RP),         intent(out) :: topo_org (:,:)
-    real(RP),         intent(out) :: lmask_org(:,:)
-    character(len=*), intent(in)  :: basename_num
-    integer,          intent(in)  :: ldims(3)
-    logical,          intent(in)  :: use_file_landwater ! use land water data from files
-    integer,          intent(in)  :: nt
+    real(RP), intent(out) :: tg_org   (KA_org,IA_org,JA_org)
+    real(RP), intent(out) :: strg_org (KA_org,IA_org,JA_org)
+    real(RP), intent(out) :: smds_org (KA_org,IA_org,JA_org)
+    real(RP), intent(out) :: lst_org  (IA_org,JA_org)
+    real(RP), intent(out) :: lz_org   (KA_org)
+    real(RP), intent(out) :: topo_org (IA_org,JA_org)
+    real(RP), intent(out) :: lmask_org(IA_org,JA_org)
+    logical,  intent(out) :: use_waterratio
 
-    real(RP) :: lon1D(ldims(2)), lat1D(ldims(3))
-    integer  :: shape(3)
+    integer,          intent(in) :: ldims(3)
+    character(len=*), intent(in) :: basename_num
+    logical,          intent(in) :: use_file_landwater ! use land water data from files
+    integer,          intent(in) :: nt
 
-    character(len=H_SHORT) :: item
-    integer                :: ielem
+    integer :: start(3), count(3), shape(2)
+    logical :: exist
 
+    integer :: vid
     integer :: i, j, k
     !---------------------------------------------------------------------------
 
-    !$omp parallel do collapse(2)
-    do j = 1, ldims(3)
-    do i = 1, ldims(2)
-       lmask_org(i,j) = UNDEF
-       topo_org(i,j)  = UNDEF
-    end do
-    end do
+    start(:) = (/KS_org,IS_org,JS_org/)
+    count(:) = (/KA_org,IA_org,JA_org/)
 
-    loop_InputLandGrADS : do ielem = 1, num_item_list_land
+    ! lsmask
+    call read2d( start(2:), count(2:), lmask_org(:,:), "lsmask", file_id_lnd, basename_num, exist=exist, step=nt )
+    if ( .not. exist ) then
+       !$omp parallel do
+       do j = 1, JA_org
+       do i = 1, IA_org
+          lmask_org(i,j) = UNDEF
+       end do
+       end do
+    end if
 
-       item  = item_list_land(ielem)
+    ! llev
+    call FILE_GrADS_get_shape( file_id_lnd, "llev", & ! (in)
+                               shape(:)             ) ! (out)
+    if ( ldims(1) .ne. shape(1) )then
+       LOG_ERROR("ParentLandInputGrADS",*) '"nz" must be equal to nz of "STEMP" for llev. :', shape(1), ldims(1)
+       call PRC_abort
+    endif
+    call FILE_GrADS_read( file_id_lnd, "llev", & ! (in)
+                          lz_org(:)            ) ! (out)
 
-       if ( var_id(ielem,2) < 0 ) cycle
+    ! LAND_TEMP, STEMP
+    call read3d( start(:), count(:), tg_org(:,:,:), "LAND_TEMP", file_id_lnd, basename_num, exist=exist, step=nt )
+    if ( .not. exist ) then
+       call read3d( start(:), count(:), tg_org(:,:,:), "STEMP", file_id_lnd, basename_num, exist=exist )
+    end if
+    if ( .not. exist ) then
+       LOG_ERROR("ParentAtmosInputGrADS",*) '"LAND_TEMP" or "STEMP" is necessary'
+       call PRC_abort
+    endif
 
-       ! read data
-       select case(item)
-       case("lsmask")
-
-          call FILE_GrADS_read( file_id_lnd, var_id(ielem,2), & ! (in)
-                                lmask_org(:,:),               & ! (out)
-                                postfix = basename_num        ) ! (in)
-
-       case("lon", "lon_sfc")
-
-          if ( item == "lon" ) then
-             if ( FILE_GrADS_isOneD( file_id_lnd, var_id(ielem,2) ) ) then
-                call FILE_GrADS_get_shape( file_id_lnd, var_id(ielem,2), & ! (in)
-                                           shape(1:1)                    ) ! (out)
-                if ( ldims(2).ne.shape(1) .and. shape(1).ne.-1 ) then
-                   LOG_ERROR("ParentLandInputGrADS",*) 'dimension of "lon" is different! ', ldims(2), shape(1)
-                   call PRC_abort
-                end if
-             else
-                call FILE_GrADS_get_shape( file_id_lnd, var_id(ielem,2), & ! (in)
-                                           shape(1:2)                    ) ! (out)
-                if ( ldims(2).ne.shape(1) .or. ldims(3).ne.shape(2) ) then
-                   LOG_ERROR("ParentLandInputGrADS",*) 'dimension of "lon" is different! ', ldims(2), shape(1), ldims(3), shape(2)
-                   call PRC_abort
-                end if
-             end if
-          end if
-
-          if ( FILE_GrADS_isOneD( file_id_lnd, var_id(ielem,2) ) ) then
-             call FILE_GrADS_read( file_id_lnd, var_id(ielem,2), & ! (in)
-                                   lon1D(:)                      ) ! (out)
+    if ( use_file_landwater ) then
+       ! LAND_WATER, SMOISVC, SMOISDS
+       call read3d( start(:), count(:), strg_org(:,:,:), "LAND_WATER", file_id_lnd, basename_num, exist=exist, step=nt )
+       if ( .not. exist ) then
+          call read3d( start(:), count(:), strg_org(:,:,:), "SMOISVC", file_id_lnd, basename_num, exist=exist, step=nt )
+       end if
+       if ( exist ) then
+          !$omp parallel do collapse(2)
+          do j = 1, JA_org
+          do i = 1, IA_org
+          do k = 2, KA_org
+             if ( strg_org(k,i,j) == UNDEF ) strg_org(k,i,j) = strg_org(k-1,i,j)
+          end do
+          end do
+          end do
+          use_waterratio = .false.
+       else
+          call read3d( start(:), count(:), smds_org(:,:,:), "SMOISDS", file_id_lnd, basename_num, exist=exist, step=nt )
+          if ( exist ) then
              !$omp parallel do collapse(2)
-             do j = 1, ldims(3)
-             do i = 1, ldims(2)
-                llon_org(i,j) = lon1D(i) * D2R
-             enddo
-             enddo
+             do j = 1, JA_org
+             do i = 1, IA_org
+             do k = 2, KA_org
+                if ( smds_org(k,i,j) == UNDEF ) smds_org(k,i,j) = smds_org(k-1,i,j)
+             end do
+             end do
+             end do
+             use_waterratio = .true.
           else
-             call FILE_GrADS_read( file_id_lnd, var_id(ielem,2), & ! (in)
-                                   llon_org(:,:),                & ! (out)
-                                   postfix = basename_num        ) ! (in)
-             !$omp parallel do collapse(2)
-             do j = 1, ldims(3)
-             do i = 1, ldims(2)
-                llon_org(i,j) = llon_org(i,j) * D2R
-             enddo
-             enddo
+             LOG_ERROR("ParentAtmosInputGrADS",*) '"LAND_WATER", "SMOISVC", or "SMOISDS" is necessary'
+             call PRC_abort
           end if
+       endif
 
-       case("lat", "lat_sfc")
+    end if ! use_file_landwater
 
-          if ( item == "lat" ) then
-             if ( FILE_GrADS_isOneD( file_id_lnd, var_id(ielem,2) ) ) then
-                call FILE_GrADS_get_shape( file_id_lnd, var_id(ielem,2), & ! (in)
-                                           shape(1:1)                    ) ! (out)
-                if ( ldims(3).ne.shape(1) .and. shape(1).ne.-1 ) then
-                   LOG_ERROR("ParentLandInputGrADS",*) 'dimension of "lat" is different! ', ldims(3), shape(1)
-                   call PRC_abort
-                end if
-             else
-                call FILE_GrADS_get_shape( file_id_lnd, var_id(ielem,2), & ! (in)
-                                           shape(1:2)                    ) ! (out)
-                if ( ldims(2).ne.shape(1) .or. ldims(3).ne.shape(2) ) then
-                   LOG_ERROR("ParentLandInputGrADS",*) 'dimension of "lat" is different! ', ldims(2), shape(1), ldims(3), shape(2)
-                   call PRC_abort
-                end if
-             end if
-          end if
 
-          if ( FILE_GrADS_isOneD( file_id_lnd, var_id(ielem,2) ) ) then
-             call FILE_GrADS_read( file_id_lnd, var_id(ielem,2), & ! (in)
-                                   lat1D(:)                      ) ! (out)
-             !$omp parallel do collapse(2)
-             do j = 1, ldims(3)
-             do i = 1, ldims(2)
-                llat_org(i,j) = lat1D(j) * D2R
-             enddo
-             enddo
+    ! LAND_SFC_TEMP, SFC_TEMP, SKINT
+    call read2d( start(2:), count(2:), lst_org(:,:), "LAND_SFC_TEMP", file_id_lnd, basename_num, exist=exist, step=nt )
+    if ( .not. exist ) then
+       call read2d( start(2:), count(2:), lst_org(:,:), "SFC_TEMP", file_id_lnd, basename_num, exist=exist )
+    end if
+    if ( .not. exist ) then
+       call read2d( start(2:), count(2:), lst_org(:,:), "SKINT", file_id_lnd, basename_num, exist=exist )
+    end if
+    if ( .not. exist ) then
+       LOG_ERROR("ParentAtmosInputGrADS",*) '"LAND_SFC_TEMP", "SFC_TEMP", or "SKINT" is necessary'
+       call PRC_abort
+    endif
+
+
+    ! topo_sfc, topo, SGP
+
+    call read2d( start(2:), count(2:), topo_org(:,:), "topo_sfc", file_id_lnd, basename_num, exist=exist, step=nt )
+    if ( .not. exist ) then
+       call FILE_GrADS_varcheck( file_id_lnd, "topo", & ! (in)
+                                 exist                ) ! (out)
+       if ( exist ) then
+          call FILE_GrADS_get_shape( file_id_lnd, "topo", & ! (in)
+                                     shape(:)             ) ! (out)
+          if ( ldims(2).ne.shape(1) .or. ldims(3).ne.shape(2) ) then
+             LOG_WARN_CONT(*) 'dimension of "topo" is different! ', ldims(2), shape(1), ldims(3), shape(2)
+             exist = .false.
           else
-             call FILE_GrADS_read( file_id_lnd, var_id(ielem,2), & ! (in)
-                                   llat_org(:,:),                & ! (out)
-                                   postfix = basename_num        ) ! (in)
-             !$omp parallel do collapse(2)
-             do j = 1, ldims(3)
-             do i = 1, ldims(2)
-                llat_org(i,j) = llat_org(i,j) * D2R
-             enddo
-             enddo
+             call read2d( start(2:), count(2:), topo_org(:,:), "topo", file_id_lnd, basename_num, exist=exist )
           end if
-
-       case("llev")
-
-          call FILE_GrADS_get_shape( file_id_lnd, var_id(ielem,2), & ! (in)
-                                     shape(:)                      ) ! (out)
-          if( ldims(1) .ne. shape(1) )then
-             LOG_ERROR("ParentLandInputGrADS",*) '"nz" must be equal to nz of "STEMP" for llev. :', shape(1), ldims(1)
-             call PRC_abort
-          endif
-          call FILE_GrADS_read( file_id_lnd, var_id(ielem,2), & ! (in)
-                                lz_org(:)                     ) ! (out)
-
-       case('STEMP')
-
-          call FILE_GrADS_get_shape( file_id_lnd, var_id(ielem,2), & ! (in)
-                                     shape(:)                      ) ! (out)
-          if ( ldims(1) .ne. shape(1) ) then
-             LOG_ERROR("ParentAtmosInputGrADS",*) '"nz" must be equal to nz of "STEMP" for ',trim(item),'. :', shape(1), ldims(1)
-             call PRC_abort
-          endif
-
-          call FILE_GrADS_read( file_id_lnd, var_id(ielem,2), & ! (in)
-                                tg_org(:,:,:),                & ! (out)
-                                step = nt,                    & ! (in)
-                                postfix = basename_num        ) ! (in)
-
-       case('SMOISVC')
-
-          call FILE_GrADS_get_shape( file_id_lnd, var_id(ielem,2), & ! (in)
-                                     shape(:)                      ) ! (out)
-          if ( ldims(1) .ne. shape(1) ) then
-             LOG_ERROR("ParentAtmosInputGrADS",*) '"nz" must be equal to nz of "STEMP" for ',trim(item),'. :', shape(1), ldims(1)
-             call PRC_abort
-          endif
-
-          call FILE_GrADS_read( file_id_lnd, var_id(ielem,2), & ! (in)
-                                strg_org(:,:,:),              & ! (out)
-                                step = nt,                    & ! (in)
-                                postfix = basename_num        ) ! (in)
-
-       case('SMOISDS')
-
-          call FILE_GrADS_get_shape( file_id_lnd, var_id(ielem,2), & ! (in)
-                                     shape(:)                      ) ! (out)
-          if ( ldims(1) .ne. shape(1) ) then
-             LOG_ERROR("ParentAtmosInputGrADS",*) '"nz" must be equal to nz of "STEMP" for ',trim(item),'. :', shape(1), ldims(1)
-             call PRC_abort
-          endif
-
-          call FILE_GrADS_read( file_id_lnd, var_id(ielem,2), & ! (in)
-                                smds_org(:,:,:),              & ! (out)
-                                step = nt,                    & ! (in)
-                                postfix = basename_num        ) ! (in)
-
-       case('SKINT')
-
-          call FILE_GrADS_read( file_id_lnd, var_id(ielem,2), & ! (in)
-                                lst_org(:,:),                 & ! (out)
-                                step = nt,                    & ! (in)
-                                postfix = basename_num        ) ! (in)
-
-       case('topo', 'topo_sfc')
-
-          if ( item == "topo" ) then
-             call FILE_GrADS_get_shape( file_id_lnd, var_id(ielem,2), & ! (in)
-                                        shape(1:2)                    ) ! (out)
-             if ( ldims(2).ne.shape(1) .or. ldims(3).ne.shape(2) ) then
-                LOG_WARN("ParentLandInputGrADS",*) 'namelist of "topo_sfc" is not found in grads namelist!'
-                LOG_WARN_CONT(*) 'dimension of "topo" is different! ', ldims(2), shape(1), ldims(3), shape(2)
-                cycle
-             end if
+       end if
+    end if
+    if ( .not. exist ) then
+       call FILE_GrADS_varcheck( file_id_lnd, "SGP", & ! (in)
+                                 exist               ) ! (out)
+       if ( exist ) then
+          call FILE_GrADS_get_shape( file_id_lnd, "SGP", & ! (in)
+                                     shape(:)            ) ! (out)
+          if ( ldims(2).ne.shape(1) .or. ldims(3).ne.shape(2) ) then
+             LOG_WARN_CONT(*) 'dimension of "SGP" is different! ', ldims(2), shape(1), ldims(3), shape(2)
+             exist = .false.
+          else
+             call read2d( start(2:), count(2:), topo_org(:,:), "SGP", file_id_lnd, basename_num, exist=exist )
+             !$omp parallel do
+             do j = 1, JA_org
+             do i = 1, IA_org
+                topo_org(i,j) = topo_org(i,j) / GRAV
+             end do
+             end do
           end if
-
-          call FILE_GrADS_read( file_id_lnd, var_id(ielem,2), & ! (in)
-                                topo_org(:,:),                & ! (out)
-                                postfix = basename_num        ) ! (in)
-
-       end select
-    enddo loop_InputLandGrADS
+       end if
+    end if
+    if ( .not. exist ) then
+       LOG_WARN("ParentLandInputGrADS",*) '"topo_sfc", "topo", or "SGP" is not found in grads namelist'
+    end if
 
     return
   end subroutine ParentLandInputGrADS
@@ -1632,38 +957,59 @@ contains
   !-----------------------------------------------------------------------------
   !> Ocean Setup
   subroutine ParentOceanSetupGrADS( &
-       odims,   & ! (out)
-       timelen, & ! (out)
-       basename ) ! (in)
+       odims,            & ! (out)
+       timelen,          & ! (out)
+       lon_all, lat_all, & ! (out)
+       basename,         & ! (in)
+       basename_num      ) ! (in)
+    use scale_const, only: &
+       D2R => CONST_D2R
     use scale_file_grads, only: &
        FILE_GrADS_open, &
        FILE_GrADS_varid, &
-       FILE_GrADS_get_shape
+       FILE_GrADS_get_shape, &
+       FILE_GrADS_isOneD
     implicit none
 
-    integer,          intent(out) :: odims(2)
-    integer,          intent(out) :: timelen
-    character(len=*), intent(in)  :: basename
+    integer,           intent(out) :: odims(2)
+    integer,           intent(out) :: timelen
+    real(RP), allocatable, intent(out) :: lon_all(:,:)
+    real(RP), allocatable, intent(out) :: lat_all(:,:)
 
-    character(len=H_SHORT) :: item
-    integer                :: ielem
-    integer                :: vid
+    character(len=*), intent(in)  :: basename
+    character(len=*), intent(in)  :: basename_num
+
+    character(len=7) :: vname
+    integer :: vid
+    integer :: shape(2)
+    logical :: exist
     !---------------------------------------------------------------------------
 
     LOG_INFO("ParentOceanSetupGrADS",*) 'Real Case/Ocean Input File Type: GrADS format'
 
+    if ( basename == "" ) then
+       LOG_ERROR("ParentOceanSetupGrADS",*) '"BASENAME_ORG" is not specified in "PARAM_MKINIT_REAL_OCEAN"!', trim(basename)
+       call PRC_abort
+    endif
     call FILE_GrADS_open( basename,   & ! (in)
                           file_id_ocn ) ! (out)
 
-    call FILE_GrADS_varid( file_id_ocn, "SST", & ! (in)
-                           vid                 ) ! (out)
+    call FILE_GrADS_varid( file_id_ocn, "OCEAN_SFC_TEMP", & ! (in)
+                           vid                            ) ! (out)
+    if ( vid < 0 ) then
+       call FILE_GrADS_varid( file_id_ocn, "SST", & ! (in)
+                              vid                 ) ! (out)
+    end if
+    if ( vid < 0 ) then
+       call FILE_GrADS_varid( file_id_ocn, "SFC_TEMP", & ! (in)
+                              vid                      ) ! (out)
+    end if
     if ( vid < 0 ) then
        call FILE_GrADS_varid( file_id_ocn, "SKINT", & ! (in)
-                              vid                   ) ! (out)
+                              vid                      ) ! (out)
     end if
-
     if ( vid < 0 ) then
-       LOG_ERROR("ParentOceanSetupGrADS",*) 'SST and SKINT are found in grads namelist!'
+       LOG_ERROR("ParentOceanSetupGrADS",*) '"OCEAN_SFC_TEMP", "SST", "SFC_TEMP", or "SKINT" is necessary'
        call PRC_abort
     end if
 
@@ -1671,260 +1017,362 @@ contains
                                odims(:)          ) ! (out)
 
 
-    timelen = 0        ! will be replaced later
+    ! get lon, lat
+
+    allocate( lon_all(odims(1), odims(2)) )
+    allocate( lat_all(odims(1), odims(2)) )
 
 
-    ! check existance
-    do ielem = 1, num_item_list_ocean
-       item  = item_list_ocean(ielem)
-       call FILE_GrADS_varid( file_id_ocn, item, & ! (in)
-                              var_id(ielem,3)    ) ! (out)
-    end do
-
-    ! check necessary datea
-    do ielem = 1, num_item_list_ocean
-       item  = item_list_ocean(ielem)
-
-       select case(item)
-       case('lsmask','lsmask_sst')
-          if ( var_id(Io_lsmask_sst,3) < 3 ) then
-             if ( var_id(Io_lsmask,3) < 3 ) then
-                LOG_WARN("ParentOceanSetupGrADS",*) trim(item),' is not found & not used.'
-             end if
-          else
-             var_id(Io_lsmask,3) = -1
-          endif
-       case('lon', 'lat', 'lon_sfc', 'lat_sfc', 'lon_sst', 'lat_sst')
-          if ( var_id(Io_lon_sst,3) < 0 ) then
-             if ( var_id(Io_lon_sfc,3) < 0 ) then
-                if ( var_id(Io_lon,3) < 0 ) then
-                   LOG_ERROR("ParentOceanSetupGrADS",*) 'either lon_sst, lon_sfc, or lon is necessary!'
-                   call PRC_abort
-                end if
+    call FILE_GrADS_varid( file_id_ocn, "lon_sst", & ! (in)
+                           vid                   ) ! (out)
+    if ( vid > 0 ) then
+       vname = "lon_sst"
+    else
+       call FILE_GrADS_varid( file_id_ocn, "lon_sfc", & ! (in)
+                              vid                     ) ! (out)
+       if ( vid > 0 ) then
+          call FILE_GrADS_get_shape( file_id_ocn, vid, & ! (in)
+                                     shape(:)          ) ! (out)
+          if ( FILE_GrADS_isOneD( file_id_lnd, vid ) ) then
+             if ( odims(1) .eq. shape(1) .or. shape(1) .eq. -1 ) then
+                vname = "lon_sfc"
              else
-                var_id(Io_lon,3) = -1
+                vid = -1
              end if
           else
-             var_id(Io_lon_sfc,3) = -1
-             var_id(Io_lon,    3) = -1
-          end if
-          if ( var_id(Io_lat_sst,3) < 0 ) then
-             if ( var_id(Io_lat_sfc,3) < 0 ) then
-                if ( var_id(Io_lat,3) < 0 ) then
-                   LOG_ERROR("ParentOceanSetupGrADS",*) 'either lat_sst, lat_sfc, or lat is necessary!'
-                   call PRC_abort
-                end if
+             if ( odims(1) .eq. shape(1) .and. odims(2) .eq. shape(2) ) then
+                vname = "lon_sfc"
              else
-                var_id(Io_lat,3) = -1
+                vid = -1
              end if
-          else
-             var_id(Io_lat_sfc,3) = -1
-             var_id(Io_lat,    3) = -1
           end if
-       case('SST','SKINT')
-          if ( var_id(Io_sst,3) < 0 ) then
-             if ( var_id(Io_skint,3) < 0 ) then
-                LOG_ERROR("ParentOceanSetupGrADS",*) 'SST and SKINT are found in grads namelist!'
-                call PRC_abort
-             else
-                LOG_WARN("ParentOceanSetupGrADS",*) 'SST is found in grads namelist. SKINT is used in place of SST.'
-             end if
+       end if
+    end if
+    if ( vid < 0 ) then
+       call FILE_GrADS_varid( file_id_ocn, "lon", & ! (in)
+                              vid                 ) ! (out)
+       if ( vid < 0 ) then
+          LOG_ERROR("ParentLandSetupGrADS",*) '"lon_sst", "lon_sfc", or "lon" is necessary'
+          call PRC_abort
+       end if
+       call FILE_GrADS_get_shape( file_id_ocn, vid, & ! (in)
+                                  shape(:)          ) ! (out)
+       if ( FILE_GrADS_isOneD( file_id_ocn, vid ) ) then
+          if ( odims(1) .eq. shape(1) .or. shape(1) .eq. -1 ) then
+             vname = "lon"
           else
-             var_id(Io_skint,3) = -1
+             vid = -1
           end if
-       case default !
-          if ( var_id(ielem,3) < 0 ) then
-             LOG_ERROR("ParentOceanSetupGrADS",*) 'Not found in grads namelist! : ', &
-                        trim(item_list_ocean(ielem))
-             call PRC_abort
-          endif
-       end select
+       else
+          if ( odims(1) .eq. shape(1) .and. odims(2) .eq. shape(2) ) then
+             vname = "lon"
+          else
+             vid = -1
+          end if
+       end if
+       if ( vid < 0 ) then
+          LOG_ERROR("ParentOceanSetupGrADS",*) 'dimension of "lon_sfc" and "lon" is different! ', odims(:), shape(:)
+          call PRC_abort
+       end if
+    end if
+    call read2d( (/1,1/), odims(:), lon_all(:,:), vname, file_id_ocn, basename_num, oneD=1 )
+    lon_all(:,:) = lon_all(:,:) * D2R
 
-    end do
+
+    call FILE_GrADS_varid( file_id_ocn, "lat_sst", & ! (in)
+                           vid                     ) ! (out)
+    if ( vid > 0 ) then
+       vname = "lat_sst"
+    else
+       call FILE_GrADS_varid( file_id_ocn, "lat_sfc", & ! (in)
+                              vid                     ) ! (out)
+       if ( vid > 0 ) then
+          call FILE_GrADS_get_shape( file_id_ocn, vid, & ! (in)
+                                     shape(:)          ) ! (out)
+          if ( FILE_GrADS_isOneD( file_id_lnd, vid ) ) then
+             if ( odims(2) .eq. shape(1) .or. shape(1) .eq. -1 ) then
+                vname = "lat_sfc"
+             else
+                vid = -1
+             end if
+          else
+             if ( odims(1) .eq. shape(1) .and. odims(2) .eq. shape(2) ) then
+                vname = "lat_sfc"
+             else
+                vid = -1
+             end if
+          end if
+       end if
+    end if
+    if ( vid < 0 ) then
+       call FILE_GrADS_varid( file_id_lnd, "lat", & ! (in)
+                              vid                 ) ! (out)
+       if ( vid < 0 ) then
+          LOG_ERROR("ParentLandSetupGrADS",*) '"lat_sst", "lat_sfc", or "lat" is necessary'
+          call PRC_abort
+       end if
+       call FILE_GrADS_get_shape( file_id_ocn, vid, & ! (in)
+                                  shape(:)          ) ! (out)
+       if ( FILE_GrADS_isOneD( file_id_lnd, vid ) ) then
+          if ( odims(2) .eq. shape(1) .or. shape(1) .eq. -1 ) then
+             vname = "lat"
+          else
+             vid = -1
+          end if
+       else
+          if ( odims(1) .eq. shape(1) .and. odims(2) .eq. shape(2) ) then
+             vname = "lat"
+          else
+             vid = -1
+          end if
+       end if
+       if ( vid < 0 ) then
+          LOG_ERROR("ParentOceanSetupGrADS",*) 'dimension of "lat_sfc" and "lat" is different! ', odims(:), shape(:)
+          call PRC_abort
+       end if
+    end if
+    call read2d( (/1,1/), odims(:), lat_all(:,:), vname, file_id_ocn, basename_num, oneD=2 )
+    lat_all(:,:) = lat_all(:,:) * D2R
+
+
+    ! tentative
+    timelen = 1
 
     return
   end subroutine ParentOceanSetupGrADS
 
   !-----------------------------------------------------------------------------
-  subroutine ParentOceanOpenGrADS
-    implicit none
-
-    return
-  end subroutine ParentOceanOpenGrADS
-
-  !-----------------------------------------------------------------------------
   subroutine ParentOceanInputGrADS( &
-      tw_org,       & ! (out)
-      sst_org,      & ! (out)
-      omask_org,    & ! (out)
-      olon_org,     & ! (out)
-      olat_org,     & ! (out)
-      basename_num, & ! (in)
-      odims,        & ! (in)
-      nt            ) ! (in)
+       IA_org, IS_org, IE_org, &
+       JA_org, JS_org, JE_org, &
+       tw_org,       &
+       sst_org,      &
+       omask_org,    &
+       basename_num, &
+       odims,        &
+       nt            )
     use scale_const, only: &
        UNDEF => CONST_UNDEF, &
        D2R   => CONST_D2R,   &
        TEM00 => CONST_TEM00, &
        EPS   => CONST_EPS
     use scale_file_grads, only: &
-       FILE_GrADS_isOneD,    &
        FILE_GrADS_get_shape, &
+       FILE_GrADS_varid,     &
        FILE_GrADS_read
     implicit none
+    integer, intent(in) :: IA_org, IS_org, IE_org
+    integer, intent(in) :: JA_org, JS_org, JE_org
 
-    real(RP),         intent(out) :: tw_org   (:,:)
-    real(RP),         intent(out) :: sst_org  (:,:)
-    real(RP),         intent(out) :: omask_org(:,:)
-    real(RP),         intent(out) :: olon_org (:,:)
-    real(RP),         intent(out) :: olat_org (:,:)
+    real(RP), intent(out) :: tw_org   (IA_org,JA_org)
+    real(RP), intent(out) :: sst_org  (IA_org,JA_org)
+    real(RP), intent(out) :: omask_org(IA_org,JA_org)
+
     character(len=*), intent(in)  :: basename_num
     integer,          intent(in)  :: odims(2)
     integer,          intent(in)  :: nt
 
-    character(len=H_SHORT) :: item
-    integer                :: ielem
-
-    real(RP) :: lon1D(odims(1)), lat1D(odims(2))
-
-    integer :: shape(2)
+    integer :: start(2), count(2), shape(2)
+    integer :: vid
+    logical :: exist
     integer :: i, j
     !---------------------------------------------------------------------------
 
-    !$omp parallel do collapse(2)
-    do j = 1, odims(2)
-    do i = 1, odims(1)
-       omask_org(i,j) = UNDEF
-    end do
-    end do
 
-    loop_InputOceanGrADS : do ielem = 1, num_item_list_ocean
+    start(:) = (/IS_org,JS_org/)
+    count(:) = (/IA_org,JA_org/)
 
-       if ( var_id(ielem,3) < 0 ) cycle
+    ! lsmask
+    call read2d( start(:), count(:), omask_org(:,:), "lsmask_sst", file_id_ocn, basename_num, exist=exist, step=nt )
+    if ( .not. exist ) then
+       call FILE_GrADS_varid( file_id_ocn, "lsmask", & ! (in)
+                              vid                     ) ! (out)
+       call FILE_GrADS_get_shape( file_id_ocn, vid, & ! (in)
+                                  shape(:)          ) ! (out)
+       if ( odims(1) .ne. shape(1) .or. odims(2) .ne. shape(2) ) then
+          LOG_WARN("ParentOceanInputGrADS",*) 'dimension of lsmask is different. not use'
+          !$omp parallel do
+          do j = 1, JA_org
+          do i = 1, IA_org
+             omask_org(i,j) = UNDEF
+          end do
+          end do
+       else
+          call read2d( start(:), count(:), omask_org(:,:), "lsmask", file_id_ocn, basename_num, exist=exist, step=nt )
+       end if
+    end if
 
-       item  = item_list_ocean(ielem)
 
-       ! read data
-       select case(item)
-       case("lsmask","lsmask_sst")
-
-          if ( item == "lsmask" ) then
-             call FILE_GrADS_get_shape( file_id_ocn, var_id(ielem,3), & ! (in)
-                                        shape(:)                      ) ! (out)
-             if ( odims(1) .ne. shape(1) .or. odims(2) .ne. shape(2) ) then
-                LOG_WARN("ParentOceanInputGrADS",*) 'dimension of lsmask is different. not use'
-                cycle
-             end if
-          end if
-
-          call FILE_GrADS_read( file_id_ocn, var_id(ielem,3), & ! (in)
-                                omask_org(:,:),               & ! (out)
-                                postfix = basename_num        ) ! (in)
-
-       case("lon","lon_sfc","lon_sst")
-
-          if ( item .ne. "lon_sst" ) then
-             if ( FILE_GrADS_isOneD( file_id_ocn, var_id(ielem,3) ) ) then
-                call FILE_GrADS_get_shape( file_id_ocn, var_id(ielem,3), & ! (in)
-                                           shape(1:1)                    ) ! (out)
-                if ( odims(1).ne.shape(1) .and. shape(1).ne.-1 ) then
-                   LOG_ERROR("ParentOceanInputGrADS",*) 'dimension of "',trim(item),'" is different! ', odims(1), shape(1)
-                   call PRC_abort
-                end if
-             else
-                call FILE_GrADS_get_shape( file_id_ocn, var_id(ielem,3), & ! (in)
-                                           shape(:)                      ) ! (out)
-                if ( odims(1).ne.shape(1) .or. odims(2).ne.shape(2) ) then
-                   LOG_ERROR("ParentOceanInputGrADS",*) 'dimension of "',trim(item),'" is different', odims(1), shape(1), odims(2), shape(2)
-                   call PRC_abort
-                end if
-             end if
-          end if
-
-          if ( FILE_GrADS_isOneD( file_id_ocn, var_id(ielem,3) ) ) then
-             call FILE_GrADS_read( file_id_ocn, var_id(ielem,3), & ! (in)
-                                   lon1D(:)                      ) ! (out)
-             !$omp parallel do collapse(2)
-             do j = 1, odims(2)
-             do i = 1, odims(1)
-                olon_org(i,j) = lon1D(i) * D2R
-             enddo
-             enddo
+    ! OCEAN_SFC_TEMP, SST, SFC_TEMP, SKINT
+    call read2d( start(:), count(:), sst_org(:,:), "OCEAN_SFC_TEMP", file_id_ocn, basename_num, exist=exist, step=nt )
+    if ( .not. exist ) then
+       call read2d( start(:), count(:), sst_org(:,:), "SST", file_id_ocn, basename_num, exist=exist, step=nt )
+    end if
+    if ( .not. exist ) then
+       call FILE_GrADS_varid( file_id_ocn, "SFC_TEMP", & ! (in)
+                              vid                     ) ! (out)
+       if ( vid > 0 ) then
+          call FILE_GrADS_get_shape( file_id_ocn, vid, & ! (in)
+                                     shape(:)          ) ! (out)
+          if ( odims(1).eq.shape(1) .and. odims(2).eq.shape(2) ) then
+             call read2d( start(:), count(:), sst_org(:,:), "SFC_TEMP", file_id_ocn, basename_num, exist=exist, step=nt )
           else
-             call FILE_GrADS_read( file_id_ocn, var_id(ielem,3), & ! (in)
-                                   olon_org(:,:),                & ! (out)
-                                   postfix = basename_num        ) ! (in)
-             !$omp parallel do collapse(2)
-             do j = 1, odims(2)
-             do i = 1, odims(1)
-                olon_org(i,j) = olon_org(i,j) * D2R
-             enddo
-             enddo
+             exist = .false.
           end if
-
-       case("lat","lat_sfc","lat_sst")
-
-          if ( item .ne. "lat_sst" ) then
-             if ( FILE_GrADS_isOneD( file_id_ocn, var_id(ielem,3) ) ) then
-                call FILE_GrADS_get_shape( file_id_ocn, var_id(ielem,3), & ! (in)
-                                           shape(1:1)                    ) ! (out)
-                if ( odims(2).ne.shape(1) .and. shape(1).ne.-1 ) then
-                   LOG_ERROR("ParentOceanInputGrADS",*) 'dimension of "',trim(item),'" is different! ', odims(2), shape(1)
-                   call PRC_abort
-                end if
-             else
-                call FILE_GrADS_get_shape( file_id_ocn, var_id(ielem,3), & ! (in)
-                                           shape(:)                      ) ! (out)
-                if ( odims(1).ne.shape(1) .or. odims(2).ne.shape(2) ) then
-                   LOG_ERROR("ParentOceanInputGrADS",*) 'dimension of "',trim(item),'" is different', odims(1), shape(1), odims(2), shape(2)
-                   call PRC_abort
-                end if
-             end if
-          end if
-
-          if ( FILE_GrADS_isOneD( file_id_ocn, var_id(ielem,3) ) ) then
-             call FILE_GrADS_read( file_id_ocn, var_id(ielem,3), & ! (in)
-                                   lat1D(:)                      ) ! (out)
-             !$omp parallel do collapse(2)
-             do j = 1, odims(2)
-             do i = 1, odims(1)
-                olat_org(i,j) = lat1D(j) * D2R
-             enddo
-             enddo
-          else
-             call FILE_GrADS_read( file_id_ocn, var_id(ielem,3), & ! (in)
-                                   olat_org(:,:),                & ! (out)
-                                   postfix = basename_num        ) ! (in)
-             !$omp parallel do collapse(2)
-             do j = 1, odims(2)
-             do i = 1, odims(1)
-                olat_org(i,j) = olat_org(i,j) * D2R
-             enddo
-             enddo
-          end if
-
-       case("SKINT","SST")
-
-          if ( item == "SKINT" ) then
-             call FILE_GrADS_get_shape( file_id_ocn, var_id(ielem,3), & ! (in)
-                                        shape(:)                      ) ! (out)
-             if ( odims(1).ne.shape(1) .or. odims(2).ne.shape(2) ) then
-                LOG_ERROR("ParentLandOceanGrADS",*) 'dimension of "',trim(item),'" is different', odims(1), shape(1), odims(2), shape(2)
-                call PRC_abort
-             end if
-          end if
-
-          call FILE_GrADS_read( file_id_ocn, var_id(ielem,3), & ! (in)
-                                sst_org(:,:),                 & ! (out)
-                                postfix = basename_num        ) ! (in)
-
-       end select
-    enddo loop_InputOceanGrADS
+       else
+          exist = .false.
+       end if
+    end if
+    if ( .not. exist ) then
+       call FILE_GrADS_varid( file_id_ocn, "SKINT", & ! (in)
+                              vid                     ) ! (out)
+       call FILE_GrADS_get_shape( file_id_ocn, vid, & ! (in)
+                                  shape(:)          ) ! (out)
+       if ( odims(1).eq.shape(1) .and. odims(2).eq.shape(2) ) then
+          call read2d( start(:), count(:), sst_org(:,:), "SKINT", file_id_ocn, basename_num, step=nt )
+       else
+          LOG_ERROR("ParentOceanInputGrADS",*) 'dimension of "SFC_TEMP" and/or "SKINT" is different'
+          call PRC_abort
+       end if
+    end if
 
     tw_org = sst_org
 
     return
   end subroutine ParentOceanInputGrADS
 
+  ! private
+
+  subroutine read2d( start, count, data, name, fid, postfix, exist, oneD, step )
+    use scale_file_grads, only: &
+       FILE_GrADS_varid, &
+       FILE_GrADS_read, &
+       FILE_GrADS_isOneD
+    integer,  intent(in)  :: start(2)
+    integer,  intent(in)  :: count(2)
+    real(RP), intent(out) :: data(count(1),count(2))
+    character(len=*), intent(in) :: name
+    integer,          intent(in) :: fid
+    character(len=*), intent(in) :: postfix
+
+    logical, intent(out), optional :: exist
+    integer, intent(in),  optional :: oneD
+    integer, intent(in),  optional :: step
+
+    integer :: vid
+    real(RP), allocatable :: v1d(:)
+    integer :: oneD_
+    integer :: i, j
+
+    call FILE_GrADS_varid( fid, name, & ! (in)
+                           vid        ) ! (out)
+    if ( vid < 0 ) then
+       if ( present(exist) ) then
+          exist = .false.
+          return
+       end if
+       LOG_ERROR("read2d",*) '"', trim(name), '" is required'
+       call PRC_abort
+    end if
+    if ( present(exist) ) exist = .true.
+
+    if( FILE_GrADS_isOneD( fid, vid ) ) then
+       if ( present(oneD) ) then
+          oneD_ = oneD
+       else
+          oneD_ = 1
+       end if
+       allocate( v1d(count(oneD_)) )
+       call FILE_GrADS_read( fid, vid,                 & ! (in)
+                             v1d(:),                   & ! (out)
+                             step=step,                & ! (in)
+                             start=start(oneD_:oneD_), & ! (in)
+                             count=count(oneD_:oneD_)  ) ! (in)
+       if ( oneD_ == 1 ) then
+          !$omp parallel do
+          do j = 1, count(2)
+          do i = 1, count(1)
+             data(i,j) = v1d(i)
+          enddo
+          enddo
+       else
+          !$omp parallel do
+          do j = 1, count(2)
+          do i = 1, count(1)
+             data(i,j) = v1d(j)
+          enddo
+          enddo
+       end if
+       deallocate( v1d )
+    else
+       call FILE_GrADS_read( fid, vid,       & ! (in)
+                             data(:,:),      & ! (out)
+                             step=step,      & ! (in)
+                             start=start(:), & ! (in)
+                             count=count(:), & ! (in)
+                             postfix=postfix ) ! (in)
+    end if
+
+    return
+  end subroutine read2d
+
+  subroutine read3d( start, count, data, name, fid, postfix, exist, step )
+    use scale_file_grads, only: &
+       FILE_GrADS_varid, &
+       FILE_GrADS_read, &
+       FILE_GrADS_isOneD
+    integer,  intent(in)  :: start(3)
+    integer,  intent(in)  :: count(3)
+    real(RP), intent(out) :: data(count(1),count(2),count(3))
+    character(len=*), intent(in) :: name
+    integer,          intent(in) :: fid
+    character(len=*), intent(in) :: postfix
+
+    logical, intent(out), optional :: exist
+    integer, intent(in), optional :: step
+
+    integer :: vid
+    real(RP), allocatable :: v1d(:)
+    integer :: k, i, j
+
+    call FILE_GrADS_varid( fid, name, & ! (in)
+                           vid        ) ! (out)
+    if ( vid < 0 ) then
+       if ( present(exist) ) then
+          exist = .false.
+          return
+       end if
+       LOG_ERROR("read3d",*) '"', trim(name), '" is required'
+       call PRC_abort
+    end if
+    if ( present(exist) ) exist = .true.
+
+    if( FILE_GrADS_isOneD( fid, vid ) ) then
+       allocate( v1d(count(1)) )
+       call FILE_GrADS_read( fid, vid,         & ! (in)
+                             v1d(:),           & ! (out)
+                             step=step,        &
+                             start=start(1:1), & ! (in)
+                             count=count(1:1)  ) ! (in)
+       !$omp parallel do collapse(2)
+       do j = 1, count(3)
+       do i = 1, count(2)
+       do k = 1, count(1)
+          data(k,i,j) = v1d(k)
+       enddo
+       enddo
+       enddo
+       deallocate( v1d )
+    else
+       call FILE_GrADS_read( fid, vid,       & ! (in)
+                             data(:,:,:),    & ! (out)
+                             step=step,      & ! (in)
+                             start=start(:), & ! (in)
+                             count=count(:), & ! (in)
+                             postfix=postfix ) ! (in)
+    end if
+
+    return
+  end subroutine read3d
 
 end module mod_realinput_grads

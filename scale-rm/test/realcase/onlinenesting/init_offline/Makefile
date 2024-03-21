@@ -7,6 +7,8 @@
 PWD         = $(shell pwd)
 TOPDIR      = $(abspath ../../../../..)
 TESTDIR     = ../../..
+DATADIR     = ${TOPDIR}/data
+DATADIR_RM  = ${TESTDIR}/data
 
 ifndef PREPDIR
    PREPDIR = ../pp
@@ -30,8 +32,7 @@ INITCONF    = init_d02_history.conf,init_d02_restart.conf
 TPROC       = 6,6
 
 # required data (parameters,distributed files)
-DATPARAM    = " [${TESTDIR}/data/land/param.bucket.conf param.bucket.conf ] \
-                [$(PREPDIR)/latlon_domain_catalogue_d01.txt latlon_domain_catalogue_d01.txt] "
+DATPARAM    = " [${DATADIR}/land/param.bucket.conf param.bucket.conf ] "
 DATDISTS    = " [6 $(PREPDIR)/topo_d02                     topo_d02                    ] \
                 [6 $(PREPDIR)/landuse_d02                  landuse_d02                 ] \
                 [3 $(INITDIR)/init_d01_20100501-000000.000 init_d01_20100501-000000.000] \

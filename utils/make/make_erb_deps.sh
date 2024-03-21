@@ -17,7 +17,7 @@ do
          echo
          echo "source : ${ferb}"
          echo "target : ${fudcd}"
-         fname=${fudcd} erb ${ferb#./} > ${fudcd}
+         fname=${fudcd} erb -T - ${ferb#./} > ${fudcd}
       done
    else
       echo

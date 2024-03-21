@@ -119,7 +119,9 @@ contains
 
     integer  :: i, j
     !---------------------------------------------------------------------------
+    !$acc data copyin(Uabs) copyout(Z0M,Z0H,Z0E)
 
+    !$acc kernels
     !$omp parallel do private(Ustar)
     do j = OJS, OJE
     do i = OIS, OIE
@@ -139,7 +141,9 @@ contains
                        OCEAN_PHY_ROUGHNESS_Z0E_min )
     enddo
     enddo
+    !$acc end kernels
 
+    !$acc end data
     return
   end subroutine OCEAN_PHY_ROUGHNESS_miller92
 

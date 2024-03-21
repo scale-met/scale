@@ -15,12 +15,12 @@ Table \ref{tab:setting_ideal} shows the experimental settings.
 \begin{tabularx}{150mm}{|l|X|X|} \hline
  \rowcolor[gray]{0.9} ~~ & Configuration & Note \\ \hline
  Number of MPI processes& 1: eastward direction, 2: northward direction & 2 MPI parallelization \\ \hline
- Horizontal grid spacing & 500 m: eastward direction, 500 m :northward direction & The 2-dimensional experiment in the northward and vertical directions. \\ \hline
+ Horizontal grid spacing & 500 m: eastward direction, 500 m: northward direction & The 2-dimensional experiment in the northward and vertical directions. \\ \hline
  Number of horizontal grids & 1: eastward direction, 40: northward direction &  \\ \hline
  Number of vertical layers & 97 layers with model top of 20 km & Stretched grid with finer resolution in the lower layers. \\ \hline
- Lateral boundary condition & Periodic condition & both eastward and northward \\ \hline
+ Lateral boundary condition & Periodic condition & Both eastward and northward \\ \hline
  Time step & 5 sec      &  10 sec in microphysics scheme\\ \hline
- Integration time     & 3,600 sec & The total nummber of time step is 720.\\ \hline
+ Integration time     & 3,600 sec & The total number of time step is 720.\\ \hline
  Time interval of data output & 300 sec  &  \\ \hline
  Physical scheme & Only the microphysics scheme &
  6-class single-moment bulk model \citep{tomita_2008} \\ \hline
@@ -78,8 +78,6 @@ If it is successfully completed, the following message is output in the command 
  *** Start Launch System for SCALE-RM\\
  *** Execute preprocess? :  T\\
  *** Execute model?      :  F\\
- *** a single comunicator\\
- *** a single comunicator\\
  *** End   Launch System for SCALE-RM\\
 }
 
@@ -98,8 +96,7 @@ only the log file of the 0th process (master rank) is output as default.
 If the execution is normally concluded, the statements below are output at the end of this LOG file:
 
 \msgbox{
- +++++ finalize MPI...\\
- +++++ MPI is peacefully finalized\\
+ +++++ Closing LOG file\\
 }
 
 The two files
@@ -111,7 +108,7 @@ It can be directly read by GPhys/Ruby-DCL and ncview.
 \subsubsection{Execution of simulation} %\label{subsec:ideal_exp_run}
 %------------------------------------------------------
 
-The number of parallel process is required to be the same as that when creating the initial conditions.
+The number of parallel processes is required to be the same as that when creating the initial conditions.
 The configuration file for the run is \verb|sample/run_R20kmDX500m.conf|.
 \begin{verbatim}
   $ cp  sample/run_R20kmDX500m.conf  ./run_R20kmDX500m.conf
@@ -130,7 +127,6 @@ The following three files are then generated under the given directory:
 When the execution concludes normally,
 the following message is output at the end of this LOG file:
 \msgbox{
- +++++ finalize MPI...\\
- +++++ MPI is peacefully finalized\\
+ +++++ Closing LOG file\\
 }
 The two files \verb|history.pe000000.nc| and \verb|history.pe000001.nc| are history files containing the results of the calculation. They are formatted by \netcdf, and size of each file is approximately 1.5 MB.

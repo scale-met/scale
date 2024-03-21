@@ -25,6 +25,7 @@ module scale_coriolis
   !++ Public procedure
   !
   public :: CORIOLIS_setup
+  public :: CORIOLIS_finalize
 
   !-----------------------------------------------------------------------------
   !
@@ -120,7 +121,21 @@ contains
        call PRC_abort
     end select
 
+    !$acc enter data copyin(CORIOLIS_f)
+
     return
   end subroutine CORIOLIS_setup
+
+  !-----------------------------------------------------------------------------
+  !> Finalize
+  subroutine CORIOLIS_finalize
+    implicit none
+    !---------------------------------------------------------------------------
+
+    !$acc exit data delete(CORIOLIS_f)
+    deallocate( CORIOLIS_f )
+
+    return
+  end subroutine CORIOLIS_finalize
 
 end module scale_coriolis

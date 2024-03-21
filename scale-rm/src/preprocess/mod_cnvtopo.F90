@@ -198,50 +198,70 @@ contains
       CNVTOPO_smooth_maxslope_limit = CNVTOPO_smooth_maxslope
 
     else
-      minslope(:,:) = HUGE
 
-      j = JS-1
-      i = IS-1
-      do k = KS, KE
-         DZDX = atan2( CNVTOPO_smooth_maxslope_ratio * CDZ(k), DXL(i) ) / D2R
-         DZDY = atan2( CNVTOPO_smooth_maxslope_ratio * CDZ(k), DYL(j) ) / D2R
-         minslope(IS,JS) = min( minslope(IS,JS), DZDX, DZDY )
-      enddo
+       !$acc data create(minslope)
 
-      j = JS-1
-      do i = IS, IE
-      do k = KS, KE
-         DZDX = atan2( CNVTOPO_smooth_maxslope_ratio * CDZ(k), DXL(i) ) / D2R
-         DZDY = atan2( CNVTOPO_smooth_maxslope_ratio * CDZ(k), DYL(j) ) / D2R
-         minslope(i,JS) = min( minslope(i,JS), DZDX, DZDY )
-      enddo
-      enddo
+       !$acc kernels
+       minslope(:,:) = HUGE
+       !$acc end kernels
 
-      i = IS-1
-      !$omp parallel do &
-      !$omp private(DZDX,DZDY)
-      do j = JS, JE
-      do k = KS, KE
-         DZDX = atan2( CNVTOPO_smooth_maxslope_ratio * CDZ(k), DXL(i) ) / D2R
-         DZDY = atan2( CNVTOPO_smooth_maxslope_ratio * CDZ(k), DYL(j) ) / D2R
-         minslope(IS,j) = min( minslope(IS,j), DZDX, DZDY )
-      enddo
-      enddo
+       j = JS-1
+       i = IS-1
+       !$acc kernels
+       !$acc loop independent
+       do k = KS, KE
+          DZDX = atan2( CNVTOPO_smooth_maxslope_ratio * CDZ(k), DXL(i) ) / D2R
+          DZDY = atan2( CNVTOPO_smooth_maxslope_ratio * CDZ(k), DYL(j) ) / D2R
+          minslope(IS,JS) = min( minslope(IS,JS), DZDX, DZDY )
+       enddo
+       !$accend  kernels
 
-      !$omp parallel do &
-      !$omp private(DZDX,DZDY)
-      do j = JS, JE
-      do i = IS, IE
-      do k = KS, KE
-         DZDX = atan2( CNVTOPO_smooth_maxslope_ratio * CDZ(k), DXL(i) ) / D2R
-         DZDY = atan2( CNVTOPO_smooth_maxslope_ratio * CDZ(k), DYL(j) ) / D2R
-         minslope(i,j) = min( minslope(i,j), DZDX, DZDY )
-      enddo
-      enddo
-      enddo
+       j = JS-1
+       !$acc kernels
+       !$acc loop collapse(2) independent
+       do i = IS, IE
+       do k = KS, KE
+          DZDX = atan2( CNVTOPO_smooth_maxslope_ratio * CDZ(k), DXL(i) ) / D2R
+          DZDY = atan2( CNVTOPO_smooth_maxslope_ratio * CDZ(k), DYL(j) ) / D2R
+          minslope(i,JS) = min( minslope(i,JS), DZDX, DZDY )
+       enddo
+       enddo
+       !$acc end kernels
 
-      call STATISTICS_horizontal_min( IA, IS, IE, JA, JS, JE, &
+       i = IS-1
+       !$omp parallel do &
+       !$omp private(DZDX,DZDY)
+       !$acc kernels
+       !$acc loop collapse(2) independent
+       do j = JS, JE
+       do k = KS, KE
+          DZDX = atan2( CNVTOPO_smooth_maxslope_ratio * CDZ(k), DXL(i) ) / D2R
+          DZDY = atan2( CNVTOPO_smooth_maxslope_ratio * CDZ(k), DYL(j) ) / D2R
+          minslope(IS,j) = min( minslope(IS,j), DZDX, DZDY )
+       enddo
+       enddo
+       !$acc end kernels
+
+       !$omp parallel do &
+       !$omp private(DZDX,DZDY)
+       !$acc kernels
+       !$acc loop collapse(3) independent
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          DZDX = atan2( CNVTOPO_smooth_maxslope_ratio * CDZ(k), DXL(i) ) / D2R
+          DZDY = atan2( CNVTOPO_smooth_maxslope_ratio * CDZ(k), DYL(j) ) / D2R
+          minslope(i,j) = min( minslope(i,j), DZDX, DZDY )
+       enddo
+       enddo
+       enddo
+       !$acc end kernels
+
+       call STATISTICS_horizontal_min( IA, IS, IE, JA, JS, JE, &
                                       minslope(:,:), CNVTOPO_smooth_maxslope_limit )
+
+       !$acc end data
+
     end if
 
     return
@@ -277,11 +297,13 @@ contains
 
        !$omp parallel do
 !OCL XFILL
+       !$acc kernels
        do j = 1, JA
        do i = 1, IA
           TOPOGRAPHY_Zsfc(i,j) = 0.0_RP
        end do
        end do
+       !$acc end kernels
 
        if ( CNVTOPO_UseGTOPO30 ) then
           call CNVTOPO_GTOPO30( TOPOGRAPHY_Zsfc(:,:) ) ! [INOUT]
@@ -362,11 +384,13 @@ contains
     call CNV2D_exec( Zsfc(:,:), min_value = -9000.0_RP, yrevers = .true. ) ! [OUT]
 
     !$omp parallel do collapse(2)
+    !$acc kernels
     do j = 1, JA
     do i = 1, IA
        if ( Zsfc(i,j) /= UNDEF ) TOPO_Zsfc(i,j) = Zsfc(i,j) ! replace data
     end do
     end do
+    !$acc end kernels
 
     return
   end subroutine CNVTOPO_GTOPO30
@@ -430,11 +454,13 @@ contains
     call CNV2D_exec( Zsfc(:,:), min_value = -900.0_RP ) ! [OUT]
 
     !$omp parallel do collapse(2)
+    !$acc kernels
     do j = 1, JA
     do i = 1, IA
        if ( Zsfc(i,j) /= UNDEF ) TOPO_Zsfc(i,j) = Zsfc(i,j) ! replace data
     end do
     end do
+    !$acc end kernels
 
     return
   end subroutine CNVTOPO_DEM50M
@@ -470,7 +496,7 @@ contains
     character(len=H_SHORT) :: USERFILE_GrADS_LATNAME   = 'lat'
     character(len=H_SHORT) :: USERFILE_GrADS_LONNAME   = 'lon'
     character(len=H_SHORT) :: USERFILE_INTERP_TYPE     = 'LINEAR'
-    integer                :: USERFILE_INTERP_level    = 5
+    integer                :: USERFILE_INTERP_LEVEL    = 5
 
 
     namelist / PARAM_CNVTOPO_USERFILE / &
@@ -540,12 +566,12 @@ contains
           call PRC_abort
        endif
 
-       call CNV2D_grads_init( USERFILE_GrADS_FILENAME,             &
-                              USERFILE_GrADS_VARNAME,              &
-                              USERFILE_GrADS_LATNAME,              &
-                              USERFILE_GrADS_LONNAME,              &
-                              USERFILE_INTERP_TYPE,                &
-                              interp_level = USERFILE_INTERP_LEVEL )
+       call CNV2D_grads_init( USERFILE_GrADS_FILENAME, &
+                              USERFILE_GrADS_VARNAME,  &
+                              USERFILE_GrADS_LATNAME,  &
+                              USERFILE_GrADS_LONNAME,  &
+                              USERFILE_INTERP_TYPE,    &
+                              USERFILE_INTERP_LEVEL    )
 
     case default
        LOG_ERROR("CNVTOPO_USERFILE",*) 'USERFILE_TYPE is invalid: ',trim(USERFILE_TYPE)
@@ -557,11 +583,13 @@ contains
                      min_value = USERFILE_MINVAL, yrevers = USERFILE_yrevers ) ! [IN]
 
     !$omp parallel do collapse(2)
+    !$acc kernels
     do j = 1, JA
     do i = 1, IA
        if ( Zsfc(i,j) /= UNDEF ) TOPO_Zsfc(i,j) = Zsfc(i,j) ! replace data
     end do
     end do
+    !$acc end kernels
 
     return
   end subroutine CNVTOPO_USERFILE
@@ -602,6 +630,7 @@ contains
     real(RP) :: slope(IA,JA)
     real(RP) :: maxslope
     real(RP), pointer :: TOPO_sign(:,:)
+    real(RP), allocatable, target :: TOPO_sign_t(:,:)
     real(RP) :: flag, ocean_flag
 
     character(len=8), parameter :: varname(2) = (/ "DZsfc_DX", "DZsfc_DY" /)
@@ -629,9 +658,12 @@ contains
     DYL(:) = FDY(:)
 
     if ( CNVTOPO_smooth_trim_ocean ) then
-       allocate( TOPO_sign(IA,JA) )
+       allocate( TOPO_sign_t(IA,JA) )
+       TOPO_sign => TOPO_sign_t
+       !$acc enter data create(TOPO_sign)
        !$omp parallel do &
        !$omp private(ocean_flag)
+       !$acc kernels
        do j = 1, JA
        do i = 1, IA
           ocean_flag = ( 0.5_RP + sign( 0.5_RP, LANDUSE_fact_ocean(i,j) - 1.0_RP + EPS ) ) & ! fact_ocean==1
@@ -639,9 +671,12 @@ contains
           TOPO_sign(i,j) = sign( 1.0_RP, Zsfc(i,j) ) * ( 1.0_RP - ocean_flag )
        end do
        end do
+       !$acc end kernels
     else
        TOPO_sign => NULL()
     end if
+
+    !$acc data copyin(DXL, DYL) create(DZsfc_DXY, FLX_X, FLX_Y)
 
     ! digital filter
     do ite = 1, CNVTOPO_smooth_itelim+1
@@ -650,21 +685,31 @@ contains
        call TOPOGRAPHY_fillhalo( Zsfc=Zsfc(:,:), FILL_BND=.true. )
 
        !$omp parallel do
+       !$acc kernels
        do j = 1, JA
        do i = 1, IA-1
           DZsfc_DXY(i,j,1) = atan2( ( Zsfc(i+1,j)-Zsfc(i,j) ), DXL(i) ) / D2R
        enddo
        enddo
+       !$acc end kernels
+       !$acc kernels
        DZsfc_DXY(IA,:,1) = 0.0_RP
+       !$acc end kernels
        !$omp parallel do
+       !$acc kernels
        do j = 1, JA-1
        do i = 1, IA
           DZsfc_DXY(i,j,2) = atan2( ( Zsfc(i,j+1)-Zsfc(i,j) ), DYL(j) ) / D2R
        enddo
        enddo
+       !$acc end kernels
+       !$acc kernels
        DZsfc_DXY(:,JA,2) = 0.0_RP
+       !$acc end kernels
 
+       !$acc kernels
        slope(:,:) = max( abs(DZsfc_DXY(:,:,1)), abs(DZsfc_DXY(:,:,2)) )
+       !$acc end kernels
        call STATISTICS_horizontal_max( IA, IS, IE, JA, JS, JE, &
                                        slope(:,:), maxslope )
 
@@ -680,6 +725,8 @@ contains
 
           ! 3 by 3 gaussian filter
           !$omp parallel do
+          !$acc kernels
+          !$acc loop collapse(2) independent
           do j = JS, JE
           do i = IS, IE
              Zsfc(i,j) = ( 0.2500_RP * Zsfc(i  ,j  ) &
@@ -693,16 +740,19 @@ contains
                          + 0.0625_RP * Zsfc(i+1,j+1) )
           enddo
           enddo
+          !$acc end kernels
 
        case( 'LAPLACIAN' )
 
           !$omp parallel do
+          !$acc kernels
           do j = JS  , JE
           do i = IS-1, IE
              FLX_X(i,j) = Zsfc(i+1,j) - Zsfc(i,j)
 !             FLX_TMP(i,j) = Zsfc(i+1,j) - Zsfc(i,j)
           enddo
           enddo
+          !$acc end kernels
 !!$          call TOPOGRAPHY_fillhalo( FLX_TMP )
 !!$          do j = JS  , JE
 !!$          do i = IS-1, IE
@@ -711,12 +761,14 @@ contains
 !!$          enddo
 
           !$omp parallel do
+          !$acc kernels
           do j = JS-1, JE
           do i = IS  , IE
              FLX_Y(i,j) = Zsfc(i,j+1) - Zsfc(i,j)
 !             FLX_TMP(i,j) = Zsfc(i,j+1) - Zsfc(i,j)
           enddo
           enddo
+          !$acc end kernels
 !!$          call TOPOGRAPHY_fillhalo( FLX_TMP )
 !!$          do j = JS-1, JE
 !!$          do i = IS  , IE
@@ -728,6 +780,7 @@ contains
           if ( CNVTOPO_smooth_local ) then
              !$omp parallel do &
              !$omp private(flag)
+             !$acc kernels
              do j = JS  , JE
              do i = IS-1, IE
                 flag = 0.5_RP &
@@ -742,8 +795,10 @@ contains
                 FLX_X(i,j) = FLX_X(i,j) * flag
              enddo
              enddo
+             !$acc end kernels
              !$omp parallel do &
              !$omp private(flag)
+             !$acc kernels
              do j = JS-1, JE
              do i = IS  , IE
                 flag = 0.5_RP &
@@ -758,9 +813,11 @@ contains
                 FLX_Y(i,j) = FLX_Y(i,j) * flag
              enddo
              enddo
+             !$acc end kernels
           endif
 
           !$omp parallel do
+          !$acc kernels
           do j = JS, JE
           do i = IS, IE
              Zsfc(i,j) = Zsfc(i,j) &
@@ -768,6 +825,7 @@ contains
                                   + ( FLX_Y(i,j) - FLX_Y(i,j-1) ) )
           enddo
           enddo
+          !$acc end kernels
 
        case default
           LOG_ERROR("CNVTOPO_smooth",*) 'Invalid smoothing type'
@@ -776,11 +834,13 @@ contains
 
        if ( CNVTOPO_smooth_trim_ocean ) then
           !$omp parallel do
+          !$acc kernels
           do j = JS, JE
           do i = IS, IE
              Zsfc(i,j) = sign( max( Zsfc(i,j) * TOPO_sign(i,j), 0.0_RP ), TOPO_sign(i,j) )
           end do
           end do
+          !$acc end kernels
        end if
 
     enddo
@@ -814,21 +874,31 @@ contains
        call TOPOGRAPHY_fillhalo( Zsfc=Zsfc(:,:), FILL_BND=.true. )
 
        !$omp parallel do
+       !$acc kernels
        do j = 1, JA
        do i = 1, IA-1
           DZsfc_DXY(i,j,1) = atan2( ( Zsfc(i+1,j)-Zsfc(i,j) ), DXL(i) ) / D2R
        enddo
        enddo
+       !$acc end kernels
+       !$acc kernels
        DZsfc_DXY(IA,:,1) = 0.0_RP
+       !$acc end kernels
        !$omp parallel do
+       !$acc kernels
        do j = 1, JA-1
        do i = 1, IA
           DZsfc_DXY(i,j,2) = atan2( ( Zsfc(i,j+1)-Zsfc(i,j) ), DYL(j) ) / D2R
        enddo
        enddo
+       !$acc end kernels
+       !$acc kernels
        DZsfc_DXY(:,JA,2) = 0.0_RP
+       !$acc end kernels
 
+       !$acc kernels
        slope(:,:) = max( abs(DZsfc_DXY(:,:,1)), abs(DZsfc_DXY(:,:,2)) )
+       !$acc end kernels
        call STATISTICS_horizontal_max( IA, IS, IE, JA, JS, JE, &
                                        slope(:,:), maxslope )
 
@@ -840,6 +910,12 @@ contains
 
     call STATISTICS_detail( IA, IS, IE, JA, JS, JE, 2, &
                             varname(:), DZsfc_DXY(:,:,:) )
+
+
+    if ( CNVTOPO_smooth_trim_ocean ) then
+       !$acc exit data delete(TOPO_sign)
+    end if
+    !$acc end data
 
     LOG_NEWLINE
 

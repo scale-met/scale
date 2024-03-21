@@ -76,7 +76,6 @@ contains
     logical                :: OCEAN_PHY_ICE_nudging_enable_periodic_month = .false.
     logical                :: OCEAN_PHY_ICE_nudging_enable_periodic_day   = .false.
     integer                :: OCEAN_PHY_ICE_nudging_step_fixed            = 0
-    real(RP)               :: OCEAN_PHY_ICE_nudging_offset                = 0.0_RP
     real(RP)               :: OCEAN_PHY_ICE_nudging_defval                != UNDEF
     logical                :: OCEAN_PHY_ICE_nudging_check_coordinates     = .true.
     integer                :: OCEAN_PHY_ICE_nudging_step_limit            = 0
@@ -97,7 +96,6 @@ contains
 !        OCEAN_PHY_ICE_nudging_enable_periodic_month, &
 !        OCEAN_PHY_ICE_nudging_enable_periodic_day,   &
 !        OCEAN_PHY_ICE_nudging_step_fixed,            &
-!        OCEAN_PHY_ICE_nudging_offset,                &
 !        OCEAN_PHY_ICE_nudging_defval,                &
 !        OCEAN_PHY_ICE_nudging_check_coordinates,     &
 !        OCEAN_PHY_ICE_nudging_step_limit
@@ -152,7 +150,6 @@ contains
                                         OCEAN_PHY_ICE_nudging_enable_periodic_month, & ! [IN]
                                         OCEAN_PHY_ICE_nudging_enable_periodic_day,   & ! [IN]
                                         OCEAN_PHY_ICE_nudging_step_fixed,            & ! [IN]
-                                        OCEAN_PHY_ICE_nudging_offset,                & ! [IN]
                                         OCEAN_PHY_ICE_nudging_defval,                & ! [IN]
                                         check_coordinates = OCEAN_PHY_ICE_nudging_check_coordinates, & ! [IN]
                                         step_limit        = OCEAN_PHY_ICE_nudging_step_limit         ) ! [IN]
@@ -176,7 +173,9 @@ contains
 
     integer :: i, j
     !---------------------------------------------------------------------------
+    !$acc data copyin(ICE_MASS) copyout(ICE_FRAC)
 
+    !$acc kernels
     do j = OJS, OJE
     do i = OIS, OIE
        ICE_FRAC(i,j) = ICE_MASS(i,j) / OCEAN_PHY_ICE_mass_critical
@@ -184,7 +183,9 @@ contains
        ICE_FRAC(i,j) = min( sqrt( max( ICE_FRAC(i,j), 0.0_RP ) ), OCEAN_PHY_ICE_fraction_limit )
     enddo
     enddo
+    !$acc end kernels
 
+    !$acc end data
     return
   end subroutine OCEAN_PHY_ICE_fraction
 
@@ -202,7 +203,8 @@ contains
        MASS_SUPL,     &
        ENGI_SUPL      )
     use scale_const, only: &
-       DWATR => CONST_DWATR
+       DWATR => CONST_DWATR, &
+       EPS   => CONST_EPS
     use scale_atmos_hydrometeor, only: &
        CV_WATER, &
        CV_ICE,   &
@@ -227,9 +229,13 @@ contains
 
     integer  :: i, j
     !---------------------------------------------------------------------------
+    !$acc data copy(OCEAN_TEMP,ICE_TEMP,ICE_MASS) &
+    !$acc      copyin(calc_flag) &
+    !$acc      copyout(MASS_FLUX,ENGI_FLUX,MASS_SUPL,ENGI_SUPL)
 
     C_w = CV_WATER * DWATR * OCEAN_DEPTH
 
+    !$acc kernels
     !$omp parallel do &
     !$omp private(ICE_MASS_frz,ICE_MASS_prev)
     do j = OJS, OJE
@@ -247,13 +253,21 @@ contains
           ICE_MASS_frz = ICE_MASS(i,j) - ICE_MASS_prev
 
           ! update ice temperature
-          ICE_TEMP(i,j) = ICE_TEMP(i,j) &
-                        + ( OCEAN_PHY_ICE_freezetemp - ICE_TEMP(i,j) ) * ICE_MASS_frz / ICE_MASS(i,j)
+          if ( ICE_MASS(i,j) > EPS ) then
+             ICE_TEMP(i,j) = ICE_TEMP(i,j) &
+                  + ( OCEAN_PHY_ICE_freezetemp - ICE_TEMP(i,j) ) * ICE_MASS_frz / ICE_MASS(i,j)
+          else ! all ice melt
+             ICE_TEMP(i,j) = OCEAN_PHY_ICE_freezetemp ! dummy
+          end if
 
           ! update ocean temperature
-          OCEAN_TEMP(i,j) = OCEAN_TEMP(i,j) &
-                          + ( CV_WATER * OCEAN_TEMP(i,j) - CV_ICE * OCEAN_PHY_ICE_freezetemp + LHF ) * ICE_MASS_frz &
-                          / ( C_w - CV_WATER * ICE_MASS_frz )
+          if ( C_w - CV_WATER * ICE_MASS_frz > EPS ) then
+             OCEAN_TEMP(i,j) = OCEAN_TEMP(i,j) &
+                  + ( CV_WATER * OCEAN_TEMP(i,j) - CV_ICE * OCEAN_PHY_ICE_freezetemp + LHF ) * ICE_MASS_frz &
+                  / ( C_w - CV_WATER * ICE_MASS_frz )
+          else ! all water freeze
+             OCEAN_TEMP(i,j) = OCEAN_PHY_ICE_freezetemp
+          end if
 
           MASS_FLUX(i,j) = ICE_MASS_frz
           ENGI_FLUX(i,j) = ( CV_ICE * OCEAN_PHY_ICE_freezetemp - LHF ) * ICE_MASS_frz
@@ -267,7 +281,9 @@ contains
        endif
     enddo
     enddo
+    !$acc end kernels
 
+    !$acc end data
     return
   end subroutine OCEAN_PHY_ICE_adjustment
 
@@ -329,11 +345,15 @@ contains
 
     integer  :: i, j
     !---------------------------------------------------------------------------
+    !$acc data copyin (iflx_water,iflx_hbalance,subsfc_temp, &
+    !$acc              TC_dz,ICE_TEMP,ICE_MASS,ICE_FRAC,calc_flag) &
+    !$acc      copyout(ICE_TEMP_t,ICE_MASS_t,SFLX_G,SFLX_water,SFLX_RHOE)
 
     LOG_PROGRESS(*) 'ocean / physics / seaice'
 
     dt_RP = real(dt,kind=RP)
 
+    !$acc kernels
     !$omp parallel do &
     !$omp private(mass_budget,heat_budget,dM,dE,G,M_mlt, &
     !$omp         ICE_TEMP_new,ICE_MASS_new)
@@ -392,7 +412,9 @@ contains
        endif
     enddo
     enddo
+    !$acc end kernels
 
+    !$acc end data
     return
   end subroutine OCEAN_PHY_ICE_simple
 

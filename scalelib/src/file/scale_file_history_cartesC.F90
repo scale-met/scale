@@ -31,6 +31,7 @@ module scale_file_history_cartesC
   !++ Public procedures
   !
   public :: FILE_HISTORY_CARTESC_setup
+  public :: FILE_HISTORY_CARTESC_finalize
   public :: FILE_HISTORY_CARTESC_Set_Pres
 
   !-----------------------------------------------------------------------------
@@ -54,8 +55,8 @@ module scale_file_history_cartesC
                                               "z       ", &
                                               "pressure"  /)
 
-  integer               :: FILE_HISTORY_CARTESC_MODEL_nlayer = -1
-  integer               :: FILE_HISTORY_CARTESC_PRES_nlayer = 0
+  integer               :: FILE_HISTORY_CARTESC_MODEL_nlayer
+  integer               :: FILE_HISTORY_CARTESC_PRES_nlayer
   real(RP), allocatable :: FILE_HISTORY_CARTESC_PRES_val(:)
 
   integer  :: im,   jm,  km
@@ -67,7 +68,7 @@ module scale_file_history_cartesC
   integer  :: FILE_HISTORY_CARTESC_STARTDATE(6) !< start time [YYYY MM DD HH MM SS]
   real(DP) :: FILE_HISTORY_CARTESC_STARTSUBSEC  !< subsecond part of start time [sec]
 
-  logical  :: FILE_HISTORY_CARTESC_BOUNDARY = .false.
+  logical  :: FILE_HISTORY_CARTESC_BOUNDARY
 
   logical  :: pres_set = .false.
 
@@ -126,7 +127,10 @@ contains
     LOG_NEWLINE
     LOG_INFO("FILE_HISTORY_CARTESC_setup",*) 'Setup'
 
-    FILE_HISTORY_CARTESC_PRES(:) = 0.0_RP
+    FILE_HISTORY_CARTESC_MODEL_nlayer = -1
+    FILE_HISTORY_CARTESC_PRES_nlayer  = 0
+    FILE_HISTORY_CARTESC_PRES(:)      = 0.0_RP
+    FILE_HISTORY_CARTESC_BOUNDARY     = .false.
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -251,8 +255,22 @@ contains
   end subroutine FILE_HISTORY_CARTESC_setup
 
   !-----------------------------------------------------------------------------
-  !> set hydrostatic pressure for pressure coordinate
+  !> Setup
+  subroutine FILE_HISTORY_CARTESC_finalize
+    use scale_interp_vert, only: &
+       INTERP_VERT_dealloc_pres
+    implicit none
+
+    if ( FILE_HISTORY_CARTESC_PRES_nlayer > 0 ) then
+       call INTERP_VERT_dealloc_pres
+       deallocate( FILE_HISTORY_CARTESC_PRES_val )
+    end if
+
+    return
+  end subroutine FILE_HISTORY_CARTESC_finalize
+
   !-----------------------------------------------------------------------------
+  !> set hydrostatic pressure for pressure coordinate
   subroutine FILE_HISTORY_CARTESC_Set_Pres( &
        PRES,    &
        PRESH,   &
@@ -1332,14 +1350,14 @@ contains
        AXIS(1:im,1:jm,k) = ATMOS_GRID_CARTESC_REAL_CZ(k+KS-1,ims:ime,jms:jme)
     enddo
     AXIS_name(1:3) = (/'x ', 'y ', 'z '/)
-    call FILE_HISTORY_Set_AssociatedCoordinate( 'height', 'height above ground level',                    &
+    call FILE_HISTORY_Set_AssociatedCoordinate( 'height', 'height above sea level',                    &
                                                 'm', AXIS_name(1:3), AXIS(1:im,1:jm,1:), start=start(:,1) )
 
     do k = 0, FILE_HISTORY_CARTESC_MODEL_nlayer
        AXIS(1:im,1:jm,k) = ATMOS_GRID_CARTESC_REAL_FZ(k+KS-1,ims:ime,jms:jme)
     enddo
     AXIS_name(1:3) = (/'x ', 'y ', 'zh'/)
-    call FILE_HISTORY_Set_AssociatedCoordinate( 'height_xyw', 'height above ground level (half level xyw)', &
+    call FILE_HISTORY_Set_AssociatedCoordinate( 'height_xyw', 'height above sea level (half level xyw)', &
                                                 'm' , AXIS_name(1:3), AXIS(1:im,1:jm,0:), start=start(:,1)  )
 
     if ( PRC_TwoD ) then
@@ -1368,7 +1386,7 @@ contains
        end if
     end if
     AXIS_name(1:3) = (/'xh', 'y ', 'z '/)
-    call FILE_HISTORY_Set_AssociatedCoordinate( 'height_uyz', 'height above ground level (half level uyz)', &
+    call FILE_HISTORY_Set_AssociatedCoordinate( 'height_uyz', 'height above sea level (half level uyz)', &
                                                 'm', AXIS_name(1:3), AXIS(1:imh,1:jm,1:), start=start(:,2)  )
 
     do k = 1, FILE_HISTORY_CARTESC_MODEL_nlayer
@@ -1386,7 +1404,7 @@ contains
        enddo
     endif
     AXIS_name(1:3) = (/'x ', 'yh', 'z '/)
-    call FILE_HISTORY_Set_AssociatedCoordinate( 'height_xvz', 'height above ground level (half level xvz)', &
+    call FILE_HISTORY_Set_AssociatedCoordinate( 'height_xvz', 'height above sea level (half level xvz)', &
                                                 'm', AXIS_name(1:3), AXIS(1:im,1:jmh,1:), start=start(:,3)  )
 
     do k = 1, FILE_HISTORY_CARTESC_MODEL_nlayer
@@ -1417,7 +1435,7 @@ contains
        enddo
     endif
     AXIS_name(1:3) = (/'xh', 'yh', 'z '/)
-    call FILE_HISTORY_Set_AssociatedCoordinate( 'height_uvz', 'height above ground level (half level uvz)', &
+    call FILE_HISTORY_Set_AssociatedCoordinate( 'height_uvz', 'height above sea level (half level uvz)', &
                                                 'm', AXIS_name(1:3), AXIS(1:imh,1:jmh,1:), start=start(:,4) )
 
     do k = 0, FILE_HISTORY_CARTESC_MODEL_nlayer
@@ -1435,7 +1453,7 @@ contains
        enddo
     endif
     AXIS_name(1:3) = (/'xh', 'y ', 'zh'/)
-    call FILE_HISTORY_Set_AssociatedCoordinate( 'height_uyw', 'height above ground level (half level uyw)', &
+    call FILE_HISTORY_Set_AssociatedCoordinate( 'height_uyw', 'height above sea level (half level uyw)', &
                                                 'm', AXIS_name(1:3), AXIS(1:imh,1:jm,0:), start=start(:,2)  )
 
     do k = 0, FILE_HISTORY_CARTESC_MODEL_nlayer
@@ -1453,7 +1471,7 @@ contains
        enddo
     endif
     AXIS_name(1:3) = (/'x ', 'yh', 'zh'/)
-    call FILE_HISTORY_Set_AssociatedCoordinate( 'height_xvw', 'height above ground level (half level xvw)', &
+    call FILE_HISTORY_Set_AssociatedCoordinate( 'height_xvw', 'height above sea level (half level xvw)', &
                                                 'm', AXIS_name(1:3), AXIS(1:im,1:jmh,0:), start=start(:,3)  )
 
     do k = 0, FILE_HISTORY_CARTESC_MODEL_nlayer
@@ -1484,7 +1502,7 @@ contains
        enddo
     endif
     AXIS_name(1:3) = (/'xh', 'yh', 'zh'/)
-    call FILE_HISTORY_Set_AssociatedCoordinate( 'height_uvw', 'height above ground level (half level uvw)', 'm', &
+    call FILE_HISTORY_Set_AssociatedCoordinate( 'height_uvw', 'height above sea level (half level uvw)', 'm', &
                                                 AXIS_name(1:3), AXIS(1:imh,1:jmh,0:), start=start(:,4)           )
 
     AXIS(1:im,1:jm,1) = ATMOS_GRID_CARTESC_REAL_LON (ims:ime,jms:jme) / D2R
@@ -1574,7 +1592,7 @@ contains
     end do
     AXIS_name = (/'xh', 'y ', 'zh'/)
     call FILE_HISTORY_Set_AssociatedCoordinate( 'cell_area_uyw_x', 'area of grid cell face (half level uyw, normal x)', 'm2', &
-                                                AXIS_name(1:3), AXIS(1:imh,1:jmh,0:), start=start(:,2)                        )
+                                                AXIS_name(1:3), AXIS(1:imh,1:jm,0:), start=start(:,2)                        )
     do k = 0, FILE_HISTORY_CARTESC_MODEL_nlayer
     do j = 1, jmh
     do i = 1, im

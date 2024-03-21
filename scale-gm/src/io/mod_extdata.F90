@@ -54,16 +54,16 @@ module mod_extdata
      character(len=H_SHORT) :: layername         !--- name of layer
      integer                :: kall              !--- number of layer
      integer                :: num_of_data       !--- number of data
-     integer,  pointer      :: data_date(:,:)    !--- date of each data piece
-     real(DP), pointer      :: data_time(:)      !--- time[sec] of each data piecce
+     integer,  allocatable  :: data_date(:,:)    !--- date of each data piece
+     real(DP), allocatable  :: data_time(:)      !--- time[sec] of each data piecce
      integer                :: data_rec(2)       !--- data record ( forward & backward )
      integer                :: fix_rec           !--- record number if it's fixed
      logical                :: opt_fix_rec       !--- flag for fix record number
      logical                :: opt_monthly_cnst  !--- no time interpolation in a month
      logical                :: opt_periodic_year !--- flag for periodic year
      real(RP)               :: defval            !--- default value
-     real(RP), pointer      :: v(:,:,:,:)        !--- data stoarege for regular region
-     real(RP), pointer      :: v_pl(:,:,:,:)     !--- data stoarege for poler region
+     real(RP), allocatable  :: v(:,:,:,:)        !--- data stoarege for regular region
+     real(RP), allocatable  :: v_pl(:,:,:,:)     !--- data stoarege for poler region
   end type extdatainfo
 
   type(extdatainfo), allocatable, private :: info(:)

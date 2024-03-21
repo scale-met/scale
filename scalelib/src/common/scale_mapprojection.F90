@@ -91,7 +91,7 @@ module scale_mapprojection
   real(RP), public :: MAPPROJECTION_basepoint_lat =  34.653_RP ! position of base point in real world [deg]
 
   type, public :: mappinginfo
-     character(len=H_SHORT) :: mapping_name
+     character(len=H_SHORT) :: mapping_name = ""
      real(DP)               :: false_easting
      real(DP)               :: false_northing
      real(DP)               :: longitude_of_central_meridian
@@ -101,7 +101,7 @@ module scale_mapprojection
      real(DP)               :: standard_parallel(2)
      real(DP)               :: rotation
   end type mappinginfo
-  type(mappinginfo), public :: MAPPROJECTION_mappinginfo
+  type(mappinginfo), public, save :: MAPPROJECTION_mappinginfo
 
   type, public :: mappingparam
      real(DP) :: basepoint_x
@@ -142,8 +142,8 @@ module scale_mapprojection
   real(DP), private :: MAPPROJECTION_LC_lat1  = 30.0_DP ! standard latitude1 for L.C. projection [deg]
   real(DP), private :: MAPPROJECTION_LC_lat2  = 60.0_DP ! standard latitude2 for L.C. projection [deg]
   real(DP), private :: MAPPROJECTION_PS_lat             ! standard latitude1 for P.S. projection [deg]
-  real(DP), private :: MAPPROJECTION_M_lat    =  0.0_DP ! standard latitude1 for Mer. projection [deg]
-  real(DP), private :: MAPPROJECTION_EC_lat   =  0.0_DP ! standard latitude1 for E.C. projection [deg]
+  real(DP), private :: MAPPROJECTION_M_lat              ! standard latitude1 for Mer. projection [deg]
+  real(DP), private :: MAPPROJECTION_EC_lat             ! standard latitude1 for E.C. projection [deg]
 
   type(mappingparam), private :: MAPPROJECTION_mappingparam
 
@@ -231,6 +231,8 @@ contains
     MAPPROJECTION_basepoint_x = DOMAIN_CENTER_X
     MAPPROJECTION_basepoint_y = DOMAIN_CENTER_Y
     MAPPROJECTION_PS_lat      = UNDEF
+    MAPPROJECTION_M_lat       = UNDEF
+    MAPPROJECTION_EC_lat      = UNDEF
 
 
     !--- read namelist
@@ -299,6 +301,7 @@ contains
        rotcoef   => MAPPROJECTION_rotcoef_PolarStereographic
     case('MER')
        LOG_INFO_CONT(*) '=> Mercator projection'
+       if( MAPPROJECTION_M_lat == UNDEF ) MAPPROJECTION_M_lat = MAPPROJECTION_basepoint_lat
        MAPPROJECTION_mappinginfo%mapping_name = "mercator"
        MAPPROJECTION_mappinginfo%standard_parallel(1) = MAPPROJECTION_M_lat
 
@@ -308,6 +311,7 @@ contains
        rotcoef   => MAPPROJECTION_rotcoef_Mercator
     case('EC')
        LOG_INFO_CONT(*) '=> Equidistant Cylindrical projection'
+       if( MAPPROJECTION_EC_lat == UNDEF ) MAPPROJECTION_EC_lat = MAPPROJECTION_basepoint_lat
        MAPPROJECTION_mappinginfo%mapping_name = "equirectangular"
        MAPPROJECTION_mappinginfo%standard_parallel(1) = MAPPROJECTION_EC_lat
        MAPPROJECTION_mappinginfo%longitude_of_central_meridian = MAPPROJECTION_basepoint_lon
@@ -1083,6 +1087,7 @@ contains
     type(mappinginfo),  intent(in)  :: info
     type(mappingparam), intent(out) :: param
 
+    real(DP), parameter :: EPS = 1D-16
     real(DP) :: LC_lat1, LC_lat2
     real(DP) :: basepoint_lat
     real(DP) :: basepoint_x, basepoint_y
@@ -1098,8 +1103,8 @@ contains
     basepoint_x   = info%false_easting
     basepoint_y   = info%false_northing
 
-    if ( LC_lat1 >= LC_lat2 ) then
-       LOG_ERROR("MAPPROJECTION_get_param_LambertConformal",*) 'Please set LC_lat1 < LC_lat2 in degree. STOP'
+    if ( LC_lat1 > LC_lat2 ) then
+       LOG_ERROR("MAPPROJECTION_get_param_LambertConformal",*) 'Please set LC_lat1 <= LC_lat2 in degree. STOP'
        call PRC_abort
     endif
 
@@ -1108,11 +1113,13 @@ contains
 
     lat1rot = 0.5_DP*PI - param%hemisphere * LC_lat1 * D2R
     lat2rot = 0.5_DP*PI - param%hemisphere * LC_lat2 * D2R
-
-    ! calc conformal factor c
-    param%c = ( log( sin(lat1rot)        ) - log( sin(lat2rot)        ) ) &
-            / ( log( tan(0.5_DP*lat1rot) ) - log( tan(0.5_DP*lat2rot) ) )
-
+    if ( LC_lat2 - LC_lat1 > EPS ) then
+       ! calc conformal factor c
+       param%c = ( log( sin(lat1rot)        ) - log( sin(lat2rot)        ) ) &
+               / ( log( tan(0.5_DP*lat1rot) ) - log( tan(0.5_DP*lat2rot) ) )
+    else
+       param%c = cos(lat1rot)
+    end if
     ! pre-calc factor
     param%fact = sin(lat1rot) / param%c / tan(0.5_DP*lat1rot)**param%c
 

@@ -36,6 +36,7 @@ module scale_landuse
   public :: LANDUSE_calc_fact
   public :: LANDUSE_fillhalo
   public :: LANDUSE_write
+  public :: LANDUSE_finalize
 
   !-----------------------------------------------------------------------------
   !
@@ -150,12 +151,14 @@ contains
     LANDUSE_frac_land (:,:) = 0.0_RP
     LANDUSE_frac_urban(:,:) = 0.0_RP
     LANDUSE_frac_lake (:,:) = 0.0_RP
+    !$acc enter data copyin(LANDUSE_frac_land, LANDUSE_frac_urban, LANDUSE_frac_lake)
 
     allocate( LANDUSE_index_PFT(IA,JA,LANDUSE_PFT_mosaic) )
     allocate( LANDUSE_frac_PFT (IA,JA,LANDUSE_PFT_mosaic) )
     LANDUSE_frac_PFT (:,:,:) = 0.0_RP
     LANDUSE_frac_PFT (:,:,1) = 1.0_RP ! tentative, mosaic is off
     LANDUSE_index_PFT(:,:,:) = 1      ! default
+    !$acc enter data copyin(LANDUSE_index_PFT, LANDUSE_frac_PFT)
 
     allocate( LANDUSE_fact_ocean(IA,JA) )
     allocate( LANDUSE_fact_land (IA,JA) )
@@ -165,6 +168,7 @@ contains
     LANDUSE_fact_land (:,:) = 0.0_RP
     LANDUSE_fact_urban(:,:) = 0.0_RP
     LANDUSE_fact_lake (:,:) = 0.0_RP
+    !$acc enter data copyin(LANDUSE_fact_ocean, LANDUSE_fact_land, LANDUSE_fact_urban, LANDUSE_fact_lake)
 
     allocate( LANDUSE_exists_ocean(IA,JA) )
     allocate( LANDUSE_exists_land (IA,JA) )
@@ -174,6 +178,7 @@ contains
     LANDUSE_exists_land (:,:) = .false.
     LANDUSE_exists_urban(:,:) = .false.
     LANDUSE_exists_lake (:,:) = .false.
+    !$acc enter data copyin(LANDUSE_exists_ocean, LANDUSE_exists_land, LANDUSE_exists_urban, LANDUSE_exists_lake)
 
 
 
@@ -181,15 +186,11 @@ contains
 
        LOG_INFO("LANDUSE_setup",*) 'Assume all grids are ocean'
 
-       call LANDUSE_calc_fact
-
     elseif( LANDUSE_AllLand ) then
 
        LOG_INFO("LANDUSE_setup",*) 'Assume all grids are land'
        LOG_INFO("LANDUSE_setup",*) 'Assume land PFT is 1 (bare ground)'
        LANDUSE_frac_land (:,:) = 1.0_RP
-
-       call LANDUSE_calc_fact
 
     elseif( LANDUSE_AllUrban ) then
 
@@ -200,8 +201,6 @@ contains
        LANDUSE_frac_urban(:,:)   = 1.0_RP
        LANDUSE_index_PFT (:,:,:) = LANDUSE_index_URBAN
 
-       call LANDUSE_calc_fact
-
     elseif( LANDUSE_AllLake ) then
 
        LOG_INFO("LANDUSE_setup",*) 'Assume all grids are land'
@@ -210,8 +209,6 @@ contains
        LANDUSE_frac_land (:,:)   = 1.0_RP
        LANDUSE_frac_lake (:,:)   = 1.0_RP
        LANDUSE_index_PFT (:,:,:) = LANDUSE_index_LAKE
-
-       call LANDUSE_calc_fact
 
     elseif( LANDUSE_MosaicWorld ) then
 
@@ -222,14 +219,16 @@ contains
        LANDUSE_frac_urban(:,:) = 0.5_RP
 !       LANDUSE_frac_lake (:,:) = 0.25_RP
 
-       call LANDUSE_calc_fact
-
     else ! default: read from file
 
        call LANDUSE_read( OCEAN_do, URBAN_do, LAKE_do )
-       call LANDUSE_calc_fact
 
     endif
+
+    !$acc update device(LANDUSE_frac_land, LANDUSE_frac_urban, LANDUSE_frac_lake)
+    !$acc update device(LANDUSE_index_PFT, LANDUSE_frac_PFT)
+
+    call LANDUSE_calc_fact
 
     return
   end subroutine LANDUSE_setup
@@ -247,6 +246,7 @@ contains
 
     ! make factors
     !$omp parallel do private(fact_soil)
+    !$acc kernels
     do j = 1, JA
     do i = 1, IA
        LANDUSE_fact_ocean(i,j) = max( 1.0_RP - LANDUSE_frac_land(i,j), 0.0_RP )
@@ -261,6 +261,10 @@ contains
        if( LANDUSE_fact_lake (i,j) > 0.0_RP ) LANDUSE_exists_lake (i,j) = .true.
     enddo
     enddo
+    !$acc end kernels
+
+    !$acc update host(LANDUSE_fact_ocean, LANDUSE_fact_land, LANDUSE_fact_urban, LANDUSE_fact_lake)
+    !$acc update host(LANDUSE_exists_ocean, LANDUSE_exists_land, LANDUSE_exists_urban, LANDUSE_exists_lake)
 
     return
   end subroutine LANDUSE_calc_fact
@@ -281,6 +285,10 @@ contains
     integer  :: p
     !---------------------------------------------------------------------------
 
+    ! tentative (calculated in mod_cnvlanduse.F90)
+    !$acc update device(LANDUSE_frac_land, LANDUSE_frac_lake, LANDUSE_frac_urban)
+    !$acc update device(LANDUSE_frac_PFT, LANDUSE_index_PFT)
+
     FILL_BND_ = .true.
     if ( present(FILL_BND) ) FILL_BND_ = FILL_BND
 
@@ -300,8 +308,12 @@ contains
     call COMM_wait ( LANDUSE_fact_urban(:,:), 6, FILL_BND_ )
     call COMM_wait ( LANDUSE_fact_lake (:,:), 7, FILL_BND_ )
 
+    !$acc data create(temp)
+
     do p = 1, LANDUSE_PFT_mosaic
+       !$acc kernels
        temp(:,:) = real(LANDUSE_index_PFT(:,:,p),kind=RP)
+       !$acc end kernels
 
        call COMM_vars8( LANDUSE_frac_PFT(:,:,p), 8+2*(p-1) )
        call COMM_vars8( temp            (:,:)  , 9+2*(p-1) )
@@ -309,8 +321,16 @@ contains
        call COMM_wait ( LANDUSE_frac_PFT(:,:,p), 8+2*(p-1), FILL_BND_ )
        call COMM_wait ( temp            (:,:)  , 9+2*(p-1), FILL_BND_ )
 
+       !$acc kernels
        LANDUSE_index_PFT(:,:,p) = aint(temp(:,:),kind=4)
+       !$acc end kernels
     enddo
+
+    !$acc end data
+
+    !$acc update host( LANDUSE_frac_land, LANDUSE_frac_lake, LANDUSE_frac_urban )
+    !$acc update host( LANDUSE_fact_ocean, LANDUSE_fact_land, LANDUSE_fact_urban, LANDUSE_fact_lake )
+    !$acc update host( LANDUSE_frac_PFT, LANDUSE_index_PFT )
 
     return
   end subroutine LANDUSE_fillhalo
@@ -484,6 +504,7 @@ contains
              end do
              end do
           end if
+
           LANDUSE_frac_lake(:,:) = 0.0_RP
        end if
 
@@ -565,5 +586,38 @@ contains
 
     return
   end subroutine LANDUSE_write
+
+  !-----------------------------------------------------------------------------
+  !> Finalize
+  subroutine LANDUSE_finalize
+    implicit none
+    !---------------------------------------------------------------------------
+
+    LOG_NEWLINE
+    LOG_INFO("LANDUSE_finalize",*) 'Finalize'
+
+    !$acc exit data delete(LANDUSE_frac_land, LANDUSE_frac_urban, LANDUSE_frac_lake)
+    deallocate( LANDUSE_frac_land  )
+    deallocate( LANDUSE_frac_urban )
+    deallocate( LANDUSE_frac_lake  )
+
+    !$acc exit data delete(LANDUSE_index_PFT, LANDUSE_frac_PFT)
+    deallocate( LANDUSE_index_PFT )
+    deallocate( LANDUSE_frac_PFT  )
+
+    !$acc exit data delete(LANDUSE_fact_ocean, LANDUSE_fact_land, LANDUSE_fact_urban, LANDUSE_fact_lake)
+    deallocate( LANDUSE_fact_ocean )
+    deallocate( LANDUSE_fact_land  )
+    deallocate( LANDUSE_fact_urban )
+    deallocate( LANDUSE_fact_lake  )
+
+    !$acc exit data delete(LANDUSE_exists_ocean, LANDUSE_exists_land, LANDUSE_exists_urban, LANDUSE_exists_lake)
+    deallocate( LANDUSE_exists_ocean )
+    deallocate( LANDUSE_exists_land  )
+    deallocate( LANDUSE_exists_urban )
+    deallocate( LANDUSE_exists_lake  )
+
+    return
+  end subroutine LANDUSE_finalize
 
 end module scale_landuse

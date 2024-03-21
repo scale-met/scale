@@ -15,6 +15,9 @@ module scale_random
   !
   use scale_precision
   use scale_io
+#ifdef _OPENACC
+  use openacc
+#endif
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -25,6 +28,8 @@ module scale_random
   public :: RANDOM_setup
   public :: RANDOM_uniform
   public :: RANDOM_normal
+  public :: RANDOM_finalize
+  public :: RANDOM_Knuth_shuffle
 
   interface RANDOM_uniform
      module procedure RANDOM_uniform_1D
@@ -105,7 +110,7 @@ contains
   !> Reset random seed
   subroutine RANDOM_reset
     use scale_prc, only: &
-       PRC_myrank
+       PRC_UNIVERSAL_myrank
     implicit none
 
     integer  :: time1(8) ! date and time information
@@ -128,7 +133,7 @@ contains
        call cpu_time(time2)
     endif
 
-    RANDOM_seedvar(:) = PRC_myrank                     &
+    RANDOM_seedvar(:) = PRC_UNIVERSAL_myrank           &
                       + ( time1(1) - 1970 ) * 32140800 &
                       + time1(2) * 2678400             &
                       + time1(3) * 86400               &
@@ -151,6 +156,7 @@ contains
     !---------------------------------------------------------------------------
 
     call random_number(var)
+    !$acc update device(var) if(acc_is_present(var))
 
     return
   end subroutine RANDOM_uniform_1D
@@ -163,6 +169,7 @@ contains
     !---------------------------------------------------------------------------
 
     call random_number(var)
+    !$acc update device(var) if(acc_is_present(var))
 
     return
   end subroutine RANDOM_uniform_2D
@@ -175,6 +182,7 @@ contains
     !---------------------------------------------------------------------------
 
     call random_number(var)
+    !$acc update device(var) if(acc_is_present(var))
 
     return
   end subroutine RANDOM_uniform_3D
@@ -216,6 +224,40 @@ contains
     return
   end subroutine RANDOM_normal_3D
 
+  !> finalize
+  subroutine RANDOM_finalize
+    implicit none
+    !---------------------------------------------------------------------------
+
+    RANDOM_FIX = .false.
+
+    deallocate( RANDOM_seedvar )
+
+    return
+  end subroutine RANDOM_finalize
+
+  subroutine RANDOM_Knuth_shuffle( num, a )
+    implicit none
+    integer, intent(in) :: num
+    integer, intent(out) :: a(num)
+    integer :: i, randpos, tmp
+    real(DP) :: r
+
+    do i = 1, num
+      a(i) = i
+    end do
+
+    do i = num, 2, -1
+      call random_number(r)
+      randpos = int(r * i) + 1
+      tmp = a(randpos)
+      a(randpos) = a(i)
+      a(i) = tmp
+    end do
+
+    return
+  end subroutine RANDOM_Knuth_shuffle
+
   ! private
 
   subroutine get_normal( n, var )
@@ -246,6 +288,8 @@ contains
        theta = 2.0_RP * PI * rnd(n+1)
        var(n) = fact * cos(theta)
     end if
+
+    !$acc update device(var) if(acc_is_present(var))
 
     return
   end subroutine get_normal

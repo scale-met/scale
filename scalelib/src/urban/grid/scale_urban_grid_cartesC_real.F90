@@ -27,6 +27,7 @@ module scale_urban_grid_cartesC_real
   !++ Public procedure
   !
   public :: URBAN_GRID_CARTESC_REAL_setup
+  public :: URBAN_GRID_CARTESC_REAL_finalize
   public :: URBAN_GRID_CARTESC_REAL_set_areavol
 
   !-----------------------------------------------------------------------------
@@ -55,10 +56,24 @@ contains
     ! at this moment, horizontal grid is identical to that of the atmosphere
     allocate( URBAN_GRID_CARTESC_REAL_AREA(    UIA,UJA) )
     allocate( URBAN_GRID_CARTESC_REAL_VOL (UKA,UIA,UJA) )
+    !$acc enter data create(URBAN_GRID_CARTESC_REAL_AREA,URBAN_GRID_CARTESC_REAL_VOL)
 
     return
   end subroutine URBAN_GRID_CARTESC_REAL_setup
 
+  !-----------------------------------------------------------------------------
+  !> Finalize
+  subroutine URBAN_GRID_CARTESC_REAL_finalize
+    implicit none
+
+    !$acc exit data delete(URBAN_GRID_CARTESC_REAL_AREA,URBAN_GRID_CARTESC_REAL_VOL)
+    deallocate( URBAN_GRID_CARTESC_REAL_AREA )
+    deallocate( URBAN_GRID_CARTESC_REAL_VOL  )
+
+    return
+  end subroutine URBAN_GRID_CARTESC_REAL_finalize
+
+  !-----------------------------------------------------------------------------
   subroutine URBAN_GRID_CARTESC_REAL_set_areavol
     use scale_atmos_grid_cartesC_real, only: &
        ATMOS_GRID_CARTESC_REAL_AREA
@@ -71,10 +86,15 @@ contains
 
     integer :: k, i, j
 
-    URBAN_GRID_CARTESC_REAL_TOTAREA = 0.0_RP
     do j = 1, UJA
     do i = 1, UIA
        URBAN_GRID_CARTESC_REAL_AREA(i,j) = ATMOS_GRID_CARTESC_REAL_AREA(i,j) * LANDUSE_fact_urban(i,j)
+    end do
+    end do
+
+    URBAN_GRID_CARTESC_REAL_TOTAREA = 0.0_RP
+    do j = UJS, UJE
+    do i = UIS, UIE
        URBAN_GRID_CARTESC_REAL_TOTAREA = URBAN_GRID_CARTESC_REAL_TOTAREA + URBAN_GRID_CARTESC_REAL_AREA(i,j)
     end do
     end do
@@ -95,6 +115,8 @@ contains
     end do
     end do
     end do
+
+    !$acc update device(URBAN_GRID_CARTESC_REAL_AREA,URBAN_GRID_CARTESC_REAL_VOL)
 
     call FILE_CARTESC_set_coordinates_urban( URBAN_GRID_CARTESC_REAL_VOL(:,:,:) ) ! [IN]
 

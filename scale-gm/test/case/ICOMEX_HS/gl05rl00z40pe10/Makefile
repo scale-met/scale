@@ -7,6 +7,8 @@
 PWD         = $(shell pwd)
 TOPDIR      = $(abspath ../../../../..)
 TESTDIR     = ../../..
+DATADIR     = ${TOPDIR}/data
+DATADIR_GM  = ${TESTDIR}/data
 
 
 # user-defined source files
@@ -15,12 +17,11 @@ ORG_SRCS    =
 
 # parameters for run
 RUNCONF     = run.conf
-ICO2LLNAME  = gm_fio_ico2ll
 ICO2LLCONF  = ico2ll.conf
 TPROC       = 10
 
 # required data (parameters,distributed files)
-DATPARAM    = " [${TESTDIR}/data/grid/vgrid/vgrid40_600m_24km.dat vgrid40_600m_24km.dat] \
+DATPARAM    = " [${DATADIR_GM}/grid/vgrid/vgrid40_600m_24km.dat vgrid40_600m_24km.dat] \
                 [$(SCALE_DB)/grid/llmap/gl05rl00pe10_i180j90 llmap] "
 DATDISTS    = " [${TPROC} $(SCALE_DB)/grid/boundary/gl05rl00pe10/boundary_GL05RL00 boundary_GL05RL00] "
 

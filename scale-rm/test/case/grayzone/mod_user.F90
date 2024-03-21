@@ -35,6 +35,7 @@ module mod_user
   !
   public :: USER_tracer_setup
   public :: USER_setup
+  public :: USER_finalize
   public :: USER_mkinit
   public :: USER_calc_tendency
   public :: USER_update
@@ -271,7 +272,7 @@ contains
     allocate( shf_in (mstep) )
 
     fid_data = IO_get_available_fid()
-    fdata_name_sst = trim(inbasedir)//'/'//trim(fdata_name_sst)
+    call IO_get_fname(fdata_name_sst, trim(inbasedir)//'/'//trim(fdata_name_sst))
     open(fid_data, file=trim(fdata_name_sst), status='old',iostat=ierr)
     if(ierr /= 0) then
       LOG_WARN("USER_setup",*) 'Msg : Sub[mod_user_setup]/Mod[uset_setup]'
@@ -289,7 +290,7 @@ contains
 
     if( GIVEN_HEAT_FLUX )then
       fid_data_sf = IO_get_available_fid()
-      fdata_name_sf=trim(inbasedir)//'/'//trim(fdata_name_sf)
+      call IO_get_fname(fdata_name_sf, trim(inbasedir)//'/'//trim(fdata_name_sf))
       open(fid_data_sf, file=trim(fdata_name_sf), status='old',iostat=ierr)
       if(ierr /= 0) then
         LOG_WARN("USER_setup",*) 'Msg : Sub[SF_GRAYZONE_setup]/Mod[sf_grayzone]'
@@ -314,6 +315,40 @@ contains
 
     return
   end subroutine USER_setup
+
+  !-----------------------------------------------------------------------------
+  !> Finalization
+  subroutine USER_finalize
+    implicit none
+    !---------------------------------------------------------------------------
+
+    deallocate( time_sst_in )
+    deallocate( sst_in )
+    deallocate( sst )
+
+    deallocate( time_in )
+    deallocate( lhf_in )
+    deallocate( shf_in )
+
+    if ( allocated(MOMZ_LS) ) then
+       first_in = .true.
+       deallocate( MOMZ_LS )
+       deallocate( MOMZ_LS_DZ )
+       deallocate( U_GEOS )
+       deallocate( V_GEOS )
+       deallocate( QV_LS )
+
+       deallocate( wk )
+       deallocate( var )
+
+       deallocate( momz_ls_t )
+       deallocate( momz_ls_dz_t )
+       deallocate( z_in )
+       deallocate( time_atm_in )
+    end if
+
+    return
+  end subroutine USER_finalize
 
   !-----------------------------------------------------------------------------
   !> Make initial state
@@ -475,7 +510,7 @@ contains
       !
       ! open 1-dim forcing data
       fid_data = IO_get_available_fid()
-      fdata_name_atm=trim(inbasedir)//'/'//trim(fdata_name_atm)
+      call IO_get_fname(fdata_name_atm, trim(inbasedir)//'/'//trim(fdata_name_atm))
       open(fid_data, file=trim(fdata_name_atm), status='old',iostat=ierr)
       if(ierr /= 0) then
         LOG_WARN("USER_calc_tendency",*) 'Msg : Sub[mod_user_setup]/Mod[user_setup]'

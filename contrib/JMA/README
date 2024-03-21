@@ -1,0 +1,4 @@
+To use the schemes in JMA PP Library, locate the library at this directory.
+
+* The library file "libpp.a": scale/contrib/JMA/physlib/pp/src/libpp.a
+* The module files "*.mod"  : scale/contrib/JMA/physlib/pp/src/*.mod

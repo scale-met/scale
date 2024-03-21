@@ -22,6 +22,9 @@ module scale_file_cartesC
   use scale_urban_grid_cartesC_index
   use scale_file_h, only: &
      FILE_FILE_MAX
+#ifdef _OPENACC
+  use openacc
+#endif
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -30,7 +33,7 @@ module scale_file_cartesC
   !++ Public procedure
   !
   public :: FILE_CARTESC_setup
-  public :: FILE_CARTESC_cleanup
+  public :: FILE_CARTESC_finalize
   public :: FILE_CARTESC_set_coordinates_atmos
   public :: FILE_CARTESC_set_areavol_atmos
   public :: FILE_CARTESC_set_coordinates_ocean
@@ -105,7 +108,6 @@ module scale_file_cartesC
   !
   !++ Private procedure
   !
-  private :: closeall
   private :: check_1d
   private :: check_2d
   private :: check_3d
@@ -176,6 +178,9 @@ module scale_file_cartesC
   logical,    private :: File_haszcoord   (0:FILE_FILE_MAX-1)          ! z-coordinates exist?
   integer(8), private :: write_buf_amount (0:FILE_FILE_MAX-1)          ! sum of write buffer amounts
 
+  integer,    private :: nfiles = 0
+  integer,    private :: fids(FILE_FILE_MAX)
+
   ! global star and count
   integer,  private, target :: startXY   (3), countXY   (3)
   integer,  private, target :: startZX   (2), countZX   (2)
@@ -201,6 +206,7 @@ module scale_file_cartesC
 
   logical,  private :: set_coordinates = .false.
 
+  logical,  private :: prof = .false.
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
@@ -310,9 +316,16 @@ contains
 
   !-----------------------------------------------------------------------------
   !> deallocate buffers
-  subroutine FILE_CARTESC_cleanup
+  subroutine FILE_CARTESC_finalize
     implicit none
+
+    integer :: n
     !---------------------------------------------------------------------------
+
+    do n = 1, nfiles
+       call FILE_CARTESC_close( fids(nfiles) )
+    end do
+    nfiles = 0
 
     deallocate( AXIS_HGT    )
     deallocate( AXIS_HGTWXY )
@@ -352,10 +365,10 @@ contains
 
     call Free_Derived_Datatype
 
-    call closeall
+    set_coordinates = .false.
 
     return
-  end subroutine FILE_CARTESC_cleanup
+  end subroutine FILE_CARTESC_finalize
 
   !-----------------------------------------------------------------------------
   !> Get dimension information from file
@@ -742,6 +755,7 @@ contains
   subroutine FILE_CARTESC_open( &
        basename, &
        fid,      &
+       single,   &
        aggregate )
     use scale_file_h, only: &
        FILE_FREAD
@@ -754,17 +768,19 @@ contains
 
     character(len=*), intent(in)  :: basename !< basename of the file
     integer,          intent(out) :: fid      !< file ID
+    logical,          intent(in), optional :: single
     logical,          intent(in), optional :: aggregate
     !---------------------------------------------------------------------------
 
-    call PROF_rapstart('FILE_O_NetCDF', 2)
+    call PROF_rapstart('FILE_Write', 2)
 
     call FILE_Open( basename,            & ! [IN]
                     fid,                 & ! [OUT]
+                    single=single,       & ! [IN]
                     aggregate=aggregate, & ! [IN]
                     rankid=PRC_myrank    ) ! [IN]
 
-    call PROF_rapend  ('FILE_O_NetCDF', 2)
+    call PROF_rapend  ('FILE_Write', 2)
 
     return
   end subroutine FILE_CARTESC_open
@@ -824,7 +840,8 @@ contains
     integer                :: date_(6)
     !---------------------------------------------------------------------------
 
-    call PROF_rapstart('FILE_O_NetCDF', 2)
+    prof = .true.
+    call PROF_rapstart('FILE_Write', 2)
 
     if ( present(single) ) then
        single_ = single
@@ -891,6 +908,9 @@ contains
 
     if ( fid > 0 .and. (.not. fileexisted) ) then ! do below only once when file is created
 
+       nfiles = nfiles + 1
+       fids(nfiles) = fid
+
        File_axes_written(fid) = .false.  ! indicating axes have not been written yet
 
        if ( present( haszcoord ) ) then
@@ -932,7 +952,8 @@ contains
 
     end if
 
-    call PROF_rapend  ('FILE_O_NetCDF', 2)
+    call PROF_rapend  ('FILE_Write', 2)
+    prof = .false.
 
     return
   end subroutine FILE_CARTESC_create
@@ -943,7 +964,7 @@ contains
     use scale_file, only: &
        FILE_get_AGGREGATE, &
        FILE_opened,    &
-       FILE_single,    &
+       FILE_allnodes,  &
        FILE_EndDef,    &
        FILE_Flush,     &
        FILE_Attach_Buffer
@@ -956,7 +977,7 @@ contains
 
     if ( .not. FILE_opened(fid) ) return
 
-    call PROF_rapstart('FILE_O_NetCDF', 2, disable_barrier = FILE_single(fid) )
+    call PROF_rapstart('FILE_Write', 2, disable_barrier = .not. FILE_allnodes(fid) )
 
     call FILE_EndDef( fid ) ! [IN]
 
@@ -977,16 +998,16 @@ contains
                                      File_haszcoord(fid), & ! [IN]
                                      start(:)             ) ! [IN]
 
-       ! Tell PnetCDF library to use a buffer of size write_buf_amount to aggregate write requests to be post in FILE_CARTESC_write_var
-       if ( FILE_get_AGGREGATE(fid) ) then
-          call FILE_Flush( fid )
-          call FILE_Attach_Buffer( fid, write_buf_amount(fid) )
-       endif
-
        File_axes_written(fid) = .true.
     endif
 
-    call PROF_rapend('FILE_O_NetCDF', 2, disable_barrier = FILE_single(fid) )
+    ! Tell PnetCDF library to use a buffer of size write_buf_amount to aggregate write requests to be post in FILE_CARTESC_write_var
+    if ( FILE_get_AGGREGATE(fid) ) then
+       call FILE_Flush( fid )
+       call FILE_Attach_Buffer( fid, write_buf_amount(fid) )
+    endif
+
+    call PROF_rapend('FILE_Write', 2, disable_barrier = .not. FILE_allnodes(fid) )
 
     return
   end subroutine FILE_CARTESC_enddef
@@ -997,7 +1018,7 @@ contains
     use scale_file, only: &
        FILE_get_AGGREGATE, &
        FILE_opened, &
-       FILE_single, &
+       FILE_allnodes, &
        FILE_Flush
     implicit none
 
@@ -1006,13 +1027,13 @@ contains
 
     if ( .not. FILE_opened(fid) ) return
 
-    call PROF_rapstart('FILE_O_NetCDF', 2, disable_barrier = FILE_single(fid) )
+    call PROF_rapstart('FILE_Write', 2, disable_barrier = .not. FILE_allnodes(fid) )
 
     if ( FILE_get_AGGREGATE(fid) ) then
        call FILE_Flush( fid ) ! flush all pending read/write requests
     end if
 
-    call PROF_rapend('FILE_O_NetCDF', 2, disable_barrier = FILE_single(fid) )
+    call PROF_rapend('FILE_Write', 2, disable_barrier = .not. FILE_allnodes(fid) )
 
     return
   end subroutine FILE_CARTESC_flush
@@ -1023,7 +1044,7 @@ contains
     use scale_file, only: &
        FILE_get_AGGREGATE, &
        FILE_opened,    &
-       FILE_single,    &
+       FILE_allnodes,  &
        FILE_Close,     &
        FILE_Flush,     &
        FILE_Detach_Buffer
@@ -1034,7 +1055,7 @@ contains
 
     if ( .not. FILE_opened(fid) ) return
 
-    call PROF_rapstart('FILE_O_NetCDF', 2, disable_barrier = FILE_single(fid) )
+    call PROF_rapstart('FILE_Write', 2, disable_barrier = .not. FILE_allnodes(fid) )
 
     if ( FILE_get_AGGREGATE(fid) ) then
        call FILE_Flush( fid )        ! flush all pending read/write requests
@@ -1046,7 +1067,7 @@ contains
 
     call FILE_Close( fid ) ! [IN]
 
-    call PROF_rapend('FILE_O_NetCDF', 2, disable_barrier = FILE_single(fid) )
+    call PROF_rapend('FILE_Write', 2, disable_barrier = .not. FILE_allnodes(fid) )
 
     return
   end subroutine FILE_CARTESC_close
@@ -1212,7 +1233,7 @@ contains
     use scale_file, only: &
        FILE_get_AGGREGATE, &
        FILE_opened, &
-       FILE_single, &
+       FILE_allnodes, &
        FILE_Read
     use scale_prc, only: &
        PRC_abort
@@ -1238,7 +1259,7 @@ contains
 
     if ( .not. FILE_opened(fid) ) return
 
-    call PROF_rapstart('FILE_I_NetCDF', 2, disable_barrier = FILE_single(fid) )
+    call PROF_rapstart('FILE_Read', 2, disable_barrier = .not. FILE_allnodes(fid) )
 
     LOG_INFO("FILE_CARTESC_read_var_1D",'(1x,2A)') 'Read from file (1D), name : ', trim(varname)
 
@@ -1334,7 +1355,7 @@ contains
        call FILE_Read( fid, varname, var(dim1_S:dim1_E), step=step )
     endif
 
-    call PROF_rapend('FILE_I_NetCDF', 2, disable_barrier = FILE_single(fid) )
+    call PROF_rapend('FILE_Read', 2, disable_barrier = .not. FILE_allnodes(fid) )
 
     return
   end subroutine FILE_CARTESC_read_var_1D
@@ -1350,7 +1371,7 @@ contains
     use scale_file, only: &
        FILE_get_AGGREGATE, &
        FILE_opened, &
-       FILE_single, &
+       FILE_allnodes, &
        FILE_Read
     use scale_prc, only: &
        PRC_abort
@@ -1369,11 +1390,13 @@ contains
     integer, pointer :: start(:), count(:)
     integer :: dim1_S, dim1_E
     integer :: dim2_S, dim2_E
+
+    real(RP), allocatable :: buf(:,:)
     !---------------------------------------------------------------------------
 
     if ( .not. FILE_opened(fid) ) return
 
-    call PROF_rapstart('FILE_I_NetCDF', 2, disable_barrier = FILE_single(fid) )
+    call PROF_rapstart('FILE_Read', 2, disable_barrier = .not. FILE_allnodes(fid) )
 
     LOG_INFO("FILE_CARTESC_read_var_2D",'(1x,2A)') 'Read from file (2D), name : ', trim(varname)
 
@@ -1431,10 +1454,17 @@ contains
           LOG_ERROR("FILE_CARTESC_read_var_2D",*) 'size of var is invalid: ', trim(varname), size(var), vsize
           call PRC_abort
        end if
-       call FILE_Read( fid, varname, var(dim1_S:dim1_E,dim2_S:dim2_E), step=step )
+       allocate( buf(dim1_S:dim1_E,dim2_S:dim2_E) )
+       call FILE_Read( fid, varname, buf(:,:), step=step )
+       !$omp workshare
+       var(dim1_S:dim1_E,dim2_S:dim2_E) = buf(:,:)
+       !$omp endworkshare
+       deallocate( buf )
+
+       !$acc update device(var) if(acc_is_present(var))
     endif
 
-    call PROF_rapend('FILE_I_NetCDF', 2, disable_barrier = FILE_single(fid) )
+    call PROF_rapend('FILE_Read', 2, disable_barrier = .not. FILE_allnodes(fid) )
 
     return
   end subroutine FILE_CARTESC_read_var_2D
@@ -1450,7 +1480,7 @@ contains
     use scale_file, only: &
        FILE_get_AGGREGATE, &
        FILE_opened, &
-       FILE_single, &
+       FILE_allnodes, &
        FILE_Read
     use scale_prc, only: &
        PRC_abort
@@ -1473,11 +1503,12 @@ contains
     integer :: dim1_S, dim1_E
     integer :: dim2_S, dim2_E
     integer :: dim3_S, dim3_E
+    real(RP), allocatable :: buf(:,:,:)
     !---------------------------------------------------------------------------
 
     if ( .not. FILE_opened(fid) ) return
 
-    call PROF_rapstart('FILE_I_NetCDF', 2, disable_barrier = FILE_single(fid) )
+    call PROF_rapstart('FILE_Read', 2, disable_barrier = .not. FILE_allnodes(fid) )
 
     LOG_INFO("FILE_CARTESC_read_var_3D",'(1x,2A)') 'Read from file (3D), name : ', trim(varname)
 
@@ -1608,12 +1639,19 @@ contains
           LOG_ERROR("FILE_CARTESC_read_var_3D",*) 'size of var is invalid: ', trim(varname), size(var), vsize
           call PRC_abort
        end if
-       call FILE_Read( fid, varname, var(dim1_S:dim1_E,dim2_S:dim2_E,dim3_S:dim3_E), &
-                       step=step, allow_missing=allow_missing                        )
 
+       allocate( buf(dim1_S:dim1_E,dim2_S:dim2_E,dim3_S:dim3_E) )
+       call FILE_Read( fid, varname, buf(:,:,:), &
+                       step=step, allow_missing=allow_missing )
+       !$omp workshare
+       var(dim1_S:dim1_E,dim2_S:dim2_E,dim3_S:dim3_E) = buf(:,:,:)
+       !$omp end workshare
+       deallocate( buf )
+
+       !$acc update device(var) if(acc_is_present(var))
     endif
 
-    call PROF_rapend('FILE_I_NetCDF', 2, disable_barrier = FILE_single(fid) )
+    call PROF_rapend('FILE_Read', 2, disable_barrier = .not. FILE_allnodes(fid) )
 
     return
   end subroutine FILE_CARTESC_read_var_3D
@@ -1629,7 +1667,7 @@ contains
     use scale_file, only: &
        FILE_get_AGGREGATE, &
        FILE_opened, &
-       FILE_single, &
+       FILE_allnodes, &
        FILE_Read
     use scale_prc, only: &
        PRC_abort
@@ -1653,11 +1691,13 @@ contains
     integer :: dim2_S, dim2_E
     integer :: dim3_S, dim3_E
     integer :: dim4_S, dim4_E
+
+    real(RP), allocatable :: buf(:,:,:,:)
     !---------------------------------------------------------------------------
 
     if ( .not. FILE_opened(fid) ) return
 
-    call PROF_rapstart('FILE_I_NetCDF', 2, disable_barrier = FILE_single(fid) )
+    call PROF_rapstart('FILE_Read', 2, disable_barrier = .not. FILE_allnodes(fid) )
 
     LOG_INFO("FILE_CARTESC_read_var_4D",'(1x,2A)') 'Read from file (4D), name : ', trim(varname)
 
@@ -1680,11 +1720,6 @@ contains
           dtype = centerTypeOCEAN
           start => startOCEAN
           count => countOCEAN
-       elseif ( dim_type == 'LXYT' ) then
-          vsize = LKA * LIA * LJA * step
-          dtype = centerTypeLAND
-          start => startLAND
-          count => countLAND
        elseif ( dim_type == 'LXYT' ) then
           vsize = LKA * LIA * LJA * step
           dtype = centerTypeLAND
@@ -1746,10 +1781,10 @@ contains
           dim2_E = IEB
           dim3_S = JSB
           dim3_E = JEB
-       elseif ( dim_type == 'OXYT' ) then
-          vsize = LKA * LIA * LJA * step
-          dim1_S = LKS
-          dim1_E = LKE
+       elseif ( dim_type == 'UXYT' ) then
+          vsize = UKA * UIA * UJA * step
+          dim1_S = UKS
+          dim1_E = UKE
           dim2_S = ISB
           dim2_E = IEB
           dim3_S = JSB
@@ -1765,11 +1800,19 @@ contains
        end if
        dim4_S   = 1
        dim4_E   = step
-       call FILE_Read( fid, varname,                                     & ! (in)
-            var(dim1_S:dim1_E,dim2_S:dim2_E,dim3_S:dim3_E,dim4_S:dim4_E) ) ! (out)
+
+       allocate( buf(dim1_S:dim1_E,dim2_S:dim2_E,dim3_S:dim3_E,dim4_S:dim4_E) )
+       call FILE_Read( fid, varname, & ! (in)
+                       buf(:,:,:,:)  ) ! (out)
+       !$omp workshare
+       var(dim1_S:dim1_E,dim2_S:dim2_E,dim3_S:dim3_E,dim4_S:dim4_E) = buf(:,:,:,:)
+       !$omp end workshare
+       deallocate( buf )
+
+       !$acc update device(var) if(acc_is_present(var))
     endif
 
-    call PROF_rapend('FILE_I_NetCDF', 2, disable_barrier = FILE_single(fid) )
+    call PROF_rapend('FILE_Read', 2, disable_barrier = .not. FILE_allnodes(fid) )
 
     return
   end subroutine FILE_CARTESC_read_var_4D
@@ -1782,7 +1825,7 @@ contains
        step, existed )
     use scale_file, only: &
        FILE_opened, &
-       FILE_single, &
+       FILE_allnodes, &
        FILE_get_shape, &
        FILE_get_dataInfo, &
        FILE_get_attribute, &
@@ -1815,7 +1858,7 @@ contains
 
     if ( .not. FILE_opened(fid) ) return
 
-    call PROF_rapstart('FILE_I_NetCDF', 2, disable_barrier = FILE_single(fid) )
+    call PROF_rapstart('FILE_Read', 2, disable_barrier = .not. FILE_allnodes(fid) )
 
     LOG_INFO("FILE_CARTESC_read_auto_2D",'(1x,2A)') 'Read from file (2D), name : ', trim(varname)
 
@@ -1823,7 +1866,10 @@ contains
 
     if ( present( existed ) ) then
        existed = existed2
-       if ( .not. existed2 ) return
+       if ( .not. existed2 ) then
+          call PROF_rapend  ('FILE_Read', 2)
+          return
+       end if
     end if
 
     if ( .not. existed2 ) then
@@ -1851,8 +1897,9 @@ contains
 
     call FILE_read( fid, varname, var(:,:), step=step, start=start(:), count=count(:) )
     call FILE_CARTESC_flush( fid )
+    !$acc update device(var) if(acc_is_present(var))
 
-    call PROF_rapend('FILE_I_NetCDF', 2, disable_barrier = FILE_single(fid) )
+    call PROF_rapend('FILE_Read', 2, disable_barrier = .not. FILE_allnodes(fid) )
 
     return
   end subroutine FILE_CARTESC_read_auto_2D
@@ -1865,7 +1912,7 @@ contains
        step, existed )
     use scale_file, only: &
        FILE_opened, &
-       FILE_single, &
+       FILE_allnodes, &
        FILE_get_shape, &
        FILE_get_dataInfo, &
        FILE_get_attribute, &
@@ -1900,7 +1947,7 @@ contains
 
     if ( .not. FILE_opened(fid) ) return
 
-    call PROF_rapstart('FILE_I_NetCDF', 2, disable_barrier = FILE_single(fid) )
+    call PROF_rapstart('FILE_Read', 2, disable_barrier = .not. FILE_allnodes(fid) )
 
     LOG_INFO("FILE_CARTESC_read_auto_3D",'(1x,2A)') 'Read from file (3D), name : ', trim(varname)
 
@@ -1908,7 +1955,10 @@ contains
 
     if ( present(existed) ) then
        existed = existed2
-       if ( .not. existed2 ) return
+       if ( .not. existed2 ) then
+          call PROF_rapend  ('FILE_Read', 2)
+          return
+       end if
     end if
 
     if ( .not. existed2 ) then
@@ -1941,6 +1991,7 @@ contains
        count(:) = (/nz,nx,ny/)
        call FILE_read( fid, varname, var(:,:,:), step=step, start=start(:), count=count(:) )
        call FILE_CARTESC_flush( fid )
+       !$acc update device(var) if(acc_is_present(var))
     else if ( dnames(1)(1:1)=="x" .and. dnames(2)(1:1)=="y" .and. ( dnames(3)(1:1)=="z" .or. dnames(3)(2:2)=="z" ) ) then
        allocate( buf(nx,ny,nz) )
        if ( nx==dims(1) .and. ny==dims(2) .and. nz==dims(3) ) then
@@ -1964,6 +2015,7 @@ contains
        call FILE_CARTESC_flush( fid )
 
        !$omp parallel do
+       !$acc kernels if(acc_is_present(var))
        do j = 1, ny
        do i = 1, nx
        do k = 1, nz
@@ -1971,13 +2023,14 @@ contains
        end do
        end do
        end do
+       !$acc end kernels
        deallocate(buf)
     else
        LOG_ERROR("FILE_CARTESC_read_auto_3D",*) 'invalid dimension'
        call PRC_abort
     end if
 
-    call PROF_rapend('FILE_I_NetCDF', 2, disable_barrier = FILE_single(fid) )
+    call PROF_rapend('FILE_Read', 2, disable_barrier = .not. FILE_allnodes(fid) )
 
     return
   end subroutine FILE_CARTESC_read_auto_3D
@@ -2293,7 +2346,7 @@ contains
        ATMOS_GRID_CARTESC_NAME
     use scale_file, only: &
        FILE_opened, &
-       FILE_single, &
+       FILE_allnodes, &
        FILE_Set_Attribute
 
     integer,          intent(in) :: fid
@@ -2310,7 +2363,7 @@ contains
 
     if ( .not. FILE_opened(fid) ) return
 
-    call PROF_rapstart('FILE_O_NetCDF', 2, disable_barrier = FILE_single(fid) )
+    if ( .not. prof ) call PROF_rapstart('FILE_Write', 2, disable_barrier = .not. FILE_allnodes(fid) )
 
     call FILE_Set_Attribute( fid, "global", "Conventions", "CF-1.6" ) ! [IN]
 
@@ -2342,7 +2395,7 @@ contains
     call FILE_Set_Attribute( fid, "global", "time_units", tunits )
     call FILE_Set_Attribute( fid, "global", "time_start", (/time/) )
 
-    call PROF_rapend('FILE_O_NetCDF', 2, disable_barrier = FILE_single(fid) )
+    if ( .not. prof ) call PROF_rapend('FILE_Write', 2, disable_barrier = .not. FILE_allnodes(fid) )
 
     return
   end subroutine FILE_CARTESC_put_globalAttributes
@@ -2355,7 +2408,6 @@ contains
        hasZ   )
     use scale_file, only: &
        FILE_opened,                   &
-       FILE_single,                   &
        FILE_get_AGGREGATE,            &
        FILE_Def_Axis,                 &
        FILE_Set_Attribute,            &
@@ -2382,8 +2434,6 @@ contains
     !---------------------------------------------------------------------------
 
     if ( .not. FILE_opened(fid) ) return
-
-    call PROF_rapstart('FILE_O_NetCDF', 2, disable_barrier = FILE_single(fid) )
 
     if ( .not. set_dim ) then
        call set_dimension_informations
@@ -2515,10 +2565,10 @@ contains
 
     if ( hasZ ) then
        axisname = (/'z ', 'x ', 'y '/)
-       call FILE_Def_AssociatedCoordinate( fid, 'height',     'height above ground level', &
+       call FILE_Def_AssociatedCoordinate( fid, 'height',     'height above sea level', &
                                            'm', axisname(1:3), dtype                        )
        axisname = (/'zh', 'x ', 'y '/)
-       call FILE_Def_AssociatedCoordinate( fid, 'height_wxy', 'height above ground level (half level wxy)', &
+       call FILE_Def_AssociatedCoordinate( fid, 'height_wxy', 'height above sea level (half level wxy)', &
                                            'm', axisname(1:3), dtype                                         )
 
        axisname = (/'z ', 'xh', 'y '/)
@@ -2825,8 +2875,6 @@ contains
     call FILE_Set_Attribute( fid, "grid_model_global", "face_dimensions",     "CXG: FYG (padding: none) CYG: FYG (padding: none)" )
     call FILE_Set_Attribute( fid, "grid_model_global", "vertical_dimensions", "CZ: FZ (padding: none)" )
 
-    call PROF_rapend('FILE_O_NetCDF', 2, disable_barrier = FILE_single(fid) )
-
     return
   end subroutine FILE_CARTESC_def_axes
 
@@ -2840,7 +2888,6 @@ contains
        UNDEF => CONST_UNDEF
     use scale_file, only: &
        FILE_opened, &
-       FILE_single, &
        FILE_get_AGGREGATE, &
        FILE_Write_Axis,                 &
        FILE_Write_AssociatedCoordinate
@@ -2907,6 +2954,7 @@ contains
     real(RP) :: uz_bnds(2,UKA), uzh_bnds(2,0:UKA)
     real(RP) :: x_bnds(2,IA), xh_bnds(2,0:IA)
     real(RP) :: y_bnds(2,JA), yh_bnds(2,0:JA)
+    integer  :: start_(2)
 
     real(RP) :: FDXG(0:IAG), FDYG(0:JAG)
     real(RP) :: FDX(0:IA), FDY(0:JA)
@@ -2915,8 +2963,6 @@ contains
     !---------------------------------------------------------------------------
 
     if ( .not. FILE_opened(fid) ) return
-
-    call PROF_rapstart('FILE_O_NetCDF', 2, disable_barrier = FILE_single(fid) )
 
     if ( FILE_get_AGGREGATE(fid) ) then
        ! For parallel I/O, not all variables are written by all processes.
@@ -2940,20 +2986,23 @@ contains
     end if
 
     if ( haszcoord .and. put_z ) then
+       start_(1) = 1
+       start_(2) = start(1)
+
        ! atmos
        call FILE_Write_Axis( fid, 'z', ATMOS_GRID_CARTESC_CZ(KS:KE), start(1:1) )
        do k = KS, KE
           z_bnds(1,k) = ATMOS_GRID_CARTESC_FZ(k-1)
           z_bnds(2,k) = ATMOS_GRID_CARTESC_FZ(k  )
        end do
-       call FILE_Write_AssociatedCoordinate( fid, 'z_bnds', z_bnds(:,KS:KE), start(1:1) )
+       call FILE_Write_AssociatedCoordinate( fid, 'z_bnds', z_bnds(:,KS:KE), start_(:) )
 
        call FILE_Write_Axis( fid, 'zh', ATMOS_GRID_CARTESC_FZ(KS-1:KE)  , start(1:1) )
        do k = KS-1, KE
           zh_bnds(1,k) = ATMOS_GRID_CARTESC_CZ(k  )
           zh_bnds(2,k) = ATMOS_GRID_CARTESC_CZ(k+1)
        end do
-       call FILE_Write_AssociatedCoordinate( fid, 'zh_bnds', zh_bnds(:,KS-1:KE), start(1:1) )
+       call FILE_Write_AssociatedCoordinate( fid, 'zh_bnds', zh_bnds(:,KS-1:KE), start_(:) )
 
        ! ocean
        if ( OKMAX > 0 ) then
@@ -2962,7 +3011,7 @@ contains
              oz_bnds(1,k) = OCEAN_GRID_CARTESC_FZ(k-1)
              oz_bnds(2,k) = OCEAN_GRID_CARTESC_FZ(k  )
           end do
-          call FILE_Write_AssociatedCoordinate( fid, 'oz_bnds', oz_bnds(:,OKS:OKE), start(1:1) )
+          call FILE_Write_AssociatedCoordinate( fid, 'oz_bnds', oz_bnds(:,OKS:OKE), start_(:) )
 
           call FILE_Write_Axis( fid, 'ozh', OCEAN_GRID_CARTESC_FZ(OKS-1:OKE), start(1:1) )
           ozh_bnds(1,OKS-1) = OCEAN_GRID_CARTESC_FZ(OKS-1)
@@ -2971,7 +3020,7 @@ contains
              ozh_bnds(1,k+1) = OCEAN_GRID_CARTESC_CZ(k+1)
           end do
           ozh_bnds(2,OKE) = OCEAN_GRID_CARTESC_FZ(OKE)
-          call FILE_Write_AssociatedCoordinate( fid, 'ozh_bnds', ozh_bnds(:,OKS-1:OKE), start(1:1) )
+          call FILE_Write_AssociatedCoordinate( fid, 'ozh_bnds', ozh_bnds(:,OKS-1:OKE), start_(:) )
        end if
 
        ! land
@@ -2981,7 +3030,7 @@ contains
              lz_bnds(1,k) = LAND_GRID_CARTESC_FZ(k-1)
              lz_bnds(2,k) = LAND_GRID_CARTESC_FZ(k  )
           end do
-          call FILE_Write_AssociatedCoordinate( fid, 'lz_bnds', lz_bnds(:,LKS:LKE), start(1:1) )
+          call FILE_Write_AssociatedCoordinate( fid, 'lz_bnds', lz_bnds(:,LKS:LKE), start_(:) )
 
           call FILE_Write_Axis( fid, 'lzh', LAND_GRID_CARTESC_FZ(LKS-1:LKE), start(1:1) )
           lzh_bnds(1,LKS-1) = LAND_GRID_CARTESC_FZ(LKS-1)
@@ -2990,7 +3039,7 @@ contains
              lzh_bnds(1,k+1) = LAND_GRID_CARTESC_CZ(k+1)
           end do
           lzh_bnds(2,LKE) = LAND_GRID_CARTESC_FZ(LKE)
-          call FILE_Write_AssociatedCoordinate( fid, 'lzh_bnds', lzh_bnds(:,LKS-1:LKE), start(1:1) )
+          call FILE_Write_AssociatedCoordinate( fid, 'lzh_bnds', lzh_bnds(:,LKS-1:LKE), start_(:) )
        end if
 
        ! urban
@@ -3000,7 +3049,7 @@ contains
              uz_bnds(1,k) = URBAN_GRID_CARTESC_FZ(k-1)
              uz_bnds(2,k) = URBAN_GRID_CARTESC_FZ(k  )
           end do
-          call FILE_Write_AssociatedCoordinate( fid, 'uz_bnds', uz_bnds(:,UKS:UKE), start(1:1) )
+          call FILE_Write_AssociatedCoordinate( fid, 'uz_bnds', uz_bnds(:,UKS:UKE), start_(:) )
 
           call FILE_Write_Axis( fid, 'uzh', URBAN_GRID_CARTESC_FZ(UKS-1:UKE), start(1:1) )
           uzh_bnds(1,UKS-1) = URBAN_GRID_CARTESC_FZ(UKS-1)
@@ -3009,18 +3058,21 @@ contains
              uzh_bnds(1,k+1) = URBAN_GRID_CARTESC_CZ(k+1)
           end do
           uzh_bnds(2,UKE) = URBAN_GRID_CARTESC_FZ(UKE)
-          call FILE_Write_AssociatedCoordinate( fid, 'uzh_bnds', uzh_bnds(:,UKS-1:UKE), start(1:1) )
+          call FILE_Write_AssociatedCoordinate( fid, 'uzh_bnds', uzh_bnds(:,UKS-1:UKE), start_(:) )
        end if
     end if
 
     if ( put_x ) then
+       start_(1) = 1
+       start_(2) = start(2)
+
        if ( FILE_get_aggregate(fid) ) then
           call FILE_Write_Axis( fid, 'x' ,  ATMOS_GRID_CARTESC_CX(ISB2:IEB2),  start(2:2) )
           do i = ISB2, IEB2
              x_bnds(1,i) = ATMOS_GRID_CARTESC_FX(i-1)
              x_bnds(2,i) = ATMOS_GRID_CARTESC_FX(i  )
           end do
-          call FILE_Write_AssociatedCoordinate( fid, 'x_bnds', x_bnds(:,ISB2:IEB2), (/1,start(2)/) )
+          call FILE_Write_AssociatedCoordinate( fid, 'x_bnds', x_bnds(:,ISB2:IEB2), start_(:) )
 
           call FILE_Write_Axis( fid, 'xh',  ATMOS_GRID_CARTESC_FX(ISB2:IEB2),  start(2:2) )
           do i = ISB2, IEB2-1
@@ -3033,14 +3085,14 @@ contains
           else
              xh_bnds(2,IEB2) = ATMOS_GRID_CARTESC_CX(IEB2+1)
           end if
-          call FILE_Write_AssociatedCoordinate( fid, 'xh_bnds', xh_bnds(:,ISB2:IEB2), (/1,start(2)/) )
+          call FILE_Write_AssociatedCoordinate( fid, 'xh_bnds', xh_bnds(:,ISB2:IEB2), start_(:) )
        else
           call FILE_Write_Axis( fid, 'x' ,  ATMOS_GRID_CARTESC_CX(ISB:IEB),  start(2:2) )
           do i = ISB2, IEB
              x_bnds(1,i) = ATMOS_GRID_CARTESC_FX(i-1)
              x_bnds(2,i) = ATMOS_GRID_CARTESC_FX(i  )
           end do
-          call FILE_Write_AssociatedCoordinate( fid, 'x_bnds', x_bnds(:,ISB:IEB), (/1,start(2)/) )
+          call FILE_Write_AssociatedCoordinate( fid, 'x_bnds', x_bnds(:,ISB:IEB), start_(:) )
 
           call FILE_Write_Axis( fid, 'xh',  ATMOS_GRID_CARTESC_FX(ISB:IEB),  start(2:2) )
           do i = ISB, IEB-1
@@ -3053,18 +3105,21 @@ contains
           else
              xh_bnds(2,IEB) = ATMOS_GRID_CARTESC_CX(IEB+1)
           end if
-          call FILE_Write_AssociatedCoordinate( fid, 'xh_bnds', xh_bnds(:,ISB:IEB), (/1,start(2)/) )
+          call FILE_Write_AssociatedCoordinate( fid, 'xh_bnds', xh_bnds(:,ISB:IEB), start_(:) )
        end if
     end if
 
     if ( put_y ) then
+       start_(1) = 1
+       start_(2) = start(3)
+
        if ( FILE_get_aggregate(fid) ) then
           call FILE_Write_Axis( fid, 'y' ,  ATMOS_GRID_CARTESC_CY(JSB2:JEB2),  start(3:3) )
           do j = JSB2, JEB2
              y_bnds(1,j) = ATMOS_GRID_CARTESC_FY(j-1)
              y_bnds(2,j) = ATMOS_GRID_CARTESC_FY(j  )
           end do
-          call FILE_Write_AssociatedCoordinate( fid, 'y_bnds', y_bnds(:,JSB2:JEB2), (/1,start(2)/) )
+          call FILE_Write_AssociatedCoordinate( fid, 'y_bnds', y_bnds(:,JSB2:JEB2), start_(:) )
 
           call FILE_Write_Axis( fid, 'yh',  ATMOS_GRID_CARTESC_FY(JSB2:JEB2),  start(3:3) )
           do j = JSB2, JEB2-1
@@ -3077,14 +3132,14 @@ contains
           else
              yh_bnds(2,JEB2) = ATMOS_GRID_CARTESC_CY(JEB2+1)
           end if
-          call FILE_Write_AssociatedCoordinate( fid, 'yh_bnds', yh_bnds(:,JSB2:JEB2), (/1,start(2)/) )
+          call FILE_Write_AssociatedCoordinate( fid, 'yh_bnds', yh_bnds(:,JSB2:JEB2), start_(:) )
        else
           call FILE_Write_Axis( fid, 'y' ,  ATMOS_GRID_CARTESC_CY(JSB:JEB),  start(3:3) )
           do j = JSB, JEB
              y_bnds(1,j) = ATMOS_GRID_CARTESC_FY(j-1)
              y_bnds(2,j) = ATMOS_GRID_CARTESC_FY(j  )
           end do
-          call FILE_Write_AssociatedCoordinate( fid, 'y_bnds', y_bnds(:,JSB:JEB), (/1,start(2)/) )
+          call FILE_Write_AssociatedCoordinate( fid, 'y_bnds', y_bnds(:,JSB:JEB), start_(:) )
 
           call FILE_Write_Axis( fid, 'yh',  ATMOS_GRID_CARTESC_FY(JSB:JEB),  start(3:3) )
           do j = JSB, JEB-1
@@ -3097,7 +3152,7 @@ contains
           else
              yh_bnds(2,JEB) = ATMOS_GRID_CARTESC_CY(JEB+1)
           end if
-          call FILE_Write_AssociatedCoordinate( fid, 'yh_bnds', yh_bnds(:,JSB:JEB), (/1,start(2)/) )
+          call FILE_Write_AssociatedCoordinate( fid, 'yh_bnds', yh_bnds(:,JSB:JEB), start_(:) )
        end if
     end if
 
@@ -3263,14 +3318,14 @@ contains
           call FILE_Write_AssociatedCoordinate( fid, 'height'    , AXIS_HGT   (:,XSB:XEB,YSB:YEB), start(1:3) )
           call FILE_Write_AssociatedCoordinate( fid, 'height_wxy', AXIS_HGTWXY(:,XSB:XEB,YSB:YEB), start(1:3) )
 
-          call FILE_Write_AssociatedCoordinate( fid, 'cell_area_zuy_x', AXIS_AREAZUY_X(:,XSB:XEB,YSB:YEB), start(2:3) )
-          call FILE_Write_AssociatedCoordinate( fid, 'cell_area_zxv_y', AXIS_AREAZXV_Y(:,XSB:XEB,YSB:YEB), start(2:3) )
-          call FILE_Write_AssociatedCoordinate( fid, 'cell_area_wuy_x', AXIS_AREAWUY_X(:,XSB:XEB,YSB:YEB), start(2:3) )
-          call FILE_Write_AssociatedCoordinate( fid, 'cell_area_wxv_y', AXIS_AREAWXV_Y(:,XSB:XEB,YSB:YEB), start(2:3) )
-          call FILE_Write_AssociatedCoordinate( fid, 'cell_area_zxy_x', AXIS_AREAZXY_X(:,XSB:XEB,YSB:YEB), start(2:3) )
-          call FILE_Write_AssociatedCoordinate( fid, 'cell_area_zuv_y', AXIS_AREAZUV_Y(:,XSB:XEB,YSB:YEB), start(2:3) )
-          call FILE_Write_AssociatedCoordinate( fid, 'cell_area_zuv_x', AXIS_AREAZUV_X(:,XSB:XEB,YSB:YEB), start(2:3) )
-          call FILE_Write_AssociatedCoordinate( fid, 'cell_area_zxy_y', AXIS_AREAZXY_Y(:,XSB:XEB,YSB:YEB), start(2:3) )
+          call FILE_Write_AssociatedCoordinate( fid, 'cell_area_zuy_x', AXIS_AREAZUY_X(:,XSB:XEB,YSB:YEB), start(1:3) )
+          call FILE_Write_AssociatedCoordinate( fid, 'cell_area_zxv_y', AXIS_AREAZXV_Y(:,XSB:XEB,YSB:YEB), start(1:3) )
+          call FILE_Write_AssociatedCoordinate( fid, 'cell_area_wuy_x', AXIS_AREAWUY_X(:,XSB:XEB,YSB:YEB), start(1:3) )
+          call FILE_Write_AssociatedCoordinate( fid, 'cell_area_wxv_y', AXIS_AREAWXV_Y(:,XSB:XEB,YSB:YEB), start(1:3) )
+          call FILE_Write_AssociatedCoordinate( fid, 'cell_area_zxy_x', AXIS_AREAZXY_X(:,XSB:XEB,YSB:YEB), start(1:3) )
+          call FILE_Write_AssociatedCoordinate( fid, 'cell_area_zuv_y', AXIS_AREAZUV_Y(:,XSB:XEB,YSB:YEB), start(1:3) )
+          call FILE_Write_AssociatedCoordinate( fid, 'cell_area_zuv_x', AXIS_AREAZUV_X(:,XSB:XEB,YSB:YEB), start(1:3) )
+          call FILE_Write_AssociatedCoordinate( fid, 'cell_area_zxy_y', AXIS_AREAZXY_Y(:,XSB:XEB,YSB:YEB), start(1:3) )
 
           call FILE_Write_AssociatedCoordinate( fid, 'cell_volume',     AXIS_VOL   (:,XSB:XEB,YSB:YEB), start(1:3) )
           call FILE_Write_AssociatedCoordinate( fid, 'cell_volume_wxy', AXIS_VOLWXY(:,XSB:XEB,YSB:YEB), start(1:3) )
@@ -3288,8 +3343,6 @@ contains
           end if
        end if
     end if
-
-    call PROF_rapend('FILE_O_NetCDF', 2, disable_barrier = FILE_single(fid) )
 
     return
   end subroutine FILE_CARTESC_write_axes
@@ -3309,7 +3362,7 @@ contains
        FILE_REAL4
     use scale_file, only: &
        FILE_opened, &
-       FILE_single, &
+       FILE_allnodes, &
        FILE_Def_Variable, &
        FILE_Set_Attribute
     use scale_prc, only: &
@@ -3345,7 +3398,7 @@ contains
 
     if ( .not. FILE_opened(fid) ) return
 
-    call PROF_rapstart('FILE_O_NetCDF', 2, disable_barrier = FILE_single(fid) )
+    call PROF_rapstart('FILE_Write', 2, disable_barrier = .not. FILE_allnodes(fid) )
 
     if    ( datatype == 'REAL8' ) then
        dtype = FILE_REAL8
@@ -3484,7 +3537,7 @@ contains
        call FILE_Set_Attribute( fid, varname, "location", FILE_CARTESC_dims(dimid)%location )
     end if
 
-    call PROF_rapend('FILE_O_NetCDF', 2, disable_barrier = FILE_single(fid) )
+    call PROF_rapend('FILE_Write', 2, disable_barrier = .not. FILE_allnodes(fid) )
 
     return
   end subroutine FILE_CARTESC_def_var
@@ -3500,7 +3553,7 @@ contains
     use scale_file, only: &
        FILE_get_AGGREGATE, &
        FILE_opened, &
-       FILE_single, &
+       FILE_allnodes, &
        FILE_Write
     use scale_prc, only: &
        PRC_myrank,  &
@@ -3525,7 +3578,7 @@ contains
 
     if ( .not. FILE_opened(fid) ) return
 
-    call PROF_rapstart('FILE_O_NetCDF', 2, disable_barrier = FILE_single(fid) )
+    call PROF_rapstart('FILE_Write', 2, disable_barrier = .not. FILE_allnodes(fid) )
 
     rankidx(1) = PRC_2Drank(PRC_myrank,1)
     rankidx(2) = PRC_2Drank(PRC_myrank,2)
@@ -3569,7 +3622,7 @@ contains
     if( exec ) call FILE_Write( vid, var(dim1_S:dim1_E),          & ! [IN]
                                 NOWDAYSEC, NOWDAYSEC, start=start ) ! [IN]
 
-    call PROF_rapend('FILE_O_NetCDF', 2, disable_barrier = FILE_single(fid) )
+    call PROF_rapend('FILE_Write', 2, disable_barrier = .not. FILE_allnodes(fid) )
 
     return
   end subroutine FILE_CARTESC_write_var_1D
@@ -3588,7 +3641,7 @@ contains
     use scale_file, only: &
        FILE_get_AGGREGATE, &
        FILE_opened, &
-       FILE_single, &
+       FILE_allnodes, &
        FILE_Write
     use scale_prc, only: &
        PRC_myrank,     &
@@ -3608,7 +3661,7 @@ contains
     character(len=*), intent(in)  :: dim_type !< axis type (Z/X/Y)
     logical,          intent(in), optional :: fill_halo !< switch whether include halo data or not (default=false)
 
-    real(RP)              :: varhalo( size(var(:,1)), size(var(1,:)) )
+    real(RP), allocatable :: buf(:,:)
 
     integer               :: dim1_S, dim1_E
     integer               :: dim2_S, dim2_E
@@ -3622,7 +3675,7 @@ contains
 
     if ( .not. FILE_opened(fid) ) return
 
-    call PROF_rapstart('FILE_O_NetCDF', 2, disable_barrier = FILE_single(fid) )
+    call PROF_rapstart('FILE_Write', 2, disable_barrier = .not. FILE_allnodes(fid) )
 
     rankidx(1) = PRC_2Drank(PRC_myrank,1)
     rankidx(2) = PRC_2Drank(PRC_myrank,2)
@@ -3669,48 +3722,58 @@ contains
     endif
 
     if ( exec ) then
+
+       !$acc update host(var) if(acc_is_present(var))
+
+       allocate( buf(dim1_S:dim1_E,dim2_S:dim2_E) )
+
        if ( fill_halo_ ) then ! fill halo cells with RMISS
           do j = JS, JE
           do i = IS, IE
-             varhalo(i,j) = var(i,j)
+             buf(i,j) = var(i,j)
           end do
           end do
 
           ! W halo
-          do j = 1, JA
-          do i = 1, IS-1
-             varhalo(i,j) = RMISS
+          do j = dim2_S, dim2_E
+          do i = dim1_S, IS-1
+             buf(i,j) = RMISS
           enddo
           enddo
           ! E halo
-          do j = 1, JA
-          do i = IE+1, IA
-             varhalo(i,j) = RMISS
+          do j = dim2_S, dim2_E
+          do i = IE+1,   dim1_E
+             buf(i,j) = RMISS
           enddo
           enddo
           ! S halo
-          do j = 1, JS-1
-          do i = 1, IA
-             varhalo(i,j) = RMISS
+          do j = dim2_S, JS-1
+          do i = dim1_S, dim1_E
+             buf(i,j) = RMISS
           enddo
           enddo
           ! N halo
-          do j = JE+1, JA
-          do i = 1, IA
-             varhalo(i,j) = RMISS
+          do j = JE+1,   dim2_E
+          do i = dim1_S, dim1_E
+             buf(i,j) = RMISS
           enddo
           enddo
-
-          call FILE_Write( vid, varhalo(dim1_S:dim1_E,dim2_S:dim2_E), &
-                           NOWDAYSEC, NOWDAYSEC, start                ) ! [IN]
        else
-          call FILE_Write( vid, var(dim1_S:dim1_E,dim2_S:dim2_E), &
-                           NOWDAYSEC, NOWDAYSEC, start            ) ! [IN]
-       endif
+          do j = dim2_S, dim2_E
+          do i = dim1_S, dim1_E
+             buf(i,j) = var(i,j)
+          end do
+          end do
+       end if
+
+       call FILE_Write( vid, buf(:,:), NOWDAYSEC, NOWDAYSEC, start ) ! [IN]
+       call FILE_CARTESC_flush( fid )
+
+       deallocate( buf )
 
     endif
 
-    call PROF_rapend('FILE_O_NetCDF', 2, disable_barrier = FILE_single(fid) )
+    call PROF_rapend('FILE_Write', 2, disable_barrier = .not. FILE_allnodes(fid) )
 
     return
   end subroutine FILE_CARTESC_write_var_2D
@@ -3729,7 +3792,7 @@ contains
     use scale_file, only: &
        FILE_get_AGGREGATE, &
        FILE_opened, &
-       FILE_single, &
+       FILE_allnodes, &
        FILE_Write
     use scale_prc, only: &
        PRC_myrank,  &
@@ -3750,9 +3813,9 @@ contains
 
     logical,          intent(in), optional :: fill_halo !< include halo data?
 
-    real(RP) :: varhalo( size(var(:,1,1)), size(var(1,:,1)), size(var(1,1,:)) )
+    real(RP), allocatable :: buf(:,:,:)
 
-    integer  :: dim1_S, dim1_E, dim1_max
+    integer  :: dim1_S, dim1_E
     integer  :: dim2_S, dim2_E
     integer  :: dim3_S, dim3_E
 
@@ -3764,7 +3827,7 @@ contains
 
     if ( .not. FILE_opened(fid) ) return
 
-    call PROF_rapstart('FILE_O_NetCDF', 2, disable_barrier = FILE_single(fid) )
+    call PROF_rapstart('FILE_Write', 2, disable_barrier = .not. FILE_allnodes(fid) )
 
     fill_halo_ = .false.
     if( present(fill_halo) ) fill_halo_ = fill_halo
@@ -3780,25 +3843,20 @@ contains
          .OR. dim_type == 'ZXHY'  &
          .OR. dim_type == 'ZXYH'  &
          .OR. dim_type == 'ZXHYH' ) then
-       dim1_max = KMAX
        dim1_S   = KS
        dim1_E   = KE
     elseif (  dim_type == 'ZHXY'  &
          .OR. dim_type == 'ZHXHY' &
          .OR. dim_type == 'ZHXYH' ) then
-       dim1_max = KMAX+1
        dim1_S   = KS-1
        dim1_E   = KE
     elseif( dim_type == 'OXY' ) then
-       dim1_max = OKMAX
        dim1_S   = OKS
        dim1_E   = OKE
     elseif( dim_type == 'LXY' ) then
-       dim1_max = LKMAX
        dim1_S   = LKS
        dim1_E   = LKE
     elseif( dim_type == 'UXY' ) then
-       dim1_max = UKMAX
        dim1_S   = UKS
        dim1_E   = UKE
     else
@@ -3818,57 +3876,72 @@ contains
        dim3_E   = JEB
     endif
 
+    !$acc update host(var) if(acc_is_present(var))
+
+    allocate( buf(dim1_S:dim1_E,dim2_S:dim2_E,dim3_S:dim3_E) )
+
     if ( fill_halo_ ) then
+
        !$omp parallel do
        do j = JS, JE
        do i = IS, IE
-       do k = 1, dim1_max
-          varhalo(k,i,j) = var(k,i,j)
+       do k = dim1_S, dim1_E
+          buf(k,i,j) = var(k,i,j)
        enddo
        enddo
        enddo
 
        ! W halo
-       do j = 1, JA
-       do i = 1, IS-1
-       do k = 1, dim1_max
-          varhalo(k,i,j) = RMISS
+       do j = dim3_S, dim3_E
+       do i = dim2_S, IS-1
+       do k = dim1_S, dim1_E
+          buf(k,i,j) = RMISS
        enddo
        enddo
        enddo
        ! E halo
-       do j = 1, JA
-       do i = IE+1, IA
-       do k = 1, dim1_max
-          varhalo(k,i,j) = RMISS
+       do j = dim3_S, dim3_E
+       do i = IE+1,   dim2_E
+       do k = dim1_S, dim1_E
+          buf(k,i,j) = RMISS
        enddo
        enddo
        enddo
        ! S halo
-       do j = 1, JS-1
-       do i = 1, IA
-       do k = 1, dim1_max
-          varhalo(k,i,j) = RMISS
+       do j = dim3_S, JS-1
+       do i = dim2_S, dim2_E
+       do k = dim1_S, dim1_E
+          buf(k,i,j) = RMISS
        enddo
        enddo
        enddo
        ! N halo
-       do j = JE+1, JA
-       do i = 1, IA
-       do k = 1, dim1_max
-          varhalo(k,i,j) = RMISS
+       do j = JE+1,   dim3_E
+       do i = dim2_S, dim2_E
+       do k = dim1_S, dim1_E
+          buf(k,i,j) = RMISS
        enddo
        enddo
        enddo
 
-       call FILE_Write( vid, varhalo(dim1_S:dim1_E,dim2_S:dim2_E,dim3_S:dim3_E), &
-                        NOWDAYSEC, NOWDAYSEC, start                              ) ! [IN]
     else
-       call FILE_Write( vid, var(dim1_S:dim1_E,dim2_S:dim2_E,dim3_S:dim3_E), &
-                        NOWDAYSEC, NOWDAYSEC, start                          ) ! [IN]
-    endif
 
-    call PROF_rapend('FILE_O_NetCDF', 2, disable_barrier = FILE_single(fid) )
+       do j = dim3_S, dim3_E
+       do i = dim2_S, dim2_E
+       do k = dim1_S, dim1_E
+          buf(k,i,j) = var(k,i,j)
+       enddo
+       enddo
+       enddo
+
+    end if
+
+    call FILE_Write( vid, buf(:,:,:), NOWDAYSEC, NOWDAYSEC, start ) ! [IN]
+    call FILE_CARTESC_flush( fid )
+
+    deallocate( buf )
+
+    call PROF_rapend('FILE_Write', 2, disable_barrier = .not. FILE_allnodes(fid) )
 
     return
   end subroutine FILE_CARTESC_write_var_3D
@@ -3890,7 +3963,7 @@ contains
     use scale_file, only: &
        FILE_get_AGGREGATE, &
        FILE_opened, &
-       FILE_single, &
+       FILE_allnodes, &
        FILE_Write
     use scale_prc, only: &
        PRC_myrank,     &
@@ -3912,7 +3985,7 @@ contains
     real(DP),         intent(in), optional :: timeofs   !< offset time     (optional)
     logical,          intent(in), optional :: fill_halo !< include halo data?
 
-    real(RP) :: varhalo( size(var(:,1,1)), size(var(1,:,1)) )
+    real(RP), allocatable :: buf(:,:)
 
     integer  :: dim1_S, dim1_E
     integer  :: dim2_S, dim2_E
@@ -3929,7 +4002,7 @@ contains
 
     if ( .not. FILE_opened(fid) ) return
 
-    call PROF_rapstart('FILE_O_NetCDF', 2, disable_barrier = FILE_single(fid) )
+    call PROF_rapstart('FILE_Write', 2, disable_barrier = .not. FILE_allnodes(fid) )
 
     fill_halo_ = .false.
     if( present(fill_halo) ) fill_halo_ = fill_halo
@@ -3964,93 +4037,118 @@ contains
     start(2) = JSGA
     ! start(3) time dimension will be set in file_write_data()
 
+    allocate( buf(dim1_S:dim1_E,dim2_S:dim2_E) )
+
     if ( present(timetarg) ) then
        nowtime = timeofs_ + (timetarg-1) * time_interval
 
+       !$acc update host(var) if(acc_is_present(var))
+
        if ( fill_halo_ ) then
+
           do j = JS, JE
           do i = IS, IE
-             varhalo(i,j) = var(i,j,timetarg)
+             buf(i,j) = var(i,j,timetarg)
           end do
           end do
 
           ! W halo
-          do j = 1, JA
-          do i = 1, IS-1
-             varhalo(i,j) = RMISS
+          do j = dim2_S, dim2_E
+          do i = dim1_S, IS-1
+             buf(i,j) = RMISS
           enddo
           enddo
           ! E halo
-          do j = 1, JA
-          do i = IE+1, IA
-             varhalo(i,j) = RMISS
+          do j = dim2_S, dim2_E
+          do i = IE+1,   dim1_E
+             buf(i,j) = RMISS
           enddo
           enddo
           ! S halo
-          do j = 1, JS-1
-          do i = 1, IA
-             varhalo(i,j) = RMISS
+          do j = dim2_S, JS-1
+          do i = dim1_S, dim1_E
+             buf(i,j) = RMISS
           enddo
           enddo
           ! N halo
-          do j = JE+1, JA
-          do i = 1, IA
-             varhalo(i,j) = RMISS
+          do j = JE+1,   dim2_E
+          do i = dim1_S, dim1_E
+             buf(i,j) = RMISS
           enddo
           enddo
 
-          call FILE_Write( vid, varhalo(dim1_S:dim1_E,dim2_S:dim2_E), &
-                           nowtime, nowtime, start                    ) ! [IN]
        else
-          call FILE_Write( vid, var(dim1_S:dim1_E,dim2_S:dim2_E,timetarg), &
-                           nowtime, nowtime, start                         ) ! [IN]
-       endif
+
+          do j = dim2_S, dim2_E
+          do i = dim1_S, dim1_E
+             buf(i,j) = var(i,j,timetarg)
+          enddo
+          enddo
+
+       end if
+
+       call FILE_Write( vid, buf(:,:), nowtime, nowtime, start ) ! [IN]
+       call FILE_CARTESC_flush( fid )
+
     else
        nowtime = timeofs_
+
+       !$acc update host(var) if(acc_is_present(var))
+
        do n = 1, step
           if ( fill_halo_ ) then
+
              do j = JS, JE
              do i = IS, IE
-                varhalo(i,j) = var(i,j,n)
+                buf(i,j) = var(i,j,n)
              end do
              end do
 
              ! W halo
-             do j = 1, JA
-             do i = 1, IS-1
-                varhalo(i,j) = RMISS
+             do j = dim2_S, dim2_E
+             do i = dim1_S, IS-1
+                buf(i,j) = RMISS
              enddo
              enddo
              ! E halo
-             do j = 1, JA
-             do i = IE+1, IA
-                varhalo(i,j) = RMISS
+             do j = dim2_S, dim2_E
+             do i = IE+1,   dim1_E
+                buf(i,j) = RMISS
              enddo
              enddo
              ! S halo
-             do j = 1, JS-1
-             do i = 1, IA
-                varhalo(i,j) = RMISS
+             do j = dim2_S, JS-1
+             do i = dim1_S, dim1_E
+                buf(i,j) = RMISS
              enddo
              enddo
              ! N halo
-             do j = JE+1, JA
-             do i = 1, IA
-                varhalo(i,j) = RMISS
+             do j = JE+1,   dim2_E
+             do i = dim1_S, dim1_E
+                buf(i,j) = RMISS
              enddo
              enddo
 
-             call FILE_Write( vid, varhalo(dim1_S:dim1_E,dim2_S:dim2_E), &
-                              nowtime, nowtime, start                    ) ! [IN]
           else
-             call FILE_Write( vid, var(dim1_S:dim1_E,dim2_S:dim2_E,n), &
-                              nowtime, nowtime, start                  ) ! [IN]
-          endif
+
+             do j = dim2_S, dim2_E
+             do i = dim1_S, dim1_E
+                buf(i,j) = var(i,j,n)
+             enddo
+             enddo
+
+          end if
+
+          call FILE_Write( vid, buf(:,:), nowtime, nowtime, start ) ! [IN]
+          call FILE_CARTESC_flush( fid )
+
           nowtime = nowtime + time_interval
        enddo
     endif
 
-    call PROF_rapend('FILE_O_NetCDF', 2, disable_barrier = FILE_single(fid) )
+    deallocate( buf )
+
+    call PROF_rapend('FILE_Write', 2, disable_barrier = .not. FILE_allnodes(fid) )
 
     return
   end subroutine FILE_CARTESC_write_var_3D_t
@@ -4072,9 +4170,8 @@ contains
     use scale_file, only: &
        FILE_get_AGGREGATE, &
        FILE_opened, &
-       FILE_single, &
-       FILE_Write, &
-       FILE_Flush
+       FILE_allnodes, &
+       FILE_Write
     use scale_prc, only: &
        PRC_myrank,     &
        PRC_abort
@@ -4095,9 +4192,9 @@ contains
     real(DP),         intent(in), optional :: timeofs   !< offset time     (optional)
     logical,          intent(in), optional :: fill_halo !< include halo data?
 
-    real(RP) :: varhalo( size(var(:,1,1,1)), size(var(1,:,1,1)), size(var(1,1,:,1)) )
+    real(RP), allocatable :: buf(:,:,:)
 
-    integer  :: dim1_S, dim1_E, dim1_max
+    integer  :: dim1_S, dim1_E
     integer  :: dim2_S, dim2_E
     integer  :: dim3_S, dim3_E
 
@@ -4113,7 +4210,7 @@ contains
 
     if ( .not. FILE_opened(fid) ) return
 
-    call PROF_rapstart('FILE_O_NetCDF', 2, disable_barrier = FILE_single(fid) )
+    call PROF_rapstart('FILE_Write', 2, disable_barrier = .not. FILE_allnodes(fid) )
 
     fill_halo_ = .false.
     if( present(fill_halo) ) fill_halo_ = fill_halo
@@ -4147,35 +4244,27 @@ contains
     if (      dim_type == 'ZXYT'  &
          .OR. dim_type == 'ZXHYT' &
          .OR. dim_type == 'ZXYHT' ) then
-       dim1_max = KMAX
        dim1_S   = KS
        dim1_E   = KE
     elseif ( dim_type == 'ZHXYT' ) then
-       dim1_max = KMAX+1
        dim1_S   = KS-1
        dim1_E   = KE
     elseif( dim_type == 'OXYT' ) then
-       dim1_max = OKMAX
        dim1_S   = OKS
        dim1_E   = OKE
     elseif( dim_type == 'OHXYT' ) then
-       dim1_max = OKMAX+1
        dim1_S   = OKS-1
        dim1_E   = OKE
     elseif( dim_type == 'LXYT' ) then
-       dim1_max = LKMAX
        dim1_S   = LKS
        dim1_E   = LKE
     elseif( dim_type == 'LHXYT' ) then
-       dim1_max = LKMAX+1
        dim1_S   = LKS-1
        dim1_E   = LKE
     elseif( dim_type == 'UXYT' ) then
-       dim1_max = UKMAX
        dim1_S   = UKS
        dim1_E   = UKE
     elseif( dim_type == 'UHXYT' ) then
-       dim1_max = UKMAX+1
        dim1_S   = UKS-1
        dim1_E   = UKE
     else
@@ -4183,114 +4272,140 @@ contains
        call PRC_abort
     endif
 
+    allocate( buf(dim1_S:dim1_E,dim2_S:dim2_E,dim3_S:dim3_E) )
+
+    !$acc update host(var) if(acc_is_present(var))
+
     if ( present(timetarg) ) then
        nowtime = timeofs_ + (timetarg-1) * time_interval
 
        if ( fill_halo_ ) then
+
           do j = JS, JE
           do i = IS, IE
-          do k = 1, dim1_max
-             varhalo(k,i,j) = var(k,i,j,timetarg)
+          do k = dim1_S, dim1_E
+             buf(k,i,j) = var(k,i,j,timetarg)
           end do
           end do
           end do
 
           ! W halo
-          do j = 1, JA
-          do i = 1, IS-1
-          do k = 1, dim1_max
-             varhalo(k,i,j) = RMISS
+          do j = dim3_S, dim3_E
+          do i = dim2_S, IS-1
+          do k = dim1_S, dim1_E
+             buf(k,i,j) = RMISS
           enddo
           enddo
           enddo
           ! E halo
-          do j = 1, JA
-          do i = IE+1, IA
-          do k = 1, dim1_max
-             varhalo(k,i,j) = RMISS
+          do j = dim3_S, dim3_E
+          do i = IE+1,   dim2_E
+          do k = dim1_S, dim1_E
+             buf(k,i,j) = RMISS
           enddo
           enddo
           enddo
           ! S halo
-          do j = 1, JS-1
-          do i = 1, IA
-          do k = 1, dim1_max
-             varhalo(k,i,j) = RMISS
+          do j = dim3_S, JS-1
+          do i = dim2_S, dim2_E
+          do k = dim1_S, dim1_E
+             buf(k,i,j) = RMISS
           enddo
           enddo
           enddo
           ! N halo
-          do j = JE+1, JA
-          do i = 1, IA
-          do k = 1, dim1_max
-             varhalo(k,i,j) = RMISS
+          do j = JE+1,   dim3_E
+          do i = dim2_S, dim2_E
+          do k = dim1_S, dim1_E
+             buf(k,i,j) = RMISS
           enddo
           enddo
           enddo
 
-          call FILE_Write( vid, varhalo(dim1_S:dim1_E,dim2_S:dim2_E,dim3_S:dim3_E), &
-                           nowtime, nowtime, start                                  ) ! [IN]
        else
-          call FILE_Write( vid, var(dim1_S:dim1_E,dim2_S:dim2_E,dim3_S:dim3_E,timetarg), &
-                           nowtime, nowtime, start                                       ) ! [IN]
-       endif
+
+          do j = dim3_S, dim3_E
+          do i = dim2_S, dim2_E
+          do k = dim1_S, dim1_E
+             buf(k,i,j) = var(k,i,j,timetarg)
+          enddo
+          enddo
+          enddo
+
+       end if
+
+       call FILE_Write( vid, buf(:,:,:), nowtime, nowtime, start ) ! [IN]
+       call FILE_CARTESC_flush( fid )
+
     else
        nowtime = timeofs_
        do n = 1, step
           if ( fill_halo_ ) then
+
              do j = JS, JE
              do i = IS, IE
-             do k = 1, dim1_max
-                varhalo(k,i,j) = var(k,i,j,n)
+             do k = dim1_S, dim1_E
+                buf(k,i,j) = var(k,i,j,n)
              end do
              end do
              end do
 
              ! W halo
-             do j = 1, JA
-             do i = 1, IS-1
-             do k = 1, dim1_max
-                varhalo(k,i,j) = RMISS
+             do j = dim3_S, dim3_E
+             do i = dim2_S, IS-1
+             do k = dim1_S, dim1_E
+                buf(k,i,j) = RMISS
              enddo
              enddo
              enddo
              ! E halo
-             do j = 1, JA
-             do i = IE+1, IA
-             do k = 1, dim1_max
-                varhalo(k,i,j) = RMISS
+             do j = dim3_S, dim3_E
+             do i = IE+1,   dim2_E
+             do k = dim1_S, dim1_E
+                buf(k,i,j) = RMISS
              enddo
              enddo
              enddo
              ! S halo
-             do j = 1, JS-1
-             do i = 1, IA
-             do k = 1, dim1_max
-                varhalo(k,i,j) = RMISS
+             do j = dim3_S, JS-1
+             do i = dim2_S, dim2_E
+             do k = dim1_S, dim1_E
+                buf(k,i,j) = RMISS
              enddo
              enddo
              enddo
              ! N halo
-             do j = JE+1, JA
-             do i = 1, IA
-             do k = 1, dim1_max
-                varhalo(k,i,j) = RMISS
+             do j = JE+1,   dim3_E
+             do i = dim2_S, dim2_E
+             do k = dim1_S, dim1_E
+                buf(k,i,j) = RMISS
              enddo
              enddo
              enddo
 
-             call FILE_Write( vid, varhalo(dim1_S:dim1_E,dim2_S:dim2_E,dim3_S:dim3_E), &
-                              nowtime, nowtime, start                                  ) ! [IN]
           else
-             call FILE_Write( vid, var(dim1_S:dim1_E,dim2_S:dim2_E,dim3_S:dim3_E,n), &
-                              nowtime, nowtime, start                                ) ! [IN]
-          endif
-          call FILE_Flush( fid )
+
+             do j = dim3_S, dim3_E
+             do i = dim2_S, dim2_E
+             do k = dim1_S, dim1_E
+                buf(k,i,j) = var(k,i,j,n)
+             enddo
+             enddo
+             enddo
+
+          end if
+
+          call FILE_Write( vid, buf(:,:,:), nowtime, nowtime, start ) ! [IN]
+          call FILE_CARTESC_flush( fid )
+
           nowtime = nowtime + time_interval
+
        enddo
     endif
 
-    call PROF_rapend('FILE_O_NetCDF', 2, disable_barrier = FILE_single(fid) )
+    deallocate( buf )
+
+    call PROF_rapend('FILE_Write', 2, disable_barrier = .not. FILE_allnodes(fid) )
 
     return
   end subroutine FILE_CARTESC_write_var_4D
@@ -4299,20 +4414,6 @@ contains
   !-----------------------------------------------------------------------------
 
   ! private procedures
-
-  !-----------------------------------------------------------------------------
-  subroutine closeall
-    implicit none
-
-    integer :: fid
-    !---------------------------------------------------------------------------
-
-    do fid = 0, FILE_FILE_MAX-1
-       call FILE_CARTESC_close( fid )
-    enddo
-
-    return
-  end subroutine closeall
 
   !-----------------------------------------------------------------------------
   subroutine check_1d( &

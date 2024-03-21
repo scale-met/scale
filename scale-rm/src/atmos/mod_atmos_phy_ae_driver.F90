@@ -27,6 +27,7 @@ module mod_atmos_phy_ae_driver
   !
   public :: ATMOS_PHY_AE_driver_tracer_setup
   public :: ATMOS_PHY_AE_driver_setup
+  public :: ATMOS_PHY_AE_driver_finalize
   public :: ATMOS_PHY_AE_driver_adjustment
   public :: ATMOS_PHY_AE_driver_calc_tendency
 
@@ -132,6 +133,31 @@ contains
 
     return
   end subroutine ATMOS_PHY_AE_driver_setup
+
+  !-----------------------------------------------------------------------------
+  !> finalize
+  subroutine ATMOS_PHY_AE_driver_finalize
+    use scale_atmos_phy_ae_kajino13, only: &
+       ATMOS_PHY_AE_kajino13_finalize
+    use mod_atmos_admin, only: &
+       ATMOS_PHY_AE_TYPE, &
+       ATMOS_sw_phy_ae
+    implicit none
+    !---------------------------------------------------------------------------
+
+    LOG_NEWLINE
+    LOG_INFO("ATMOS_PHY_AE_driver_finalize",*) 'Finalize'
+
+    if ( ATMOS_sw_phy_ae ) then
+       select case ( ATMOS_PHY_AE_TYPE )
+       case ( 'KAJINO13' )
+          call ATMOS_PHY_AE_kajino13_finalize
+       case ( 'OFFLINE' )
+       end select
+    endif
+
+    return
+  end subroutine ATMOS_PHY_AE_driver_finalize
 
   !-----------------------------------------------------------------------------
   !> adjustment

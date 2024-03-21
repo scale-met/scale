@@ -27,6 +27,7 @@ module scale_ocean_grid_cartesC
   !++ Public procedure
   !
   public :: OCEAN_GRID_CARTESC_setup
+  public :: OCEAN_GRID_CARTESC_finalize
 
   !-----------------------------------------------------------------------------
   !
@@ -110,6 +111,7 @@ contains
 
        call OCEAN_GRID_CARTESC_generate
     endif
+    !$acc enter data create(OCEAN_GRID_CARTESC_CZ,OCEAN_GRID_CARTESC_FZ,OCEAN_GRID_CARTESC_CDZ)
 
     if ( OKE == OKS ) then
        LOG_NEWLINE
@@ -131,8 +133,27 @@ contains
        LOG_INFO_CONT('(1x,A)')                  '|=================================|'
     endif
 
+    !$acc update device(OCEAN_GRID_CARTESC_CZ,OCEAN_GRID_CARTESC_FZ,OCEAN_GRID_CARTESC_CDZ)
+
     return
   end subroutine OCEAN_GRID_CARTESC_setup
+
+  !-----------------------------------------------------------------------------
+  !> Finalize
+  subroutine OCEAN_GRID_CARTESC_finalize
+    implicit none
+    !---------------------------------------------------------------------------
+
+    LOG_NEWLINE
+    LOG_INFO("OCEAN_GRID_CARTESC_finalize",*) 'Finalize'
+
+    !$acc exit data delete(OCEAN_GRID_CARTESC_CZ,OCEAN_GRID_CARTESC_FZ,OCEAN_GRID_CARTESC_CDZ)
+    deallocate( OCEAN_GRID_CARTESC_CZ  )
+    deallocate( OCEAN_GRID_CARTESC_FZ  )
+    deallocate( OCEAN_GRID_CARTESC_CDZ )
+
+    return
+  end subroutine OCEAN_GRID_CARTESC_finalize
 
   !-----------------------------------------------------------------------------
   !> Read ocean grid

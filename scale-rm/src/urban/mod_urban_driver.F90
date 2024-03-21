@@ -27,6 +27,7 @@ module mod_urban_driver
   !++ Public procedure
   !
   public :: URBAN_driver_setup
+  public :: URBAN_driver_finalize
   public :: URBAN_driver_calc_tendency
   public :: URBAN_driver_update
   public :: URBAN_SURFACE_GET
@@ -44,8 +45,9 @@ module mod_urban_driver
   !
   !++ Private parameters & variables
   !
-  real(RP), private, allocatable :: AH_URB (:,:,:)   ! urban grid average of anthropogenic sensible heat [W/m2]
-  real(RP), private, allocatable :: AHL_URB(:,:,:)  ! urban grid average of anthropogenic latent heat [W/m2]
+  real(RP), private, allocatable :: AH_URB (:,:,:) ! urban grid average of anthropogenic sensible heat [W/m2]
+  real(RP), private, allocatable :: AHL_URB(:,:,:) ! urban grid average of anthropogenic latent heat [W/m2]
+  real(RP), private              :: AH_TOFFSET     ! time offset for AH [Hour]
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
@@ -80,6 +82,7 @@ contains
        allocate( AHL_URB(UIA,UJA,1:24) )
        AH_URB  (:,:,:) = UNDEF
        AHL_URB (:,:,:) = UNDEF
+       !$acc enter data create(AH_URB,AHL_URB)
 
        select case ( URBAN_DYN_TYPE )
        case ( 'KUSAKA01' )
@@ -87,7 +90,7 @@ contains
                                          LANDUSE_fact_urban(:,:),                        & ! [IN]
                                          URBAN_Z0M(:,:), URBAN_Z0H(:,:), URBAN_Z0E(:,:), & ! [OUT]
                                          URBAN_ZD(:,:),                                  & ! [OUT]
-                                         AH_URB(:,:,:), AHL_URB(:,:,:)                   ) ! [OUT]
+                                         AH_URB(:,:,:), AHL_URB(:,:,:), AH_TOFFSET       ) ! [OUT]
 
           URBAN_SFC_TYPE = 'KUSAKA01'
        case default
@@ -107,6 +110,41 @@ contains
 
     return
   end subroutine URBAN_driver_setup
+
+  !-----------------------------------------------------------------------------
+  !> Finalize
+  subroutine URBAN_driver_finalize
+    use mod_urban_admin, only: &
+       URBAN_do, &
+       URBAN_DYN_TYPE, &
+       URBAN_SFC_TYPE
+    use scale_urban_dyn_kusaka01, only: &
+       URBAN_DYN_kusaka01_finalize
+    implicit none
+    !---------------------------------------------------------------------------
+
+    LOG_NEWLINE
+    LOG_INFO("URBAN_driver_finalize",*) 'Finalize'
+
+    if ( URBAN_do ) then
+
+       select case ( URBAN_DYN_TYPE )
+       case ( 'KUSAKA01' )
+          call URBAN_DYN_kusaka01_finalize
+       end select
+
+       select case ( URBAN_SFC_TYPE )
+       case ( 'KUSAKA01' )
+       end select
+
+       !$acc exit data delete(AH_URB,AHL_URB)
+       deallocate( AH_URB  )
+       deallocate( AHL_URB )
+
+    end if
+
+    return
+  end subroutine URBAN_driver_finalize
 
   !-----------------------------------------------------------------------------
   !> Calclate tendency
@@ -137,7 +175,6 @@ contains
        ATMOS_V,         &
        ATMOS_DENS,      &
        ATMOS_QV,        &
-       ATMOS_PBL,       &
        ATMOS_SFC_DENS,  &
        ATMOS_SFC_PRES,  &
        ATMOS_SFLX_LW,   &
@@ -165,6 +202,7 @@ contains
        URBAN_SFLX_SH,     &
        URBAN_SFLX_LH,     &
        URBAN_SFLX_SHEX,   &
+       URBAN_SFLX_LHEX,   &
        URBAN_SFLX_QVEX,   &
        URBAN_SFLX_QTRC,   &
        URBAN_SFLX_GH,     &
@@ -203,9 +241,6 @@ contains
     use scale_time, only: &
        dt => TIME_DTSEC_URBAN, &
        NOWDATE => TIME_NOWDATE
-    use scale_mapprojection, only: &
-       BASE_LON => MAPPROJECTION_basepoint_lon, &
-       BASE_LAT => MAPPROJECTION_basepoint_lat
     use scale_atmos_grid_cartesC_real, only: &
        REAL_Z1 => ATMOS_GRID_CARTESC_REAL_Z1
     use scale_urban_grid_cartesC, only: &
@@ -223,26 +258,28 @@ contains
     real(RP) :: TRL(UKA,UIA,UJA), TBL(UKA,UIA,UJA), TGL(UKA,UIA,UJA)
     real(RP) :: TR(UIA,UJA), TB(UIA,UJA), TG(UIA,UJA)
     real(RP) :: TC(UIA,UJA), QC(UIA,UJA), UC(UIA,UJA)
-    real(RP) :: RAINR(UIA,UJA), RAINB(UIA,UJA), RAING(UIA,UJA), ROFF(UIA,UJA)
+    real(RP) :: RAINR(UIA,UJA), RAINB(UIA,UJA), RAING(UIA,UJA)
 
-    real(RP) :: LHV(UIA,UJA) ! latent heat of vaporization [J/kg]
+    real(RP) :: LHV(UIA,UJA)        ! latent heat of vaporization [J/kg]
 
-    real(RP) :: URBAN_SFLX_LHEX(UIA,UJA)
+   ! real(RP) :: URBAN_SFLX_LHEX(UIA,UJA)
 
-    real(RP) :: LAT, LON ! [deg]
-    integer  :: tloc     ! local time (1-24h)
-    real(RP) :: dsec     ! second [s]
+    integer  :: tloc, tloc_next     ! universal time (1-24h)
+    real(RP) :: dsec                ! second [s]
 
     integer :: k, i, j, iq
     !---------------------------------------------------------------------------
 
     call PROF_rapstart('URB_CalcTend', 1)
 
+    !$acc data create(TRL,TBL,TGL,TR,TB,TG,TC,QC,UC,RAINR,RAINB,RAING,LHV)
+
     !########## Get Surface Boundary from coupler ##########
     call URBAN_SURFACE_GET
 
     !########## initialize tendency ##########
 !OCL XFILL
+    !$acc kernels
     do j = UJS, UJE
     do i = UIS, UIE
     do k = UKS, UKE
@@ -252,8 +289,10 @@ contains
     end do
     end do
     end do
+    !$acc end kernels
 
 !OCL XFILL
+    !$acc kernels
     do j = UJS, UJE
     do i = UIS, UIE
        URBAN_TR_t(i,j) = 0.0_RP
@@ -268,9 +307,11 @@ contains
        URBAN_RAING_t(i,j) = 0.0_RP
     enddo
     enddo
+    !$acc end kernels
 
 !OCL XFILL
     !$omp parallel do
+    !$acc kernels
     do iq = 1, QA
     do j  = UJS, UJE
     do i  = UIS, UIE
@@ -278,12 +319,14 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
 
     select case ( URBAN_SFC_TYPE )
     case ( 'KUSAKA01' )
 
 !OCL XFILL
        !$omp parallel do
+       !$acc kernels
        do j = UJS, UJE
        do i = UIS, UIE
        do k = UKS, UKE
@@ -293,9 +336,11 @@ contains
        end do
        end do
        end do
+       !$acc end kernels
 
 !OCL XFILL
        !$omp parallel do
+       !$acc kernels
        do j = UJS, UJE
        do i = UIS, UIE
           TR(i,j) = URBAN_TR(i,j)
@@ -309,41 +354,31 @@ contains
           RAING(i,j) = URBAN_RAING(i,j)
        end do
        end do
+       !$acc end kernels
 
 
-       ! local time
-       LAT = BASE_LAT
-       LON = BASE_LON
-       if (LON < 0.0_RP )   LON = mod(LON, 360.0_RP) + 360.0_RP
-       if (LON > 360.0_RP ) LON = mod(LON, 360.0_RP)
-       tloc = mod( (NOWDATE(4) + int(LON/15.0_RP)),24 )
-       dsec = real( NOWDATE(5)*60.0_RP + NOWDATE(6), kind=RP ) / 3600.0_RP
-       if( tloc == 0 ) tloc = 24
-
-       !--- Calculate AH at LST
+       ! universal time
+       dsec = real( NOWDATE(5)*60.0_RP + NOWDATE(6), kind=RP ) / 3600.0_RP  ! [hour]
+       tloc = NOWDATE(4)                                                    ! [hour]
+       tloc = modulo(tloc-1,24)+1
        if ( tloc == 24 ) then
-          do j = UJS, UJE
-          do i = UIS, UIE
-          if ( exists_urban(i,j) ) then
-             URBAN_AH(i,j)  = ( 1.0_RP-dsec ) * AH_URB(i,j,tloc  ) &
-                            + (        dsec ) * AH_URB(i,j,1     )
-             URBAN_AHL(i,j) = ( 1.0_RP-dsec ) * AHL_URB(i,j,tloc  ) &
-                            + (        dsec ) * AHL_URB(i,j,1     )
-          end if
-          enddo
-          enddo
+         tloc_next = 1
        else
-          do j = UJS, UJE
-          do i = UIS, UIE
-          if ( exists_urban(i,j) ) then
-             URBAN_AH(i,j)  = ( 1.0_RP-dsec ) * AH_URB(i,j,tloc  ) &
-                            + (        dsec ) * AH_URB(i,j,tloc+1)
-             URBAN_AHL(i,j) = ( 1.0_RP-dsec ) * AHL_URB(i,j,tloc  ) &
-                            + (        dsec ) * AHL_URB(i,j,tloc+1)
-          end if
-          enddo
-          enddo
-       endif
+         tloc_next = tloc + 1
+       end if
+       !--- Calculate AH at UTC
+       !$acc kernels
+       do j = UJS, UJE
+       do i = UIS, UIE
+       if ( exists_urban(i,j) ) then
+          URBAN_AH(i,j)  = ( 1.0_RP-dsec ) * AH_URB(i,j, tloc) &
+                         + (        dsec ) * AH_URB(i,j, tloc_next)
+          URBAN_AHL(i,j) = ( 1.0_RP-dsec ) * AHL_URB(i,j, tloc) &
+                         + (        dsec ) * AHL_URB(i,j, tloc_next)
+       end if
+       enddo
+       enddo
+       !$acc end kernels
 
        call HYDROMETEOR_LHV( UIA, UIS, UIE, UJA, UJS, UJE, &
                              ATMOS_TEMP(:,:), LHV(:,:) )
@@ -352,7 +387,7 @@ contains
                                 ATMOS_TEMP(:,:), ATMOS_PRES(:,:),                            & ! [IN]
                                 ATMOS_U(:,:), ATMOS_V(:,:),                                  & ! [IN]
                                 ATMOS_DENS(:,:), ATMOS_QV(:,:), LHV(:,:),                    & ! [IN]
-                                REAL_Z1(:,:), ATMOS_PBL(:,:),                                & ! [IN]
+                                REAL_Z1(:,:),                                                & ! [IN]
                                 ATMOS_SFC_DENS(:,:), ATMOS_SFC_PRES(:,:),                    & ! [IN]
                                 ATMOS_SFLX_LW(:,:,:), ATMOS_SFLX_SW(:,:,:),                  & ! [IN]
                                 ATMOS_SFLX_water(:,:), ATMOS_SFLX_ENGI(:,:),                 & ! [IN]
@@ -378,19 +413,24 @@ contains
        ! anthropogenic heat fluxes
        !-----------------------------------------------------------
        !$omp parallel do
+       !$acc kernels
        do j = UJS, UJE
        do i = UIS, UIE
        if ( exists_urban(i,j) ) then
-          URBAN_SFLX_SHEX(i,j) = URBAN_AH (i,j) / LANDUSE_fact_urban(i,j) ! Sensible heat flux [W/m2]
-          URBAN_SFLX_LHEX(i,j) = URBAN_AHL(i,j) / LANDUSE_fact_urban(i,j) ! Latent heat flux   [W/m2]
-          URBAN_SFLX_SH  (i,j) = URBAN_SFLX_SH(i,j) + URBAN_SFLX_SHEX(i,j)
-          URBAN_SFLX_LH  (i,j) = URBAN_SFLX_LH(i,j) + URBAN_SFLX_LHEX(i,j)
+          !URBAN_SFLX_SHEX(i,j) = URBAN_AH (i,j) / LANDUSE_fact_urban(i,j) ! Sensible heat flux [W/m2]
+          !URBAN_SFLX_LHEX(i,j) = URBAN_AHL(i,j) / LANDUSE_fact_urban(i,j) ! Latent heat flux   [W/m2]
+          !URBAN_SFLX_SH  (i,j) = URBAN_SFLX_SH(i,j) + URBAN_SFLX_SHEX(i,j)
+          !URBAN_SFLX_LH  (i,j) = URBAN_SFLX_LH(i,j) + URBAN_SFLX_LHEX(i,j)
+          URBAN_SFLX_SHEX(i,j) = URBAN_AH (i,j)     ! Sensible anthropogenic heat flux [W/m2]
+          URBAN_SFLX_LHEX(i,j) = URBAN_AHL(i,j)     ! Latent anthropogenic heat flux [W/m2]
        end if
        end do
        end do
+       !$acc end kernels
 
 !OCL XFILL
        !$omp parallel do
+       !$acc kernels
        do j = UJS, UJE
        do i = UIS, UIE
        if ( exists_urban(i,j) ) then
@@ -402,9 +442,11 @@ contains
        end if
        end do
        end do
+       !$acc end kernels
 
 !OCL XFILL
        !$omp parallel do
+       !$acc kernels
        do j = UJS, UJE
        do i = UIS, UIE
        if ( exists_urban(i,j) ) then
@@ -420,9 +462,11 @@ contains
        end if
        end do
        end do
+       !$acc end kernels
 
        if ( .NOT. ATMOS_HYDROMETEOR_dry ) then
           !$omp parallel do
+          !$acc kernels
           do j = UJS, UJE
           do i = UIS, UIE
           if ( exists_urban(i,j) ) then
@@ -431,6 +475,7 @@ contains
           end if
           enddo
           enddo
+          !$acc end kernels
        endif
 
     end select
@@ -515,10 +560,12 @@ contains
     endif
 
 
-    call PROF_rapend  ('URB_CalcTend', 1)
-
     !########## Set Surface Boundary to coupler ##########
     call URBAN_SURFACE_SET( countup=.true. )
+
+    !$acc end data
+
+    call PROF_rapend  ('URB_CalcTend', 1)
 
     return
   end subroutine URBAN_driver_calc_tendency
@@ -574,6 +621,7 @@ contains
 
 !OCL XFILL
        !$omp parallel do
+       !$acc kernels
        do j = UJS, UJE
        do i = UIS, UIE
        if ( exists_urban(i,j) ) then
@@ -585,9 +633,11 @@ contains
        end if
        end do
        end do
+       !$acc end kernels
 
 !OCL XFILL
        !$omp parallel do
+       !$acc kernels
        do j = UJS, UJE
        do i = UIS, UIE
        if ( exists_urban(i,j) ) then
@@ -603,6 +653,7 @@ contains
        end if
        end do
        end do
+       !$acc end kernels
 
     end select
 
@@ -643,7 +694,9 @@ contains
     integer  :: i, j
     !---------------------------------------------------------------------------
 
-    call PROF_rapstart('URB_SfcExch', 2)
+    call PROF_rapstart('URB_SfcExch', 3)
+
+    !$acc data create(ATMOS_SFLX_rad_dn)
 
     if ( URBAN_do ) then
        call CPL_getATM_URB( ATMOS_TEMP       (:,:),     & ! [OUT]
@@ -663,6 +716,8 @@ contains
     endif
 
 !OCL XFILL
+    !$omp parallel do
+    !$acc kernels
     do j = UJS, UJE
     do i = UIS, UIE
        ATMOS_SFLX_LW(i,j,I_R_direct ) = ATMOS_SFLX_rad_dn(i,j,I_R_direct ,I_R_IR)    ! IR, direct
@@ -674,8 +729,11 @@ contains
                                       + ATMOS_SFLX_rad_dn(i,j,I_R_diffuse,I_R_VIS)   ! VIS, diffuse
     enddo
     enddo
+    !$acc end kernels
 
-    call PROF_rapend  ('URB_SfcExch', 2)
+    !$acc end data
+
+    call PROF_rapend  ('URB_SfcExch', 3)
 
     return
   end subroutine URBAN_SURFACE_GET
@@ -694,6 +752,7 @@ contains
        URBAN_SFLX_SH,    &
        URBAN_SFLX_LH,    &
        URBAN_SFLX_SHEX,  &
+       URBAN_SFLX_LHEX,  &
        URBAN_SFLX_QVEX,  &
        URBAN_SFLX_GH,    &
        URBAN_SFLX_QTRC,  &
@@ -714,7 +773,7 @@ contains
     logical, intent(in) :: countup
     !---------------------------------------------------------------------------
 
-    call PROF_rapstart('URB_SfcExch', 2)
+    call PROF_rapstart('URB_SfcExch', 3)
 
     if ( URBAN_do ) then
        call CPL_putURB( URBAN_SFC_TEMP  (:,:),     & ! [IN]
@@ -728,6 +787,7 @@ contains
                         URBAN_SFLX_SH   (:,:),     & ! [IN]
                         URBAN_SFLX_LH   (:,:),     & ! [IN]
                         URBAN_SFLX_SHEX (:,:),     & ! [IN]
+                        URBAN_SFLX_LHEX (:,:),     & ! [IN]
                         URBAN_SFLX_QVEX (:,:),     & ! [IN]
                         URBAN_SFLX_GH   (:,:),     & ! [IN]
                         URBAN_SFLX_QTRC (:,:,:),   & ! [IN]
@@ -739,7 +799,7 @@ contains
                         countup                    ) ! [IN]
     endif
 
-    call PROF_rapend  ('URB_SfcExch', 2)
+    call PROF_rapend  ('URB_SfcExch', 3)
 
     return
   end subroutine URBAN_SURFACE_SET

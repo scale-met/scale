@@ -23,17 +23,25 @@ module scale_file
   use scale_file_h
   use scale_prc, only: &
      PRC_abort
+  use iso_c_binding
+#ifdef _OPENACC
+  use openacc
+#endif
   !-----------------------------------------------------------------------------
   implicit none
   private
+
+  include 'scale_file_c.inc'
   !-----------------------------------------------------------------------------
   !
   !++ Public procedures
   !
   public :: FILE_setup
+  public :: FILE_finalize
   public :: FILE_open
   public :: FILE_opened
   public :: FILE_single
+  public :: FILE_allnodes
   public :: FILE_create
   public :: FILE_get_dimLength
   public :: FILE_set_option
@@ -60,7 +68,6 @@ module scale_file
   public :: FILE_flush
   public :: FILE_close
   public :: FILE_close_all
-  public :: FILE_make_fname
   public :: FILE_attach_buffer
   public :: FILE_detach_buffer
   public :: FILE_get_CFtunits
@@ -175,11 +182,18 @@ module scale_file
      module procedure FILE_set_attribute_double
   end interface FILE_set_attribute
 
+#if defined(__GFORTRAN__) && __GNUC__ < 7
+  interface cloc
+    module procedure cloc_SP
+    module procedure cloc_DP
+  end interface cloc
+#endif
+
   !-----------------------------------------------------------------------------
   !
   !++ Public parameters & variables
   !
-  logical, public :: FILE_AGGREGATE = .false. !> do parallel I/O through PnetCDF (default setting)
+  logical, public :: FILE_AGGREGATE !> do parallel I/O through PnetCDF (default setting)
 
   !-----------------------------------------------------------------------------
   !
@@ -196,7 +210,8 @@ module scale_file
      integer                   :: fid
      logical                   :: aggregate
      logical                   :: single
-     integer                   :: buffer_size
+     logical                   :: allnodes
+     integer(8)                :: buffer_size
   end type file
   type(file) :: FILE_files(FILE_FILE_MAX)
   integer    :: FILE_nfiles = 0
@@ -230,7 +245,9 @@ contains
     integer :: fid
     integer :: ierr
 
-       !--- read namelist
+    FILE_AGGREGATE = .false.
+
+    !--- read namelist
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_FILE,iostat=ierr)
     if( ierr < 0 ) then !--- missing
@@ -254,6 +271,17 @@ contains
   end subroutine FILE_setup
 
   !-----------------------------------------------------------------------------
+  !> finalize
+  !-----------------------------------------------------------------------------
+  subroutine FILE_finalize
+
+    FILE_nfiles = 0
+    FILE_nvars = 0
+
+    return
+  end subroutine FILE_finalize
+
+  !-----------------------------------------------------------------------------
   !> create file
   !!  fid is >= 1
   !<
@@ -263,7 +291,7 @@ contains
        fid, existed,               &
        rankid, single, aggregate,  &
        time_units, calendar,       &
-       append                      )
+       allnodes, append            )
     implicit none
 
     character(len=*), intent(in)  :: basename
@@ -279,6 +307,7 @@ contains
     logical,          intent(in), optional :: aggregate
     character(len=*), intent(in), optional :: time_units
     character(len=*), intent(in), optional :: calendar
+    logical,          intent(in), optional :: allnodes
     logical,          intent(in), optional :: append
 
     character(len=FILE_HMID)   :: time_units_
@@ -328,9 +357,12 @@ contains
     call FILE_get_fid( basename, mode,     & ! [IN]
                        rankid_, single_,   & ! [IN]
                        fid, existed,       & ! [OUT]
+                       allnodes=allnodes,  & ! [IN]
                        aggregate=aggregate ) ! [IN]
 
     if( existed ) return
+
+    call PROF_rapstart('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
 
     !--- append package header to the file
     call FILE_set_attribute( fid, "global", "title"      , title       ) ! [IN]
@@ -339,17 +371,19 @@ contains
 
     if ( ( .not. present(aggregate) ) .or. .not. aggregate ) then
        ! for shared-file parallel I/O, skip attributes related to MPI processes
-       call FILE_set_attribute( fid, "global", "rankid"  , (/rankid/)  ) ! [IN]
+       call FILE_set_attribute( fid, "global", "rankid"  , (/rankid_/)  ) ! [IN]
     endif
 
-    call file_set_tunits_c( FILE_files(fid)%fid,    & ! [IN]
-                            time_units_, calendar_, & ! [IN]
-                            error                   ) ! [OUT]
+    error = file_set_tunits_c( FILE_files(fid)%fid, & ! [IN]
+                               cstr(time_units_),   &
+                               cstr(calendar_ )     ) ! [IN]
 
     if ( error /= FILE_SUCCESS_CODE ) then
        LOG_ERROR("FILE_create",*) 'failed to set time units'
        call PRC_abort
     endif
+
+    call PROF_rapend('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
 
     return
   end subroutine FILE_create
@@ -372,9 +406,10 @@ contains
        call PRC_abort
     end if
 
-    call file_get_nvars_c( FILE_files(fid)%fid, & ! (in)
-                           nvars, error         ) ! (out)
+    call PROF_rapstart('FILE_Read', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
 
+    error = file_get_nvars_c( nvars,              & ! (out)
+                              FILE_files(fid)%fid ) ! (in)
     if ( error /= FILE_SUCCESS_CODE ) then
        LOG_ERROR("FILE_get_var_num",*) 'failed to get varnum. fid = ', fid
        call PRC_abort
@@ -384,6 +419,8 @@ contains
        LOG_ERROR("FILE_get_var_num",*) 'number of variables exceeds the requested size.', nvars, nvars_limit
        call PRC_abort
     endif
+
+    call PROF_rapend  ('FILE_Read', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
 
     return
   end subroutine FILE_get_var_num
@@ -406,13 +443,17 @@ contains
        call PRC_abort
     end if
 
-    call file_get_varname_c( FILE_files(fid)%fid, cvid, & ! (in)
-                             varname, error             ) ! (out)
+    call PROF_rapstart('FILE_Read', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
 
+    error = file_get_varname_c( varname, &
+                                FILE_files(fid)%fid, cvid, len(varname) ) ! (in)
+    call fstr(varname)
     if ( error /= FILE_SUCCESS_CODE ) then
        LOG_ERROR("FILE_get_var_name",*) 'failed to get varname. cvid = ', cvid
        call PRC_abort
     end if
+
+    call PROF_rapend  ('FILE_Read', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
 
     return
   end subroutine FILE_get_var_name
@@ -430,8 +471,11 @@ contains
        call PRC_abort
     end if
 
-    call file_add_associatedvariable_c( FILE_files(fid)%fid, vname , & ! (in)
-                                        error                        ) ! (out)
+    call PROF_rapstart('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
+
+    error = file_add_associatedvariable_c( FILE_files(fid)%fid, cstr(vname) ) ! (in)
+
+    call PROF_rapend ('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
 
     if ( present(existed) ) then
        if ( error == FILE_ALREADY_EXISTED_CODE ) then
@@ -465,12 +509,15 @@ contains
        call PRC_abort
     end if
 
-    call file_set_option_c( FILE_files(fid)%fid, filetype, key, val, & ! (in)
-                            error                                    ) ! (out)
+    call PROF_rapstart('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
+
+    error = file_set_option_c( FILE_files(fid)%fid, cstr(filetype), cstr(key), cstr(val) ) ! (in)
     if ( error /= FILE_SUCCESS_CODE ) then
        LOG_ERROR("FILE_set_option",*) 'failed to set option'
        call PRC_abort
     end if
+
+    call PROF_rapend  ('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
 
     return
   end subroutine FILE_set_option
@@ -481,6 +528,7 @@ contains
       fid,       &
       mode,      &
       single,    &
+      allnodes,  &
       aggregate, &
       rankid,    &
       postfix    )
@@ -490,6 +538,7 @@ contains
     integer,          intent(out) :: fid
     integer,          intent( in), optional :: mode
     logical,          intent( in), optional :: single
+    logical,          intent( in), optional :: allnodes
     logical,          intent( in), optional :: aggregate
     integer,          intent( in), optional :: rankid
     character(len=*), intent( in), optional :: postfix
@@ -516,6 +565,7 @@ contains
 
     call FILE_get_fid( basename, mode_, rankid_, single_,   & ! (in)
                        fid, existed,                        & ! (out)
+                       allnodes=allnodes,                   & ! (in)
                        aggregate=aggregate, postfix=postfix ) ! (in)
 
     return
@@ -556,6 +606,23 @@ contains
   end function FILE_single
 
   !-----------------------------------------------------------------------------
+  !> check if the file is allnodes
+  function FILE_allnodes( fid )
+    implicit none
+
+    integer, intent( in) :: fid
+    logical :: FILE_allnodes
+
+    if ( fid < 1 ) then
+       FILE_allnodes = .false.
+    else
+       FILE_allnodes = FILE_files(fid)%allnodes
+    end if
+
+    return
+  end function FILE_allnodes
+
+  !-----------------------------------------------------------------------------
   !> get length of dimension
   !-----------------------------------------------------------------------------
   subroutine FILE_get_dimLength( &
@@ -569,6 +636,7 @@ contains
 
     logical, intent(out), optional :: error
 
+    logical(c_bool) :: suppress
     integer :: ierror
 
 
@@ -577,8 +645,18 @@ contains
        call PRC_abort
     end if
 
-    call file_get_dim_length_c( FILE_files(fid)%fid, dimname, & ! (in)
-                                len, ierror                   ) ! (out)
+    call PROF_rapstart('FILE_Read', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
+
+    if ( present(error) ) then
+       suppress = .true.
+    else
+       suppress = .false.
+    end if
+
+    ierror = file_get_dim_length_c( len,                 & ! (out)
+                                    FILE_files(fid)%fid, & ! (in)
+                                    cstr(dimname),       & ! (in)
+                                    suppress             ) ! (in)
     if ( ierror /= FILE_SUCCESS_CODE .and. ierror /= FILE_ALREADY_EXISTED_CODE ) then
        if ( present(error) ) then
           error = .true.
@@ -589,6 +667,8 @@ contains
     else
        if ( present(error) ) error = .false.
     end if
+
+    call PROF_rapend  ('FILE_Read', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
 
     return
   end subroutine FILE_get_dimLength
@@ -607,7 +687,7 @@ contains
     character(len=*), intent(in) :: units
     character(len=*), intent(in) :: dim_name
     integer,          intent(in) :: dtype
-    real(SP),    intent(in) :: val(:)
+    real(SP),    intent(in), target, contiguous :: val(:)
 
     integer :: error
     intrinsic size
@@ -617,13 +697,24 @@ contains
        call PRC_abort
     end if
 
-    call file_put_axis_c( FILE_files(fid)%fid,                        & ! (in)
-         name, desc, units, dim_name, dtype, val, size(val), SP, & ! (in)
-         error                                                        ) ! (out)
+    call PROF_rapstart('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
+
+    !$acc update host(val) if(acc_is_present(val))
+
+    error = file_put_axis_c( FILE_files(fid)%fid,                 & ! (in)
+                             cstr(name), cstr(desc), cstr(units), & ! (in)
+                             cstr(dim_name), dtype,               & ! (in)
+#if defined(__GFORTRAN__) && __GNUC__ < 7
+                             cloc(val(1)), size(val), SP       ) ! (in)
+#else
+                             c_loc(val), size(val), SP       ) ! (in)
+#endif
     if ( error /= FILE_SUCCESS_CODE .and. error /= FILE_ALREADY_EXISTED_CODE ) then
        LOG_ERROR("FILE_put_axis_realSP",*) 'failed to put axis'
        call PRC_abort
     end if
+
+    call PROF_rapend  ('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
 
     return
   end subroutine FILE_put_axis_realSP
@@ -638,7 +729,7 @@ contains
     character(len=*), intent(in) :: units
     character(len=*), intent(in) :: dim_name
     integer,          intent(in) :: dtype
-    real(DP),    intent(in) :: val(:)
+    real(DP),    intent(in), target, contiguous :: val(:)
 
     integer :: error
     intrinsic size
@@ -648,13 +739,24 @@ contains
        call PRC_abort
     end if
 
-    call file_put_axis_c( FILE_files(fid)%fid,                        & ! (in)
-         name, desc, units, dim_name, dtype, val, size(val), DP, & ! (in)
-         error                                                        ) ! (out)
+    call PROF_rapstart('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
+
+    !$acc update host(val) if(acc_is_present(val))
+
+    error = file_put_axis_c( FILE_files(fid)%fid,                 & ! (in)
+                             cstr(name), cstr(desc), cstr(units), & ! (in)
+                             cstr(dim_name), dtype,               & ! (in)
+#if defined(__GFORTRAN__) && __GNUC__ < 7
+                             cloc(val(1)), size(val), DP       ) ! (in)
+#else
+                             c_loc(val), size(val), DP       ) ! (in)
+#endif
     if ( error /= FILE_SUCCESS_CODE .and. error /= FILE_ALREADY_EXISTED_CODE ) then
        LOG_ERROR("FILE_put_axis_realDP",*) 'failed to put axis'
        call PRC_abort
     end if
+
+    call PROF_rapend  ('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
 
     return
   end subroutine FILE_put_axis_realDP
@@ -687,13 +789,17 @@ contains
        call PRC_abort
     end if
 
-    call file_def_axis_c( FILE_files(fid)%fid, &
-         name, desc, units, dim_name, dtype, dim_size, bounds_, & ! (in)
-         error                                                  ) ! (out)
+    call PROF_rapstart('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
+
+    error = file_def_axis_c( FILE_files(fid)%fid,                     & ! (in)
+                             cstr(name), cstr(desc), cstr(units),     & ! (in)
+                             cstr(dim_name), dtype, dim_size, bounds_ ) ! (in)
     if ( error /= FILE_SUCCESS_CODE .and. error /= FILE_ALREADY_EXISTED_CODE ) then
        LOG_ERROR("FILE_def_axis",*) 'failed to define axis'
        call PRC_abort
     end if
+
+    call PROF_rapend  ('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
 
     return
   end subroutine FILE_def_axis
@@ -708,7 +814,7 @@ contains
        start )
     integer,          intent(in)           :: fid
     character(len=*), intent(in)           :: name
-    real(SP),    intent(in)           :: val(:)
+    real(SP),    intent(in), target, contiguous :: val(:)
     integer,          intent(in), optional :: start(:)
 
     integer :: error
@@ -719,19 +825,31 @@ contains
        call PRC_abort
     end if
 
+    call PROF_rapstart('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
+
+    !$acc update host(val) if(acc_is_present(val))
+
     if ( present(start) ) then
-       call file_write_axis_c( FILE_files(fid)%fid, & ! (in)
-            name, val, SP, start, shape(val),  & ! (in)
-            error                                   ) ! (out)
+       error = file_write_axis_c( FILE_files(fid)%fid, cstr(name),         & ! (in)
+#if defined(__GFORTRAN__) && __GNUC__ < 7
+                                  cloc(val(1)), SP, start-1, shape(val) ) ! (in)
+#else
+                                  c_loc(val), SP, start-1, shape(val) ) ! (in)
+#endif
     else
-       call file_write_axis_c( FILE_files(fid)%fid, & ! (in)
-            name, val, SP, (/1/), shape(val),  & ! (in)
-            error                                   ) ! (out)
+       error = file_write_axis_c( FILE_files(fid)%fid, cstr(name),       & ! (in)
+#if defined(__GFORTRAN__) && __GNUC__ < 7
+                                  cloc(val(1)), SP, (/0/), shape(val) ) ! (in)
+#else
+                                  c_loc(val), SP, (/0/), shape(val) ) ! (in)
+#endif
     end if
     if ( error /= FILE_SUCCESS_CODE ) then
        LOG_ERROR("FILE_write_axis_realSP",*) 'failed to write axis: '//trim(name)
        call PRC_abort
     end if
+
+    call PROF_rapend  ('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
 
     return
   end subroutine FILE_write_axis_realSP
@@ -742,7 +860,7 @@ contains
        start )
     integer,          intent(in)           :: fid
     character(len=*), intent(in)           :: name
-    real(DP),    intent(in)           :: val(:)
+    real(DP),    intent(in), target, contiguous :: val(:)
     integer,          intent(in), optional :: start(:)
 
     integer :: error
@@ -753,19 +871,31 @@ contains
        call PRC_abort
     end if
 
+    call PROF_rapstart('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
+
+    !$acc update host(val) if(acc_is_present(val))
+
     if ( present(start) ) then
-       call file_write_axis_c( FILE_files(fid)%fid, & ! (in)
-            name, val, DP, start, shape(val),  & ! (in)
-            error                                   ) ! (out)
+       error = file_write_axis_c( FILE_files(fid)%fid, cstr(name),         & ! (in)
+#if defined(__GFORTRAN__) && __GNUC__ < 7
+                                  cloc(val(1)), DP, start-1, shape(val) ) ! (in)
+#else
+                                  c_loc(val), DP, start-1, shape(val) ) ! (in)
+#endif
     else
-       call file_write_axis_c( FILE_files(fid)%fid, & ! (in)
-            name, val, DP, (/1/), shape(val),  & ! (in)
-            error                                   ) ! (out)
+       error = file_write_axis_c( FILE_files(fid)%fid, cstr(name),       & ! (in)
+#if defined(__GFORTRAN__) && __GNUC__ < 7
+                                  cloc(val(1)), DP, (/0/), shape(val) ) ! (in)
+#else
+                                  c_loc(val), DP, (/0/), shape(val) ) ! (in)
+#endif
     end if
     if ( error /= FILE_SUCCESS_CODE ) then
        LOG_ERROR("FILE_write_axis_realDP",*) 'failed to write axis: '//trim(name)
        call PRC_abort
     end if
+
+    call PROF_rapend  ('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
 
     return
   end subroutine FILE_write_axis_realDP
@@ -784,24 +914,62 @@ contains
     character(len=*), intent(in) :: units
     character(len=*), intent(in) :: dim_names(:)
     integer,          intent(in) :: dtype
+#ifdef NVIDIA
     real(SP),    intent(in) :: val(:)
+#else
+    real(SP),    intent(in), target, contiguous :: val(:)
+#endif
 
+    type(c_ptr) :: dim_names_(size(dim_names))
+    !character(:,c_char), allocatable, target :: cptr(:)
+    character(len=H_SHORT), allocatable, target :: cptr(:)
+
+    integer :: i
     integer :: error
-    intrinsic size
+    intrinsic size, len
 
     if ( .not. FILE_opened(fid) ) then
        LOG_ERROR("FILE_put_associatedCoordinate_realSP_1D",*) 'File is not opened. fid = ', fid
        call PRC_abort
     end if
 
-    call file_put_associatedcoordinate_c( FILE_files(fid)%fid, & ! (in)
-         name, desc, units, dim_names, size(dim_names), dtype, & ! (in)
-         val, SP,                                         & ! (in)
-         error                                                 ) ! (out)
+    call PROF_rapstart('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
+
+    !allocate( character(len=len(dim_names)+1) :: cptr(size(dim_names)) )
+    allocate( cptr(size(dim_names)) )
+    do i = 1, size(dim_names)
+       cptr(i) = cstr(dim_names(i))
+       dim_names_(i) = c_loc(cptr(i))
+    end do
+
+    !$acc update host(val) if(acc_is_present(val))
+
+#ifdef NVIDIA
+    block
+    real(SP), allocatable, target :: work(:)
+    allocate(work, source=val)
+#endif
+    error = file_put_associatedcoordinate_c( &
+         FILE_files(fid)%fid,                 & ! (in)
+         cstr(name), cstr(desc), cstr(units), & ! (in)
+         dim_names_, size(dim_names), dtype,  & ! (in)
+#if defined(__GFORTRAN__) && __GNUC__ < 7
+         cloc(val(1)), SP                  ) ! (in)
+#elif defined(NVIDIA)
+         c_loc(work), SP                  ) ! (in)
+#else
+         c_loc(val), SP                  ) ! (in)
+#endif
     if ( error /= FILE_SUCCESS_CODE .and. error /= FILE_ALREADY_EXISTED_CODE ) then
        LOG_ERROR("FILE_put_associatedCoordinate_realSP_1D",*) 'failed to put associated coordinate: '//trim(name)
        call PRC_abort
     end if
+
+#ifdef NVIDIA
+    end block
+#endif
+
+    call PROF_rapend  ('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
 
     return
   end subroutine FILE_put_associatedCoordinate_realSP_1D
@@ -816,24 +984,62 @@ contains
     character(len=*), intent(in) :: units
     character(len=*), intent(in) :: dim_names(:)
     integer,          intent(in) :: dtype
+#ifdef NVIDIA
     real(DP),    intent(in) :: val(:)
+#else
+    real(DP),    intent(in), target, contiguous :: val(:)
+#endif
 
+    type(c_ptr) :: dim_names_(size(dim_names))
+    !character(:,c_char), allocatable, target :: cptr(:)
+    character(len=H_SHORT), allocatable, target :: cptr(:)
+
+    integer :: i
     integer :: error
-    intrinsic size
+    intrinsic size, len
 
     if ( .not. FILE_opened(fid) ) then
        LOG_ERROR("FILE_put_associatedCoordinate_realDP_1D",*) 'File is not opened. fid = ', fid
        call PRC_abort
     end if
 
-    call file_put_associatedcoordinate_c( FILE_files(fid)%fid, & ! (in)
-         name, desc, units, dim_names, size(dim_names), dtype, & ! (in)
-         val, DP,                                         & ! (in)
-         error                                                 ) ! (out)
+    call PROF_rapstart('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
+
+    !allocate( character(len=len(dim_names)+1) :: cptr(size(dim_names)) )
+    allocate( cptr(size(dim_names)) )
+    do i = 1, size(dim_names)
+       cptr(i) = cstr(dim_names(i))
+       dim_names_(i) = c_loc(cptr(i))
+    end do
+
+    !$acc update host(val) if(acc_is_present(val))
+
+#ifdef NVIDIA
+    block
+    real(DP), allocatable, target :: work(:)
+    allocate(work, source=val)
+#endif
+    error = file_put_associatedcoordinate_c( &
+         FILE_files(fid)%fid,                 & ! (in)
+         cstr(name), cstr(desc), cstr(units), & ! (in)
+         dim_names_, size(dim_names), dtype,  & ! (in)
+#if defined(__GFORTRAN__) && __GNUC__ < 7
+         cloc(val(1)), DP                  ) ! (in)
+#elif defined(NVIDIA)
+         c_loc(work), DP                  ) ! (in)
+#else
+         c_loc(val), DP                  ) ! (in)
+#endif
     if ( error /= FILE_SUCCESS_CODE .and. error /= FILE_ALREADY_EXISTED_CODE ) then
        LOG_ERROR("FILE_put_associatedCoordinate_realDP_1D",*) 'failed to put associated coordinate: '//trim(name)
        call PRC_abort
     end if
+
+#ifdef NVIDIA
+    end block
+#endif
+
+    call PROF_rapend  ('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
 
     return
   end subroutine FILE_put_associatedCoordinate_realDP_1D
@@ -848,24 +1054,62 @@ contains
     character(len=*), intent(in) :: units
     character(len=*), intent(in) :: dim_names(:)
     integer,          intent(in) :: dtype
+#ifdef NVIDIA
     real(SP),    intent(in) :: val(:,:)
+#else
+    real(SP),    intent(in), target, contiguous :: val(:,:)
+#endif
 
+    type(c_ptr) :: dim_names_(size(dim_names))
+    !character(:,c_char), allocatable, target :: cptr(:)
+    character(len=H_SHORT), allocatable, target :: cptr(:)
+
+    integer :: i
     integer :: error
-    intrinsic size
+    intrinsic size, len
 
     if ( .not. FILE_opened(fid) ) then
        LOG_ERROR("FILE_put_associatedCoordinate_realSP_2D",*) 'File is not opened. fid = ', fid
        call PRC_abort
     end if
 
-    call file_put_associatedcoordinate_c( FILE_files(fid)%fid, & ! (in)
-         name, desc, units, dim_names, size(dim_names), dtype, & ! (in)
-         val, SP,                                         & ! (in)
-         error                                                 ) ! (out)
+    call PROF_rapstart('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
+
+    !allocate( character(len=len(dim_names)+1) :: cptr(size(dim_names)) )
+    allocate( cptr(size(dim_names)) )
+    do i = 1, size(dim_names)
+       cptr(i) = cstr(dim_names(i))
+       dim_names_(i) = c_loc(cptr(i))
+    end do
+
+    !$acc update host(val) if(acc_is_present(val))
+
+#ifdef NVIDIA
+    block
+    real(SP), allocatable, target :: work(:,:)
+    allocate(work, source=val)
+#endif
+    error = file_put_associatedcoordinate_c( &
+         FILE_files(fid)%fid,                 & ! (in)
+         cstr(name), cstr(desc), cstr(units), & ! (in)
+         dim_names_, size(dim_names), dtype,  & ! (in)
+#if defined(__GFORTRAN__) && __GNUC__ < 7
+         cloc(val(1,1)), SP                  ) ! (in)
+#elif defined(NVIDIA)
+         c_loc(work), SP                  ) ! (in)
+#else
+         c_loc(val), SP                  ) ! (in)
+#endif
     if ( error /= FILE_SUCCESS_CODE .and. error /= FILE_ALREADY_EXISTED_CODE ) then
        LOG_ERROR("FILE_put_associatedCoordinate_realSP_2D",*) 'failed to put associated coordinate: '//trim(name)
        call PRC_abort
     end if
+
+#ifdef NVIDIA
+    end block
+#endif
+
+    call PROF_rapend  ('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
 
     return
   end subroutine FILE_put_associatedCoordinate_realSP_2D
@@ -880,24 +1124,62 @@ contains
     character(len=*), intent(in) :: units
     character(len=*), intent(in) :: dim_names(:)
     integer,          intent(in) :: dtype
+#ifdef NVIDIA
     real(DP),    intent(in) :: val(:,:)
+#else
+    real(DP),    intent(in), target, contiguous :: val(:,:)
+#endif
 
+    type(c_ptr) :: dim_names_(size(dim_names))
+    !character(:,c_char), allocatable, target :: cptr(:)
+    character(len=H_SHORT), allocatable, target :: cptr(:)
+
+    integer :: i
     integer :: error
-    intrinsic size
+    intrinsic size, len
 
     if ( .not. FILE_opened(fid) ) then
        LOG_ERROR("FILE_put_associatedCoordinate_realDP_2D",*) 'File is not opened. fid = ', fid
        call PRC_abort
     end if
 
-    call file_put_associatedcoordinate_c( FILE_files(fid)%fid, & ! (in)
-         name, desc, units, dim_names, size(dim_names), dtype, & ! (in)
-         val, DP,                                         & ! (in)
-         error                                                 ) ! (out)
+    call PROF_rapstart('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
+
+    !allocate( character(len=len(dim_names)+1) :: cptr(size(dim_names)) )
+    allocate( cptr(size(dim_names)) )
+    do i = 1, size(dim_names)
+       cptr(i) = cstr(dim_names(i))
+       dim_names_(i) = c_loc(cptr(i))
+    end do
+
+    !$acc update host(val) if(acc_is_present(val))
+
+#ifdef NVIDIA
+    block
+    real(DP), allocatable, target :: work(:,:)
+    allocate(work, source=val)
+#endif
+    error = file_put_associatedcoordinate_c( &
+         FILE_files(fid)%fid,                 & ! (in)
+         cstr(name), cstr(desc), cstr(units), & ! (in)
+         dim_names_, size(dim_names), dtype,  & ! (in)
+#if defined(__GFORTRAN__) && __GNUC__ < 7
+         cloc(val(1,1)), DP                  ) ! (in)
+#elif defined(NVIDIA)
+         c_loc(work), DP                  ) ! (in)
+#else
+         c_loc(val), DP                  ) ! (in)
+#endif
     if ( error /= FILE_SUCCESS_CODE .and. error /= FILE_ALREADY_EXISTED_CODE ) then
        LOG_ERROR("FILE_put_associatedCoordinate_realDP_2D",*) 'failed to put associated coordinate: '//trim(name)
        call PRC_abort
     end if
+
+#ifdef NVIDIA
+    end block
+#endif
+
+    call PROF_rapend  ('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
 
     return
   end subroutine FILE_put_associatedCoordinate_realDP_2D
@@ -912,24 +1194,62 @@ contains
     character(len=*), intent(in) :: units
     character(len=*), intent(in) :: dim_names(:)
     integer,          intent(in) :: dtype
+#ifdef NVIDIA
     real(SP),    intent(in) :: val(:,:,:)
+#else
+    real(SP),    intent(in), target, contiguous :: val(:,:,:)
+#endif
 
+    type(c_ptr) :: dim_names_(size(dim_names))
+    !character(:,c_char), allocatable, target :: cptr(:)
+    character(len=H_SHORT), allocatable, target :: cptr(:)
+
+    integer :: i
     integer :: error
-    intrinsic size
+    intrinsic size, len
 
     if ( .not. FILE_opened(fid) ) then
        LOG_ERROR("FILE_put_associatedCoordinate_realSP_3D",*) 'File is not opened. fid = ', fid
        call PRC_abort
     end if
 
-    call file_put_associatedcoordinate_c( FILE_files(fid)%fid, & ! (in)
-         name, desc, units, dim_names, size(dim_names), dtype, & ! (in)
-         val, SP,                                         & ! (in)
-         error                                                 ) ! (out)
+    call PROF_rapstart('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
+
+    !allocate( character(len=len(dim_names)+1) :: cptr(size(dim_names)) )
+    allocate( cptr(size(dim_names)) )
+    do i = 1, size(dim_names)
+       cptr(i) = cstr(dim_names(i))
+       dim_names_(i) = c_loc(cptr(i))
+    end do
+
+    !$acc update host(val) if(acc_is_present(val))
+
+#ifdef NVIDIA
+    block
+    real(SP), allocatable, target :: work(:,:,:)
+    allocate(work, source=val)
+#endif
+    error = file_put_associatedcoordinate_c( &
+         FILE_files(fid)%fid,                 & ! (in)
+         cstr(name), cstr(desc), cstr(units), & ! (in)
+         dim_names_, size(dim_names), dtype,  & ! (in)
+#if defined(__GFORTRAN__) && __GNUC__ < 7
+         cloc(val(1,1,1)), SP                  ) ! (in)
+#elif defined(NVIDIA)
+         c_loc(work), SP                  ) ! (in)
+#else
+         c_loc(val), SP                  ) ! (in)
+#endif
     if ( error /= FILE_SUCCESS_CODE .and. error /= FILE_ALREADY_EXISTED_CODE ) then
        LOG_ERROR("FILE_put_associatedCoordinate_realSP_3D",*) 'failed to put associated coordinate: '//trim(name)
        call PRC_abort
     end if
+
+#ifdef NVIDIA
+    end block
+#endif
+
+    call PROF_rapend  ('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
 
     return
   end subroutine FILE_put_associatedCoordinate_realSP_3D
@@ -944,24 +1264,62 @@ contains
     character(len=*), intent(in) :: units
     character(len=*), intent(in) :: dim_names(:)
     integer,          intent(in) :: dtype
+#ifdef NVIDIA
     real(DP),    intent(in) :: val(:,:,:)
+#else
+    real(DP),    intent(in), target, contiguous :: val(:,:,:)
+#endif
 
+    type(c_ptr) :: dim_names_(size(dim_names))
+    !character(:,c_char), allocatable, target :: cptr(:)
+    character(len=H_SHORT), allocatable, target :: cptr(:)
+
+    integer :: i
     integer :: error
-    intrinsic size
+    intrinsic size, len
 
     if ( .not. FILE_opened(fid) ) then
        LOG_ERROR("FILE_put_associatedCoordinate_realDP_3D",*) 'File is not opened. fid = ', fid
        call PRC_abort
     end if
 
-    call file_put_associatedcoordinate_c( FILE_files(fid)%fid, & ! (in)
-         name, desc, units, dim_names, size(dim_names), dtype, & ! (in)
-         val, DP,                                         & ! (in)
-         error                                                 ) ! (out)
+    call PROF_rapstart('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
+
+    !allocate( character(len=len(dim_names)+1) :: cptr(size(dim_names)) )
+    allocate( cptr(size(dim_names)) )
+    do i = 1, size(dim_names)
+       cptr(i) = cstr(dim_names(i))
+       dim_names_(i) = c_loc(cptr(i))
+    end do
+
+    !$acc update host(val) if(acc_is_present(val))
+
+#ifdef NVIDIA
+    block
+    real(DP), allocatable, target :: work(:,:,:)
+    allocate(work, source=val)
+#endif
+    error = file_put_associatedcoordinate_c( &
+         FILE_files(fid)%fid,                 & ! (in)
+         cstr(name), cstr(desc), cstr(units), & ! (in)
+         dim_names_, size(dim_names), dtype,  & ! (in)
+#if defined(__GFORTRAN__) && __GNUC__ < 7
+         cloc(val(1,1,1)), DP                  ) ! (in)
+#elif defined(NVIDIA)
+         c_loc(work), DP                  ) ! (in)
+#else
+         c_loc(val), DP                  ) ! (in)
+#endif
     if ( error /= FILE_SUCCESS_CODE .and. error /= FILE_ALREADY_EXISTED_CODE ) then
        LOG_ERROR("FILE_put_associatedCoordinate_realDP_3D",*) 'failed to put associated coordinate: '//trim(name)
        call PRC_abort
     end if
+
+#ifdef NVIDIA
+    end block
+#endif
+
+    call PROF_rapend  ('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
 
     return
   end subroutine FILE_put_associatedCoordinate_realDP_3D
@@ -976,24 +1334,62 @@ contains
     character(len=*), intent(in) :: units
     character(len=*), intent(in) :: dim_names(:)
     integer,          intent(in) :: dtype
+#ifdef NVIDIA
     real(SP),    intent(in) :: val(:,:,:,:)
+#else
+    real(SP),    intent(in), target, contiguous :: val(:,:,:,:)
+#endif
 
+    type(c_ptr) :: dim_names_(size(dim_names))
+    !character(:,c_char), allocatable, target :: cptr(:)
+    character(len=H_SHORT), allocatable, target :: cptr(:)
+
+    integer :: i
     integer :: error
-    intrinsic size
+    intrinsic size, len
 
     if ( .not. FILE_opened(fid) ) then
        LOG_ERROR("FILE_put_associatedCoordinate_realSP_4D",*) 'File is not opened. fid = ', fid
        call PRC_abort
     end if
 
-    call file_put_associatedcoordinate_c( FILE_files(fid)%fid, & ! (in)
-         name, desc, units, dim_names, size(dim_names), dtype, & ! (in)
-         val, SP,                                         & ! (in)
-         error                                                 ) ! (out)
+    call PROF_rapstart('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
+
+    !allocate( character(len=len(dim_names)+1) :: cptr(size(dim_names)) )
+    allocate( cptr(size(dim_names)) )
+    do i = 1, size(dim_names)
+       cptr(i) = cstr(dim_names(i))
+       dim_names_(i) = c_loc(cptr(i))
+    end do
+
+    !$acc update host(val) if(acc_is_present(val))
+
+#ifdef NVIDIA
+    block
+    real(SP), allocatable, target :: work(:,:,:,:)
+    allocate(work, source=val)
+#endif
+    error = file_put_associatedcoordinate_c( &
+         FILE_files(fid)%fid,                 & ! (in)
+         cstr(name), cstr(desc), cstr(units), & ! (in)
+         dim_names_, size(dim_names), dtype,  & ! (in)
+#if defined(__GFORTRAN__) && __GNUC__ < 7
+         cloc(val(1,1,1,1)), SP                  ) ! (in)
+#elif defined(NVIDIA)
+         c_loc(work), SP                  ) ! (in)
+#else
+         c_loc(val), SP                  ) ! (in)
+#endif
     if ( error /= FILE_SUCCESS_CODE .and. error /= FILE_ALREADY_EXISTED_CODE ) then
        LOG_ERROR("FILE_put_associatedCoordinate_realSP_4D",*) 'failed to put associated coordinate: '//trim(name)
        call PRC_abort
     end if
+
+#ifdef NVIDIA
+    end block
+#endif
+
+    call PROF_rapend  ('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
 
     return
   end subroutine FILE_put_associatedCoordinate_realSP_4D
@@ -1008,24 +1404,62 @@ contains
     character(len=*), intent(in) :: units
     character(len=*), intent(in) :: dim_names(:)
     integer,          intent(in) :: dtype
+#ifdef NVIDIA
     real(DP),    intent(in) :: val(:,:,:,:)
+#else
+    real(DP),    intent(in), target, contiguous :: val(:,:,:,:)
+#endif
 
+    type(c_ptr) :: dim_names_(size(dim_names))
+    !character(:,c_char), allocatable, target :: cptr(:)
+    character(len=H_SHORT), allocatable, target :: cptr(:)
+
+    integer :: i
     integer :: error
-    intrinsic size
+    intrinsic size, len
 
     if ( .not. FILE_opened(fid) ) then
        LOG_ERROR("FILE_put_associatedCoordinate_realDP_4D",*) 'File is not opened. fid = ', fid
        call PRC_abort
     end if
 
-    call file_put_associatedcoordinate_c( FILE_files(fid)%fid, & ! (in)
-         name, desc, units, dim_names, size(dim_names), dtype, & ! (in)
-         val, DP,                                         & ! (in)
-         error                                                 ) ! (out)
+    call PROF_rapstart('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
+
+    !allocate( character(len=len(dim_names)+1) :: cptr(size(dim_names)) )
+    allocate( cptr(size(dim_names)) )
+    do i = 1, size(dim_names)
+       cptr(i) = cstr(dim_names(i))
+       dim_names_(i) = c_loc(cptr(i))
+    end do
+
+    !$acc update host(val) if(acc_is_present(val))
+
+#ifdef NVIDIA
+    block
+    real(DP), allocatable, target :: work(:,:,:,:)
+    allocate(work, source=val)
+#endif
+    error = file_put_associatedcoordinate_c( &
+         FILE_files(fid)%fid,                 & ! (in)
+         cstr(name), cstr(desc), cstr(units), & ! (in)
+         dim_names_, size(dim_names), dtype,  & ! (in)
+#if defined(__GFORTRAN__) && __GNUC__ < 7
+         cloc(val(1,1,1,1)), DP                  ) ! (in)
+#elif defined(NVIDIA)
+         c_loc(work), DP                  ) ! (in)
+#else
+         c_loc(val), DP                  ) ! (in)
+#endif
     if ( error /= FILE_SUCCESS_CODE .and. error /= FILE_ALREADY_EXISTED_CODE ) then
        LOG_ERROR("FILE_put_associatedCoordinate_realDP_4D",*) 'failed to put associated coordinate: '//trim(name)
        call PRC_abort
     end if
+
+#ifdef NVIDIA
+    end block
+#endif
+
+    call PROF_rapend  ('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
 
     return
   end subroutine FILE_put_associatedCoordinate_realDP_4D
@@ -1041,21 +1475,38 @@ contains
     character(len=*), intent(in) :: dim_names(:)
     integer,          intent(in) :: dtype
 
+    type(c_ptr) :: dim_names_(size(dim_names))
+!    character(:,c_char), allocatable, target :: cptr(:)
+    character(len=H_SHORT+1), allocatable, target :: cptr(:)
+
     integer :: error
-    intrinsic size
+    integer :: i
+    intrinsic size, len
 
     if ( .not. FILE_opened(fid) ) then
        LOG_ERROR("FILE_def_associatedCoordinate",*) 'File is not opened. fid = ', fid
        call PRC_abort
     end if
 
-    call file_def_associatedcoordinate_c( FILE_files(fid)%fid, & ! (in)
-         name, desc, units, dim_names, size(dim_names), dtype, & ! (in)
-         error                                                 ) ! (out)
+    call PROF_rapstart('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
+
+    !allocate( character(len=len(dim_names)+1) :: cptr(size(dim_names)) )
+    allocate( cptr(size(dim_names)) )
+    do i = 1, size(dim_names)
+       cptr(i) = cstr(dim_names(i))
+       dim_names_(i) = c_loc(cptr(i))
+    end do
+
+    error = file_def_associatedcoordinate_c( &
+         FILE_files(fid)%fid,                 & ! (in)
+         cstr(name), cstr(desc), cstr(units), & ! (in)
+         dim_names_, size(dim_names), dtype   ) ! (in)
     if ( error /= FILE_SUCCESS_CODE .and. error /= FILE_ALREADY_EXISTED_CODE ) then
-       LOG_ERROR("FILE_def_associatedCoordinate",*) 'failed to put associated coordinate: '//trim(name)
+       LOG_ERROR("FILE_def_associatedCoordinate",*) 'failed to define associated coordinate: '//trim(name)
        call PRC_abort
     end if
+
+    call PROF_rapend  ('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
 
     return
   end subroutine FILE_def_associatedCoordinate
@@ -1071,43 +1522,85 @@ contains
        ndims         )
     integer,          intent(in)           :: fid
     character(len=*), intent(in)           :: name
-    real(SP),    intent(in)           :: val(:)
+#ifdef NVIDIA
+    real(SP),    intent(in) :: val(:)
+#else
+    real(SP),    intent(in), target, contiguous :: val(:)
+#endif
     integer,          intent(in), optional :: start(:)
     integer,          intent(in), optional :: count(:)  ! in case val has been reshaped
     integer,          intent(in), optional :: ndims     ! in case val has been reshaped
 
+    integer :: ndims_
+    integer, allocatable :: start_(:), count_(:)
     integer :: error
-    intrinsic shape
+    integer :: i
+    intrinsic shape, size
 
     if ( .not. FILE_opened(fid) ) then
        LOG_ERROR("FILE_write_associatedCoordinate_realSP_1D",*) 'File is not opened. fid = ', fid
        call PRC_abort
     end if
 
+    call PROF_rapstart('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
+
+    if ( present(ndims) ) then
+       ndims_ = ndims
+    else
+       ndims_ = 1
+    end if
+    allocate( start_(ndims_), count_(ndims_) )
+
     if ( present(ndims) ) then
        ! Note this is called for history coordinates which have been reshaped
        ! from 2D/3D into 1D array. In this case, start and count must be also present
-       call file_write_associatedcoordinate_c( FILE_files(fid)%fid, & ! (in)
-            name, val, SP,                                     & ! (in)
-            ndims, start, count,                                    & ! (in)
-            error                                                   ) ! (out)
+       do i = 1, ndims_
+          start_(i) = start(ndims_-i+1) - 1
+          count_(i) = count(ndims_-i+1)
+       end do
     else if ( present(start) ) then
        ! Note this is called for restart coordinates
-       call file_write_associatedcoordinate_c( FILE_files(fid)%fid, & ! (in)
-            name, val, SP,                                     & ! (in)
-            1, start, shape(val),                              & ! (in)
-            error                                                   ) ! (out)
+       do i = 1, ndims_
+          start_(i) = start(1-i+1) - 1
+          count_(i) = size(val, 1-i+1)
+       end do
     else
        ! Note this is for the one-file-per-process I/O method
-       call file_write_associatedcoordinate_c( FILE_files(fid)%fid, & ! (in)
-            name, val, SP,                                     & ! (in)
-            1, (/1/), shape(val),         & ! (in)
-            error                                                   ) ! (out)
+       do i = 1, 1
+          start_(i) = 0
+          count_(i) = size(val, 1-i+1)
+       end do
     end if
+
+    !$acc update host(val) if(acc_is_present(val))
+
+#ifdef NVIDIA
+    block
+    real(SP), allocatable, target :: work(:)
+    allocate(work, source=val)
+#endif
+    error = file_write_associatedcoordinate_c( &
+         FILE_files(fid)%fid, cstr(name), & ! (in)
+#if defined(__GFORTRAN__) && __GNUC__ < 7
+         cloc(val(1)), & ! (in)
+#elif defined(NVIDIA)
+         c_loc(work), & ! (in)
+#else
+         c_loc(val), & ! (in)
+#endif
+         ndims_, SP,     & ! (in)
+         start_, count_                   ) ! (in)
+
     if ( error /= FILE_SUCCESS_CODE .and. error /= FILE_ALREADY_EXISTED_CODE ) then
-       LOG_ERROR("FILE_write_associatedCoordinate_realSP_1D",*) 'failed to put associated coordinate: '//trim(name)
+       LOG_ERROR("FILE_write_associatedCoordinate_realSP_1D",*) 'failed to write associated coordinate: '//trim(name)
        call PRC_abort
     end if
+
+#ifdef NVIDIA
+    end block
+#endif
+
+    call PROF_rapend  ('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
 
     return
   end subroutine FILE_write_associatedCoordinate_realSP_1D
@@ -1119,43 +1612,85 @@ contains
        ndims         )
     integer,          intent(in)           :: fid
     character(len=*), intent(in)           :: name
-    real(DP),    intent(in)           :: val(:)
+#ifdef NVIDIA
+    real(DP),    intent(in) :: val(:)
+#else
+    real(DP),    intent(in), target, contiguous :: val(:)
+#endif
     integer,          intent(in), optional :: start(:)
     integer,          intent(in), optional :: count(:)  ! in case val has been reshaped
     integer,          intent(in), optional :: ndims     ! in case val has been reshaped
 
+    integer :: ndims_
+    integer, allocatable :: start_(:), count_(:)
     integer :: error
-    intrinsic shape
+    integer :: i
+    intrinsic shape, size
 
     if ( .not. FILE_opened(fid) ) then
        LOG_ERROR("FILE_write_associatedCoordinate_realDP_1D",*) 'File is not opened. fid = ', fid
        call PRC_abort
     end if
 
+    call PROF_rapstart('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
+
+    if ( present(ndims) ) then
+       ndims_ = ndims
+    else
+       ndims_ = 1
+    end if
+    allocate( start_(ndims_), count_(ndims_) )
+
     if ( present(ndims) ) then
        ! Note this is called for history coordinates which have been reshaped
        ! from 2D/3D into 1D array. In this case, start and count must be also present
-       call file_write_associatedcoordinate_c( FILE_files(fid)%fid, & ! (in)
-            name, val, DP,                                     & ! (in)
-            ndims, start, count,                                    & ! (in)
-            error                                                   ) ! (out)
+       do i = 1, ndims_
+          start_(i) = start(ndims_-i+1) - 1
+          count_(i) = count(ndims_-i+1)
+       end do
     else if ( present(start) ) then
        ! Note this is called for restart coordinates
-       call file_write_associatedcoordinate_c( FILE_files(fid)%fid, & ! (in)
-            name, val, DP,                                     & ! (in)
-            1, start, shape(val),                              & ! (in)
-            error                                                   ) ! (out)
+       do i = 1, ndims_
+          start_(i) = start(1-i+1) - 1
+          count_(i) = size(val, 1-i+1)
+       end do
     else
        ! Note this is for the one-file-per-process I/O method
-       call file_write_associatedcoordinate_c( FILE_files(fid)%fid, & ! (in)
-            name, val, DP,                                     & ! (in)
-            1, (/1/), shape(val),         & ! (in)
-            error                                                   ) ! (out)
+       do i = 1, 1
+          start_(i) = 0
+          count_(i) = size(val, 1-i+1)
+       end do
     end if
+
+    !$acc update host(val) if(acc_is_present(val))
+
+#ifdef NVIDIA
+    block
+    real(DP), allocatable, target :: work(:)
+    allocate(work, source=val)
+#endif
+    error = file_write_associatedcoordinate_c( &
+         FILE_files(fid)%fid, cstr(name), & ! (in)
+#if defined(__GFORTRAN__) && __GNUC__ < 7
+         cloc(val(1)), & ! (in)
+#elif defined(NVIDIA)
+         c_loc(work), & ! (in)
+#else
+         c_loc(val), & ! (in)
+#endif
+         ndims_, DP,     & ! (in)
+         start_, count_                   ) ! (in)
+
     if ( error /= FILE_SUCCESS_CODE .and. error /= FILE_ALREADY_EXISTED_CODE ) then
-       LOG_ERROR("FILE_write_associatedCoordinate_realDP_1D",*) 'failed to put associated coordinate: '//trim(name)
+       LOG_ERROR("FILE_write_associatedCoordinate_realDP_1D",*) 'failed to write associated coordinate: '//trim(name)
        call PRC_abort
     end if
+
+#ifdef NVIDIA
+    end block
+#endif
+
+    call PROF_rapend  ('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
 
     return
   end subroutine FILE_write_associatedCoordinate_realDP_1D
@@ -1167,43 +1702,85 @@ contains
        ndims         )
     integer,          intent(in)           :: fid
     character(len=*), intent(in)           :: name
-    real(SP),    intent(in)           :: val(:,:)
+#ifdef NVIDIA
+    real(SP),    intent(in) :: val(:,:)
+#else
+    real(SP),    intent(in), target, contiguous :: val(:,:)
+#endif
     integer,          intent(in), optional :: start(:)
     integer,          intent(in), optional :: count(:)  ! in case val has been reshaped
     integer,          intent(in), optional :: ndims     ! in case val has been reshaped
 
+    integer :: ndims_
+    integer, allocatable :: start_(:), count_(:)
     integer :: error
-    intrinsic shape
+    integer :: i
+    intrinsic shape, size
 
     if ( .not. FILE_opened(fid) ) then
        LOG_ERROR("FILE_write_associatedCoordinate_realSP_2D",*) 'File is not opened. fid = ', fid
        call PRC_abort
     end if
 
+    call PROF_rapstart('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
+
+    if ( present(ndims) ) then
+       ndims_ = ndims
+    else
+       ndims_ = 2
+    end if
+    allocate( start_(ndims_), count_(ndims_) )
+
     if ( present(ndims) ) then
        ! Note this is called for history coordinates which have been reshaped
        ! from 2D/3D into 1D array. In this case, start and count must be also present
-       call file_write_associatedcoordinate_c( FILE_files(fid)%fid, & ! (in)
-            name, val, SP,                                     & ! (in)
-            ndims, start, count,                                    & ! (in)
-            error                                                   ) ! (out)
+       do i = 1, ndims_
+          start_(i) = start(ndims_-i+1) - 1
+          count_(i) = count(ndims_-i+1)
+       end do
     else if ( present(start) ) then
        ! Note this is called for restart coordinates
-       call file_write_associatedcoordinate_c( FILE_files(fid)%fid, & ! (in)
-            name, val, SP,                                     & ! (in)
-            2, start, shape(val),                              & ! (in)
-            error                                                   ) ! (out)
+       do i = 1, ndims_
+          start_(i) = start(2-i+1) - 1
+          count_(i) = size(val, 2-i+1)
+       end do
     else
        ! Note this is for the one-file-per-process I/O method
-       call file_write_associatedcoordinate_c( FILE_files(fid)%fid, & ! (in)
-            name, val, SP,                                     & ! (in)
-            2, (/1,1/), shape(val),         & ! (in)
-            error                                                   ) ! (out)
+       do i = 1, 2
+          start_(i) = 0
+          count_(i) = size(val, 2-i+1)
+       end do
     end if
+
+    !$acc update host(val) if(acc_is_present(val))
+
+#ifdef NVIDIA
+    block
+    real(SP), allocatable, target :: work(:,:)
+    allocate(work, source=val)
+#endif
+    error = file_write_associatedcoordinate_c( &
+         FILE_files(fid)%fid, cstr(name), & ! (in)
+#if defined(__GFORTRAN__) && __GNUC__ < 7
+         cloc(val(1,1)), & ! (in)
+#elif defined(NVIDIA)
+         c_loc(work), & ! (in)
+#else
+         c_loc(val), & ! (in)
+#endif
+         ndims_, SP,     & ! (in)
+         start_, count_                   ) ! (in)
+
     if ( error /= FILE_SUCCESS_CODE .and. error /= FILE_ALREADY_EXISTED_CODE ) then
-       LOG_ERROR("FILE_write_associatedCoordinate_realSP_2D",*) 'failed to put associated coordinate: '//trim(name)
+       LOG_ERROR("FILE_write_associatedCoordinate_realSP_2D",*) 'failed to write associated coordinate: '//trim(name)
        call PRC_abort
     end if
+
+#ifdef NVIDIA
+    end block
+#endif
+
+    call PROF_rapend  ('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
 
     return
   end subroutine FILE_write_associatedCoordinate_realSP_2D
@@ -1215,43 +1792,85 @@ contains
        ndims         )
     integer,          intent(in)           :: fid
     character(len=*), intent(in)           :: name
-    real(DP),    intent(in)           :: val(:,:)
+#ifdef NVIDIA
+    real(DP),    intent(in) :: val(:,:)
+#else
+    real(DP),    intent(in), target, contiguous :: val(:,:)
+#endif
     integer,          intent(in), optional :: start(:)
     integer,          intent(in), optional :: count(:)  ! in case val has been reshaped
     integer,          intent(in), optional :: ndims     ! in case val has been reshaped
 
+    integer :: ndims_
+    integer, allocatable :: start_(:), count_(:)
     integer :: error
-    intrinsic shape
+    integer :: i
+    intrinsic shape, size
 
     if ( .not. FILE_opened(fid) ) then
        LOG_ERROR("FILE_write_associatedCoordinate_realDP_2D",*) 'File is not opened. fid = ', fid
        call PRC_abort
     end if
 
+    call PROF_rapstart('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
+
+    if ( present(ndims) ) then
+       ndims_ = ndims
+    else
+       ndims_ = 2
+    end if
+    allocate( start_(ndims_), count_(ndims_) )
+
     if ( present(ndims) ) then
        ! Note this is called for history coordinates which have been reshaped
        ! from 2D/3D into 1D array. In this case, start and count must be also present
-       call file_write_associatedcoordinate_c( FILE_files(fid)%fid, & ! (in)
-            name, val, DP,                                     & ! (in)
-            ndims, start, count,                                    & ! (in)
-            error                                                   ) ! (out)
+       do i = 1, ndims_
+          start_(i) = start(ndims_-i+1) - 1
+          count_(i) = count(ndims_-i+1)
+       end do
     else if ( present(start) ) then
        ! Note this is called for restart coordinates
-       call file_write_associatedcoordinate_c( FILE_files(fid)%fid, & ! (in)
-            name, val, DP,                                     & ! (in)
-            2, start, shape(val),                              & ! (in)
-            error                                                   ) ! (out)
+       do i = 1, ndims_
+          start_(i) = start(2-i+1) - 1
+          count_(i) = size(val, 2-i+1)
+       end do
     else
        ! Note this is for the one-file-per-process I/O method
-       call file_write_associatedcoordinate_c( FILE_files(fid)%fid, & ! (in)
-            name, val, DP,                                     & ! (in)
-            2, (/1,1/), shape(val),         & ! (in)
-            error                                                   ) ! (out)
+       do i = 1, 2
+          start_(i) = 0
+          count_(i) = size(val, 2-i+1)
+       end do
     end if
+
+    !$acc update host(val) if(acc_is_present(val))
+
+#ifdef NVIDIA
+    block
+    real(DP), allocatable, target :: work(:,:)
+    allocate(work, source=val)
+#endif
+    error = file_write_associatedcoordinate_c( &
+         FILE_files(fid)%fid, cstr(name), & ! (in)
+#if defined(__GFORTRAN__) && __GNUC__ < 7
+         cloc(val(1,1)), & ! (in)
+#elif defined(NVIDIA)
+         c_loc(work), & ! (in)
+#else
+         c_loc(val), & ! (in)
+#endif
+         ndims_, DP,     & ! (in)
+         start_, count_                   ) ! (in)
+
     if ( error /= FILE_SUCCESS_CODE .and. error /= FILE_ALREADY_EXISTED_CODE ) then
-       LOG_ERROR("FILE_write_associatedCoordinate_realDP_2D",*) 'failed to put associated coordinate: '//trim(name)
+       LOG_ERROR("FILE_write_associatedCoordinate_realDP_2D",*) 'failed to write associated coordinate: '//trim(name)
        call PRC_abort
     end if
+
+#ifdef NVIDIA
+    end block
+#endif
+
+    call PROF_rapend  ('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
 
     return
   end subroutine FILE_write_associatedCoordinate_realDP_2D
@@ -1263,43 +1882,85 @@ contains
        ndims         )
     integer,          intent(in)           :: fid
     character(len=*), intent(in)           :: name
-    real(SP),    intent(in)           :: val(:,:,:)
+#ifdef NVIDIA
+    real(SP),    intent(in) :: val(:,:,:)
+#else
+    real(SP),    intent(in), target, contiguous :: val(:,:,:)
+#endif
     integer,          intent(in), optional :: start(:)
     integer,          intent(in), optional :: count(:)  ! in case val has been reshaped
     integer,          intent(in), optional :: ndims     ! in case val has been reshaped
 
+    integer :: ndims_
+    integer, allocatable :: start_(:), count_(:)
     integer :: error
-    intrinsic shape
+    integer :: i
+    intrinsic shape, size
 
     if ( .not. FILE_opened(fid) ) then
        LOG_ERROR("FILE_write_associatedCoordinate_realSP_3D",*) 'File is not opened. fid = ', fid
        call PRC_abort
     end if
 
+    call PROF_rapstart('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
+
+    if ( present(ndims) ) then
+       ndims_ = ndims
+    else
+       ndims_ = 3
+    end if
+    allocate( start_(ndims_), count_(ndims_) )
+
     if ( present(ndims) ) then
        ! Note this is called for history coordinates which have been reshaped
        ! from 2D/3D into 1D array. In this case, start and count must be also present
-       call file_write_associatedcoordinate_c( FILE_files(fid)%fid, & ! (in)
-            name, val, SP,                                     & ! (in)
-            ndims, start, count,                                    & ! (in)
-            error                                                   ) ! (out)
+       do i = 1, ndims_
+          start_(i) = start(ndims_-i+1) - 1
+          count_(i) = count(ndims_-i+1)
+       end do
     else if ( present(start) ) then
        ! Note this is called for restart coordinates
-       call file_write_associatedcoordinate_c( FILE_files(fid)%fid, & ! (in)
-            name, val, SP,                                     & ! (in)
-            3, start, shape(val),                              & ! (in)
-            error                                                   ) ! (out)
+       do i = 1, ndims_
+          start_(i) = start(3-i+1) - 1
+          count_(i) = size(val, 3-i+1)
+       end do
     else
        ! Note this is for the one-file-per-process I/O method
-       call file_write_associatedcoordinate_c( FILE_files(fid)%fid, & ! (in)
-            name, val, SP,                                     & ! (in)
-            3, (/1,1,1/), shape(val),         & ! (in)
-            error                                                   ) ! (out)
+       do i = 1, 3
+          start_(i) = 0
+          count_(i) = size(val, 3-i+1)
+       end do
     end if
+
+    !$acc update host(val) if(acc_is_present(val))
+
+#ifdef NVIDIA
+    block
+    real(SP), allocatable, target :: work(:,:,:)
+    allocate(work, source=val)
+#endif
+    error = file_write_associatedcoordinate_c( &
+         FILE_files(fid)%fid, cstr(name), & ! (in)
+#if defined(__GFORTRAN__) && __GNUC__ < 7
+         cloc(val(1,1,1)), & ! (in)
+#elif defined(NVIDIA)
+         c_loc(work), & ! (in)
+#else
+         c_loc(val), & ! (in)
+#endif
+         ndims_, SP,     & ! (in)
+         start_, count_                   ) ! (in)
+
     if ( error /= FILE_SUCCESS_CODE .and. error /= FILE_ALREADY_EXISTED_CODE ) then
-       LOG_ERROR("FILE_write_associatedCoordinate_realSP_3D",*) 'failed to put associated coordinate: '//trim(name)
+       LOG_ERROR("FILE_write_associatedCoordinate_realSP_3D",*) 'failed to write associated coordinate: '//trim(name)
        call PRC_abort
     end if
+
+#ifdef NVIDIA
+    end block
+#endif
+
+    call PROF_rapend  ('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
 
     return
   end subroutine FILE_write_associatedCoordinate_realSP_3D
@@ -1311,43 +1972,85 @@ contains
        ndims         )
     integer,          intent(in)           :: fid
     character(len=*), intent(in)           :: name
-    real(DP),    intent(in)           :: val(:,:,:)
+#ifdef NVIDIA
+    real(DP),    intent(in) :: val(:,:,:)
+#else
+    real(DP),    intent(in), target, contiguous :: val(:,:,:)
+#endif
     integer,          intent(in), optional :: start(:)
     integer,          intent(in), optional :: count(:)  ! in case val has been reshaped
     integer,          intent(in), optional :: ndims     ! in case val has been reshaped
 
+    integer :: ndims_
+    integer, allocatable :: start_(:), count_(:)
     integer :: error
-    intrinsic shape
+    integer :: i
+    intrinsic shape, size
 
     if ( .not. FILE_opened(fid) ) then
        LOG_ERROR("FILE_write_associatedCoordinate_realDP_3D",*) 'File is not opened. fid = ', fid
        call PRC_abort
     end if
 
+    call PROF_rapstart('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
+
+    if ( present(ndims) ) then
+       ndims_ = ndims
+    else
+       ndims_ = 3
+    end if
+    allocate( start_(ndims_), count_(ndims_) )
+
     if ( present(ndims) ) then
        ! Note this is called for history coordinates which have been reshaped
        ! from 2D/3D into 1D array. In this case, start and count must be also present
-       call file_write_associatedcoordinate_c( FILE_files(fid)%fid, & ! (in)
-            name, val, DP,                                     & ! (in)
-            ndims, start, count,                                    & ! (in)
-            error                                                   ) ! (out)
+       do i = 1, ndims_
+          start_(i) = start(ndims_-i+1) - 1
+          count_(i) = count(ndims_-i+1)
+       end do
     else if ( present(start) ) then
        ! Note this is called for restart coordinates
-       call file_write_associatedcoordinate_c( FILE_files(fid)%fid, & ! (in)
-            name, val, DP,                                     & ! (in)
-            3, start, shape(val),                              & ! (in)
-            error                                                   ) ! (out)
+       do i = 1, ndims_
+          start_(i) = start(3-i+1) - 1
+          count_(i) = size(val, 3-i+1)
+       end do
     else
        ! Note this is for the one-file-per-process I/O method
-       call file_write_associatedcoordinate_c( FILE_files(fid)%fid, & ! (in)
-            name, val, DP,                                     & ! (in)
-            3, (/1,1,1/), shape(val),         & ! (in)
-            error                                                   ) ! (out)
+       do i = 1, 3
+          start_(i) = 0
+          count_(i) = size(val, 3-i+1)
+       end do
     end if
+
+    !$acc update host(val) if(acc_is_present(val))
+
+#ifdef NVIDIA
+    block
+    real(DP), allocatable, target :: work(:,:,:)
+    allocate(work, source=val)
+#endif
+    error = file_write_associatedcoordinate_c( &
+         FILE_files(fid)%fid, cstr(name), & ! (in)
+#if defined(__GFORTRAN__) && __GNUC__ < 7
+         cloc(val(1,1,1)), & ! (in)
+#elif defined(NVIDIA)
+         c_loc(work), & ! (in)
+#else
+         c_loc(val), & ! (in)
+#endif
+         ndims_, DP,     & ! (in)
+         start_, count_                   ) ! (in)
+
     if ( error /= FILE_SUCCESS_CODE .and. error /= FILE_ALREADY_EXISTED_CODE ) then
-       LOG_ERROR("FILE_write_associatedCoordinate_realDP_3D",*) 'failed to put associated coordinate: '//trim(name)
+       LOG_ERROR("FILE_write_associatedCoordinate_realDP_3D",*) 'failed to write associated coordinate: '//trim(name)
        call PRC_abort
     end if
+
+#ifdef NVIDIA
+    end block
+#endif
+
+    call PROF_rapend  ('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
 
     return
   end subroutine FILE_write_associatedCoordinate_realDP_3D
@@ -1359,43 +2062,85 @@ contains
        ndims         )
     integer,          intent(in)           :: fid
     character(len=*), intent(in)           :: name
-    real(SP),    intent(in)           :: val(:,:,:,:)
+#ifdef NVIDIA
+    real(SP),    intent(in) :: val(:,:,:,:)
+#else
+    real(SP),    intent(in), target, contiguous :: val(:,:,:,:)
+#endif
     integer,          intent(in), optional :: start(:)
     integer,          intent(in), optional :: count(:)  ! in case val has been reshaped
     integer,          intent(in), optional :: ndims     ! in case val has been reshaped
 
+    integer :: ndims_
+    integer, allocatable :: start_(:), count_(:)
     integer :: error
-    intrinsic shape
+    integer :: i
+    intrinsic shape, size
 
     if ( .not. FILE_opened(fid) ) then
        LOG_ERROR("FILE_write_associatedCoordinate_realSP_4D",*) 'File is not opened. fid = ', fid
        call PRC_abort
     end if
 
+    call PROF_rapstart('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
+
+    if ( present(ndims) ) then
+       ndims_ = ndims
+    else
+       ndims_ = 4
+    end if
+    allocate( start_(ndims_), count_(ndims_) )
+
     if ( present(ndims) ) then
        ! Note this is called for history coordinates which have been reshaped
        ! from 2D/3D into 1D array. In this case, start and count must be also present
-       call file_write_associatedcoordinate_c( FILE_files(fid)%fid, & ! (in)
-            name, val, SP,                                     & ! (in)
-            ndims, start, count,                                    & ! (in)
-            error                                                   ) ! (out)
+       do i = 1, ndims_
+          start_(i) = start(ndims_-i+1) - 1
+          count_(i) = count(ndims_-i+1)
+       end do
     else if ( present(start) ) then
        ! Note this is called for restart coordinates
-       call file_write_associatedcoordinate_c( FILE_files(fid)%fid, & ! (in)
-            name, val, SP,                                     & ! (in)
-            4, start, shape(val),                              & ! (in)
-            error                                                   ) ! (out)
+       do i = 1, ndims_
+          start_(i) = start(4-i+1) - 1
+          count_(i) = size(val, 4-i+1)
+       end do
     else
        ! Note this is for the one-file-per-process I/O method
-       call file_write_associatedcoordinate_c( FILE_files(fid)%fid, & ! (in)
-            name, val, SP,                                     & ! (in)
-            4, (/1,1,1,1/), shape(val),         & ! (in)
-            error                                                   ) ! (out)
+       do i = 1, 4
+          start_(i) = 0
+          count_(i) = size(val, 4-i+1)
+       end do
     end if
+
+    !$acc update host(val) if(acc_is_present(val))
+
+#ifdef NVIDIA
+    block
+    real(SP), allocatable, target :: work(:,:,:,:)
+    allocate(work, source=val)
+#endif
+    error = file_write_associatedcoordinate_c( &
+         FILE_files(fid)%fid, cstr(name), & ! (in)
+#if defined(__GFORTRAN__) && __GNUC__ < 7
+         cloc(val(1,1,1,1)), & ! (in)
+#elif defined(NVIDIA)
+         c_loc(work), & ! (in)
+#else
+         c_loc(val), & ! (in)
+#endif
+         ndims_, SP,     & ! (in)
+         start_, count_                   ) ! (in)
+
     if ( error /= FILE_SUCCESS_CODE .and. error /= FILE_ALREADY_EXISTED_CODE ) then
-       LOG_ERROR("FILE_write_associatedCoordinate_realSP_4D",*) 'failed to put associated coordinate: '//trim(name)
+       LOG_ERROR("FILE_write_associatedCoordinate_realSP_4D",*) 'failed to write associated coordinate: '//trim(name)
        call PRC_abort
     end if
+
+#ifdef NVIDIA
+    end block
+#endif
+
+    call PROF_rapend  ('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
 
     return
   end subroutine FILE_write_associatedCoordinate_realSP_4D
@@ -1407,43 +2152,85 @@ contains
        ndims         )
     integer,          intent(in)           :: fid
     character(len=*), intent(in)           :: name
-    real(DP),    intent(in)           :: val(:,:,:,:)
+#ifdef NVIDIA
+    real(DP),    intent(in) :: val(:,:,:,:)
+#else
+    real(DP),    intent(in), target, contiguous :: val(:,:,:,:)
+#endif
     integer,          intent(in), optional :: start(:)
     integer,          intent(in), optional :: count(:)  ! in case val has been reshaped
     integer,          intent(in), optional :: ndims     ! in case val has been reshaped
 
+    integer :: ndims_
+    integer, allocatable :: start_(:), count_(:)
     integer :: error
-    intrinsic shape
+    integer :: i
+    intrinsic shape, size
 
     if ( .not. FILE_opened(fid) ) then
        LOG_ERROR("FILE_write_associatedCoordinate_realDP_4D",*) 'File is not opened. fid = ', fid
        call PRC_abort
     end if
 
+    call PROF_rapstart('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
+
+    if ( present(ndims) ) then
+       ndims_ = ndims
+    else
+       ndims_ = 4
+    end if
+    allocate( start_(ndims_), count_(ndims_) )
+
     if ( present(ndims) ) then
        ! Note this is called for history coordinates which have been reshaped
        ! from 2D/3D into 1D array. In this case, start and count must be also present
-       call file_write_associatedcoordinate_c( FILE_files(fid)%fid, & ! (in)
-            name, val, DP,                                     & ! (in)
-            ndims, start, count,                                    & ! (in)
-            error                                                   ) ! (out)
+       do i = 1, ndims_
+          start_(i) = start(ndims_-i+1) - 1
+          count_(i) = count(ndims_-i+1)
+       end do
     else if ( present(start) ) then
        ! Note this is called for restart coordinates
-       call file_write_associatedcoordinate_c( FILE_files(fid)%fid, & ! (in)
-            name, val, DP,                                     & ! (in)
-            4, start, shape(val),                              & ! (in)
-            error                                                   ) ! (out)
+       do i = 1, ndims_
+          start_(i) = start(4-i+1) - 1
+          count_(i) = size(val, 4-i+1)
+       end do
     else
        ! Note this is for the one-file-per-process I/O method
-       call file_write_associatedcoordinate_c( FILE_files(fid)%fid, & ! (in)
-            name, val, DP,                                     & ! (in)
-            4, (/1,1,1,1/), shape(val),         & ! (in)
-            error                                                   ) ! (out)
+       do i = 1, 4
+          start_(i) = 0
+          count_(i) = size(val, 4-i+1)
+       end do
     end if
+
+    !$acc update host(val) if(acc_is_present(val))
+
+#ifdef NVIDIA
+    block
+    real(DP), allocatable, target :: work(:,:,:,:)
+    allocate(work, source=val)
+#endif
+    error = file_write_associatedcoordinate_c( &
+         FILE_files(fid)%fid, cstr(name), & ! (in)
+#if defined(__GFORTRAN__) && __GNUC__ < 7
+         cloc(val(1,1,1,1)), & ! (in)
+#elif defined(NVIDIA)
+         c_loc(work), & ! (in)
+#else
+         c_loc(val), & ! (in)
+#endif
+         ndims_, DP,     & ! (in)
+         start_, count_                   ) ! (in)
+
     if ( error /= FILE_SUCCESS_CODE .and. error /= FILE_ALREADY_EXISTED_CODE ) then
-       LOG_ERROR("FILE_write_associatedCoordinate_realDP_4D",*) 'failed to put associated coordinate: '//trim(name)
+       LOG_ERROR("FILE_write_associatedCoordinate_realDP_4D",*) 'failed to write associated coordinate: '//trim(name)
        call PRC_abort
     end if
+
+#ifdef NVIDIA
+    end block
+#endif
+
+    call PROF_rapend  ('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
 
     return
   end subroutine FILE_write_associatedCoordinate_realDP_4D
@@ -1457,7 +2244,7 @@ contains
        standard_name,        &
        dims, dtype,          &
        vid,                  &
-       time_avg              )
+       time_stats            )
     integer,          intent( in) :: fid
     character(len=*), intent( in) :: varname
     character(len=*), intent( in) :: desc
@@ -1466,18 +2253,22 @@ contains
     character(len=*), intent( in) :: dims(:)
     integer,          intent( in) :: dtype
     integer,          intent(out) :: vid
-    logical,          intent( in), optional :: time_avg
+    character(len=*), intent( in), optional :: time_stats
 
     if ( .not. FILE_opened(fid) ) then
        LOG_ERROR("FILE_add_variable_no_time",*) 'File is not opened. fid = ', fid
        call PRC_abort
     end if
 
+    call PROF_rapstart('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
+
     call FILE_add_variable_with_time( fid,    & ! (in)
          varname, desc, units, standard_name, & ! (in)
          dims, dtype, -1.0_DP,                & ! (in)
          vid,                                 & ! (out)
-         time_avg = time_avg                  ) ! (in)
+         time_stats = time_stats              ) ! (in)
+
+    call PROF_rapend  ('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
 
     return
   end subroutine FILE_add_variable_no_time
@@ -1490,7 +2281,7 @@ contains
        dims, dtype,          &
        time_int,             &
        vid,                  &
-       time_avg              )
+       time_stats            )
     implicit none
     integer,          intent(in)  :: fid
     character(len=*), intent(in)  :: varname
@@ -1503,11 +2294,16 @@ contains
 
     integer,          intent(out) :: vid
 
-    logical,          intent(in), optional :: time_avg
+    character(len=*), intent(in), optional :: time_stats
+
+    type(c_ptr) :: dims_(size(dims))
+    !character(:,c_char), allocatable, target :: cptr(:)
+    character(len=H_SHORT), allocatable, target :: cptr(:)
+
+    character(len=4) :: ctstats
 
     integer  :: cvid
     integer  :: ndims
-    integer  :: itavg
     integer  :: error
     integer  :: n
 
@@ -1518,6 +2314,8 @@ contains
        LOG_ERROR("FILE_add_variable_with_time",*) 'File is not opened. fid = ', fid
        call PRC_abort
     end if
+
+    call PROF_rapstart('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
 
     vid = -1
     do n = 1, FILE_nvars
@@ -1530,16 +2328,25 @@ contains
     if ( vid < 0 ) then ! variable registration
 
        ndims = size(dims)
-       itavg = 0
 
-       if ( present(time_avg) ) then
-          if( time_avg ) itavg = 1
+       ctstats = "none"
+       if ( present(time_stats) ) then
+          ctstats = time_stats
        endif
 
-       call file_add_variable_c( FILE_files(fid)%fid,                 & ! [IN]
-                                 varname, desc, units, standard_name, & ! [IN]
-                                 dims, ndims, dtype, time_int, itavg, & ! [IN]
-                                 cvid, error                          ) ! [OUT]
+       !allocate( character(len=len(dims)+1) :: cptr(ndims) )
+       allocate( cptr(ndims) )
+       do n = 1, ndims
+          cptr(n) = cstr(dims(n))
+          dims_(n) = c_loc(cptr(n))
+       end do
+    
+       error = file_add_variable_c( cvid,                             & ! [OUT]
+                                    FILE_files(fid)%fid,              & ! [IN]
+                                    cstr(varname), cstr(desc),        & ! [IN]
+                                    cstr(units), cstr(standard_name), & ! [IN]
+                                    dims_, ndims, dtype,              & ! [IN]
+                                    time_int, cstr(ctstats)           ) ! [IN]
 
        if ( error /= FILE_SUCCESS_CODE ) then
           LOG_ERROR("FILE_add_variable_with_time",*) 'failed to add variable: '//trim(varname)
@@ -1556,6 +2363,8 @@ contains
        'Variable registration : NO.', fid, ', vid = ', vid, ', name = ', trim(varname)
     endif
 
+    call PROF_rapend  ('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
+
     return
   end subroutine FILE_add_variable_with_time
 
@@ -1566,7 +2375,7 @@ contains
        ndims, dims,          &
        dtype,                &
        vid,                  &
-       time_int, time_avg,   &
+       time_int, time_stats, &
        existed               )
     integer,          intent( in) :: fid
     character(len=*), intent( in) :: varname
@@ -1578,11 +2387,16 @@ contains
     integer,          intent( in) :: dtype
     integer,          intent(out) :: vid
     real(DP),         intent( in), optional :: time_int
-    logical,          intent( in), optional :: time_avg
+    character(len=*), intent( in), optional :: time_stats
     logical,          intent(out), optional :: existed
 
+    type(c_ptr) :: dims_(size(dims))
+    !character(:,c_char), allocatable, target :: cptr(:)
+    character(len=H_SHORT), allocatable, target :: cptr(:)
+
+    character(len=4) :: ctstats
+
     real(DP) :: tint_
-    integer  :: itavg
     integer  :: cvid
     integer  :: error
     integer  :: n
@@ -1593,6 +2407,8 @@ contains
        LOG_ERROR("FILE_def_variable",*) 'File is not opened. fid = ', fid
        call PRC_abort
     end if
+
+    call PROF_rapstart('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
 
     vid = -1
     do n = 1, FILE_nvars
@@ -1609,21 +2425,24 @@ contains
           tint_ = -1.0_DP
        endif
 
-       if ( present(time_avg) ) then
-          if ( time_avg ) then
-             itavg = 1
-          else
-             itavg = 0
-          end if
-       else
-          itavg = 0
+       ctstats = "none"
+       if ( present(time_stats) ) then
+          ctstats = time_stats
        end if
 
-       call file_add_variable_c( FILE_files(fid)%fid,                 & ! (in)
-                                 varname, desc, units, standard_name, & ! (in)
-                                 dims, ndims, dtype,                  & ! (in)
-                                 tint_, itavg,                        & ! (in)
-                                 cvid, error                          ) ! (out)
+       !allocate( character(len=len(dims)+1) :: cptr(ndims) )
+       allocate( cptr(ndims) )
+       do n = 1, ndims
+          cptr(n) = cstr(dims(n))
+          dims_(n) = c_loc(cptr(n))
+       end do
+
+       error = file_add_variable_c( cvid,                                     & ! [OUT]
+                                    FILE_files(fid)%fid,                      & ! [IN]
+                                    cstr(varname), cstr(desc),                & ! [IN]
+                                    cstr(units), cstr(standard_name),         & ! [IN]
+                                    dims_, ndims, dtype, tint_, cstr(ctstats) ) ! [IN]
+
        if ( error /= FILE_SUCCESS_CODE ) then
           LOG_ERROR("FILE_def_variable",*) 'failed to add variable: '//trim(varname)
           call PRC_abort
@@ -1643,6 +2462,8 @@ contains
        if ( present(existed) ) existed = .true.
     endif
 
+    call PROF_rapend  ('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
+
     return
   end subroutine FILE_def_variable
 
@@ -1661,7 +2482,7 @@ contains
 
     logical, intent(out), optional :: existed
 
-    integer :: suppress
+    logical(c_bool) :: suppress
     integer :: error
 
     if ( .not. FILE_opened(fid) ) then
@@ -1669,15 +2490,18 @@ contains
        call PRC_abort
     end if
 
+    call PROF_rapstart('FILE_Read', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
+
     if ( present(existed) ) then
-       suppress = 1
+       suppress = .true.
     else
-       suppress = 0
+       suppress = .false.
     end if
-    call file_get_attribute_text_c( &
-         FILE_files(fid)%fid, vname, & ! (in)
-         key, suppress,              & ! (in)
-         val, error                  ) ! (out)
+    error = file_get_attribute_text_c( val,                    & ! (out)
+                                       FILE_files(fid)%fid,    & ! (in)
+                                       cstr(vname), cstr(key), & ! (in)
+                                       suppress, len(val)      ) ! (in)
+    call fstr(val)
     if ( error /= FILE_SUCCESS_CODE ) then
        if ( present(existed) ) then
           existed = .false.
@@ -1688,6 +2512,8 @@ contains
     else
        if ( present(existed) ) existed = .true.
     end if
+
+    call PROF_rapend  ('FILE_Read', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
 
     return
   end subroutine FILE_get_attribute_text_fid
@@ -1738,12 +2564,14 @@ contains
 
     logical, intent(out), optional :: existed
 
-    character(len=5) :: buf
+    character(len=6) :: buf ! max length is for "false\0"
 
     if ( .not. FILE_opened(fid) ) then
        LOG_ERROR("FILE_get_attribute_logical_fid",*) 'File is not opened. fid = ', fid
        call PRC_abort
     end if
+
+    call PROF_rapstart('FILE_Read', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
 
     call FILE_get_attribute_text_fid( fid, vname, key, & ! (in)
                                       buf, existed     ) ! (out)
@@ -1760,6 +2588,8 @@ contains
        LOG_ERROR("FILE_get_attribute_logical_fid",*) 'value is not eigher true or false'
        call PRC_abort
     end if
+
+    call PROF_rapend  ('FILE_Read', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
 
     return
   end subroutine FILE_get_attribute_logical_fid
@@ -1809,7 +2639,7 @@ contains
 
     logical, intent(out), optional :: existed
 
-    integer :: suppress
+    logical(c_bool) :: suppress
     integer :: error
 
     intrinsic size
@@ -1819,15 +2649,17 @@ contains
        call PRC_abort
     end if
 
+    call PROF_rapstart('FILE_Read', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
+
     if ( present(existed) ) then
-       suppress = 1
+       suppress = .true.
     else
-       suppress = 0
+       suppress = .false.
     end if
-    call file_get_attribute_int_c( &
-         FILE_files(fid)%fid, vname, & ! (in)
-         key, size(val), suppress,   & ! (in)
-         val, error                  ) ! (out)
+    error = file_get_attribute_int_c( val(:),                 & ! (out)
+                                      FILE_files(fid)%fid,    & ! (in)
+                                      cstr(vname), cstr(key), & ! (in)
+                                      suppress, size(val)     ) ! (in)
     if ( error /= FILE_SUCCESS_CODE ) then
        if ( present(existed) ) then
           existed = .false.
@@ -1838,6 +2670,8 @@ contains
     else
        if ( present(existed) ) existed = .true.
     end if
+
+    call PROF_rapend  ('FILE_Read', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
 
     return
   end subroutine FILE_get_attribute_int_fid_ary
@@ -1935,7 +2769,7 @@ contains
 
     logical, intent(out), optional :: existed
 
-    integer :: suppress
+    logical(c_bool) :: suppress
     integer :: error
 
     intrinsic size
@@ -1945,15 +2779,17 @@ contains
        call PRC_abort
     end if
 
+    call PROF_rapstart('FILE_Read', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
+
     if ( present(existed) ) then
-       suppress = 1
+       suppress = .true.
     else
-       suppress = 0
+       suppress = .false.
     end if
-    call file_get_attribute_float_c( &
-         FILE_files(fid)%fid, vname, & ! (in)
-         key, size(val), suppress,   & ! (in)
-         val, error                  ) ! (out)
+    error = file_get_attribute_float_c( val,                    & ! (out)
+                                            FILE_files(fid)%fid,    & ! (in)
+                                            cstr(vname), cstr(key), & ! (in)
+                                            suppress, size(val)     ) ! (in)
     if ( error /= FILE_SUCCESS_CODE ) then
        if ( present(existed) ) then
           existed = .false.
@@ -1964,6 +2800,8 @@ contains
     else
        if ( present(existed) ) existed = .true.
     end if
+
+    call PROF_rapend  ('FILE_Read', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
 
     return
   end subroutine FILE_get_attribute_float_fid_ary
@@ -2059,7 +2897,7 @@ contains
 
     logical, intent(out), optional :: existed
 
-    integer :: suppress
+    logical(c_bool) :: suppress
     integer :: error
 
     intrinsic size
@@ -2069,15 +2907,17 @@ contains
        call PRC_abort
     end if
 
+    call PROF_rapstart('FILE_Read', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
+
     if ( present(existed) ) then
-       suppress = 1
+       suppress = .true.
     else
-       suppress = 0
+       suppress = .false.
     end if
-    call file_get_attribute_double_c( &
-         FILE_files(fid)%fid, vname, & ! (in)
-         key, size(val), suppress,   & ! (in)
-         val, error                  ) ! (out)
+    error = file_get_attribute_double_c( val,                    & ! (out)
+                                            FILE_files(fid)%fid,    & ! (in)
+                                            cstr(vname), cstr(key), & ! (in)
+                                            suppress, size(val)     ) ! (in)
     if ( error /= FILE_SUCCESS_CODE ) then
        if ( present(existed) ) then
           existed = .false.
@@ -2088,6 +2928,8 @@ contains
     else
        if ( present(existed) ) existed = .true.
     end if
+
+    call PROF_rapend  ('FILE_Read', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
 
     return
   end subroutine FILE_get_attribute_double_fid_ary
@@ -2191,14 +3033,17 @@ contains
        call PRC_abort
     end if
 
-    call file_set_attribute_text_c( &
-         FILE_files(fid)%fid, vname, & ! (in)
-         key, val,                   & ! (in)
-         error                       ) ! (out)
+    call PROF_rapstart('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
+
+    error = file_set_attribute_text_c( FILE_files(fid)%fid,    & ! (in)
+                                       cstr(vname), cstr(key), & ! (in)
+                                       cstr(val)               ) ! (in)
     if ( error /= FILE_SUCCESS_CODE .and. error /= FILE_ALREADY_EXISTED_CODE ) then
        LOG_ERROR("FILE_set_attribute_text",*) 'failed to set text attribute for '//trim(vname)//': '//trim(key)
        call PRC_abort
     end if
+
+    call PROF_rapend  ('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
 
     return
   end subroutine FILE_set_attribute_text
@@ -2247,14 +3092,17 @@ contains
        call PRC_abort
     end if
 
-    call file_set_attribute_int_c( &
-         FILE_files(fid)%fid, vname, & ! (in)
-         key, val(:), size(val(:)),  & ! (in)
-         error                       ) ! (out)
+    call PROF_rapstart('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
+
+    error = file_set_attribute_int_c( FILE_files(fid)%fid,    & ! (in)
+                                      cstr(vname), cstr(key), & ! (in)
+                                      val(:), size(val(:))    ) ! (in)
     if ( error /= FILE_SUCCESS_CODE .and. error /= FILE_ALREADY_EXISTED_CODE ) then
        LOG_ERROR("FILE_set_attribute_int",*) 'failed to set integer attribute for '//trim(vname)//': '//trim(key)
        call PRC_abort
     end if
+
+    call PROF_rapend  ('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
 
     return
   end subroutine FILE_set_attribute_int_ary
@@ -2294,14 +3142,17 @@ contains
        call PRC_abort
     end if
 
-    call file_set_attribute_float_c( &
-         FILE_files(fid)%fid, vname, & ! (in)
-         key, val(:), size(val(:)),  & ! (in)
-         error                       ) ! (out)
+    call PROF_rapstart('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
+
+    error = file_set_attribute_float_c( FILE_files(fid)%fid,    & ! (in)
+                                            cstr(vname), cstr(key), & ! (in)
+                                            val(:), size(val(:))    ) ! (in)
     if ( error /= FILE_SUCCESS_CODE .and. error /= FILE_ALREADY_EXISTED_CODE ) then
        LOG_ERROR("FILE_set_attribute_float",*) 'failed to set float attribute for '//trim(vname)//': '//trim(key)
        call PRC_abort
     end if
+
+    call PROF_rapend  ('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
 
     return
   end subroutine FILE_set_attribute_float_ary
@@ -2340,14 +3191,17 @@ contains
        call PRC_abort
     end if
 
-    call file_set_attribute_double_c( &
-         FILE_files(fid)%fid, vname, & ! (in)
-         key, val(:), size(val(:)),  & ! (in)
-         error                       ) ! (out)
+    call PROF_rapstart('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
+
+    error = file_set_attribute_double_c( FILE_files(fid)%fid,    & ! (in)
+                                            cstr(vname), cstr(key), & ! (in)
+                                            val(:), size(val(:))    ) ! (in)
     if ( error /= FILE_SUCCESS_CODE .and. error /= FILE_ALREADY_EXISTED_CODE ) then
        LOG_ERROR("FILE_set_attribute_double",*) 'failed to set double attribute for '//trim(vname)//': '//trim(key)
        call PRC_abort
     end if
+
+    call PROF_rapend  ('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
 
     return
   end subroutine FILE_set_attribute_double_ary
@@ -2375,6 +3229,7 @@ contains
       basename, varname, &
       dims,              &
       rankid, single,    &
+      has_tdim,          &
       error              )
     implicit none
 
@@ -2383,6 +3238,7 @@ contains
     integer,          intent(out)           :: dims(:)
     integer,          intent( in), optional :: rankid
     logical,          intent( in), optional :: single
+    logical,          intent(out), optional :: has_tdim
     logical,          intent(out), optional :: error
 
     integer :: fid
@@ -2393,9 +3249,10 @@ contains
                     fid,                         & ! (out)
                     rankid=rankid, single=single ) ! (in)
 
-    call FILE_get_shape_fid( fid, varname, & ! (in)
-                             dims(:),      & ! (out)
-                             error = error ) ! (out)
+    call FILE_get_shape_fid( fid, varname,        & ! (in)
+                             dims(:),             & ! (out)
+                             has_tdim = has_tdim, & ! (out)
+                             error = error        ) ! (out)
 
     return
   end subroutine FILE_get_shape_fname
@@ -2403,20 +3260,20 @@ contains
   subroutine FILE_get_shape_fid( &
        fid, varname, &
        dims,         &
+       has_tdim,     &
        error         )
     implicit none
     integer,          intent( in)           :: fid
     character(len=*), intent( in)           :: varname
-
     integer,          intent(out)           :: dims(:)
-
+    logical,          intent(out), optional :: has_tdim
     logical,          intent(out), optional :: error
 
     type(datainfo) :: dinfo
     integer :: ierror
     integer :: n
 
-    logical :: suppress
+    logical(c_bool) :: suppress
 
     intrinsic size
     !---------------------------------------------------------------------------
@@ -2426,6 +3283,8 @@ contains
        call PRC_abort
     end if
 
+    call PROF_rapstart('FILE_Read', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
+
     if ( present(error) ) then
        suppress = .true.
     else
@@ -2433,10 +3292,12 @@ contains
     end if
 
     !--- get data information
-    call file_get_datainfo_c( dinfo,   & ! (out)
-         FILE_files(fid)%fid, varname, & ! (in)
-         1, suppress,                  & ! (in)
-         ierror                        ) ! (out)
+    ierror = file_get_datainfo_c( dinfo,               & ! (out)
+                                  FILE_files(fid)%fid, & ! (in)
+                                  cstr(varname),       & ! (in)
+                                  1, suppress          ) ! (in)
+
+    call PROF_rapend  ('FILE_Read', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
 
     !--- verify
     if ( ierror /= FILE_SUCCESS_CODE ) then
@@ -2457,6 +3318,7 @@ contains
        dims(n) = dinfo%dim_size(n)
     end do
 
+    if ( present(has_tdim) ) has_tdim = dinfo%has_tdim
     if ( present(error) ) error = .false.
 
     return
@@ -2483,8 +3345,10 @@ contains
        call PRC_abort
     end if
 
-    call file_get_step_size_c( FILE_files(fid)%fid, varname, & ! (in)
-                               len, ierror                   ) ! (out)
+    call PROF_rapstart('FILE_Read', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
+
+    ierror = file_get_step_size_c( len,                               & ! (out)
+                                   FILE_files(fid)%fid, cstr(varname) ) ! (in)
     if ( ierror /= FILE_SUCCESS_CODE .and. ierror /= FILE_ALREADY_EXISTED_CODE ) then
        if ( present(error) ) then
           error = .true.
@@ -2495,6 +3359,8 @@ contains
     else
        if ( present(error) ) error = .false.
     end if
+
+    call PROF_rapend  ('FILE_Read', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
 
     return
   end subroutine FILE_get_stepSize
@@ -2566,6 +3432,8 @@ contains
        call PRC_abort
     end if
 
+    call PROF_rapstart('FILE_Read', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
+
     call FILE_get_attribute( fid, 'global', 'title',       title       )
     call FILE_get_attribute( fid, 'global', 'source',      source      )
     call FILE_get_attribute( fid, 'global', 'institution', institution )
@@ -2575,6 +3443,8 @@ contains
     do v = 1, nvars
        call FILE_get_var_name( fid, v, varname(v) )
     enddo
+
+    call PROF_rapend  ('FILE_Read', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
 
     return
   end subroutine FILE_get_commonInfo_fid
@@ -2590,8 +3460,9 @@ contains
        datatype,                           &
        dim_rank, dim_name, dim_size,       &
        natts, att_name, att_type, att_len, &
-       time_start, time_end,               &
-       time_units, calendar                )
+       has_tdim,                           &
+       time_start, time_end, time_units,   &
+       calendar                            )
     implicit none
 
     character(len=*),           intent(in)  :: basename
@@ -2612,6 +3483,7 @@ contains
     character(len=FILE_HSHORT), intent(out), optional :: att_name(:)
     integer,                    intent(out), optional :: att_type(:)
     integer,                    intent(out), optional :: att_len (:)
+    logical,                    intent(out), optional :: has_tdim
     real(DP),                   intent(out), optional :: time_start
     real(DP),                   intent(out), optional :: time_end
     character(len=FILE_HMID),   intent(out), optional :: time_units
@@ -2632,14 +3504,16 @@ contains
                     fid,                          & ! [OUT]
                     rankid=rankid, single=single_ ) ! [IN]
 
-    call FILE_get_dataInfo_fid( fid, varname,                              & ! [IN]
-                                istep,                                     & ! [IN] , optional
-                                existed,                                   & ! [OUT], optional
-                                description, units, standard_name,         & ! [OUT], optional
-                                datatype,                                  & ! [OUT], optional
-                                dim_rank, dim_name, dim_size,              & ! [OUT], optional
-                                natts, att_name, att_type, att_len,        & ! [OUT], optional
-                                time_start, time_end, time_units, calendar ) ! [OUT], optional
+    call FILE_get_dataInfo_fid( fid, varname,                       & ! [IN]
+                                istep,                              & ! [IN] , optional
+                                existed,                            & ! [OUT], optional
+                                description, units, standard_name,  & ! [OUT], optional
+                                datatype,                           & ! [OUT], optional
+                                dim_rank, dim_name, dim_size,       & ! [OUT], optional
+                                natts, att_name, att_type, att_len, & ! [OUT], optional
+                                has_tdim,                           & ! [OUT], optional
+                                time_start, time_end, time_units,   & ! [OUT], optional
+                                calendar                            ) ! [OUT], optional
 
     return
   end subroutine FILE_get_dataInfo_fname
@@ -2652,30 +3526,32 @@ contains
        datatype,                           &
        dim_rank, dim_name, dim_size,       &
        natts, att_name, att_type, att_len, &
-       time_start, time_end,               &
-       time_units, calendar                )
+       has_tdim,                           &
+       time_start, time_end, time_units,   &
+       calendar                            )
     implicit none
 
     integer,          intent(in)  :: fid
     character(len=*), intent(in)  :: varname
 
-    integer,                    intent(in),  optional :: istep
-    logical,                    intent(out), optional :: existed
-    character(len=FILE_HMID),   intent(out), optional :: description
-    character(len=FILE_HSHORT), intent(out), optional :: units
-    character(len=FILE_HMID),   intent(out), optional :: standard_name
-    integer,                    intent(out), optional :: datatype
-    integer,                    intent(out), optional :: dim_rank
-    character(len=FILE_HSHORT), intent(out), optional :: dim_name(:)
-    integer,                    intent(out), optional :: dim_size(:)
-    integer,                    intent(out), optional :: natts
-    character(len=FILE_HSHORT), intent(out), optional :: att_name(:)
-    integer,                    intent(out), optional :: att_type(:)
-    integer,                    intent(out), optional :: att_len (:)
-    real(DP),                   intent(out), optional :: time_start
-    real(DP),                   intent(out), optional :: time_end
-    character(len=FILE_HMID),   intent(out), optional :: time_units
-    character(len=FILE_HSHORT), intent(out), optional :: calendar
+    integer,          intent(in),  optional :: istep
+    logical,          intent(out), optional :: existed
+    character(len=*), intent(out), optional :: description
+    character(len=*), intent(out), optional :: units
+    character(len=*), intent(out), optional :: standard_name
+    integer,          intent(out), optional :: datatype
+    integer,          intent(out), optional :: dim_rank
+    character(len=*), intent(out), optional :: dim_name(:)
+    integer,          intent(out), optional :: dim_size(:)
+    integer,          intent(out), optional :: natts
+    character(len=*), intent(out), optional :: att_name(:)
+    integer,          intent(out), optional :: att_type(:)
+    integer,          intent(out), optional :: att_len (:)
+    logical,          intent(out), optional :: has_tdim
+    real(DP),         intent(out), optional :: time_start
+    real(DP),         intent(out), optional :: time_end
+    character(len=*), intent(out), optional :: time_units
+    character(len=*), intent(out), optional :: calendar
 
     type(datainfo) :: dinfo
 
@@ -2684,8 +3560,10 @@ contains
     integer  :: i
     integer  :: error
 
-    logical :: suppress
+    logical(c_bool) :: suppress
     logical :: existed2
+
+    character(len=FILE_HMID) :: tu
 
     intrinsic size
     !---------------------------------------------------------------------------
@@ -2707,13 +3585,16 @@ contains
        call PRC_abort
     end if
 
+    call PROF_rapstart('FILE_Read', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
+
     !--- get data information
-    call file_get_datainfo_c( dinfo,               & ! [OUT]
-                              FILE_files(fid)%fid, & ! [IN]
-                              varname,             & ! [IN]
-                              istep_,              & ! [IN]
-                              suppress,            & ! [IN]
-                              error                ) ! [OUT]
+    error = file_get_datainfo_c( dinfo,               & ! [OUT]
+                                 FILE_files(fid)%fid, & ! [IN]
+                                 cstr(varname),       & ! [IN]
+                                 istep_,              & ! [IN]
+                                 suppress             ) ! [IN]
+
+    call PROF_rapend  ('FILE_Read', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
 
     !--- verify and exit
     if ( error /= FILE_SUCCESS_CODE ) then
@@ -2726,17 +3607,19 @@ contains
        end if
     endif
 
+    call PROF_rapstart('FILE_Read', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
+
     if ( present(existed) ) existed = .true.
 
-    if ( present(description)   ) description   = dinfo%description
-    if ( present(units)         ) units         = dinfo%units
-    if ( present(standard_name) ) standard_name = dinfo%standard_name
+    if ( present(description)   ) call fstr(description, dinfo%description)
+    if ( present(units)         ) call fstr(units, dinfo%units)
+    if ( present(standard_name) ) call fstr(standard_name, dinfo%standard_name)
     if ( present(datatype)      ) datatype      = dinfo%datatype
     if ( present(dim_rank)      ) dim_rank      = dinfo%rank
 
     if ( present(dim_name) ) then
        do i = 1, min( dinfo%rank, size(dim_name) ) ! limit dimension rank
-          dim_name(i) = dinfo%dim_name(i)
+          call fstr(dim_name(i), dinfo%dim_name(:,i))
        enddo
     endif
 
@@ -2749,7 +3632,7 @@ contains
     if ( present(natts) ) natts = dinfo%natts
     if ( present(att_name) ) then
        do i = 1, min( dinfo%natts, size(att_name) )
-          att_name(i) = dinfo%att_name(i)
+          call fstr(att_name(i), dinfo%att_name(:,i))
        end do
     end if
     if ( present(att_type) ) then
@@ -2763,25 +3646,31 @@ contains
        end do
     end if
 
+    call fstr(tu, dinfo%time_units)
+
     if ( present(time_units)  ) then
-       if ( dinfo%time_units == "" ) then
+       if ( tu == "" ) then
           call FILE_get_attribute( fid, "global", "time_units", time_units )
        else
-          time_units = dinfo%time_units
+          time_units = tu
        endif
     endif
 
     if ( present(calendar) ) then
-       if ( dinfo%time_units == "" ) then
+       if ( tu == "" ) then
           call FILE_get_attribute( fid, "global", "calendar", calendar, existed2 )
           if ( .not. existed2 ) calendar = ""
        else
-          calendar = dinfo%calendar
+          call fstr(calendar, dinfo%calendar)
        end if
     end if
 
+    if ( present(has_tdim) ) then
+       has_tdim = dinfo%has_tdim
+    end if
+
     if ( present(time_start)  ) then
-       if ( dinfo%time_units == "" ) then
+       if ( tu == "" ) then
           call FILE_get_Attribute( fid, "global", "time_start", time )
           time_start = time(1)
        else
@@ -2790,13 +3679,15 @@ contains
     endif
 
     if ( present(time_end)  ) then
-       if ( dinfo%time_units == "" ) then
+       if ( tu == "" ) then
           call FILE_get_Attribute( fid, "global", "time_start", time )
           time_end = time(1)
        else
           time_end = dinfo%time_end
        end if
     endif
+
+    call PROF_rapend  ('FILE_Read', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
 
     return
   end subroutine FILE_get_dataInfo_fid
@@ -2875,24 +3766,24 @@ contains
        time_units, calendar                )
     implicit none
 
-    integer,                    intent(in)  :: fid
-    character(len=*),           intent(in)  :: varname
-    integer,                    intent(out) :: step_nmax
-    character(len=FILE_HMID),   intent(out) :: description
-    character(len=FILE_HSHORT), intent(out) :: units
-    character(len=FILE_HMID),   intent(out) :: standard_name
-    integer,                    intent(out) :: datatype
-    integer,                    intent(out) :: dim_rank
-    character(len=FILE_HSHORT), intent(out) :: dim_name  (:)
-    integer,                    intent(out) :: dim_size  (:)
-    integer,                    intent(out) :: natts
-    character(len=FILE_HSHORT), intent(out) :: att_name  (:)
-    integer,                    intent(out) :: att_type  (:)
-    integer,                    intent(out) :: att_len   (:)
-    real(DP),                   intent(out) :: time_start(:)
-    real(DP),                   intent(out) :: time_end  (:)
-    character(len=FILE_HMID),   intent(out) :: time_units
-    character(len=FILE_HSHORT), intent(out) :: calendar
+    integer,          intent(in)  :: fid
+    character(len=*), intent(in)  :: varname
+    integer,          intent(out) :: step_nmax
+    character(len=*), intent(out) :: description
+    character(len=*), intent(out) :: units
+    character(len=*), intent(out) :: standard_name
+    integer,          intent(out) :: datatype
+    integer,          intent(out) :: dim_rank
+    character(len=*), intent(out) :: dim_name  (:)
+    integer,          intent(out) :: dim_size  (:)
+    integer,          intent(out) :: natts
+    character(len=*), intent(out) :: att_name  (:)
+    integer,          intent(out) :: att_type  (:)
+    integer,          intent(out) :: att_len   (:)
+    real(DP),         intent(out) :: time_start(:)
+    real(DP),         intent(out) :: time_end  (:)
+    character(len=*), intent(out) :: time_units
+    character(len=*), intent(out) :: calendar
 
     type(datainfo) :: dinfo
 
@@ -2902,6 +3793,10 @@ contains
     logical  :: existed
 
     integer  :: istep
+    integer  :: istep_max
+
+    logical(c_bool) :: suppress
+    character(len=FILE_HMID) :: tu
 
     intrinsic size
     !---------------------------------------------------------------------------
@@ -2910,6 +3805,8 @@ contains
        LOG_ERROR("FILE_get_all_dataInfo_fid",*) 'File is not opened. fid = ', fid
        call PRC_abort
     end if
+
+    call PROF_rapstart('FILE_Read', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
 
     ! initialize
     description   = ""
@@ -2922,14 +3819,14 @@ contains
     time_start(:) = FILE_RMISS
     time_end  (:) = FILE_RMISS
 
-    do istep = 1, min( size(time_start), size(time_end) )
+    suppress = .true.
+    istep_max = min( size(time_start), size(time_end) )
+    do istep = 1, istep_max
        !--- get data information
-       call file_get_datainfo_c( dinfo,               & ! [OUT]
-                                 FILE_files(fid)%fid, & ! [IN]
-                                 varname,             & ! [IN]
-                                 istep,               & ! [IN]
-                                 .true.,              & ! [IN]
-                                 error                ) ! [OUT]
+       error = file_get_datainfo_c( dinfo,               & ! [OUT]
+                                    FILE_files(fid)%fid, & ! [IN]
+                                    cstr(varname),       & ! [IN]
+                                    istep, suppress      ) ! [IN]
 
        !--- verify and exit
        if ( error /= FILE_SUCCESS_CODE ) then
@@ -2938,25 +3835,26 @@ contains
        endif
 
        if ( istep == 1 ) then
-          description   = dinfo%description
-          units         = dinfo%units
-          standard_name = dinfo%standard_name
+          call fstr(description, dinfo%description)
+          call fstr(units, dinfo%units)
+          call fstr(standard_name, dinfo%standard_name)
           datatype      = dinfo%datatype
           dim_rank      = dinfo%rank
           natts         = dinfo%natts
 
           do i = 1, min( dinfo%rank, size(dim_name) ) ! limit dimension rank
-             dim_name(i) = dinfo%dim_name(i)
+             call fstr(dim_name(i), dinfo%dim_name(:,i))
              dim_size(i) = dinfo%dim_size(i)
           enddo
 
           do i = 1, min( dinfo%natts, size(att_name) )
-             att_name(i) = dinfo%att_name(i)
+             call fstr(att_name(i), dinfo%att_name(:,i))
              att_type(i) = dinfo%att_type(i)
              att_len (i) = dinfo%att_len (i)
           end do
 
-          if ( dinfo%time_units == "" ) then
+          call fstr(tu, dinfo%time_units)
+          if ( tu == "" ) then
              call FILE_get_attribute( fid, "global", "time_units", time_units )
              call FILE_get_attribute( fid, "global", "calendar", calendar, existed )
              if ( .not. existed ) calendar = ""
@@ -2966,16 +3864,27 @@ contains
              step_nmax = 1
              exit
           else
-             time_units    = dinfo%time_units
-             calendar      = dinfo%calendar
+             time_units    = tu
              time_start(1) = dinfo%time_start
              time_end  (1) = dinfo%time_end
+             call fstr(calendar, dinfo%calendar)
           endif
        else
           time_start(istep) = dinfo%time_start
           time_end  (istep) = dinfo%time_end
        endif
     enddo
+
+    if ( istep == istep_max + 1 ) then
+       if ( error /= FILE_SUCCESS_CODE ) then
+          LOG_ERROR("FILE_get_all_dataInfo_fid",*) 'size of time is not enough: ', istep_max
+          call PRC_abort
+       else
+          step_nmax = istep - 1
+       end if
+    end if
+
+    call PROF_rapend  ('FILE_Read', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
 
     return
   end subroutine FILE_get_all_dataInfo_fid
@@ -3284,7 +4193,11 @@ contains
 
     integer,          intent( in)           :: fid
     character(len=*), intent( in)           :: varname
-    real(SP),    intent(out)           :: var(:)
+#ifdef NVIDIA
+    real(SP),    intent(out), target :: var(:)
+#else
+    real(SP),    intent(out), target, contiguous :: var(:)
+#endif
     integer,          intent( in), optional :: step
     logical,          intent( in), optional :: allow_missing !> if data is missing, set value to missing_value
     real(SP),    intent( in), optional :: missing_value !> default is zero
@@ -3294,11 +4207,12 @@ contains
     integer,          intent( in), optional :: count(:)    !> request sizes to global variable
 
     integer :: step_
-    logical :: allow_missing_
+    logical(c_bool) :: allow_missing_
     real(SP) :: missing_value_
 
     type(datainfo) :: dinfo
     integer :: dim_size(1)
+
     integer :: error
     integer :: n
 
@@ -3306,9 +4220,11 @@ contains
     !---------------------------------------------------------------------------
 
     if ( .not. FILE_opened(fid) ) then
-       LOG_ERROR("FILE_",*) 'File is not opened. fid = ', fid
+       LOG_ERROR("FILE_read_var_realSP_1D",*) 'File is not opened. fid = ', fid
        call PRC_abort
     end if
+
+    call PROF_rapstart('FILE_Read', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
 
     if ( present(step) ) then
        step_ = step
@@ -3329,9 +4245,10 @@ contains
     end if
 
     !--- get data information
-    call file_get_datainfo_c( dinfo,                          & ! (out)
-         FILE_files(fid)%fid, varname, step_, allow_missing_, & ! (in)
-         error                                                ) ! (out)
+    error = file_get_datainfo_c( dinfo,                & ! (out)
+                                 FILE_files(fid)%fid,  & ! (in)
+                                 cstr(varname),        & ! (in)
+                                 step_, allow_missing_ ) ! (in)
 
     !--- verify
     if ( error /= FILE_SUCCESS_CODE ) then
@@ -3355,13 +4272,31 @@ contains
     end if
 
     if ( present(ntypes) ) then
-       call file_read_data_c( var(:),                   & ! (out)
-            dinfo, SP, ntypes, dtype, start(:), count(:), & ! (in)
-            error                                              ) ! (out)
+#if defined(__GFORTRAN__) && __GNUC__ < 7
+       error = file_read_data_c( cloc(var(1)),                  & ! (out)
+#else
+       error = file_read_data_c( c_loc(var),                  & ! (out)
+#endif
+            dinfo, SP, ntypes, dtype, start(:), count(:) ) ! (in)
     else if ( present(start) .and. present(count) ) then
-       call file_read_data_c( var(:),          & ! (out)
-            dinfo, SP, 0, 0, start(:), count(:), & ! (in)
-            error                                     ) ! (out)
+#ifdef NVIDIA
+       block
+       real(SP), allocatable, target :: work(:)
+       allocate(work, mold=var)
+#endif
+       error = file_read_data_c( &
+#if defined(__GFORTRAN__) && __GNUC__ < 7
+            cloc(var(1)), & ! (out)
+#elif defined(NVIDIA)
+            c_loc(work), & ! (out)
+#else
+            c_loc(var), & ! (out)
+#endif
+            dinfo, SP, 0, 0, start(:), count(:) ) ! (in)
+#ifdef NVIDIA
+       var = work
+       end block
+#endif
     else
        dim_size(:) = shape(var)
        do n = 1, 1
@@ -3370,14 +4305,33 @@ contains
              call PRC_abort
           end if
        end do
-       call file_read_data_c( var(:), & ! (out)
-            dinfo, SP, 0, 0, -1, -1,    & ! (in)
-            error                            ) ! (out)
+#ifdef NVIDIA
+       block
+       real(SP), allocatable, target :: work(:)
+       allocate(work, mold=var)
+#endif
+       error = file_read_data_c( &
+#if defined(__GFORTRAN__) && __GNUC__ < 7
+            cloc(var(1)), & ! (out)
+#elif defined(NVIDIA)
+            c_loc(work), & ! (out)
+#else
+            c_loc(var), & ! (out)
+#endif
+            dinfo, SP, 0, 0, (/0/), (/0/) ) ! (in)
+#ifdef NVIDIA
+       var = work
+       end block
+#endif
     end if
     if ( error /= FILE_SUCCESS_CODE ) then
        LOG_ERROR("FILE_read_var_realSP_1D",*) 'failed to get data value: ', trim(varname)
        call PRC_abort
     end if
+
+    !$acc update device(var) if(acc_is_present(var))
+
+    call PROF_rapend  ('FILE_Read', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
 
     return
   end subroutine FILE_read_var_realSP_1D
@@ -3393,7 +4347,11 @@ contains
 
     integer,          intent( in)           :: fid
     character(len=*), intent( in)           :: varname
-    real(DP),    intent(out)           :: var(:)
+#ifdef NVIDIA
+    real(DP),    intent(out), target :: var(:)
+#else
+    real(DP),    intent(out), target, contiguous :: var(:)
+#endif
     integer,          intent( in), optional :: step
     logical,          intent( in), optional :: allow_missing !> if data is missing, set value to missing_value
     real(DP),    intent( in), optional :: missing_value !> default is zero
@@ -3403,11 +4361,12 @@ contains
     integer,          intent( in), optional :: count(:)    !> request sizes to global variable
 
     integer :: step_
-    logical :: allow_missing_
+    logical(c_bool) :: allow_missing_
     real(DP) :: missing_value_
 
     type(datainfo) :: dinfo
     integer :: dim_size(1)
+
     integer :: error
     integer :: n
 
@@ -3415,9 +4374,11 @@ contains
     !---------------------------------------------------------------------------
 
     if ( .not. FILE_opened(fid) ) then
-       LOG_ERROR("FILE_",*) 'File is not opened. fid = ', fid
+       LOG_ERROR("FILE_read_var_realDP_1D",*) 'File is not opened. fid = ', fid
        call PRC_abort
     end if
+
+    call PROF_rapstart('FILE_Read', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
 
     if ( present(step) ) then
        step_ = step
@@ -3438,9 +4399,10 @@ contains
     end if
 
     !--- get data information
-    call file_get_datainfo_c( dinfo,                          & ! (out)
-         FILE_files(fid)%fid, varname, step_, allow_missing_, & ! (in)
-         error                                                ) ! (out)
+    error = file_get_datainfo_c( dinfo,                & ! (out)
+                                 FILE_files(fid)%fid,  & ! (in)
+                                 cstr(varname),        & ! (in)
+                                 step_, allow_missing_ ) ! (in)
 
     !--- verify
     if ( error /= FILE_SUCCESS_CODE ) then
@@ -3464,13 +4426,31 @@ contains
     end if
 
     if ( present(ntypes) ) then
-       call file_read_data_c( var(:),                   & ! (out)
-            dinfo, DP, ntypes, dtype, start(:), count(:), & ! (in)
-            error                                              ) ! (out)
+#if defined(__GFORTRAN__) && __GNUC__ < 7
+       error = file_read_data_c( cloc(var(1)),                  & ! (out)
+#else
+       error = file_read_data_c( c_loc(var),                  & ! (out)
+#endif
+            dinfo, DP, ntypes, dtype, start(:), count(:) ) ! (in)
     else if ( present(start) .and. present(count) ) then
-       call file_read_data_c( var(:),          & ! (out)
-            dinfo, DP, 0, 0, start(:), count(:), & ! (in)
-            error                                     ) ! (out)
+#ifdef NVIDIA
+       block
+       real(DP), allocatable, target :: work(:)
+       allocate(work, mold=var)
+#endif
+       error = file_read_data_c( &
+#if defined(__GFORTRAN__) && __GNUC__ < 7
+            cloc(var(1)), & ! (out)
+#elif defined(NVIDIA)
+            c_loc(work), & ! (out)
+#else
+            c_loc(var), & ! (out)
+#endif
+            dinfo, DP, 0, 0, start(:), count(:) ) ! (in)
+#ifdef NVIDIA
+       var = work
+       end block
+#endif
     else
        dim_size(:) = shape(var)
        do n = 1, 1
@@ -3479,14 +4459,33 @@ contains
              call PRC_abort
           end if
        end do
-       call file_read_data_c( var(:), & ! (out)
-            dinfo, DP, 0, 0, -1, -1,    & ! (in)
-            error                            ) ! (out)
+#ifdef NVIDIA
+       block
+       real(DP), allocatable, target :: work(:)
+       allocate(work, mold=var)
+#endif
+       error = file_read_data_c( &
+#if defined(__GFORTRAN__) && __GNUC__ < 7
+            cloc(var(1)), & ! (out)
+#elif defined(NVIDIA)
+            c_loc(work), & ! (out)
+#else
+            c_loc(var), & ! (out)
+#endif
+            dinfo, DP, 0, 0, (/0/), (/0/) ) ! (in)
+#ifdef NVIDIA
+       var = work
+       end block
+#endif
     end if
     if ( error /= FILE_SUCCESS_CODE ) then
        LOG_ERROR("FILE_read_var_realDP_1D",*) 'failed to get data value: ', trim(varname)
        call PRC_abort
     end if
+
+    !$acc update device(var) if(acc_is_present(var))
+
+    call PROF_rapend  ('FILE_Read', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
 
     return
   end subroutine FILE_read_var_realDP_1D
@@ -3502,7 +4501,11 @@ contains
 
     integer,          intent( in)           :: fid
     character(len=*), intent( in)           :: varname
-    real(SP),    intent(out)           :: var(:,:)
+#ifdef NVIDIA
+    real(SP),    intent(out), target :: var(:,:)
+#else
+    real(SP),    intent(out), target, contiguous :: var(:,:)
+#endif
     integer,          intent( in), optional :: step
     logical,          intent( in), optional :: allow_missing !> if data is missing, set value to missing_value
     real(SP),    intent( in), optional :: missing_value !> default is zero
@@ -3512,11 +4515,12 @@ contains
     integer,          intent( in), optional :: count(:)    !> request sizes to global variable
 
     integer :: step_
-    logical :: allow_missing_
+    logical(c_bool) :: allow_missing_
     real(SP) :: missing_value_
 
     type(datainfo) :: dinfo
     integer :: dim_size(2)
+
     integer :: error
     integer :: n
 
@@ -3524,9 +4528,11 @@ contains
     !---------------------------------------------------------------------------
 
     if ( .not. FILE_opened(fid) ) then
-       LOG_ERROR("FILE_",*) 'File is not opened. fid = ', fid
+       LOG_ERROR("FILE_read_var_realSP_2D",*) 'File is not opened. fid = ', fid
        call PRC_abort
     end if
+
+    call PROF_rapstart('FILE_Read', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
 
     if ( present(step) ) then
        step_ = step
@@ -3547,9 +4553,10 @@ contains
     end if
 
     !--- get data information
-    call file_get_datainfo_c( dinfo,                          & ! (out)
-         FILE_files(fid)%fid, varname, step_, allow_missing_, & ! (in)
-         error                                                ) ! (out)
+    error = file_get_datainfo_c( dinfo,                & ! (out)
+                                 FILE_files(fid)%fid,  & ! (in)
+                                 cstr(varname),        & ! (in)
+                                 step_, allow_missing_ ) ! (in)
 
     !--- verify
     if ( error /= FILE_SUCCESS_CODE ) then
@@ -3573,13 +4580,31 @@ contains
     end if
 
     if ( present(ntypes) ) then
-       call file_read_data_c( var(:,:),                   & ! (out)
-            dinfo, SP, ntypes, dtype, start(:), count(:), & ! (in)
-            error                                              ) ! (out)
+#if defined(__GFORTRAN__) && __GNUC__ < 7
+       error = file_read_data_c( cloc(var(1,1)),                  & ! (out)
+#else
+       error = file_read_data_c( c_loc(var),                  & ! (out)
+#endif
+            dinfo, SP, ntypes, dtype, start(:), count(:) ) ! (in)
     else if ( present(start) .and. present(count) ) then
-       call file_read_data_c( var(:,:),          & ! (out)
-            dinfo, SP, 0, 0, start(:), count(:), & ! (in)
-            error                                     ) ! (out)
+#ifdef NVIDIA
+       block
+       real(SP), allocatable, target :: work(:,:)
+       allocate(work, mold=var)
+#endif
+       error = file_read_data_c( &
+#if defined(__GFORTRAN__) && __GNUC__ < 7
+            cloc(var(1,1)), & ! (out)
+#elif defined(NVIDIA)
+            c_loc(work), & ! (out)
+#else
+            c_loc(var), & ! (out)
+#endif
+            dinfo, SP, 0, 0, start(:), count(:) ) ! (in)
+#ifdef NVIDIA
+       var = work
+       end block
+#endif
     else
        dim_size(:) = shape(var)
        do n = 1, 2
@@ -3588,14 +4613,33 @@ contains
              call PRC_abort
           end if
        end do
-       call file_read_data_c( var(:,:), & ! (out)
-            dinfo, SP, 0, 0, -1, -1,    & ! (in)
-            error                            ) ! (out)
+#ifdef NVIDIA
+       block
+       real(SP), allocatable, target :: work(:,:)
+       allocate(work, mold=var)
+#endif
+       error = file_read_data_c( &
+#if defined(__GFORTRAN__) && __GNUC__ < 7
+            cloc(var(1,1)), & ! (out)
+#elif defined(NVIDIA)
+            c_loc(work), & ! (out)
+#else
+            c_loc(var), & ! (out)
+#endif
+            dinfo, SP, 0, 0, (/0/), (/0/) ) ! (in)
+#ifdef NVIDIA
+       var = work
+       end block
+#endif
     end if
     if ( error /= FILE_SUCCESS_CODE ) then
        LOG_ERROR("FILE_read_var_realSP_2D",*) 'failed to get data value: ', trim(varname)
        call PRC_abort
     end if
+
+    !$acc update device(var) if(acc_is_present(var))
+
+    call PROF_rapend  ('FILE_Read', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
 
     return
   end subroutine FILE_read_var_realSP_2D
@@ -3611,7 +4655,11 @@ contains
 
     integer,          intent( in)           :: fid
     character(len=*), intent( in)           :: varname
-    real(DP),    intent(out)           :: var(:,:)
+#ifdef NVIDIA
+    real(DP),    intent(out), target :: var(:,:)
+#else
+    real(DP),    intent(out), target, contiguous :: var(:,:)
+#endif
     integer,          intent( in), optional :: step
     logical,          intent( in), optional :: allow_missing !> if data is missing, set value to missing_value
     real(DP),    intent( in), optional :: missing_value !> default is zero
@@ -3621,11 +4669,12 @@ contains
     integer,          intent( in), optional :: count(:)    !> request sizes to global variable
 
     integer :: step_
-    logical :: allow_missing_
+    logical(c_bool) :: allow_missing_
     real(DP) :: missing_value_
 
     type(datainfo) :: dinfo
     integer :: dim_size(2)
+
     integer :: error
     integer :: n
 
@@ -3633,9 +4682,11 @@ contains
     !---------------------------------------------------------------------------
 
     if ( .not. FILE_opened(fid) ) then
-       LOG_ERROR("FILE_",*) 'File is not opened. fid = ', fid
+       LOG_ERROR("FILE_read_var_realDP_2D",*) 'File is not opened. fid = ', fid
        call PRC_abort
     end if
+
+    call PROF_rapstart('FILE_Read', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
 
     if ( present(step) ) then
        step_ = step
@@ -3656,9 +4707,10 @@ contains
     end if
 
     !--- get data information
-    call file_get_datainfo_c( dinfo,                          & ! (out)
-         FILE_files(fid)%fid, varname, step_, allow_missing_, & ! (in)
-         error                                                ) ! (out)
+    error = file_get_datainfo_c( dinfo,                & ! (out)
+                                 FILE_files(fid)%fid,  & ! (in)
+                                 cstr(varname),        & ! (in)
+                                 step_, allow_missing_ ) ! (in)
 
     !--- verify
     if ( error /= FILE_SUCCESS_CODE ) then
@@ -3682,13 +4734,31 @@ contains
     end if
 
     if ( present(ntypes) ) then
-       call file_read_data_c( var(:,:),                   & ! (out)
-            dinfo, DP, ntypes, dtype, start(:), count(:), & ! (in)
-            error                                              ) ! (out)
+#if defined(__GFORTRAN__) && __GNUC__ < 7
+       error = file_read_data_c( cloc(var(1,1)),                  & ! (out)
+#else
+       error = file_read_data_c( c_loc(var),                  & ! (out)
+#endif
+            dinfo, DP, ntypes, dtype, start(:), count(:) ) ! (in)
     else if ( present(start) .and. present(count) ) then
-       call file_read_data_c( var(:,:),          & ! (out)
-            dinfo, DP, 0, 0, start(:), count(:), & ! (in)
-            error                                     ) ! (out)
+#ifdef NVIDIA
+       block
+       real(DP), allocatable, target :: work(:,:)
+       allocate(work, mold=var)
+#endif
+       error = file_read_data_c( &
+#if defined(__GFORTRAN__) && __GNUC__ < 7
+            cloc(var(1,1)), & ! (out)
+#elif defined(NVIDIA)
+            c_loc(work), & ! (out)
+#else
+            c_loc(var), & ! (out)
+#endif
+            dinfo, DP, 0, 0, start(:), count(:) ) ! (in)
+#ifdef NVIDIA
+       var = work
+       end block
+#endif
     else
        dim_size(:) = shape(var)
        do n = 1, 2
@@ -3697,14 +4767,33 @@ contains
              call PRC_abort
           end if
        end do
-       call file_read_data_c( var(:,:), & ! (out)
-            dinfo, DP, 0, 0, -1, -1,    & ! (in)
-            error                            ) ! (out)
+#ifdef NVIDIA
+       block
+       real(DP), allocatable, target :: work(:,:)
+       allocate(work, mold=var)
+#endif
+       error = file_read_data_c( &
+#if defined(__GFORTRAN__) && __GNUC__ < 7
+            cloc(var(1,1)), & ! (out)
+#elif defined(NVIDIA)
+            c_loc(work), & ! (out)
+#else
+            c_loc(var), & ! (out)
+#endif
+            dinfo, DP, 0, 0, (/0/), (/0/) ) ! (in)
+#ifdef NVIDIA
+       var = work
+       end block
+#endif
     end if
     if ( error /= FILE_SUCCESS_CODE ) then
        LOG_ERROR("FILE_read_var_realDP_2D",*) 'failed to get data value: ', trim(varname)
        call PRC_abort
     end if
+
+    !$acc update device(var) if(acc_is_present(var))
+
+    call PROF_rapend  ('FILE_Read', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
 
     return
   end subroutine FILE_read_var_realDP_2D
@@ -3720,7 +4809,11 @@ contains
 
     integer,          intent( in)           :: fid
     character(len=*), intent( in)           :: varname
-    real(SP),    intent(out)           :: var(:,:,:)
+#ifdef NVIDIA
+    real(SP),    intent(out), target :: var(:,:,:)
+#else
+    real(SP),    intent(out), target, contiguous :: var(:,:,:)
+#endif
     integer,          intent( in), optional :: step
     logical,          intent( in), optional :: allow_missing !> if data is missing, set value to missing_value
     real(SP),    intent( in), optional :: missing_value !> default is zero
@@ -3730,11 +4823,12 @@ contains
     integer,          intent( in), optional :: count(:)    !> request sizes to global variable
 
     integer :: step_
-    logical :: allow_missing_
+    logical(c_bool) :: allow_missing_
     real(SP) :: missing_value_
 
     type(datainfo) :: dinfo
     integer :: dim_size(3)
+
     integer :: error
     integer :: n
 
@@ -3742,9 +4836,11 @@ contains
     !---------------------------------------------------------------------------
 
     if ( .not. FILE_opened(fid) ) then
-       LOG_ERROR("FILE_",*) 'File is not opened. fid = ', fid
+       LOG_ERROR("FILE_read_var_realSP_3D",*) 'File is not opened. fid = ', fid
        call PRC_abort
     end if
+
+    call PROF_rapstart('FILE_Read', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
 
     if ( present(step) ) then
        step_ = step
@@ -3765,9 +4861,10 @@ contains
     end if
 
     !--- get data information
-    call file_get_datainfo_c( dinfo,                          & ! (out)
-         FILE_files(fid)%fid, varname, step_, allow_missing_, & ! (in)
-         error                                                ) ! (out)
+    error = file_get_datainfo_c( dinfo,                & ! (out)
+                                 FILE_files(fid)%fid,  & ! (in)
+                                 cstr(varname),        & ! (in)
+                                 step_, allow_missing_ ) ! (in)
 
     !--- verify
     if ( error /= FILE_SUCCESS_CODE ) then
@@ -3791,13 +4888,31 @@ contains
     end if
 
     if ( present(ntypes) ) then
-       call file_read_data_c( var(:,:,:),                   & ! (out)
-            dinfo, SP, ntypes, dtype, start(:), count(:), & ! (in)
-            error                                              ) ! (out)
+#if defined(__GFORTRAN__) && __GNUC__ < 7
+       error = file_read_data_c( cloc(var(1,1,1)),                  & ! (out)
+#else
+       error = file_read_data_c( c_loc(var),                  & ! (out)
+#endif
+            dinfo, SP, ntypes, dtype, start(:), count(:) ) ! (in)
     else if ( present(start) .and. present(count) ) then
-       call file_read_data_c( var(:,:,:),          & ! (out)
-            dinfo, SP, 0, 0, start(:), count(:), & ! (in)
-            error                                     ) ! (out)
+#ifdef NVIDIA
+       block
+       real(SP), allocatable, target :: work(:,:,:)
+       allocate(work, mold=var)
+#endif
+       error = file_read_data_c( &
+#if defined(__GFORTRAN__) && __GNUC__ < 7
+            cloc(var(1,1,1)), & ! (out)
+#elif defined(NVIDIA)
+            c_loc(work), & ! (out)
+#else
+            c_loc(var), & ! (out)
+#endif
+            dinfo, SP, 0, 0, start(:), count(:) ) ! (in)
+#ifdef NVIDIA
+       var = work
+       end block
+#endif
     else
        dim_size(:) = shape(var)
        do n = 1, 3
@@ -3806,14 +4921,33 @@ contains
              call PRC_abort
           end if
        end do
-       call file_read_data_c( var(:,:,:), & ! (out)
-            dinfo, SP, 0, 0, -1, -1,    & ! (in)
-            error                            ) ! (out)
+#ifdef NVIDIA
+       block
+       real(SP), allocatable, target :: work(:,:,:)
+       allocate(work, mold=var)
+#endif
+       error = file_read_data_c( &
+#if defined(__GFORTRAN__) && __GNUC__ < 7
+            cloc(var(1,1,1)), & ! (out)
+#elif defined(NVIDIA)
+            c_loc(work), & ! (out)
+#else
+            c_loc(var), & ! (out)
+#endif
+            dinfo, SP, 0, 0, (/0/), (/0/) ) ! (in)
+#ifdef NVIDIA
+       var = work
+       end block
+#endif
     end if
     if ( error /= FILE_SUCCESS_CODE ) then
        LOG_ERROR("FILE_read_var_realSP_3D",*) 'failed to get data value: ', trim(varname)
        call PRC_abort
     end if
+
+    !$acc update device(var) if(acc_is_present(var))
+
+    call PROF_rapend  ('FILE_Read', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
 
     return
   end subroutine FILE_read_var_realSP_3D
@@ -3829,7 +4963,11 @@ contains
 
     integer,          intent( in)           :: fid
     character(len=*), intent( in)           :: varname
-    real(DP),    intent(out)           :: var(:,:,:)
+#ifdef NVIDIA
+    real(DP),    intent(out), target :: var(:,:,:)
+#else
+    real(DP),    intent(out), target, contiguous :: var(:,:,:)
+#endif
     integer,          intent( in), optional :: step
     logical,          intent( in), optional :: allow_missing !> if data is missing, set value to missing_value
     real(DP),    intent( in), optional :: missing_value !> default is zero
@@ -3839,11 +4977,12 @@ contains
     integer,          intent( in), optional :: count(:)    !> request sizes to global variable
 
     integer :: step_
-    logical :: allow_missing_
+    logical(c_bool) :: allow_missing_
     real(DP) :: missing_value_
 
     type(datainfo) :: dinfo
     integer :: dim_size(3)
+
     integer :: error
     integer :: n
 
@@ -3851,9 +4990,11 @@ contains
     !---------------------------------------------------------------------------
 
     if ( .not. FILE_opened(fid) ) then
-       LOG_ERROR("FILE_",*) 'File is not opened. fid = ', fid
+       LOG_ERROR("FILE_read_var_realDP_3D",*) 'File is not opened. fid = ', fid
        call PRC_abort
     end if
+
+    call PROF_rapstart('FILE_Read', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
 
     if ( present(step) ) then
        step_ = step
@@ -3874,9 +5015,10 @@ contains
     end if
 
     !--- get data information
-    call file_get_datainfo_c( dinfo,                          & ! (out)
-         FILE_files(fid)%fid, varname, step_, allow_missing_, & ! (in)
-         error                                                ) ! (out)
+    error = file_get_datainfo_c( dinfo,                & ! (out)
+                                 FILE_files(fid)%fid,  & ! (in)
+                                 cstr(varname),        & ! (in)
+                                 step_, allow_missing_ ) ! (in)
 
     !--- verify
     if ( error /= FILE_SUCCESS_CODE ) then
@@ -3900,13 +5042,31 @@ contains
     end if
 
     if ( present(ntypes) ) then
-       call file_read_data_c( var(:,:,:),                   & ! (out)
-            dinfo, DP, ntypes, dtype, start(:), count(:), & ! (in)
-            error                                              ) ! (out)
+#if defined(__GFORTRAN__) && __GNUC__ < 7
+       error = file_read_data_c( cloc(var(1,1,1)),                  & ! (out)
+#else
+       error = file_read_data_c( c_loc(var),                  & ! (out)
+#endif
+            dinfo, DP, ntypes, dtype, start(:), count(:) ) ! (in)
     else if ( present(start) .and. present(count) ) then
-       call file_read_data_c( var(:,:,:),          & ! (out)
-            dinfo, DP, 0, 0, start(:), count(:), & ! (in)
-            error                                     ) ! (out)
+#ifdef NVIDIA
+       block
+       real(DP), allocatable, target :: work(:,:,:)
+       allocate(work, mold=var)
+#endif
+       error = file_read_data_c( &
+#if defined(__GFORTRAN__) && __GNUC__ < 7
+            cloc(var(1,1,1)), & ! (out)
+#elif defined(NVIDIA)
+            c_loc(work), & ! (out)
+#else
+            c_loc(var), & ! (out)
+#endif
+            dinfo, DP, 0, 0, start(:), count(:) ) ! (in)
+#ifdef NVIDIA
+       var = work
+       end block
+#endif
     else
        dim_size(:) = shape(var)
        do n = 1, 3
@@ -3915,14 +5075,33 @@ contains
              call PRC_abort
           end if
        end do
-       call file_read_data_c( var(:,:,:), & ! (out)
-            dinfo, DP, 0, 0, -1, -1,    & ! (in)
-            error                            ) ! (out)
+#ifdef NVIDIA
+       block
+       real(DP), allocatable, target :: work(:,:,:)
+       allocate(work, mold=var)
+#endif
+       error = file_read_data_c( &
+#if defined(__GFORTRAN__) && __GNUC__ < 7
+            cloc(var(1,1,1)), & ! (out)
+#elif defined(NVIDIA)
+            c_loc(work), & ! (out)
+#else
+            c_loc(var), & ! (out)
+#endif
+            dinfo, DP, 0, 0, (/0/), (/0/) ) ! (in)
+#ifdef NVIDIA
+       var = work
+       end block
+#endif
     end if
     if ( error /= FILE_SUCCESS_CODE ) then
        LOG_ERROR("FILE_read_var_realDP_3D",*) 'failed to get data value: ', trim(varname)
        call PRC_abort
     end if
+
+    !$acc update device(var) if(acc_is_present(var))
+
+    call PROF_rapend  ('FILE_Read', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
 
     return
   end subroutine FILE_read_var_realDP_3D
@@ -3938,7 +5117,11 @@ contains
 
     integer,          intent( in)           :: fid
     character(len=*), intent( in)           :: varname
-    real(SP),    intent(out)           :: var(:,:,:,:)
+#ifdef NVIDIA
+    real(SP),    intent(out), target :: var(:,:,:,:)
+#else
+    real(SP),    intent(out), target, contiguous :: var(:,:,:,:)
+#endif
     integer,          intent( in), optional :: step
     logical,          intent( in), optional :: allow_missing !> if data is missing, set value to missing_value
     real(SP),    intent( in), optional :: missing_value !> default is zero
@@ -3948,11 +5131,12 @@ contains
     integer,          intent( in), optional :: count(:)    !> request sizes to global variable
 
     integer :: step_
-    logical :: allow_missing_
+    logical(c_bool) :: allow_missing_
     real(SP) :: missing_value_
 
     type(datainfo) :: dinfo
     integer :: dim_size(4)
+
     integer :: error
     integer :: n
 
@@ -3960,9 +5144,11 @@ contains
     !---------------------------------------------------------------------------
 
     if ( .not. FILE_opened(fid) ) then
-       LOG_ERROR("FILE_",*) 'File is not opened. fid = ', fid
+       LOG_ERROR("FILE_read_var_realSP_4D",*) 'File is not opened. fid = ', fid
        call PRC_abort
     end if
+
+    call PROF_rapstart('FILE_Read', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
 
     if ( present(step) ) then
        step_ = step
@@ -3983,9 +5169,10 @@ contains
     end if
 
     !--- get data information
-    call file_get_datainfo_c( dinfo,                          & ! (out)
-         FILE_files(fid)%fid, varname, step_, allow_missing_, & ! (in)
-         error                                                ) ! (out)
+    error = file_get_datainfo_c( dinfo,                & ! (out)
+                                 FILE_files(fid)%fid,  & ! (in)
+                                 cstr(varname),        & ! (in)
+                                 step_, allow_missing_ ) ! (in)
 
     !--- verify
     if ( error /= FILE_SUCCESS_CODE ) then
@@ -4009,13 +5196,31 @@ contains
     end if
 
     if ( present(ntypes) ) then
-       call file_read_data_c( var(:,:,:,:),                   & ! (out)
-            dinfo, SP, ntypes, dtype, start(:), count(:), & ! (in)
-            error                                              ) ! (out)
+#if defined(__GFORTRAN__) && __GNUC__ < 7
+       error = file_read_data_c( cloc(var(1,1,1,1)),                  & ! (out)
+#else
+       error = file_read_data_c( c_loc(var),                  & ! (out)
+#endif
+            dinfo, SP, ntypes, dtype, start(:), count(:) ) ! (in)
     else if ( present(start) .and. present(count) ) then
-       call file_read_data_c( var(:,:,:,:),          & ! (out)
-            dinfo, SP, 0, 0, start(:), count(:), & ! (in)
-            error                                     ) ! (out)
+#ifdef NVIDIA
+       block
+       real(SP), allocatable, target :: work(:,:,:,:)
+       allocate(work, mold=var)
+#endif
+       error = file_read_data_c( &
+#if defined(__GFORTRAN__) && __GNUC__ < 7
+            cloc(var(1,1,1,1)), & ! (out)
+#elif defined(NVIDIA)
+            c_loc(work), & ! (out)
+#else
+            c_loc(var), & ! (out)
+#endif
+            dinfo, SP, 0, 0, start(:), count(:) ) ! (in)
+#ifdef NVIDIA
+       var = work
+       end block
+#endif
     else
        dim_size(:) = shape(var)
        do n = 1, 4
@@ -4024,14 +5229,33 @@ contains
              call PRC_abort
           end if
        end do
-       call file_read_data_c( var(:,:,:,:), & ! (out)
-            dinfo, SP, 0, 0, -1, -1,    & ! (in)
-            error                            ) ! (out)
+#ifdef NVIDIA
+       block
+       real(SP), allocatable, target :: work(:,:,:,:)
+       allocate(work, mold=var)
+#endif
+       error = file_read_data_c( &
+#if defined(__GFORTRAN__) && __GNUC__ < 7
+            cloc(var(1,1,1,1)), & ! (out)
+#elif defined(NVIDIA)
+            c_loc(work), & ! (out)
+#else
+            c_loc(var), & ! (out)
+#endif
+            dinfo, SP, 0, 0, (/0/), (/0/) ) ! (in)
+#ifdef NVIDIA
+       var = work
+       end block
+#endif
     end if
     if ( error /= FILE_SUCCESS_CODE ) then
        LOG_ERROR("FILE_read_var_realSP_4D",*) 'failed to get data value: ', trim(varname)
        call PRC_abort
     end if
+
+    !$acc update device(var) if(acc_is_present(var))
+
+    call PROF_rapend  ('FILE_Read', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
 
     return
   end subroutine FILE_read_var_realSP_4D
@@ -4047,7 +5271,11 @@ contains
 
     integer,          intent( in)           :: fid
     character(len=*), intent( in)           :: varname
-    real(DP),    intent(out)           :: var(:,:,:,:)
+#ifdef NVIDIA
+    real(DP),    intent(out), target :: var(:,:,:,:)
+#else
+    real(DP),    intent(out), target, contiguous :: var(:,:,:,:)
+#endif
     integer,          intent( in), optional :: step
     logical,          intent( in), optional :: allow_missing !> if data is missing, set value to missing_value
     real(DP),    intent( in), optional :: missing_value !> default is zero
@@ -4057,11 +5285,12 @@ contains
     integer,          intent( in), optional :: count(:)    !> request sizes to global variable
 
     integer :: step_
-    logical :: allow_missing_
+    logical(c_bool) :: allow_missing_
     real(DP) :: missing_value_
 
     type(datainfo) :: dinfo
     integer :: dim_size(4)
+
     integer :: error
     integer :: n
 
@@ -4069,9 +5298,11 @@ contains
     !---------------------------------------------------------------------------
 
     if ( .not. FILE_opened(fid) ) then
-       LOG_ERROR("FILE_",*) 'File is not opened. fid = ', fid
+       LOG_ERROR("FILE_read_var_realDP_4D",*) 'File is not opened. fid = ', fid
        call PRC_abort
     end if
+
+    call PROF_rapstart('FILE_Read', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
 
     if ( present(step) ) then
        step_ = step
@@ -4092,9 +5323,10 @@ contains
     end if
 
     !--- get data information
-    call file_get_datainfo_c( dinfo,                          & ! (out)
-         FILE_files(fid)%fid, varname, step_, allow_missing_, & ! (in)
-         error                                                ) ! (out)
+    error = file_get_datainfo_c( dinfo,                & ! (out)
+                                 FILE_files(fid)%fid,  & ! (in)
+                                 cstr(varname),        & ! (in)
+                                 step_, allow_missing_ ) ! (in)
 
     !--- verify
     if ( error /= FILE_SUCCESS_CODE ) then
@@ -4118,13 +5350,31 @@ contains
     end if
 
     if ( present(ntypes) ) then
-       call file_read_data_c( var(:,:,:,:),                   & ! (out)
-            dinfo, DP, ntypes, dtype, start(:), count(:), & ! (in)
-            error                                              ) ! (out)
+#if defined(__GFORTRAN__) && __GNUC__ < 7
+       error = file_read_data_c( cloc(var(1,1,1,1)),                  & ! (out)
+#else
+       error = file_read_data_c( c_loc(var),                  & ! (out)
+#endif
+            dinfo, DP, ntypes, dtype, start(:), count(:) ) ! (in)
     else if ( present(start) .and. present(count) ) then
-       call file_read_data_c( var(:,:,:,:),          & ! (out)
-            dinfo, DP, 0, 0, start(:), count(:), & ! (in)
-            error                                     ) ! (out)
+#ifdef NVIDIA
+       block
+       real(DP), allocatable, target :: work(:,:,:,:)
+       allocate(work, mold=var)
+#endif
+       error = file_read_data_c( &
+#if defined(__GFORTRAN__) && __GNUC__ < 7
+            cloc(var(1,1,1,1)), & ! (out)
+#elif defined(NVIDIA)
+            c_loc(work), & ! (out)
+#else
+            c_loc(var), & ! (out)
+#endif
+            dinfo, DP, 0, 0, start(:), count(:) ) ! (in)
+#ifdef NVIDIA
+       var = work
+       end block
+#endif
     else
        dim_size(:) = shape(var)
        do n = 1, 4
@@ -4133,14 +5383,33 @@ contains
              call PRC_abort
           end if
        end do
-       call file_read_data_c( var(:,:,:,:), & ! (out)
-            dinfo, DP, 0, 0, -1, -1,    & ! (in)
-            error                            ) ! (out)
+#ifdef NVIDIA
+       block
+       real(DP), allocatable, target :: work(:,:,:,:)
+       allocate(work, mold=var)
+#endif
+       error = file_read_data_c( &
+#if defined(__GFORTRAN__) && __GNUC__ < 7
+            cloc(var(1,1,1,1)), & ! (out)
+#elif defined(NVIDIA)
+            c_loc(work), & ! (out)
+#else
+            c_loc(var), & ! (out)
+#endif
+            dinfo, DP, 0, 0, (/0/), (/0/) ) ! (in)
+#ifdef NVIDIA
+       var = work
+       end block
+#endif
     end if
     if ( error /= FILE_SUCCESS_CODE ) then
        LOG_ERROR("FILE_read_var_realDP_4D",*) 'failed to get data value: ', trim(varname)
        call PRC_abort
     end if
+
+    !$acc update device(var) if(acc_is_present(var))
+
+    call PROF_rapend  ('FILE_Read', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
 
     return
   end subroutine FILE_read_var_realDP_4D
@@ -4157,7 +5426,11 @@ contains
     implicit none
 
     integer,  intent(in)           :: vid
+#ifdef NVIDIA
     real(SP), intent(in) :: var(:)
+#else
+    real(SP), intent(in), target, contiguous :: var(:)
+#endif
     real(DP), intent(in)           :: t_start
     real(DP), intent(in)           :: t_end
     integer,  intent(in), optional :: ndims    ! when var has been reshaped to 1D
@@ -4183,6 +5456,8 @@ contains
        call PRC_abort
     end if
 
+    call PROF_rapstart('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
+
     if ( present(ndims) ) then
        ! history variable has been reshaped to 1D
        ! In this case, start and count must be present
@@ -4196,10 +5471,13 @@ contains
           call PRC_abort
        end if
 
-       call file_write_data_c( FILE_files(fid)%fid, FILE_vars(vid)%vid, & ! (in)
-            var(:), ts, te, SP,                             & ! (in)
-            ndims, start, count,                                        & ! (in)
-            error                                                       ) ! (out)
+       error = file_write_data_c( FILE_files(fid)%fid, FILE_vars(vid)%vid, & ! (in)
+#if defined(__GFORTRAN__) && __GNUC__ < 7
+                                  cloc(var(1)), ts, te, ndims, SP,      & ! (in)
+#else
+                                  c_loc(var), ts, te, ndims, SP,      & ! (in)
+#endif
+                                  start, count                             ) ! (in)
     else
        ! this is for restart variable which keeps its original shape
        if ( present(start) ) then
@@ -4207,15 +5485,34 @@ contains
        else
           start_(:) = 1
        end if
-       call file_write_data_c( FILE_files(fid)%fid, FILE_vars(vid)%vid, & ! (in)
-            var(:), ts, te, SP,                             & ! (in)
-            1, start_, shape(var),                                 & ! (in)
-            error                                                       ) ! (out)
+
+       !$acc update host(var) if(acc_is_present(var))
+
+#ifdef NVIDIA
+       block
+       real(SP), allocatable, target :: work(:)
+       allocate(work, source=var)
+#endif
+       error = file_write_data_c( FILE_files(fid)%fid, FILE_vars(vid)%vid, & ! (in)
+#if defined(__GFORTRAN__) && __GNUC__ < 7
+                                  cloc(var(1)), & ! (in)
+#elif defined(NVIDIA)
+                                  c_loc(work), & ! (in)
+#else
+                                  c_loc(var), & ! (in)
+#endif
+                                  ts, te, 1, SP,     & ! (in)
+                                  start_, shape(var)                       ) ! (in)
+#ifdef NVIDIA
+       end block
+#endif
     end if
     if ( error /= FILE_SUCCESS_CODE ) then
        LOG_ERROR("FILE_write_realSP_1D",*) 'failed to write data: ', trim(FILE_vars(vid)%name)
        call PRC_abort
     end if
+
+    call PROF_rapend  ('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
 
     return
   end subroutine FILE_write_realSP_1D
@@ -4228,7 +5525,11 @@ contains
     implicit none
 
     integer,  intent(in)           :: vid
+#ifdef NVIDIA
     real(DP), intent(in) :: var(:)
+#else
+    real(DP), intent(in), target, contiguous :: var(:)
+#endif
     real(DP), intent(in)           :: t_start
     real(DP), intent(in)           :: t_end
     integer,  intent(in), optional :: ndims    ! when var has been reshaped to 1D
@@ -4254,6 +5555,8 @@ contains
        call PRC_abort
     end if
 
+    call PROF_rapstart('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
+
     if ( present(ndims) ) then
        ! history variable has been reshaped to 1D
        ! In this case, start and count must be present
@@ -4267,10 +5570,13 @@ contains
           call PRC_abort
        end if
 
-       call file_write_data_c( FILE_files(fid)%fid, FILE_vars(vid)%vid, & ! (in)
-            var(:), ts, te, DP,                             & ! (in)
-            ndims, start, count,                                        & ! (in)
-            error                                                       ) ! (out)
+       error = file_write_data_c( FILE_files(fid)%fid, FILE_vars(vid)%vid, & ! (in)
+#if defined(__GFORTRAN__) && __GNUC__ < 7
+                                  cloc(var(1)), ts, te, ndims, DP,      & ! (in)
+#else
+                                  c_loc(var), ts, te, ndims, DP,      & ! (in)
+#endif
+                                  start, count                             ) ! (in)
     else
        ! this is for restart variable which keeps its original shape
        if ( present(start) ) then
@@ -4278,15 +5584,34 @@ contains
        else
           start_(:) = 1
        end if
-       call file_write_data_c( FILE_files(fid)%fid, FILE_vars(vid)%vid, & ! (in)
-            var(:), ts, te, DP,                             & ! (in)
-            1, start_, shape(var),                                 & ! (in)
-            error                                                       ) ! (out)
+
+       !$acc update host(var) if(acc_is_present(var))
+
+#ifdef NVIDIA
+       block
+       real(DP), allocatable, target :: work(:)
+       allocate(work, source=var)
+#endif
+       error = file_write_data_c( FILE_files(fid)%fid, FILE_vars(vid)%vid, & ! (in)
+#if defined(__GFORTRAN__) && __GNUC__ < 7
+                                  cloc(var(1)), & ! (in)
+#elif defined(NVIDIA)
+                                  c_loc(work), & ! (in)
+#else
+                                  c_loc(var), & ! (in)
+#endif
+                                  ts, te, 1, DP,     & ! (in)
+                                  start_, shape(var)                       ) ! (in)
+#ifdef NVIDIA
+       end block
+#endif
     end if
     if ( error /= FILE_SUCCESS_CODE ) then
        LOG_ERROR("FILE_write_realDP_1D",*) 'failed to write data: ', trim(FILE_vars(vid)%name)
        call PRC_abort
     end if
+
+    call PROF_rapend  ('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
 
     return
   end subroutine FILE_write_realDP_1D
@@ -4297,7 +5622,11 @@ contains
     implicit none
 
     integer,  intent(in)           :: vid
+#ifdef NVIDIA
     real(SP), intent(in) :: var(:,:)
+#else
+    real(SP), intent(in), target, contiguous :: var(:,:)
+#endif
     real(DP), intent(in)           :: t_start
     real(DP), intent(in)           :: t_end
     integer,  intent(in), optional :: start(:)
@@ -4321,20 +5650,41 @@ contains
        call PRC_abort
     end if
 
+    call PROF_rapstart('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
+
        ! this is for restart variable which keeps its original shape
        if ( present(start) ) then
           start_(:) = start(:)
        else
           start_(:) = 1
        end if
-       call file_write_data_c( FILE_files(fid)%fid, FILE_vars(vid)%vid, & ! (in)
-            var(:,:), ts, te, SP,                             & ! (in)
-            2, start_, shape(var),                                 & ! (in)
-            error                                                       ) ! (out)
+
+       !$acc update host(var) if(acc_is_present(var))
+
+#ifdef NVIDIA
+       block
+       real(SP), allocatable, target :: work(:,:)
+       allocate(work, source=var)
+#endif
+       error = file_write_data_c( FILE_files(fid)%fid, FILE_vars(vid)%vid, & ! (in)
+#if defined(__GFORTRAN__) && __GNUC__ < 7
+                                  cloc(var(1,1)), & ! (in)
+#elif defined(NVIDIA)
+                                  c_loc(work), & ! (in)
+#else
+                                  c_loc(var), & ! (in)
+#endif
+                                  ts, te, 2, SP,     & ! (in)
+                                  start_, shape(var)                       ) ! (in)
+#ifdef NVIDIA
+       end block
+#endif
     if ( error /= FILE_SUCCESS_CODE ) then
        LOG_ERROR("FILE_write_realSP_2D",*) 'failed to write data: ', trim(FILE_vars(vid)%name)
        call PRC_abort
     end if
+
+    call PROF_rapend  ('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
 
     return
   end subroutine FILE_write_realSP_2D
@@ -4345,7 +5695,11 @@ contains
     implicit none
 
     integer,  intent(in)           :: vid
+#ifdef NVIDIA
     real(DP), intent(in) :: var(:,:)
+#else
+    real(DP), intent(in), target, contiguous :: var(:,:)
+#endif
     real(DP), intent(in)           :: t_start
     real(DP), intent(in)           :: t_end
     integer,  intent(in), optional :: start(:)
@@ -4369,20 +5723,41 @@ contains
        call PRC_abort
     end if
 
+    call PROF_rapstart('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
+
        ! this is for restart variable which keeps its original shape
        if ( present(start) ) then
           start_(:) = start(:)
        else
           start_(:) = 1
        end if
-       call file_write_data_c( FILE_files(fid)%fid, FILE_vars(vid)%vid, & ! (in)
-            var(:,:), ts, te, DP,                             & ! (in)
-            2, start_, shape(var),                                 & ! (in)
-            error                                                       ) ! (out)
+
+       !$acc update host(var) if(acc_is_present(var))
+
+#ifdef NVIDIA
+       block
+       real(DP), allocatable, target :: work(:,:)
+       allocate(work, source=var)
+#endif
+       error = file_write_data_c( FILE_files(fid)%fid, FILE_vars(vid)%vid, & ! (in)
+#if defined(__GFORTRAN__) && __GNUC__ < 7
+                                  cloc(var(1,1)), & ! (in)
+#elif defined(NVIDIA)
+                                  c_loc(work), & ! (in)
+#else
+                                  c_loc(var), & ! (in)
+#endif
+                                  ts, te, 2, DP,     & ! (in)
+                                  start_, shape(var)                       ) ! (in)
+#ifdef NVIDIA
+       end block
+#endif
     if ( error /= FILE_SUCCESS_CODE ) then
        LOG_ERROR("FILE_write_realDP_2D",*) 'failed to write data: ', trim(FILE_vars(vid)%name)
        call PRC_abort
     end if
+
+    call PROF_rapend  ('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
 
     return
   end subroutine FILE_write_realDP_2D
@@ -4393,7 +5768,11 @@ contains
     implicit none
 
     integer,  intent(in)           :: vid
+#ifdef NVIDIA
     real(SP), intent(in) :: var(:,:,:)
+#else
+    real(SP), intent(in), target, contiguous :: var(:,:,:)
+#endif
     real(DP), intent(in)           :: t_start
     real(DP), intent(in)           :: t_end
     integer,  intent(in), optional :: start(:)
@@ -4417,20 +5796,41 @@ contains
        call PRC_abort
     end if
 
+    call PROF_rapstart('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
+
        ! this is for restart variable which keeps its original shape
        if ( present(start) ) then
           start_(:) = start(:)
        else
           start_(:) = 1
        end if
-       call file_write_data_c( FILE_files(fid)%fid, FILE_vars(vid)%vid, & ! (in)
-            var(:,:,:), ts, te, SP,                             & ! (in)
-            3, start_, shape(var),                                 & ! (in)
-            error                                                       ) ! (out)
+
+       !$acc update host(var) if(acc_is_present(var))
+
+#ifdef NVIDIA
+       block
+       real(SP), allocatable, target :: work(:,:,:)
+       allocate(work, source=var)
+#endif
+       error = file_write_data_c( FILE_files(fid)%fid, FILE_vars(vid)%vid, & ! (in)
+#if defined(__GFORTRAN__) && __GNUC__ < 7
+                                  cloc(var(1,1,1)), & ! (in)
+#elif defined(NVIDIA)
+                                  c_loc(work), & ! (in)
+#else
+                                  c_loc(var), & ! (in)
+#endif
+                                  ts, te, 3, SP,     & ! (in)
+                                  start_, shape(var)                       ) ! (in)
+#ifdef NVIDIA
+       end block
+#endif
     if ( error /= FILE_SUCCESS_CODE ) then
        LOG_ERROR("FILE_write_realSP_3D",*) 'failed to write data: ', trim(FILE_vars(vid)%name)
        call PRC_abort
     end if
+
+    call PROF_rapend  ('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
 
     return
   end subroutine FILE_write_realSP_3D
@@ -4441,7 +5841,11 @@ contains
     implicit none
 
     integer,  intent(in)           :: vid
+#ifdef NVIDIA
     real(DP), intent(in) :: var(:,:,:)
+#else
+    real(DP), intent(in), target, contiguous :: var(:,:,:)
+#endif
     real(DP), intent(in)           :: t_start
     real(DP), intent(in)           :: t_end
     integer,  intent(in), optional :: start(:)
@@ -4465,20 +5869,41 @@ contains
        call PRC_abort
     end if
 
+    call PROF_rapstart('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
+
        ! this is for restart variable which keeps its original shape
        if ( present(start) ) then
           start_(:) = start(:)
        else
           start_(:) = 1
        end if
-       call file_write_data_c( FILE_files(fid)%fid, FILE_vars(vid)%vid, & ! (in)
-            var(:,:,:), ts, te, DP,                             & ! (in)
-            3, start_, shape(var),                                 & ! (in)
-            error                                                       ) ! (out)
+
+       !$acc update host(var) if(acc_is_present(var))
+
+#ifdef NVIDIA
+       block
+       real(DP), allocatable, target :: work(:,:,:)
+       allocate(work, source=var)
+#endif
+       error = file_write_data_c( FILE_files(fid)%fid, FILE_vars(vid)%vid, & ! (in)
+#if defined(__GFORTRAN__) && __GNUC__ < 7
+                                  cloc(var(1,1,1)), & ! (in)
+#elif defined(NVIDIA)
+                                  c_loc(work), & ! (in)
+#else
+                                  c_loc(var), & ! (in)
+#endif
+                                  ts, te, 3, DP,     & ! (in)
+                                  start_, shape(var)                       ) ! (in)
+#ifdef NVIDIA
+       end block
+#endif
     if ( error /= FILE_SUCCESS_CODE ) then
        LOG_ERROR("FILE_write_realDP_3D",*) 'failed to write data: ', trim(FILE_vars(vid)%name)
        call PRC_abort
     end if
+
+    call PROF_rapend  ('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
 
     return
   end subroutine FILE_write_realDP_3D
@@ -4489,7 +5914,11 @@ contains
     implicit none
 
     integer,  intent(in)           :: vid
+#ifdef NVIDIA
     real(SP), intent(in) :: var(:,:,:,:)
+#else
+    real(SP), intent(in), target, contiguous :: var(:,:,:,:)
+#endif
     real(DP), intent(in)           :: t_start
     real(DP), intent(in)           :: t_end
     integer,  intent(in), optional :: start(:)
@@ -4513,20 +5942,41 @@ contains
        call PRC_abort
     end if
 
+    call PROF_rapstart('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
+
        ! this is for restart variable which keeps its original shape
        if ( present(start) ) then
           start_(:) = start(:)
        else
           start_(:) = 1
        end if
-       call file_write_data_c( FILE_files(fid)%fid, FILE_vars(vid)%vid, & ! (in)
-            var(:,:,:,:), ts, te, SP,                             & ! (in)
-            4, start_, shape(var),                                 & ! (in)
-            error                                                       ) ! (out)
+
+       !$acc update host(var) if(acc_is_present(var))
+
+#ifdef NVIDIA
+       block
+       real(SP), allocatable, target :: work(:,:,:,:)
+       allocate(work, source=var)
+#endif
+       error = file_write_data_c( FILE_files(fid)%fid, FILE_vars(vid)%vid, & ! (in)
+#if defined(__GFORTRAN__) && __GNUC__ < 7
+                                  cloc(var(1,1,1,1)), & ! (in)
+#elif defined(NVIDIA)
+                                  c_loc(work), & ! (in)
+#else
+                                  c_loc(var), & ! (in)
+#endif
+                                  ts, te, 4, SP,     & ! (in)
+                                  start_, shape(var)                       ) ! (in)
+#ifdef NVIDIA
+       end block
+#endif
     if ( error /= FILE_SUCCESS_CODE ) then
        LOG_ERROR("FILE_write_realSP_4D",*) 'failed to write data: ', trim(FILE_vars(vid)%name)
        call PRC_abort
     end if
+
+    call PROF_rapend  ('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
 
     return
   end subroutine FILE_write_realSP_4D
@@ -4537,7 +5987,11 @@ contains
     implicit none
 
     integer,  intent(in)           :: vid
+#ifdef NVIDIA
     real(DP), intent(in) :: var(:,:,:,:)
+#else
+    real(DP), intent(in), target, contiguous :: var(:,:,:,:)
+#endif
     real(DP), intent(in)           :: t_start
     real(DP), intent(in)           :: t_end
     integer,  intent(in), optional :: start(:)
@@ -4561,20 +6015,41 @@ contains
        call PRC_abort
     end if
 
+    call PROF_rapstart('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
+
        ! this is for restart variable which keeps its original shape
        if ( present(start) ) then
           start_(:) = start(:)
        else
           start_(:) = 1
        end if
-       call file_write_data_c( FILE_files(fid)%fid, FILE_vars(vid)%vid, & ! (in)
-            var(:,:,:,:), ts, te, DP,                             & ! (in)
-            4, start_, shape(var),                                 & ! (in)
-            error                                                       ) ! (out)
+
+       !$acc update host(var) if(acc_is_present(var))
+
+#ifdef NVIDIA
+       block
+       real(DP), allocatable, target :: work(:,:,:,:)
+       allocate(work, source=var)
+#endif
+       error = file_write_data_c( FILE_files(fid)%fid, FILE_vars(vid)%vid, & ! (in)
+#if defined(__GFORTRAN__) && __GNUC__ < 7
+                                  cloc(var(1,1,1,1)), & ! (in)
+#elif defined(NVIDIA)
+                                  c_loc(work), & ! (in)
+#else
+                                  c_loc(var), & ! (in)
+#endif
+                                  ts, te, 4, DP,     & ! (in)
+                                  start_, shape(var)                       ) ! (in)
+#ifdef NVIDIA
+       end block
+#endif
     if ( error /= FILE_SUCCESS_CODE ) then
        LOG_ERROR("FILE_write_realDP_4D",*) 'failed to write data: ', trim(FILE_vars(vid)%name)
        call PRC_abort
     end if
+
+    call PROF_rapend  ('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
 
     return
   end subroutine FILE_write_realDP_4D
@@ -4591,7 +6066,9 @@ contains
 
     if ( .not. FILE_opened(fid) ) return
 
-    call file_enddef_c( FILE_files(fid)%fid, error )
+    call PROF_rapstart('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
+
+    error = file_enddef_c( FILE_files(fid)%fid )
 
     if ( error == FILE_SUCCESS_CODE ) then
 
@@ -4603,6 +6080,8 @@ contains
        LOG_ERROR("FILE_enddef",*) 'failed to exit define mode'
        call PRC_abort
     end if
+
+    call PROF_rapend  ('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
 
     return
   end subroutine FILE_enddef
@@ -4619,7 +6098,9 @@ contains
 
     if ( .not. FILE_opened(fid) ) return
 
-    call file_redef_c( FILE_files(fid)%fid, error )
+    call PROF_rapstart('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
+
+    error = file_redef_c( FILE_files(fid)%fid )
 
     if ( error == FILE_SUCCESS_CODE ) then
 
@@ -4631,6 +6112,8 @@ contains
        LOG_ERROR("FILE_redef",*) 'failed to enter to define mode'
        call PRC_abort
     end if
+
+    call PROF_rapend  ('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
 
     return
   end subroutine FILE_redef
@@ -4654,7 +6137,9 @@ contains
        call FILE_detach_buffer(fid)
     end if
 
-    call file_attach_buffer_c( FILE_files(fid)%fid, buf_amount, error )
+    call PROF_rapstart('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
+
+    error = file_attach_buffer_c( FILE_files(fid)%fid, buf_amount )
 
     if ( error /= FILE_SUCCESS_CODE ) then
        LOG_ERROR("FILE_attach_buffer",*) 'failed to attach buffer in PnetCDF'
@@ -4667,6 +6152,8 @@ contains
             ', size = ', buf_amount
 
     FILE_files(fid)%buffer_size = buf_amount
+
+    call PROF_rapend  ('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
 
     return
   end subroutine FILE_attach_buffer
@@ -4687,7 +6174,9 @@ contains
 
     if ( FILE_files(fid)%buffer_size < 0 ) return ! not attached
 
-    call file_detach_buffer_c( FILE_files(fid)%fid, error )
+    call PROF_rapstart('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
+
+    error = file_detach_buffer_c( FILE_files(fid)%fid )
 
     if ( error /= FILE_SUCCESS_CODE ) then
        LOG_ERROR("FILE_detach_buffer",*) 'failed to detach buffer in PnetCDF'
@@ -4700,11 +6189,13 @@ contains
 
     FILE_files(fid)%buffer_size = -1
 
+    call PROF_rapend  ('FILE_Write', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
+
     return
   end subroutine FILE_detach_buffer
 
   !-----------------------------------------------------------------------------
-  ! This subroutine is used when PnetCDF I/O method is enabled
+  ! flush data
   subroutine FILE_flush( fid )
     implicit none
 
@@ -4717,7 +6208,9 @@ contains
 
     if ( FILE_files(fid)%fid < 0 ) return  ! already closed
 
-    call file_flush_c( FILE_files(fid)%fid, error )
+    call PROF_rapstart('FILE', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
+
+    error = file_flush_c( FILE_files(fid)%fid )
 
     if ( error == FILE_SUCCESS_CODE ) then
 
@@ -4726,9 +6219,11 @@ contains
 !!$            'Flush : No.', fid, ', name = ', trim(FILE_files(fid)%name)
 
     else
-       LOG_ERROR("FILE_flush",*) 'failed to flush PnetCDF pending requests'
+       LOG_ERROR("FILE_flush",*) 'failed to flush data to netcdf file'
        call PRC_abort
     end if
+
+    call PROF_rapend  ('FILE', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
 
     return
   end subroutine FILE_flush
@@ -4739,7 +6234,7 @@ contains
     integer, intent(in) :: fid
     logical, intent(in), optional :: abort !> true when this is called in the abort process
 
-    logical :: abort_
+    logical(c_bool) :: abort_
     integer :: error
     integer :: n
     !---------------------------------------------------------------------------
@@ -4748,13 +6243,15 @@ contains
 
     if ( FILE_files(fid)%fid < 0 ) return  ! already closed
 
+    call PROF_rapstart('FILE', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
+
     if ( present(abort) ) then
        abort_ = abort
     else
        abort_ = .false.
     end if
 
-    call file_close_c( FILE_files(fid)%fid, abort_, error )
+    error = file_close_c( FILE_files(fid)%fid, abort_ )
 
     if ( error == FILE_SUCCESS_CODE ) then
 
@@ -4763,7 +6260,7 @@ contains
             'Close : No.', fid, ', name = ', trim(FILE_files(fid)%name)
 
     elseif( error /= FILE_ALREADY_CLOSED_CODE ) then
-       LOG_ERROR("FILE_close",*) 'failed to close file'
+       LOG_ERROR("FILE_close",*) 'failed to close file: ', trim(FILE_files(fid)%name)
        if ( .not. abort_ ) call PRC_abort
     end if
 
@@ -4778,6 +6275,8 @@ contains
           FILE_vars(n)%name = ''
        end if
     end do
+
+    call PROF_rapend  ('FILE', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
 
     return
   end subroutine FILE_close
@@ -4796,34 +6295,6 @@ contains
 
     return
   end subroutine FILE_close_all
-
-  subroutine FILE_make_fname( &
-       basename, &
-       prefix,   &
-       rankid,   &
-       len,      &
-       fname     )
-    character(len=*), intent( in) :: basename
-    character(len=*), intent( in) :: prefix
-    integer,          intent( in) :: rankid
-    integer,          intent( in) :: len
-    character(len=*), intent(out) :: fname
-
-    !                           12345678901234567
-    character(len=17) :: fmt = "(A, '.', A, I*.*)"
-    !---------------------------------------------------------------------------
-
-    if ( len < 1 .or. len > 9 ) then
-       LOG_ERROR("FILE_make_fname",*) 'len is invalid'
-       call PRC_abort
-    end if
-
-    write(fmt(14:14),'(I1)') len
-    write(fmt(16:16),'(I1)') len
-    write(fname, fmt) trim(basename), trim(prefix), rankid
-
-    return
-  end subroutine FILE_make_fname
 
   !-----------------------------------------------------------------------------
   !> get unit of time
@@ -4865,6 +6336,7 @@ contains
       single,    &
       fid,       &
       existed,   &
+      allnodes,  &
       aggregate, &
       postfix    )
     use scale_prc, only: &
@@ -4880,6 +6352,7 @@ contains
     integer,          intent(out) :: fid
     logical,          intent(out) :: existed
 
+    logical,          intent( in), optional :: allnodes
     logical,          intent( in), optional :: aggregate
     character(len=*), intent( in), optional :: postfix
 
@@ -4889,6 +6362,7 @@ contains
     character(len=FILE_HLONG) :: fname
     integer                   :: n
 
+    logical :: allnodes_
     logical :: aggregate_
     integer :: cfid
     integer :: error
@@ -4896,6 +6370,12 @@ contains
     !---------------------------------------------------------------------------
 
     !--- check aggregate (parallel I/O on a single shared netCDF file)
+
+    if ( present(allnodes) ) then
+       allnodes_ = allnodes
+    else
+       allnodes_ = .true.
+    end if
 
     ! check to do PnetCDF I/O
     if ( present(aggregate) ) then
@@ -4911,13 +6391,13 @@ contains
     end if
 
     if ( present(postfix) ) then
-       fname = trim(basename)//trim(postfix)
+       call IO_get_fname(fname, trim(basename)//trim(postfix))
     elseif ( aggregate_ ) then
-       fname = basename
+       call IO_get_fname(fname, basename)
     elseif ( single ) then
-       fname = trim(basename)//'.peall'
+       call IO_get_fname(fname, basename, rank=-1)
     else
-       call FILE_make_fname( basename, 'pe', rankid, 6, fname )
+       call IO_get_fname(fname, basename, rank=rankid)
     endif
 
     !--- search existing file
@@ -4934,9 +6414,10 @@ contains
        return
     end if
 
-    call file_open_c( cfid,                  & ! (out)
-                      fname, mode, mpi_comm, & ! (in)
-                      error                  ) ! (out)
+    call PROF_rapstart('FILE', 2, disable_barrier = ( .not. allnodes_ ) .or. single )
+
+    error = file_open_c( cfid,                       & ! (out)
+                         cstr(fname), mode, mpi_comm ) ! (in)
 
     if ( error /= FILE_SUCCESS_CODE ) then
        LOG_ERROR("FILE_get_fid",*) 'failed to open file :'//trim(fname)//'.nc'
@@ -4950,6 +6431,7 @@ contains
     FILE_files(fid)%fid       = cfid
     FILE_files(fid)%aggregate = aggregate_
     FILE_files(fid)%single    = single
+    FILE_files(fid)%allnodes  = allnodes_ .and. (.not. single)
     FILE_files(fid)%buffer_size = -1
 
     LOG_NEWLINE
@@ -4958,9 +6440,29 @@ contains
 
     existed = .false.
 
+    call PROF_rapend  ('FILE', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
+
     return
   end subroutine FILE_get_fid
 
+#if defined(__GFORTRAN__) && __GNUC__ < 7
+  function cloc_SP( x )
+    use iso_c_binding
+    implicit none
+    real(SP), target, intent(in) :: x
+    type(c_ptr) :: cloc_SP
+    cloc_SP = c_loc(x)
+    return
+  end function cloc_SP
+  function cloc_DP( x )
+    use iso_c_binding
+    implicit none
+    real(DP), target, intent(in) :: x
+    type(c_ptr) :: cloc_DP
+    cloc_DP = c_loc(x)
+    return
+  end function cloc_DP
+#endif
 
 end module scale_file
 !-------------------------------------------------------------------------------

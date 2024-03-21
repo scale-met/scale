@@ -14,9 +14,9 @@ If the below conditions are satisfied, your answer is correct:
 
 
 \item {\bf How is the computational domain altered while maintaining the number of MPI processes?}\\
-If the number of grid points increases n times, the domain size also increases n times.
+If the number of grid points increases $n$ times, the domain size also increases $n$ times.
 Thus, only \nmitem{IMAXG, JMAXG} in \namelist{PARAM_ATMOS_GRID_CARTESC_INDEX} are changed.
-The red parts indicate the answer below:
+The red parts indicate the answer below:\\
 
 \noindent {\small {\rm
 \ovalbox{
@@ -30,7 +30,7 @@ The red parts indicate the answer below:
 }}}\\
 
 \item {\bf How is horizontal grid interval changed while maintaining the computational domain?}\\
-When the number of MPI processes is not changed, \nmitem{DX, DY} in \namelist{PARAM_ATMOS_GRID_CARTESC} and \nmitem{IMAXG, JMAXG} in \namelist{PARAM_ATMOS_GRID_CARTESC_INDEX} should be changed.
+When the number of MPI processes is not changed, \nmitem{DX, DY} in \namelist{PARAM_ATMOS_GRID_CARTESC} and \nmitem{IMAXG, JMAXG} in \namelist{PARAM_ATMOS_GRID_CARTESC_INDEX} should be changed.\\
 
 \noindent {\small {\rm
 \ovalbox{
@@ -41,8 +41,8 @@ When the number of MPI processes is not changed, \nmitem{DX, DY} in \namelist{PA
 \\
 \verb|&PARAM_ATMOS_GRID_CARTESC_INDEX| & \\
 \verb| KMAX  = 36,|  & \\
-\verb| IMAXG = 90,|  & \\
-\verb| JMAXG = 90,|  & \\
+\textcolor{red}{\verb| IMAXG = 360,|} & (\verb|IMAXG = 90| in the original settings)\\
+\textcolor{red}{\verb| JMAXG = 360,|} & (\verb|JMAXG = 90| in the original settings)\\
 \verb|/| &\\
  \\
 \verb|&PARAM_ATMOS_GRID_CARTESC| & \\
@@ -59,9 +59,9 @@ In the case that the number of MPI processes is changed, if the below conditions
 \end{eqnarray}
 
 Moreover, it is necessary to suitably change the time interval for the dynamics,\\
- i.e., \nmitem{TIME_DT_ATMOS_DYN} and \nmitem{TIME_DT} (refer to Section \ref{sec:timeintiv}).
+ i.e., \nmitem{TIME_DT_ATMOS_DYN} and \nmitem{TIME_DT} (refer to Section \ref{sec:timeintiv}), and also the output intervals (refer to Section \ref{sec:output}).
  The width of the buffer region should be set between 20 and 40 times of the grid spacing.
- Below is an example of the answer, indicating the case where the buffer region was set to 20 times the grid spacing.
+ Below is an example of the answer, indicating the case where the buffer region was set to 20 times the grid spacing.\\
 
 \noindent {\small {\rm
 \ovalbox{
@@ -75,8 +75,7 @@ Moreover, it is necessary to suitably change the time interval for the dynamics,
 
 
 \item {\bf How is the location of the computational domain changed?}\\
-
-The coordinates of the center of the computational domain are changed as follows. Note that the unit is degrees. For example, 139 degrees 45.4 min = 139 + 45.4/60 degrees.
+The coordinates of the center of the computational domain are changed as follows. Note that the unit is degrees. For example, 139 degrees 45.4 min = 139 + 45.4/60 degrees.\\
 
 \noindent {\small {\rm
 \ovalbox{
@@ -112,9 +111,10 @@ Furthermore, it is necessary to prepare a boundary condition of more than 12 hou
 
 
 \item {\bf How are output variables added and their output interval changed?}\\
-
 The output interval is set to \nmitem{FILE_HISTORY_DEFAULT_TINTERVAL} in \namelist{PARAM_FILE_HISTORY} as below. The output variables are specified at \nmitem{NAME} in \namelist{HISTORY_ITEM}. The list of the history variables is in the reference manual.
 See Section \ref{sec:reference_manual} for the reference manual.\\
+In order to horizontally/vertically remap a variable whose output interval is set at \nmitem{TINTERVAL} in \namelist{HISTORY_ITEM} by \sno, the value of \nmitem{TINTERVAL} must be equal to that of \\
+\nmitem{FILE_HISTORY_DEFAULT_TINTERVAL}.\\
 
 \noindent {\small {\rm
 \ovalbox{
@@ -127,16 +127,17 @@ See Section \ref{sec:reference_manual} for the reference manual.\\
 \\
 \textcolor{red}{\verb|&HISTORY_ITEM NAME="SFLX_SW_up" /|} & \textcolor{red}{added}\\
 \textcolor{red}{\verb|&HISTORY_ITEM NAME="SFLX_SW_dn" /|} & \textcolor{red}{added}\\
-\\
+\verb| ....(omission)....| & \\
+\textcolor{red}{\verb|&HISTORY_ITEM NAME="DENS", TINTERVAL=1800.D0 /|} & when remapping this variable by \sno  \\
+\verb| ....(omission)....| & \\
+\verb|/| & \\
 \end{tabularx}
 }}}\\
 
 
-
 \item {\bf How does the model restart?}\\
-
-The first integration for three hours is configured in \verb|run.conf| as below.
-Once the three hours for integration have elapsed, the restart file is created.\\
+The first integration for 3 hours is configured in \verb|run.conf| as below.
+Once the 3 hours for integration have elapsed, the restart file is created.\\
 
 \noindent {\small {\rm
 \ovalbox{
@@ -158,30 +159,34 @@ Once the three hours for integration have elapsed, the restart file is created.\
 \verb|/| & \\
 \\
 \verb|&PARAM_RESTART | & \\
-\textcolor{red}{\verb| RESTART_OUTPUT      = .true.,|} ~~~~~~~~~~~~(\verb|.false.,| in the original setting) & \\
+\textcolor{red}{\verb| RESTART_OUTPUT      = .true.,|} & \\
 \verb| RESTART_IN_BASENAME = "../init/init_d01_20070714-180000.000",| &  \\
-\textcolor{red}{\verb| RESTART_OUT_BASENAME = "restart_d01",|} ~~~~~~~~~~~~~~~(added)& \\
+\textcolor{red}{\verb| RESTART_OUT_BASENAME = "restart_d01",|} & \\
 \verb|/| & \\
 \\
 \verb|&PARAM_ATMOS_BOUNDARY| & \\
 \verb| ATMOS_BOUNDARY_TYPE           = "REAL",                            | & \\
 \verb| ATMOS_BOUNDARY_IN_BASENAME    = "../init/output/boundary_d01",     | & \\
-\textcolor{red}{\verb| ATMOS_BOUNDARY_START_DATE     = 2010, 7, 14, 18, 0, 0,|} ~~~~~~~~(added, but is not necessary.)&\\
-\verb| ATMOS_BOUNDARY_UPDATE_DT      = 21600.D0,                          | & \\
+\verb|/| & \\
+\\
+\verb|&PARAM_ATMOS_REFSTAT| & \\
+\verb| ATMOS_REFSTATE_TYPE      = "INIT",  | & \\
+\textcolor{red}{\verb| ATMOS_REFSTART_UPDATE_DT = 10800.D0,|} &\\
 \verb|/| & \\
 \end{tabularx}
 }}}\\
 
 
-When \nmitem{TIME_DURATION} is set to three hours and \nmitem{RESTART_OUTPUT} is \verb|.true.|, the restart file is created at the end of the integration. Therefore, \nmitem{TIME_DT_ATMOS_RESTART}, \\
+When \nmitem{TIME_DURATION} is set to 3 hours and \nmitem{RESTART_OUTPUT} is \verb|.true.|, the restart file is created at the end of the integration. Therefore, \nmitem{TIME_DT_ATMOS_RESTART}, \\
 \nmitem{TIME_DT_OCEAN_RESTART}, \nmitem{TIME_DT_LAND_RESTART}, and \nmitem{TIME_DT_URBAN_RESTART} are not necessary.\\
-When \nmitem{TIME_DURATION} is set to more than three hours, it is necessary to specify \\
+When \nmitem{TIME_DURATION} is set to more than 3 hours, it is necessary to specify \\
 \nmitem{TIME_DT_ATMOS_RESTART}, \nmitem{TIME_DT_OCEAN_RESTART}, \nmitem{TIME_DT_LAND_RESTART}, and \\
 \nmitem{TIME_DT_URBAN_RESTART}.
-The values for \nmitem{TIME_DT_ATMOS_RESTART}, \nmitem{TIME_DT_OCEAN_RESTART}, \nmitem{TIME_DT_LAND_RESTART}, and \nmitem{TIME_DT_URBAN_RESTART} must be a divisor of three hours (10800 s) and a multiple of \nmitem{TIME_DT}.
+The values for \nmitem{TIME_DT_ATMOS_RESTART}, \nmitem{TIME_DT_OCEAN_RESTART}, \nmitem{TIME_DT_LAND_RESTART}, and \nmitem{TIME_DT_URBAN_RESTART} must be a divisor of 3 hours (10800 s) and a multiple of \nmitem{TIME_DT}.
+In order to make the reference state (See Section \ref{subsec:refstat}) in the restart calculation identical to that in the first calculation, the update interval of the reference state is specified to be a divisor of 3 hours.
 
 
-The configuration for the restart calculation from three to six hours in integration time is as follows:\\
+The configuration for the restart calculation from 3 to 6 hours in integration time is as follows:\\
 
 \noindent {\small {\rm
 \ovalbox{
@@ -196,14 +201,17 @@ The configuration for the restart calculation from three to six hours in integra
 \verb|&PARAM_RESTART | & \\
 \verb| RESTART_OUTPUT      = .true.,                |                  & (not always necessary)\\
 \textcolor{red}{\verb| RESTART_IN_BASENAME = "restart_d01_20070714-210000.000",|} & (\textcolor{red}{necessary})\\
-\verb| RESTART_OUT_BASENAME = "restart2_d01",| & (not alway necessary)\\
+\verb| RESTART_OUT_BASENAME = "restart2_d01",| & (not always necessary)\\
 \verb|/| & \\
 \\
 \verb|&PARAM_ATMOS_BOUNDARY| & \\
 \verb| ATMOS_BOUNDARY_TYPE           = "REAL",                            | & \\
 \verb| ATMOS_BOUNDARY_IN_BASENAME    = "../init/output/boundary_d01",     | & \\
-\textcolor{red}{\verb| ATMOS_BOUNDARY_START_DATE     = 2010, 7, 14, 18, 0, 0,   |} & (\textcolor{red}{necessary})\\
-\verb| ATMOS_BOUNDARY_UPDATE_DT      = 21600.D0,                          | & \\
+\verb|/| & \\
+\\
+\verb|&PARAM_ATMOS_REFSTAT| & \\
+\verb| ATMOS_REFSTATE_TYPE      = "INIT",  | & \\
+\textcolor{red}{\verb| ATMOS_REFSTART_UPDATE_DT = 10800.D0,|} &\\
 \verb|/| & \\
 \end{tabularx}
 }}}\\

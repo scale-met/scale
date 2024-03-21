@@ -28,6 +28,7 @@ module mod_atmos_phy_lt_driver
   !
   public :: ATMOS_PHY_LT_driver_tracer_setup
   public :: ATMOS_PHY_LT_driver_setup
+  public :: ATMOS_PHY_LT_driver_finalize
   public :: ATMOS_PHY_LT_driver_adjustment
 
   !-----------------------------------------------------------------------------
@@ -246,6 +247,36 @@ contains
   end subroutine ATMOS_PHY_LT_driver_setup
 
   !-----------------------------------------------------------------------------
+  subroutine ATMOS_PHY_LT_driver_finalize
+    use scale_atmos_phy_lt_sato2019, only: &
+       ATMOS_PHY_LT_sato2019_finalize
+    use mod_atmos_admin, only: &
+       ATMOS_PHY_LT_TYPE, &
+       ATMOS_sw_phy_lt
+    use mod_atmos_phy_lt_vars, only: &
+       flg_lt, &
+       ATMOS_PHY_LT_Sarea
+    implicit none
+    !---------------------------------------------------------------------------
+
+    LOG_NEWLINE
+    LOG_INFO("ATMOS_PHY_LT_driver_finalize",*) 'Finalize'
+
+    if ( ATMOS_sw_phy_lt ) then
+       select case ( ATMOS_PHY_LT_TYPE )
+       case ( 'OFF', 'NONE' )
+       case ( 'SATO2019' )
+          call ATMOS_PHY_LT_sato2019_finalize
+       end select
+    end if
+
+    if ( flg_lt ) then
+       deallocate( ATMOS_PHY_LT_Sarea )
+    end if
+
+    return
+  end subroutine ATMOS_PHY_LT_driver_finalize
+  !-----------------------------------------------------------------------------
   !> Driver
   subroutine ATMOS_PHY_LT_driver_adjustment
     use scale_time, only: &
@@ -268,6 +299,10 @@ contains
     real(RP) :: QHYD(KA,IA,JA)
     !---------------------------------------------------------------------------
 
+    !$acc data create(QHYD) &
+    !$acc      copyin(DENS,RHOT,QHYD,Sarea) &
+    !$acc      copy(QTRC,Epot)
+
     call ATMOS_vars_get_diagnostic( "QHYD", QHYD(:,:,:) )
 
     call ATMOS_PHY_LT_sato2019_adjustment( &
@@ -277,6 +312,8 @@ contains
          QTRC(:,:,:,QS_LT:QE_LT), Epot(:,:,:)                   ) ! [INOUT]
 
     call history
+
+    !$acc end data
 
     return
   end subroutine ATMOS_PHY_LT_driver_adjustment
@@ -299,12 +336,15 @@ contains
     logical  :: HIST_sw(w_nmax)
     integer  :: k, i, j, n, ip
 
+    !$acc data copyin(QTRC,DENS) create(work)
+
     do ip = 1, w_nmax
        call FILE_HISTORY_query( HIST_id(ip), HIST_sw(ip) )
     end do
 
     if ( HIST_sw(I_CRGD_LIQ) ) then
        !$omp parallel do
+       !$acc kernels
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
@@ -316,10 +356,12 @@ contains
        end do
        end do
        end do
+       !$acc end kernels
        call FILE_HISTORY_put( HIST_id(I_CRGD_LIQ), work(:,:,:) )
     end if
     if ( HIST_sw(I_CRGD_ICE) ) then
        !$omp parallel do
+       !$acc kernels
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
@@ -331,10 +373,12 @@ contains
        end do
        end do
        end do
+       !$acc end kernels
        call FILE_HISTORY_put( HIST_id(I_CRGD_ICE), work(:,:,:) )
     end if
     if ( HIST_sw(I_CRGD_TOT) ) then
        !$omp parallel do
+       !$acc kernels
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
@@ -346,8 +390,11 @@ contains
        end do
        end do
        end do
+       !$acc end kernels
        call FILE_HISTORY_put( HIST_id(I_CRGD_TOT), work(:,:,:) )
     end if
+
+    !$acc end data
 
     return
   end subroutine history

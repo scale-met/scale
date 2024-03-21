@@ -11,6 +11,7 @@
 #################################################
 
 NUM_DOMAIN=1 # set number of domains
+DOM_NUMBER=2
 
 RUN_DATE_YEAR=2007
 RUN_DATE_MON=7
@@ -24,7 +25,7 @@ TIME_DURATION="6.0"
 TIME_DURATION_UNIT="HOUR" # unit: DAY / HOUR / MIN / SEC
 
 TIME_DT_RESTART="10800.0"   # unit: SEC only
-TIME_DT_BOUNDARY="900.0"    # unit: SEC only
+TIME_DT_BOUNDARY="900.0"  # unit: SEC only
 TIME_DT_REFSTATE="10800.0"  # unit: SEC only
 TIME_DT_HISTORY_2D="150.0"  # unit: SEC only
 TIME_DT_HISTORY_3D="150.0"  # unit: SEC only
@@ -37,9 +38,9 @@ TIME_DT_ATMOS_PHY_RD=( "150.0" ) # required parameters for each domain - unit: S
 TIME_DT_ATMOS_PHY_SF=(  "15.0" ) # required parameters for each domain - unit: SEC only
 TIME_DT_ATMOS_PHY_TB=(  "15.0" ) # required parameters for each domain - unit: SEC only
 TIME_DT_ATMOS_PHY_BL=(  "15.0" ) # required parameters for each domain - unit: SEC only
-TIME_DT_OCEAN=(         "75.0" ) # required parameters for each domain - unit: SEC only
-TIME_DT_LAND=(          "75.0" ) # required parameters for each domain - unit: SEC only
-TIME_DT_URBAN=(         "75.0" ) # required parameters for each domain - unit: SEC only
+TIME_DT_OCEAN=(         "15.0" ) # required parameters for each domain - unit: SEC only
+TIME_DT_LAND=(          "15.0" ) # required parameters for each domain - unit: SEC only
+TIME_DT_URBAN=(         "15.0" ) # required parameters for each domain - unit: SEC only
 
 #################################################
 #
@@ -162,7 +163,7 @@ HIST_ITEMS_AVERAGE_3D=(
 INIT_BASENAME="init"
 
 BASENAME_ORG="history_d01"
-FILETYPE_ORG="SCALE-RM"
+FILETYPE_ORG="NetCDF"
 PARENT_PRC_NUM_X=2
 PARENT_PRC_NUM_Y=2
 LATLON_CATALOGUE="latlon_domain_catalogue_d01.txt"

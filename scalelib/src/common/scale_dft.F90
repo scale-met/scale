@@ -17,6 +17,7 @@ module scale_dft
   implicit none
 
   public :: DFT_setup
+  public :: DFT_finalize
   public :: DFT_g2g
   public :: DFT_g2g_divfree
 
@@ -91,7 +92,23 @@ contains
       table_m(2*m)   = sin(PI*m/JMAX)
     enddo
 
+    !$acc enter data copyin(table_x, table_y)
+    !$acc enter data copyin(table_l, table_m)
+    !$acc enter data create(work)
+
   end subroutine DFT_setup
+
+  subroutine DFT_finalize
+
+    !$acc exit data delete(table_x, table_y)
+    !$acc exit data delete(table_l, table_m)
+    !$acc exit data delete(work)
+    deallocate( table_x, table_y )
+    deallocate( table_l, table_m )
+    deallocate( work )
+
+    return
+  end subroutine DFT_finalize
 
   subroutine DFT_g2s(KA,KS,KE,IA,IS,IE,JA,JS,JE,LM,MM,f,s)
     ! Grid to spectral transformation
@@ -105,12 +122,16 @@ contains
     integer :: i, j, k, l, m
     integer :: ierr
 
+    !$acc data copyin(f) copyout(s) create(work_s)
+
     c = 1.0_RP/IMAX
+    !$acc kernels
     do j = JS, JE
       do l = 0, 2*LM
         do k = KS, KE
           work(k,l,j) = 0
         enddo
+        !$acc loop seq
         do i = IS, IE
           tb = table_x(i,l)*c
           do k = KS, KE
@@ -119,7 +140,9 @@ contains
         enddo
       enddo
     enddo
+    !$acc end kernels
 
+    !$acc kernels
     do m = 0, 2*MM
       do l = 0, 2*LM
         do k = KS, KE
@@ -127,20 +150,26 @@ contains
         enddo
       enddo
     enddo
+    !$acc end kernels
 
     c = 1.0_RP/JMAX
+    !$acc kernels
     do m = 0, 2*MM
       do j = JS, JE
         tb = table_y(j,m)*c
         do l = 0, 2*LM
           do k = KS, KE
+             !$acc atomic
             work_s(k,l,m) = work_s(k,l,m) + work(k,l,j)*tb
           enddo
         enddo
       enddo
     enddo
+    !$acc end kernels
 
     call MPI_Allreduce(work_s, s, KA*(2*LM+1)*(2*MM+1), COMM_Datatype, MPI_SUM, PRC_LOCAL_COMM_WORLD, ierr)
+
+    !$acc end data
 
   end subroutine DFT_g2s
 
@@ -154,6 +183,9 @@ contains
     real(RP) :: c, tb
     integer :: i, j, k, l, m
 
+    !$acc data copyin(s) copyout(f)
+
+    !$acc kernels
     do j = JS, JE
       do i = IS, IE
         do k = KS, KE
@@ -161,7 +193,9 @@ contains
         enddo
       enddo
     enddo
+    !$acc end kernels
 
+    !$acc kernels
     do j = JS, JE
       do l = 0, 2*LM
         do k = KS, KE
@@ -169,7 +203,9 @@ contains
         enddo
       enddo
     enddo
+    !$acc end kernels
 
+    !$acc kernels
     do m = 0, 2*MM
       if( m == 0 ) then
         c = 1
@@ -180,12 +216,15 @@ contains
         tb = table_y(j,m)*c
         do l = 0, 2*LM
           do k = KS, KE
-            work(k,l,j) = work(k,l,j) + s(k,l,m)*tb
+             !$acc atomic
+             work(k,l,j) = work(k,l,j) + s(k,l,m)*tb
           enddo
         enddo
       enddo
     enddo
+    !$acc end kernels
 
+    !$acc kernels
     do j = JS, JE
       do i = IS, IE
         do k = KS, KE
@@ -201,11 +240,15 @@ contains
         do i = IS, IE
           tb = table_x(i,l)*c
           do k = KS, KE
-            f(k,i,j) = f(k,i,j) + work(k,l,j)*tb
+             !$acc atomic
+             f(k,i,j) = f(k,i,j) + work(k,l,j)*tb
           enddo
         enddo
       enddo
     enddo
+    !$acc end kernels
+
+    !$acc end data
 
   end subroutine DFT_s2g
 
@@ -235,9 +278,12 @@ contains
     real(RP) :: s3(KA,0:2*LM,0:2*MM)
     real(RP) :: a, b, fac
 
+    !$acc data copy(u,v) create(s1,s2,s3)
+
     call DFT_g2s(KA,KS,KE,IA,IS,IE,JA,JS,JE,LM,MM,u,s1)
 
     ! phase shift
+    !$acc kernels
     do m = 0, 2*mm
       do l = 1, lm
         do k = KS, KE
@@ -248,10 +294,12 @@ contains
         enddo
       enddo
     enddo
+    !$acc end kernels
 
     call DFT_g2s(KA,KS,KE,IA,IS,IE,JA,JS,JE,LM,MM,v,s2)
 
     ! phase shift
+    !$acc kernels
     do m = 1, mm
       do l = 0, 2*lm
         do k = KS, KE
@@ -262,8 +310,10 @@ contains
         enddo
       enddo
     enddo
+    !$acc end kernels
 
     ! rotation
+    !$acc kernels
     do m = 0, 2*mm
       do l = 0, 2*lm
         do k = KS, KE
@@ -271,8 +321,10 @@ contains
         enddo
       enddo
     enddo
+    !$acc end kernels
 
-    ! ∂v/∂x
+    ! dv/dx
+    !$acc kernels
     do m = 0, 2*mm
       do l = 1, lm
         do k = KS, KE
@@ -281,8 +333,10 @@ contains
         enddo
       enddo
     enddo
+    !$acc end kernels
 
-    ! + (- ∂u/∂y)
+    ! + (- du/dy)
+    !$acc kernels
     do m = 1, mm
       do l = 0, 2*lm
         do k = KS, KE
@@ -291,12 +345,16 @@ contains
         enddo
       enddo
     enddo
+    !$acc end kernels
 
     ! minus inverse laplacian ( stream function on model plane )
+    !$acc kernels
     do k = KS, KE
       s3(k,0,0) = 0
     enddo
+    !$acc end kernels
 
+    !$acc kernels
     do l = 1, lm
       fac = 1.0_RP/ (l*l)
       do k = KS, KE
@@ -304,7 +362,9 @@ contains
         s3(k,2*l,0)   = s3(k,2*l,0)*fac
       enddo
     enddo
+    !$acc end kernels
 
+    !$acc kernels
     do m = 1, mm
       fac = 1.0_RP/ (m*m)
       do k = KS, KE
@@ -312,7 +372,9 @@ contains
         s3(k,0,2*m)   = s3(k,0,2*m)*fac
       enddo
     enddo
+    !$acc end kernels
 
+    !$acc kernels
     do m = 1, mm
       do l = 1, lm
         fac = 1.0_RP/ (l*l+m*m)
@@ -324,15 +386,19 @@ contains
         enddo
       enddo
     enddo
+    !$acc end kernels
 
     ! divergence free 2D vector
 
-    ! ∂ψ/∂y
+    ! dphi/dy
+    !$acc kernels
     do l = 1, 2*lm
       do k = KS, KE
         s1(k,l,0) = 0
       enddo
     enddo
+    !$acc end kernels
+    !$acc kernels
     do m = 1, mm
       do l = 0, 2*lm
         do k = KS, KE
@@ -341,13 +407,17 @@ contains
         enddo
       enddo
     enddo
+    !$acc end kernels
 
-    ! -∂ψ/∂x
+    ! -dphi/dx
+    !$acc kernels
     do m = 1, 2*mm
       do k = KS, KE
         s2(k,0,m) = 0
       enddo
     enddo
+    !$acc end kernels
+    !$acc kernels
     do m = 0, 2*mm
       do l = 1, lm
         do k = KS, KE
@@ -356,8 +426,10 @@ contains
         enddo
       enddo
     enddo
+    !$acc end kernels
 
     ! phase shift
+    !$acc kernels
     do m = 0, 2*mm
       do l = 1, lm
         do k = KS, KE
@@ -368,10 +440,12 @@ contains
         enddo
       enddo
     enddo
+    !$acc end kernels
 
     call DFT_s2g(KA,KS,KE,IA,IS,IE,JA,JS,JE,LM,MM,s1,u)
 
     ! phase shift
+    !$acc kernels
     do m = 1, mm
       do l = 0, 2*lm
         do k = KS, KE
@@ -382,8 +456,11 @@ contains
         enddo
       enddo
     enddo
+    !$acc end kernels
 
     call DFT_s2g(KA,KS,KE,IA,IS,IE,JA,JS,JE,LM,MM,s2,v)
+
+    !$acc end data
 
   end subroutine DFT_g2g_divfree
 

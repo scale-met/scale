@@ -28,6 +28,7 @@ module mod_atmos_phy_mp_driver
   !
   public :: ATMOS_PHY_MP_driver_tracer_setup
   public :: ATMOS_PHY_MP_driver_setup
+  public :: ATMOS_PHY_MP_driver_finalize
   public :: ATMOS_PHY_MP_driver_calc_tendency
   public :: ATMOS_PHY_MP_driver_adjustment
   public :: ATMOS_PHY_MP_driver_qhyd2qtrc
@@ -66,15 +67,15 @@ module mod_atmos_phy_mp_driver
   !
   !++ Private parameters & variables
   !
-  logical,  private :: MP_do_precipitation   = .true.  !> apply sedimentation (precipitation)?
-  logical,  private :: MP_do_negative_fixer  = .true.  !> apply negative fixer?
-  real(RP), private :: MP_limit_negative     = 0.1_RP  !> Abort if abs(fixed negative vaue) > abs(MP_limit_negative)
-  integer,  private :: MP_ntmax_sedimentation = 1      !> number of time step for sedimentation
-  real(RP), private :: MP_max_term_vel = 10.0_RP       !> terminal velocity for calculate dt of sedimentation
-  real(RP), private :: MP_cldfrac_thleshold            !> thleshold for cloud fraction
+  logical,  private :: MP_do_precipitation    !> apply sedimentation (precipitation)?
+  logical,  private :: MP_do_negative_fixer   !> apply negative fixer?
+  real(RP), private :: MP_limit_negative      !> Abort if abs(fixed negative vaue) > abs(MP_limit_negative)
+  integer,  private :: MP_ntmax_sedimentation !> number of time step for sedimentation
+  real(RP), private :: MP_max_term_vel        !> terminal velocity for calculate dt of sedimentation
+  real(RP), private :: MP_cldfrac_thleshold   !> thleshold for cloud fraction
   integer,  private :: MP_NSTEP_SEDIMENTATION
   real(RP), private :: MP_RNSTEP_SEDIMENTATION
-  real(DP), private :: MP_DTSEC_SEDIMENTATION
+  real(RP), private :: MP_DTSEC_SEDIMENTATION
 
   integer,  private, allocatable :: HIST_hyd_id(:)
   integer,  private, allocatable :: HIST_crg_id(:)
@@ -332,6 +333,12 @@ contains
 
        MP_cldfrac_thleshold = EPS
 
+       MP_do_precipitation    = .true.
+       MP_do_negative_fixer   = .true.
+       MP_limit_negative      = 0.1_RP
+       MP_ntmax_sedimentation = 1
+       MP_max_term_vel        = 10.0_RP
+
        !--- read namelist
        rewind(IO_FID_CONF)
        read(IO_FID_CONF,nml=PARAM_ATMOS_PHY_MP,iostat=ierr)
@@ -397,15 +404,21 @@ contains
 
        else
 
+          !$acc kernels
           SFLX_rain(:,:) = 0.0_RP
+          !$acc end kernels
+          !$acc kernels
           SFLX_snow(:,:) = 0.0_RP
+          !$acc end kernels
+          !$acc kernels
           SFLX_ENGI(:,:) = 0.0_RP
+          !$acc end kernels
 
        end if
 
        ! monitor
        if ( MP_do_negative_fixer ) then
-          call FILE_HISTORY_reg( "RHOH_MP_NF",   "sensible heat by the negative fixer",          "J/m3/s", & ! [IN]
+          call FILE_HISTORY_reg( "RHOH_MP_NF",   "latent heat by the negative fixer",            "J/m3/s",  & ! [IN]
                                  hist_nf_rhoh_id                                                            ) ! [OUT]
           call FILE_HISTORY_reg( "DENS_t_MP_NF", "vapor supply by the negative fixer",           "kg/m3/s", & ! [IN]
                                  hist_nf_dens_id                                                            ) ! [OUT]
@@ -426,15 +439,57 @@ contains
 
        LOG_INFO("ATMOS_PHY_MP_driver_setup",*) 'this component is never called.'
        LOG_INFO("ATMOS_PHY_MP_driver_setup",*) 'SFLX_rain and SFLX_snow is set to zero.'
+       !$acc kernels
        SFLX_rain(:,:) = 0.0_RP
+       !$acc end kernels
+       !$acc kernels
        SFLX_snow(:,:) = 0.0_RP
+       !$acc end kernels
+       !$acc kernels
        SFLX_ENGI(:,:) = 0.0_RP
+       !$acc end kernels
 
     endif
 
     return
   end subroutine ATMOS_PHY_MP_driver_setup
 
+  !-----------------------------------------------------------------------------
+  !> finalize
+  subroutine ATMOS_PHY_MP_driver_finalize
+    use mod_atmos_admin, only: &
+       ATMOS_PHY_MP_TYPE, &
+       ATMOS_sw_phy_mp
+    use scale_atmos_phy_mp_tomita08, only: &
+       ATMOS_PHY_MP_Tomita08_finalize
+    use scale_atmos_phy_mp_sn14, only: &
+       ATMOS_PHY_MP_sn14_finalize
+    use scale_atmos_phy_mp_suzuki10, only: &
+       ATMOS_PHY_MP_suzuki10_finalize
+    implicit none
+    !---------------------------------------------------------------------------
+
+    LOG_NEWLINE
+    LOG_INFO("ATMOS_PHY_MP_driver_finalize",*) 'Finalize'
+
+    if ( ATMOS_sw_phy_mp ) then
+       select case ( ATMOS_PHY_MP_TYPE )
+       case ( 'KESSLER' )
+       case ( 'TOMITA08' )
+          call ATMOS_PHY_MP_Tomita08_finalize
+       case ( 'SN14' )
+          call ATMOS_PHY_MP_sn14_finalize
+       case ( 'SUZUKI10' )
+          call ATMOS_PHY_MP_suzuki10_finalize
+       end select
+    end if
+
+    if ( allocated(HIST_hyd_id) ) deallocate( HIST_hyd_id )
+    if ( allocated(HIST_crg_id) ) deallocate( HIST_crg_id )
+    if ( allocated(hist_vterm_id) ) deallocate( hist_vterm_id )
+
+    return
+  end subroutine ATMOS_PHY_MP_driver_finalize
   !-----------------------------------------------------------------------------
   !> adjustment
   subroutine ATMOS_PHY_MP_driver_adjustment
@@ -457,7 +512,7 @@ contains
        RHOT,  &
        QTRC
     use mod_atmos_phy_mp_vars, only: &
-       QA_MP
+       QE_MP
     use scale_time, only: &
        dt => TIME_DTSEC
     use scale_file_history, only: &
@@ -479,6 +534,8 @@ contains
 
     if ( MP_do_negative_fixer .and. (.not. ATMOS_HYDROMETEOR_dry) ) then
 
+       !$acc data copy(DENS, TEMP, CVtot, CPtot, QTRC(:,:,:,I_QV:QE_MP)) create(RHOH, DENS_d, ENGI_d) copyout(RHOT)
+
        call FILE_HISTORY_query( hist_nf_rhoh_id, do_put_rhoh )
        call FILE_HISTORY_query( hist_nf_dens_id, do_put_dens )
        call FILE_HISTORY_query( hist_nf_engi_id, do_put_engi )
@@ -486,7 +543,7 @@ contains
        if ( monit_nf_mass_id > 0 .or. monit_nf_engi_id > 0 .or. &
             do_put_rhoh .or. do_put_dens .or. do_put_engi ) then
           call ATMOS_PHY_MP_negative_fixer( &
-               KA, KS, KE, IA, 1, IA, JA, 1, JA, QLA, QIA, &
+               KA, KS, KE, IA, IS, IE, JA, JS, JE, QLA, QIA, &
                MP_limit_negative,                     & ! [IN]
                DENS(:,:,:), TEMP(:,:,:),              & ! [INOUT]
                CVtot(:,:,:), CPtot(:,:,:),            & ! [INOUT]
@@ -495,7 +552,7 @@ contains
                DENS_diff = DENS_d, ENGI_diff = ENGI_d ) ! [OUT, optional]
        else
           call ATMOS_PHY_MP_negative_fixer( &
-               KA, KS, KE, IA, 1, IA, JA, 1, JA, QLA, QIA, &
+               KA, KS, KE, IA, IS, IE, JA, JS, JE, QLA, QIA, &
                MP_limit_negative,                    & ! [IN]
                DENS(:,:,:), TEMP(:,:,:),             & ! [INOUT]
                CVtot(:,:,:), CPtot(:,:,:),           & ! [INOUT]
@@ -505,6 +562,8 @@ contains
        !$omp parallel private(Rtot)
 
        !$omp do
+       !$acc kernels async
+       !$acc loop collapse(3) independent
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
@@ -513,10 +572,12 @@ contains
        end do
        end do
        end do
+       !$acc end kernels
        !$omp end do nowait
 
        ! for non-mass tracers, such as number density
-       do iq = QHE+1, QA_MP
+       !$acc kernels async
+       do iq = QHE+1, QE_MP
        !$omp do
        do j = JS, JE
        do i = IS, IE
@@ -526,11 +587,13 @@ contains
        end do
        end do
        end do
+       !$acc end kernels
 
        !$omp end parallel
 
        if ( do_put_rhoh ) then
           !$omp parallel do
+          !$acc kernels async
           do j = JS, JE
           do i = IS, IE
           do k = KS, KE
@@ -538,10 +601,13 @@ contains
           end do
           end do
           end do
+          !$acc end kernels
+          !$acc update host(RHOH)
           call FILE_HISTORY_put( hist_nf_rhoh_id, RHOH(:,:,:) )
        end if
        if ( monit_nf_mass_id > 0 .or. do_put_dens ) then
           !$omp parallel do
+          !$acc kernels async
           do j = JS, JE
           do i = IS, IE
           do k = KS, KE
@@ -549,11 +615,14 @@ contains
           end do
           end do
           end do
+          !$acc end kernels
+          !$acc update host(DENS_d)
           call FILE_HISTORY_put( hist_nf_dens_id, DENS_d(:,:,:) )
           call MONITOR_put( monit_nf_mass_id, DENS_d(:,:,:) )
        end if
        if ( monit_nf_engi_id > 0 .or. do_put_engi ) then
           !$omp parallel do
+          !$acc kernels async
           do j = JS, JE
           do i = IS, IE
           do k = KS, KE
@@ -561,9 +630,15 @@ contains
           end do
           end do
           end do
+          !$acc end kernels
+          !$acc update host(ENGI_d)
           call FILE_HISTORY_put( hist_nf_engi_id, ENGI_d(:,:,:) )
           call MONITOR_put( monit_nf_engi_id, ENGI_d(:,:,:) )
        end if
+
+       !$acc wait
+
+       !$acc end data
 
     end if
 
@@ -659,7 +734,6 @@ contains
        EXNER, &
        RHOT   => RHOT_av
     use mod_atmos_phy_mp_vars, only: &
-       QA_MP, &
        QS_MP, &
        QE_MP, &
        DENS_t_MP => ATMOS_PHY_MP_DENS_t,    &
@@ -739,15 +813,30 @@ contains
     real(RP) :: mflux_crg(KA), sflux_crg(2), eflux_crg
     real(RP) :: QSPLT_in(KA,IA,JA,3)
     real(RP) :: dqcrg(KA,IA,JA), beta_crg(KA,IA,JA)
-    real(RP) :: dummy(KA)
     !---------------------------------------------------------------------------
+
+    !$acc data copy(DENS_t, MOMZ_t, RHOU_t, RHOV_t, RHOQ_t(:,:,:,:), RHOH, &
+    !$acc           DENS_t_MP, MOMZ_t_MP, RHOU_t_MP, RHOV_t_MP, RHOQ_t_MP, RHOC_t_MP, RHOH_MP, &
+    !$acc           EVAPORATE, SFLX_rain, SFLX_snow, SFLX_ENGI, &
+    !$acc           Sarea) &
+    !$acc      copyin(DENS(:,:,:), MOMZ(:,:,:), U, V, TEMP, QTRC(:,:,:,:), PRES, CVtot, CPtot, &
+    !$acc             REAL_CZ, REAL_FZ, &
+    !$acc             ATMOS_PHY_MP_TYPE, ATMOS_PHY_PRECIP_TYPE) &
+    !$acc      create(RHOE_t, TEMP1, CPtot1, CVtot1, CCN, QTRC1, CPtot_t, CVtot_t, precip, &
+    !$acc             QTRC1_crg, QSPLT_in, dqcrg, beta_crg, &
+    !$acc             hist_vterm_idx, vterm_hist)
+
 
     if ( update_flag ) then
 
+       !$acc kernels
        CCN(:,:,:) = CCN_t(:,:,:) * dt_MP
+       !$acc end kernels
 
        select case ( ATMOS_PHY_MP_TYPE )
        case ( 'KESSLER' )
+          !$omp workshare
+          !$acc kernels
 !OCL XFILL
           TEMP1(:,:,:) = TEMP(:,:,:)
 !OCL XFILL
@@ -756,13 +845,19 @@ contains
           CVtot1(:,:,:) = CVtot(:,:,:)
 !OCL XFILL
           CPtot1(:,:,:) = CPtot(:,:,:)
+          !$acc end kernels
+          !$omp end workshare
 
+          !$acc update host(DENS,PRES,TEMP1,QTRC1(:,:,:,QS_MP:QE_MP),CPtot1,CVtot1)
           call ATMOS_PHY_MP_kessler_adjustment( &
                KA, KS, KE, IA, IS, IE, JA, JS, JE, &
                DENS(:,:,:), PRES(:,:,:), dt_MP,                                      & ! [IN]
                TEMP1(:,:,:), QTRC1(:,:,:,QS_MP:QE_MP), CPtot1(:,:,:), CVtot1(:,:,:), & ! [INOUT]
                RHOE_t(:,:,:), EVAPORATE(:,:,:)                                       ) ! [OUT]
+          !acc update device(TEMP1,QTRC1(:,:,:,QS_MP:QE_MP),CPtot1,CVtot1,RHOE_t,EVAPORATE)
 
+          !$omp parallel do collapse(3)
+          !$acc kernels
           do iq = QS_MP, QE_MP
           do j = JS, JE
           do i = IS, IE
@@ -772,7 +867,10 @@ contains
           enddo
           enddo
           enddo
+          !$acc end kernels
 
+          !$omp parallel do collapse(2)
+          !$acc kernels
           do j = JS, JE
           do i = IS, IE
           do k = KS, KE
@@ -781,9 +879,13 @@ contains
           end do
           end do
           end do
+          !$acc end kernels
 
        case ( 'TOMITA08' )
 !OCL XFILL
+          !$omp parallel do collapse(2)
+          !$acc parallel async
+          !$acc loop collapse(2)
           do j = JS, JE
           do i = IS, IE
           do k = KS, KE
@@ -791,7 +893,11 @@ contains
           end do
           end do
           end do
+          !$acc end parallel
 !OCL XFILL
+          !$omp parallel do collapse(3)
+          !$acc parallel async
+          !$acc loop collapse(3)
           do iq = QS_MP, QE_MP
           do j = JS, JE
           do i = IS, IE
@@ -801,7 +907,11 @@ contains
           end do
           end do
           end do
+          !$acc end parallel
 !OCL XFILL
+          !$omp parallel do collapse(2)
+          !$acc parallel async
+          !$acc loop collapse(2)
           do j = JS, JE
           do i = IS, IE
           do k = KS, KE
@@ -809,7 +919,10 @@ contains
           end do
           end do
           end do
+          !$acc end parallel
 !OCL XFILL
+          !$acc parallel async
+          !$acc loop collapse(2)
           do j = JS, JE
           do i = IS, IE
           do k = KS, KE
@@ -817,9 +930,15 @@ contains
           end do
           end do
           end do
+          !$acc end parallel
+
+          !$acc wait
 
           if( flg_lt ) then
 !OCL XFILL
+             !$omp parallel do collapse(3)
+             !$acc parallel
+             !$acc loop collapse(3)
              do iq = QS_LT, QE_LT
              do j = JS, JE
              do i = IS, IE
@@ -829,6 +948,7 @@ contains
              end do
              end do
              end do
+             !$acc end parallel
 
              call ATMOS_PHY_LT_sato2019_select_dQCRG_from_LUT( &
                   KA, KS, KE, IA, IS, IE, JA, JS, JE, & ! [IN]
@@ -836,6 +956,7 @@ contains
                   TEMP1(:,:,:), DENS(:,:,:),          & ! [IN]
                   QTRC1(:,:,:,QLS:QLE),               & ! [IN]
                   dqcrg(:,:,:), beta_crg(:,:,:)       ) ! [OUT]
+
              call ATMOS_PHY_MP_tomita08_adjustment( &
                   KA, KS, KE, IA, IS, IE, JA, JS, JE, &
                   DENS(:,:,:), PRES(:,:,:), CCN(:,:,:), dt_MP,                          & ! [IN]
@@ -852,6 +973,9 @@ contains
                   RHOE_t(:,:,:), EVAPORATE(:,:,:)                                       ) ! [OUT]
           endif
 
+          !$omp parallel do collapse(3)
+          !$acc parallel async
+          !$acc loop collapse(3)
           do iq = QS_MP, QE_MP
           do j = JS, JE
           do i = IS, IE
@@ -861,7 +985,11 @@ contains
           enddo
           enddo
           enddo
+          !$acc end parallel
 
+          !$omp parallel do collapse(2)
+          !$acc parallel async
+          !$acc loop collapse(2)
           do j = JS, JE
           do i = IS, IE
           do k = KS, KE
@@ -870,8 +998,12 @@ contains
           end do
           end do
           end do
+          !$acc end parallel
 
           if( flg_lt ) then
+             !$omp parallel do collapse(3)
+             !$acc parallel async
+             !$acc loop collapse(3)
              do iq = QS_LT, QE_LT
              do j = JS, JE
              do i = IS, IE
@@ -881,10 +1013,14 @@ contains
              enddo
              enddo
              enddo
+             !$acc end parallel
           endif
+
+          !$acc wait
 
        case ( 'SN14' )
 
+          !$acc update host(DENS,W,QTRC(:,:,:,QS_MP:QE_MP),PRES,TEMP,Qdry,CPtot,CVtot,CCN)
           if( flg_lt ) then
              call ATMOS_PHY_LT_sato2019_select_dQCRG_from_LUT( &
                   KA, KS, KE, IA, IS, IE, JA, JS, JE, & ! [IN]
@@ -892,6 +1028,7 @@ contains
                   TEMP(:,:,:), DENS(:,:,:),           & ! [IN]
                   QTRC(:,:,:,QLS:QLE),                & ! [IN]
                   dqcrg(:,:,:), beta_crg(:,:,:)       ) ! [OUT]
+             !$acc update host(dqcrg,beta_crg,QTRC(:,:,:,QS_LT:QE_LT))
              call ATMOS_PHY_MP_sn14_tendency( &
                   KA, KS, KE, IA, IS, IE, JA, JS, JE, &
                   DENS(:,:,:), W(:,:,:), QTRC(:,:,:,QS_MP:QE_MP), PRES(:,:,:), TEMP(:,:,:),                     & ! [IN]
@@ -901,6 +1038,7 @@ contains
                   QTRC(:,:,:,QS_LT:QE_LT),                                                                      & ! [IN:optional]
                   QSPLT_in(:,:,:,:), Sarea(:,:,:,:),                                                            & ! [OUT:optional]
                   RHOC_t_MP(:,:,:,QS_LT:QE_LT)                                                                  ) ! [OUT:optional]
+             !$acc update device(QSPLT_in,Sarea,RHOC_t_MP(:,:,:,QS_LT:QE_LT))
           else
              call ATMOS_PHY_MP_sn14_tendency( &
                   KA, KS, KE, IA, IS, IE, JA, JS, JE, &
@@ -908,9 +1046,11 @@ contains
                   Qdry(:,:,:), CPtot(:,:,:), CVtot(:,:,:), CCN(:,:,:), dt_MP, REAL_CZ(:,:,:), REAL_FZ(:,:,:),   & ! [IN]
                   RHOQ_t_MP(:,:,:,QS_MP:QE_MP), RHOE_t(:,:,:), CPtot_t(:,:,:), CVtot_t(:,:,:), EVAPORATE(:,:,:) ) ! [OUT]
           endif
+          !$acc update device(RHOQ_t_MP(:,:,:,QS_MP:QE_MP),RHOE_t,CPtot_t,CVtot_t,EVAPORATE)
 
        case ( 'SUZUKI10' )
 
+          !$acc update host(DENS,PRES,TEMP,QTRC(:,:,:,QS_MP:QE_MP),QDRY,CPtot,CVtot,CCN)
           if( flg_lt ) then
              call ATMOS_PHY_LT_sato2019_select_dQCRG_from_LUT( &
                   KA, KS, KE, IA, IS, IE, JA, JS, JE, & ! [IN]
@@ -918,6 +1058,7 @@ contains
                   TEMP(:,:,:), DENS(:,:,:),           & ! [IN]
                   QTRC(:,:,:,QLS:QLE),                & ! [IN]
                   dqcrg(:,:,:), beta_crg(:,:,:)       ) ! [OUT]
+             !$acc update host(dqcrg,beta_crg,QTRC(:,:,:,QS_LT:QE_LT))
              call ATMOS_PHY_MP_suzuki10_tendency( KA, KS,  KE, IA, IS, IE, JA, JS, JE, KIJMAX, &
                                                   dt_MP,                                  & ! [IN]
                                                   DENS(:,:,:),  PRES(:,:,:), TEMP(:,:,:), & ! [IN]
@@ -933,6 +1074,7 @@ contains
                                                   QTRC(:,:,:,QS_LT:QE_LT),                & ! [IN:optional]
                                                   QSPLT_in(:,:,:,:), Sarea(:,:,:,:),      & ! [OUT:optional]
                                                   RHOC_t_MP(:,:,:,QS_LT:QE_LT)            ) ! [OUT:optional]
+             !$acc update device(QSPLT_in,Sarea,RHOC_t_MP(:,:,:,QS_LT:QE_LT))
           else
              call ATMOS_PHY_MP_suzuki10_tendency( KA, KS,  KE, IA, IS, IE, JA, JS, JE, KIJMAX, &
                                                   dt_MP,                                  & ! [IN]
@@ -945,10 +1087,12 @@ contains
                                                   CPtot_t(:,:,:), CVtot_t(:,:,:),         & ! [OUT]
                                                   EVAPORATE(:,:,:)                        ) ! [OUT]
           endif
+          !$acc update device(RHOQ_t_MP(:,:,:,QS_MP:QE_mp),RHOE_t,CPtot_t,CVtot_t,EVAPORATE)
 
           call ATMOS_PHY_MP_suzuki10_qtrc2qhyd( KA, KS, KE, IA, IS, IE, JA, JS, JE, &  ! [IN]
                                                 QTRC(:,:,:,QS_MP+1:QE_MP),          &  ! [IN]
                                                 Qe(:,:,:,:)                         )  ! [OUT]
+          !$acc update device(Qe)
 
           do iq = 1, N_HYD
              call FILE_HISTORY_query( HIST_hyd_id(iq), HIST_sw(iq) )
@@ -964,6 +1108,7 @@ contains
              call ATMOS_PHY_MP_suzuki10_crg_qtrc2qhyd( KA, KS, KE, IA, IS, IE, JA, JS, JE, &  ! [IN]
                                                        QTRC(:,:,:,QS_LT:QE_LT),            &  ! [IN]
                                                        Qecrg(:,:,:,:)                      )  ! [OUT]
+             !$acc update device(Qecrg)
 
              do iq = 1, N_HYD
                 call FILE_HISTORY_query( HIST_crg_id(iq), HIST_crg_sw(iq) )
@@ -979,6 +1124,9 @@ contains
        end select
 
 
+       !$omp parallel do collapse(2)
+       !$acc parallel
+       !$acc loop collapse(2)
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
@@ -992,6 +1140,7 @@ contains
        end do
        end do
        end do
+       !$acc end parallel
 
        if ( MP_do_precipitation ) then
 
@@ -1007,9 +1156,12 @@ contains
                 hist_vterm_idx(iq) = ih
              end if
           end do
+          !$acc update device(hist_vterm_idx)
           if ( ih > 0 ) then
              allocate( vterm_hist(KA,IA,JA,ih) )
+             !$acc kernels
              vterm_hist(:,:,:,:) = 0.0_RP
+             !$acc end kernels
           end if
 
           !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
@@ -1017,19 +1169,24 @@ contains
           !$omp         QA_LT,QS_LT,QE_LT, &
           !$omp         PRE00,LHF, &
           !$omp         ATMOS_PHY_MP_TYPE, ATMOS_PHY_PRECIP_TYPE, &
-          !$omp         dt_MP,MP_NSTEP_SEDIMENTATION,MP_DTSEC_SEDIMENTATION,MP_RNSTEP_SEDIMENTATION, &
+          !$omp         dt_MP,MP_NSTEP_SEDIMENTATION,MP_RNSTEP_SEDIMENTATION, &
           !$omp         REAL_CZ,REAL_FZ, &
-          !$omp         DENS,MOMZ,U,V,RHOT,TEMP,PRES,QTRC,CPtot,CVtot,EXNER, &
+          !$omp         DENS,MOMZ,U,V,TEMP,PRES,QTRC,CPtot,CVtot, &
           !$omp         DENS_t_MP,MOMZ_t_MP,RHOU_t_MP,RHOV_t_MP,RHOQ_t_MP,RHOH_MP, &
           !$omp         SFLX_rain,SFLX_snow,SFLX_ENGI, &
           !$omp         REFSTATE_dens, &
           !$omp         flg_lt,RHOC_t_MP, &
+          !$omp         MP_DTSEC_SEDIMENTATION, &
           !$omp         vterm_hist,hist_vterm_idx) &
           !$omp private(i,j,k,iq,step, &
           !$omp         FZ,FDZ,RFDZ,RCDZ, &
           !$omp         DENS2,TEMP2,PRES2,CPtot2,CVtot2,RHOE,RHOE2,RHOQ,RHOQ2, &
           !$omp         RHOQ2_crg,mflux_crg,sflux_crg,eflux_crg, &
           !$omp         vterm,mflux,sflux,eflux,FLX_hydro,CP_t,CV_t)
+          !$acc parallel
+          !$acc loop collapse(2) gang &
+          !$acc private(vterm,FLX_hydro,DENS2,TEMP2,PRES2,CPtot2,CVtot2,RHOE,RHOE2,RHOQ,RHOQ2,mflux,sflux,eflux,FZ,FDZ,RFDZ,RCDZ, &
+          !$acc         RHOQ2_crg,mflux_crg,sflux_crg,eflux_crg)
           do j = JS, JE
           do i = IS, IE
 
@@ -1052,6 +1209,7 @@ contains
                 RHOE(k)   = TEMP(k,i,j) * CVtot(k,i,j) * DENS2(k)
                 RHOE2(k)  = RHOE(k)
              end do
+             !$acc loop collapse(2)
              do iq = QS_MP+1, QE_MP
              do k = KS, KE
                 RHOQ (k,iq) = DENS2(k) * QTRC(k,i,j,iq) + RHOQ_t_MP(k,i,j,iq) * dt_MP
@@ -1060,6 +1218,7 @@ contains
              end do
 
              if( flg_lt ) then
+                !$acc loop collapse(2)
                 do iq = QS_LT, QE_LT
                 do k = KS, KE
                    RHOQ2_crg(k,iq) = DENS2(k) * QTRC(k,i,j,iq)
@@ -1071,6 +1230,8 @@ contains
              SFLX_snow(i,j) = 0.0_RP
              SFLX_ENGI(i,j) = 0.0_RP
              FLX_hydro(:) = 0.0_RP
+
+             !$acc loop seq
              do step = 1, MP_NSTEP_SEDIMENTATION
 
                 select case ( ATMOS_PHY_MP_TYPE )
@@ -1095,12 +1256,19 @@ contains
                         KA,        & ! [IN]
                         vterm(:,:) ) ! [OUT]
                 case default
-                   vterm(:,:) = 0.0_RP ! tentative
+                   !$acc loop seq
+                   do iq = QS_MP+1, QE_MP
+                      do k = KS, KE
+                         vterm(k,iq) = 0.0_RP ! tentative
+                      end do
+                   end do
                 end select
 
                 ! store to history output
+                !$acc loop seq
                 do iq = QS_MP+1, QE_MP
                    if ( hist_vterm_idx(iq) > 0 ) then
+                      !$acc loop independent
                       do k = KS, KE
                          vterm_hist(k,i,j,hist_vterm_idx(iq)) = vterm_hist(k,i,j,hist_vterm_idx(iq)) &
                                                               + vterm(k,iq) * MP_RNSTEP_SEDIMENTATION
@@ -1174,10 +1342,12 @@ contains
 
                 endif
 
+                !$acc loop independent
                 do k = KS, KE
                    TEMP2(k) = RHOE2(k) / ( DENS2(k) * CVtot2(k) )
                 end do
 
+                !$acc loop independent
                 do k = KS-1, KE-1
                    FLX_hydro(k) = FLX_hydro(k) + mflux(k) * MP_RNSTEP_SEDIMENTATION
                 enddo
@@ -1187,6 +1357,7 @@ contains
                 SFLX_ENGI(i,j) = SFLX_ENGI(i,j) - eflux    * MP_RNSTEP_SEDIMENTATION
 
              enddo
+
              SFLX_ENGI(i,j) = SFLX_ENGI(i,j) - SFLX_snow(i,j) * LHF ! moist internal energy
 
 !OCL XFILL
@@ -1208,6 +1379,7 @@ contains
 !                     * log( EXNER(k,i,j) ) * ( CP_t / CPtot(k,i,j) - CV_t / CVtot(k,i,j) )
              end do
 
+             !$acc loop collapse(2)
              do iq = QS_MP+1, QE_MP
              do k  = KS, KE
                 RHOQ_t_MP(k,i,j,iq) = RHOQ_t_MP(k,i,j,iq) &
@@ -1216,6 +1388,7 @@ contains
              enddo
 
              if( flg_lt ) then
+                !$acc loop collapse(2)
                 do iq = QS_LT, QE_LT
                 do k  = KS, KE
                    RHOC_t_MP(k,i,j,iq) = RHOC_t_MP(k,i,j,iq) &
@@ -1233,24 +1406,30 @@ contains
 
           enddo
           enddo
+          !$acc end parallel
 
           ! history output
           do iq = QS_MP+1, QE_MP
-             if ( hist_vterm_idx(iq) > 0 ) &
+             if ( hist_vterm_idx(iq) > 0 ) then
                 call FILE_HISTORY_put( hist_vterm_id(iq), vterm_hist(:,:,:,hist_vterm_idx(iq)) )
+             end if
           end do
-          if ( allocated( vterm_hist ) ) deallocate( vterm_hist )
+          if ( allocated( vterm_hist ) ) then
+             deallocate( vterm_hist )
+          end if
 
           call PROF_rapend  ('MP_Precipitation', 2)
 
        end if
 
 !OCL XFILL
+       !$acc kernels
        do j = JS, JE
        do i = IS, IE
           precip(i,j) = SFLX_rain(i,j) + SFLX_snow(i,j)
        end do
        end do
+       !$acc end kernels
 
        call FILE_HISTORY_in( SFLX_rain(:,:),   'RAIN_MP',   'surface rain rate by MP',          'kg/m2/s',  fill_halo=.true. )
        call FILE_HISTORY_in( SFLX_snow(:,:),   'SNOW_MP',   'surface snow rate by MP',          'kg/m2/s',  fill_halo=.true. )
@@ -1286,6 +1465,8 @@ contains
     !$omp shared(KS,KE,IS,IE,JS,JE, &
     !$omp        DENS_t_MP,MOMZ_t_MP,RHOU_t_MP,RHOV_t_MP,RHOH_MP, &
     !$omp        DENS_t,MOMZ_t,RHOU_t,RHOV_t,RHOH)
+    !$acc parallel
+    !$acc loop collapse(2)
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -1298,10 +1479,14 @@ contains
     enddo
     enddo
     enddo
+    !$acc end parallel
 
+    !$omp parallel do default(none) OMP_SCHEDULE_ collapse(3) &
+    !$omp private(iq,i,j,k) &
+    !$omp shared(QS_MP,QE_MP,JS,JE,IS,IE,KS,KE,RHOQ_t,RHOQ_t_MP)
+    !$acc parallel
+    !$acc loop collapse(3)
     do iq = QS_MP, QE_MP
-    !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ &
-    !$omp shared(JS,JE,IS,IE,KS,KE,RHOQ_t,iq,RHOQ_t_MP)
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -1310,8 +1495,12 @@ contains
     enddo
     enddo
     enddo
+    !$acc end parallel
 
     if( flg_lt ) then
+       !$omp parallel do collapse(3)
+       !$acc parallel
+       !$acc loop collapse(3)
        do iq = QS_LT, QE_LT
        do j = JS, JE
        do i = IS, IE
@@ -1322,6 +1511,7 @@ contains
        enddo
        enddo
        enddo
+       !$acc end parallel
     endif
 
     if ( STATISTICS_checktotal ) then
@@ -1349,6 +1539,8 @@ contains
                                  ATMOS_GRID_CARTESC_REAL_TOTVOL                       )
        enddo
     endif
+
+    !$acc end data
 
     return
   end subroutine ATMOS_PHY_MP_driver_calc_tendency
@@ -1387,6 +1579,9 @@ contains
 
     integer :: k, i, j
 
+    !$acc data copyin(QV, QHYD) copyout(QTRC)
+    !$acc data copyin(QNUM) if(present(QNUM))
+
     select case( ATMOS_PHY_MP_TYPE )
     case ( "NONE" )
        if ( associated( ATMOS_PHY_MP_USER_qhyd2qtrc ) ) then
@@ -1404,11 +1599,14 @@ contains
        end do
        end do
        end do
+       !$acc update host(QHYD)
        call ATMOS_PHY_MP_KESSLER_qhyd2qtrc( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
                                             QHYD(:,:,:,:),  & ! [IN]
                                             QTRC(:,:,:,2:)  ) ! [OUT]
+       !$acc update device(QTRC(:,:,:,2:))
     case ( "TOMITA08" )
        !$omp parallel do OMP_SCHEDULE_
+       !$acc kernels
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
@@ -1416,6 +1614,7 @@ contains
        end do
        end do
        end do
+       !$acc end kernels
        call ATMOS_PHY_MP_TOMITA08_qhyd2qtrc( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
                                              QHYD(:,:,:,:),  & ! [IN]
                                              QTRC(:,:,:,2:)  ) ! [OUT]
@@ -1428,10 +1627,13 @@ contains
        end do
        end do
        end do
+       !$acc update host(QHYD)
        call ATMOS_PHY_MP_SN14_qhyd2qtrc( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
                                          QHYD(:,:,:,:),  & ! [IN]
                                          QTRC(:,:,:,2:), & ! [OUT]
                                          QNUM=QNUM       ) ! [IN]
+       !$acc update device(QTRC(:,:,:,2:))
+       !$acc update device(QNUM) if(present(QNUM))
     case ( "SUZUKI10" )
        !$omp parallel do OMP_SCHEDULE_
        do j = JS, JE
@@ -1441,14 +1643,20 @@ contains
        end do
        end do
        end do
+       !$acc update host(QHYD)
        call ATMOS_PHY_MP_SUZUKI10_qhyd2qtrc( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
                                              QHYD(:,:,:,:),  & ! [IN]
                                              QTRC(:,:,:,2:), & ! [OUT]
                                              QNUM=QNUM       ) ! [IN]
+       !$acc update device(QTRC(:,:,:,2:))
+       !$acc update device(QNUM) if(present(QNUM))
     case default
        LOG_ERROR("ATMOS_PHY_MP_driver_qhyd2qtrc",*) 'ATMOS_PHY_MP_TYPE (', trim(ATMOS_PHY_MP_TYPE), ') is not supported'
        call PRC_abort
     end select
+
+    !$acc end data
+    !$acc end data
 
     return
   end subroutine ATMOS_PHY_MP_driver_qhyd2qtrc
@@ -1476,6 +1684,7 @@ contains
     integer :: k, i, j
 
     !$omp parallel do
+    !$acc kernels copyin(QV) copyout(QTRC(:,:,:,1))
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -1483,6 +1692,7 @@ contains
     end do
     end do
     end do
+    !$acc end kernels
 
     return
   end subroutine ATMOS_PHY_MP_driver_qhyd2qtrc_onlyqv

@@ -47,7 +47,12 @@ module mod_copytopo
   integer, private, parameter :: handle = 1
 
   character(len=H_SHORT), private :: COPYTOPO_IN_FILETYPE   = ''       !< 'SCALE', 'GrADS', or 'WRF-ARW'
-  character(len=H_LONG),  private :: COPYTOPO_IN_BASENAME   = ''
+  character(len=H_LONG),  private :: COPYTOPO_IN_BASENAME      = ''
+  integer,                private :: COPYTOPO_IN_PRC_NUM_X     = 0  ! for old files
+  integer,                private :: COPYTOPO_IN_PRC_NUM_Y     = 0  ! for old files
+  character(len=H_LONG),  private :: COPYTOPO_LATLON_CATALOGUE = '' ! for old files
+  integer,                private :: COPYTOPO_DOMID
+
   character(len=H_LONG),  private :: COPYTOPO_IN_POSTFIX    = ''
   character(len=H_SHORT), private :: COPYTOPO_IN_VARNAME    = 'topo'
   character(len=H_SHORT), private :: COPYTOPO_IN_LONNAME    = 'lon'
@@ -83,21 +88,24 @@ contains
     real(RP) :: TOPO_parent(IA,JA) !< topography of parent domain
 
     namelist / PARAM_COPYTOPO / &
-       COPYTOPO_IN_FILETYPE,    &
-       COPYTOPO_IN_BASENAME,    &
-       COPYTOPO_IN_POSTFIX,     &
-       COPYTOPO_IN_VARNAME,     &
-       COPYTOPO_IN_LONNAME,     &
-       COPYTOPO_IN_LATNAME,     &
-       COPYTOPO_TRANSITION_DX,  &
-       COPYTOPO_TRANSITION_DY,  &
-       COPYTOPO_FRACX,          &
-       COPYTOPO_FRACY,          &
-       COPYTOPO_taux,           &
-       COPYTOPO_tauy,           &
-       COPYTOPO_ENTIRE_REGION,  &
-       COPYTOPO_LINEAR_H,       &
-       COPYTOPO_EXP_H,          &
+       COPYTOPO_IN_FILETYPE,      &
+       COPYTOPO_IN_BASENAME,      &
+       COPYTOPO_IN_PRC_NUM_X,     & ! for old files
+       COPYTOPO_IN_PRC_NUM_Y,     & ! for old files
+       COPYTOPO_LATLON_CATALOGUE, & ! for old files
+       COPYTOPO_IN_POSTFIX,       &
+       COPYTOPO_IN_VARNAME,       &
+       COPYTOPO_IN_LONNAME,       &
+       COPYTOPO_IN_LATNAME,       &
+       COPYTOPO_TRANSITION_DX,    &
+       COPYTOPO_TRANSITION_DY,    &
+       COPYTOPO_FRACX,            &
+       COPYTOPO_FRACY,            &
+       COPYTOPO_taux,             &
+       COPYTOPO_tauy,             &
+       COPYTOPO_ENTIRE_REGION,    &
+       COPYTOPO_LINEAR_H,         &
+       COPYTOPO_EXP_H,            &
        COPYTOPO_hypdiff_ORDER,   &
        COPYTOPO_hypdiff_NITER
 
@@ -516,9 +524,9 @@ contains
     end select
 
     if ( single ) then
-       call COMM_bcast( LON_org (:,:), IA_org, JA_org )
-       call COMM_bcast( LAT_org (:,:), IA_org, JA_org )
-       call COMM_bcast( TOPO_org(:,:), IA_org, JA_org )
+       call COMM_bcast( IA_org, JA_org, LON_org (:,:) )
+       call COMM_bcast( IA_org, JA_org, LAT_org (:,:) )
+       call COMM_bcast( IA_org, JA_org, TOPO_org(:,:) )
     end if
 
     call INTERP_domain_compatibility( LON_org(:,:), LAT_org(:,:), dummy(:,:),             &
@@ -635,16 +643,22 @@ contains
   subroutine COPYTOPO_get_size_scale( &
        IA_org, JA_org )
     use scale_comm_cartesC_nest, only: &
-       NEST_TILE_NUM_X => COMM_CARTESC_NEST_TILE_NUM_X, &
-       NEST_TILE_NUM_Y => COMM_CARTESC_NEST_TILE_NUM_Y, &
-       PARENT_IMAX,       &
-       PARENT_JMAX
+       COMM_CARTESC_NEST_domain_regist_file, &
+       COMM_CARTESC_NEST_parent_info
     implicit none
     integer, intent(out) :: IA_org
     integer, intent(out) :: JA_org
 
-    IA_org = PARENT_IMAX(handle) * NEST_TILE_NUM_X
-    JA_org = PARENT_JMAX(handle) * NEST_TILE_NUM_Y
+    call COMM_CARTESC_NEST_domain_regist_file( &
+         COPYTOPO_domid,           & ! [OUT]
+         COPYTOPO_IN_BASENAME,     & ! [IN]
+         COPYTOPO_IN_PRC_NUM_X,    & ! [IN]
+         COPYTOPO_IN_PRC_NUM_Y,    & ! [IN]
+         COPYTOPO_LATLON_CATALOGUE ) ! [IN]
+
+    call COMM_CARTESC_NEST_parent_info( &
+         COPYTOPO_domid,            & ! [IN]
+         IMAXG=IA_org, JMAXG=JA_org ) ! [OUT]
 
     return
   end subroutine COPYTOPO_get_size_scale
@@ -657,8 +671,8 @@ contains
     use scale_const, only: &
        D2R => CONST_D2R
     use scale_comm_cartesC_nest, only: &
-       NEST_domain_shape => COMM_CARTESC_NEST_domain_shape, &
-       NEST_TILE_ID      => COMM_CARTESC_NEST_TILE_ID
+       COMM_CARTESC_NEST_parent_info, &
+       COMM_CARTESC_NEST_domain_shape
     use scale_file, only: &
        FILE_open, &
        FILE_read, &
@@ -668,6 +682,9 @@ contains
     real(RP), intent(out) :: LON_org (IA_org,JA_org)
     real(RP), intent(out) :: LAT_org (IA_org,JA_org)
     real(RP), intent(out) :: TOPO_org(IA_org,JA_org)
+
+    integer :: num_tile
+    integer, allocatable :: tile_id(:)
 
     real(RP), allocatable :: read2D(:,:)
 
@@ -679,16 +696,23 @@ contains
     integer :: rank
     integer :: n
 
-    do n = 1, size( NEST_TILE_ID(:) )
-       ! read data from split files
-       rank = NEST_TILE_ID(n)
+    call COMM_CARTESC_NEST_parent_info( COPYTOPO_domid,     & ! [IN]
+                                        num_tile = num_tile )
+    allocate( tile_id(num_tile) )
+    call COMM_CARTESC_NEST_parent_info( COPYTOPO_domid,   & ! [IN]
+                                        tile_id = tile_id )
 
-       call NEST_domain_shape( tilei, tilej, & ! [OUT]
-                               cxs,   cxe,   & ! [OUT]
-                               cys,   cye,   & ! [OUT]
-                               pxs,   pxe,   & ! [OUT]
-                               pys,   pye,   & ! [OUT]
-                               n             ) ! [IN]
+    do n = 1, num_tile
+       ! read data from split files
+       rank = TILE_ID(n)
+
+       call COMM_CARTESC_NEST_domain_shape( tilei, tilej,   & ! [OUT]
+                                            cxs,   cxe,     & ! [OUT]
+                                            cys,   cye,     & ! [OUT]
+                                            pxs,   pxe,     & ! [OUT]
+                                            pys,   pye,     & ! [OUT]
+                                            COPYTOPO_domid, &  ! [IN]
+                                            n               ) ! [IN]
 
        allocate( read2D(tilei,tilej) )
 

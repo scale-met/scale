@@ -29,6 +29,7 @@ module mod_user
   !
   public :: USER_tracer_setup
   public :: USER_setup
+  public :: USER_finalize
   public :: USER_mkinit
   public :: USER_calc_tendency
   public :: USER_update
@@ -153,6 +154,15 @@ contains
 
     return
   end subroutine USER_setup
+
+  !-----------------------------------------------------------------------------
+  !> Finalization
+  subroutine USER_finalize
+    implicit none
+    !---------------------------------------------------------------------------
+
+    return
+  end subroutine USER_finalize
 
   !-----------------------------------------------------------------------------
   !> Make initial state
@@ -354,10 +364,13 @@ contains
     integer :: IO_FID_SNOW_TEST
     integer :: iymd,ihh
 
+    character(len=H_LONG) :: fname
+
     integer :: i, io
 
     IO_FID_SNOW_TEST = IO_get_available_fid()
-    open(IO_FID_SNOW_TEST, file = trim(filename), status = 'OLD')
+    call IO_get_fname(fname, filename)
+    open(IO_FID_SNOW_TEST, file = fname, status = 'OLD')
     do i=1,data_length_max
        read(IO_FID_SNOW_TEST,*,end=100) iymd,ihh,data(i)
        rows = i

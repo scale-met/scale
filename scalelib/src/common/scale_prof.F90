@@ -23,6 +23,7 @@ module scale_prof
   !++ Public procedure
   !
   public :: PROF_setup
+  public :: PROF_finalize
   public :: PROF_setprefx
   public :: PROF_rapstart
   public :: PROF_rapend
@@ -75,6 +76,7 @@ module scale_prof
   real(DP),               private            :: PROF_raptstr(PROF_rapnlimit)
   real(DP),               private            :: PROF_rapttot(PROF_rapnlimit)
   integer,                private            :: PROF_rapnstr(PROF_rapnlimit)
+  integer,                private            :: PROF_rapcnt (PROF_rapnlimit)
   integer,                private            :: PROF_rapnend(PROF_rapnlimit)
   integer,                private            :: PROF_raplevel(PROF_rapnlimit)
 
@@ -135,6 +137,23 @@ contains
     return
   end subroutine PROF_setup
 
+  subroutine PROF_finalize
+
+    PROF_rap_level   = 2
+    PROF_mpi_barrier = .false.
+#ifdef PAPI
+    PROF_PAPI_flops     = 0
+    PROF_PAPI_real_time = 0.0
+    PROF_PAPI_proc_time = 0.0
+    PROF_PAPI_mflops    = 0.0
+#endif
+
+    PROF_rapnmax = 0
+    PROF_grpnmax = 0
+
+    return
+  end subroutine PROF_finalize
+
   !-----------------------------------------------------------------------------
   subroutine PROF_setprefx( &
        prefxname )
@@ -144,11 +163,7 @@ contains
 
     !---------------------------------------------------------------------------
 
-    if ( prefxname == '' ) then !--- no prefix
-       PROF_prefix = ''
-    else
-       PROF_prefix = trim(prefxname)//'_'
-    endif
+    PROF_prefix = prefxname
 
     return
   end subroutine PROF_setprefx
@@ -170,6 +185,7 @@ contains
     integer :: id
     integer :: level_
     integer :: tn
+    integer :: i
     logical :: disable_barrier_
     !$ integer :: omp_get_thread_num
     !---------------------------------------------------------------------------
@@ -192,9 +208,17 @@ contains
 
     if( level_ > PROF_rap_level ) return
 
-    rapname = trim(PROF_prefix)//trim(rapname_base)
+    if ( len_trim(PROF_prefix) > 0 ) then
+       rapname = trim(PROF_prefix)//" "//trim(rapname_base)
+    else
+       rapname = rapname_base
+    end if
 
     id = get_rapid( rapname, level_ )
+
+    PROF_rapcnt(id) = PROF_rapcnt(id) + 1
+
+    if ( PROF_rapcnt(id) > 1 ) return
 
     if ( ( .not. disable_barrier_ ) .and. PROF_mpi_barrier ) call PRC_MPIbarrier
 
@@ -205,7 +229,12 @@ contains
     !call flush(IO_FID_LOG)
 
 #ifdef FAPP
-    call FAPP_START( trim(PROF_grpname(get_grpid(rapname))), id, level_ )
+    i = index(rapname," ")
+    if ( i == 0 .or. i > len_trim(rapname)) then
+       call FAPP_START( rapname, id, level_ )
+    else
+       call FAPP_START( rapname(1:i-1)//"_"//trim(rapname(i+1:)), id, level_ )
+    end if
 #endif
 
     return
@@ -228,8 +257,8 @@ contains
     integer :: id
     integer :: level_
     integer :: tn
+    integer :: i
     logical :: disable_barrier_
-
     !$ integer :: omp_get_thread_num
     !---------------------------------------------------------------------------
 
@@ -241,26 +270,41 @@ contains
        if( level > PROF_rap_level ) return
     endif
 
+    if ( len_trim(PROF_prefix) > 0 ) then
+       rapname = trim(PROF_prefix)//" "//trim(rapname_base)
+    else
+       rapname = rapname_base
+    end if
+
     if ( present(disable_barrier) ) then
        disable_barrier_ = disable_barrier
     else
        disable_barrier_ = .false.
     endif
 
-    rapname = trim(PROF_prefix)//trim(rapname_base)
 
+    level_ = -1
     id = get_rapid( rapname, level_ )
 
     if( level_ > PROF_rap_level ) return
+
+    PROF_rapcnt(id) = PROF_rapcnt(id) - 1
+
+    if ( PROF_rapcnt(id) > 0 ) return
+
+#ifdef FAPP
+    i = index(rapname," ")
+    if ( i == 0 .or. i > len_trim(rapname)) then
+       call FAPP_STOP( rapname, id, level_ )
+    else
+       call FAPP_STOP( rapname(1:i-1)//"_"//trim(rapname(i+1:)), id, level_ )
+    end if
+#endif
 
     PROF_rapttot(id) = PROF_rapttot(id) + ( PRC_MPItime()-PROF_raptstr(id) )
     PROF_rapnend(id) = PROF_rapnend(id) + 1
 
     if ( ( .not. disable_barrier_ ) .and. PROF_mpi_barrier ) call PRC_MPIbarrier
-
-#ifdef FAPP
-    call FAPP_STOP( trim(PROF_grpname(PROF_grpid(id))), id, level_ )
-#endif
 
     return
   end subroutine PROF_rapend
@@ -279,8 +323,12 @@ contains
     integer  :: maxidx(PROF_rapnlimit)
     integer  :: minidx(PROF_rapnlimit)
 
+    integer  :: idx(PROF_rapnlimit)
+    integer  :: cnt
+
     integer :: id, gid
     integer :: fid
+    integer :: i, j
     !---------------------------------------------------------------------------
 
     do id = 1, PROF_rapnmax
@@ -295,12 +343,30 @@ contains
     if ( IO_LOG_ALLNODE ) then ! report for each node
 
        do gid = 1, PROF_rapnmax
+          cnt = 0
           do id = 1, PROF_rapnmax
              if (       PROF_raplevel(id) <= PROF_rap_level &
                   .AND. PROF_grpid   (id) == gid            ) then
-                LOG_INFO_CONT('(1x,A,I3.3,A,A,A,F10.3,A,I9)') &
-                              'ID=',id,' : ',PROF_rapname(id),' T=',PROF_rapttot(id),' N=',PROF_rapnstr(id)
-             endif
+                cnt = cnt + 1
+                idx(cnt) = id
+             end if
+          end do
+          do j = 1, cnt-1
+             do i = j+1, cnt
+                if ( PROF_raplevel(idx(i)) < PROF_raplevel(idx(j)) .or. &
+                     ( PROF_raplevel(idx(i)) == PROF_raplevel(idx(j)) &
+                     .and. PROF_rapname(idx(i)) < PROF_rapname(idx(j)) ) ) then
+                   id = idx(i)
+                   idx(i) = idx(j)
+                   idx(j) = id
+                end if
+             end do
+          end do
+          do i = 1, cnt
+             id = idx(i)
+             LOG_INFO_CONT('(1x,2A,I2,A,F10.3,A,I9)') &
+                  PROF_rapname(id), ' lev=', PROF_raplevel(id), &
+                  ': T=',PROF_rapttot(id),' N=',PROF_rapnstr(id)
           enddo
        enddo
 
@@ -323,20 +389,38 @@ contains
           if ( IO_L ) fid = IO_FID_LOG
        endif
 
-       do gid = 1, PROF_rapnmax
-          do id = 1, PROF_rapnmax
-             if (       PROF_raplevel(id) <= PROF_rap_level &
-                  .AND. PROF_grpid   (id) == gid            &
-                  .AND. fid > 0                             ) then
-                write(fid,'(6x,A,I3.3,3A,F10.3,A,F10.3,A,I5,2A,F10.3,A,I5,2A,I9)') &
-                          'ID=',id,' : ',PROF_rapname(id), &
-                          ' T(avg)=',avgvar(id), &
-                          ', T(max)=',maxvar(id),'[',maxidx(id),']', &
-                          ', T(min)=',minvar(id),'[',minidx(id),']', &
-                          ', N=',PROF_rapnstr(id)
-             endif
+       if ( fid > 0 ) then
+          do gid = 1, PROF_rapnmax
+             cnt = 0
+             do id = 1, PROF_rapnmax
+                if (       PROF_raplevel(id) <= PROF_rap_level &
+                     .AND. PROF_grpid   (id) == gid            ) then
+                   cnt = cnt + 1
+                   idx(cnt) = id
+                end if
+             end do
+             do j = 1, cnt-1
+                do i = j+1, cnt
+                   if ( PROF_raplevel(idx(i)) < PROF_raplevel(idx(j)) .or. &
+                        ( PROF_raplevel(idx(i)) == PROF_raplevel(idx(j)) &
+                        .and. PROF_rapname(idx(i)) < PROF_rapname(idx(j)) ) ) then
+                      id = idx(i)
+                      idx(i) = idx(j)
+                      idx(j) = id
+                   end if
+                end do
+             end do
+             do i = 1, cnt
+                id = idx(i)
+                write(fid,'(1x,2A,I2,A,F10.3,2(A,F10.3,A,I6,A),A,I9)') &
+                     PROF_rapname(id), ' lev=', PROF_raplevel(id), &
+                     ': T(avg)=',avgvar(id), &
+                     ', T(max)=',maxvar(id),'[',maxidx(id),']', &
+                     ', T(min)=',minvar(id),'[',minidx(id),']', &
+                     ', N=',PROF_rapnstr(id)
+             end do
           enddo
-       enddo
+       end if
 
     endif
 
@@ -414,13 +498,13 @@ contains
 
        LOG_NEWLINE
        LOG_INFO("PROF_PAPI_rapreport",*) 'PAPI Report'
-       LOG_INFO("PROF_PAPI_rapreport",'(1x,A,A,F10.3,A,F10.3,A,I5,A,A,F10.3,A,I5,A,A,I7)') &
+       LOG_INFO("PROF_PAPI_rapreport",'(1x,A,A,F10.3,A,F10.3,A,I6,A,A,F10.3,A,I6,A)') &
                   'Real time [sec]',' T(avg)=',avgvar(1), &
                   ', T(max)=',maxvar(1),'[',maxidx(1),']',', T(min)=',minvar(1),'[',minidx(1),']'
-       LOG_INFO("PROF_PAPI_rapreport",'(1x,A,A,F10.3,A,F10.3,A,I5,A,A,F10.3,A,I5,A,A,I7)') &
+       LOG_INFO("PROF_PAPI_rapreport",'(1x,A,A,F10.3,A,F10.3,A,I6,A,A,F10.3,A,I6,A)') &
                   'CPU  time [sec]',' T(avg)=',avgvar(2), &
                   ', T(max)=',maxvar(2),'[',maxidx(2),']',', T(min)=',minvar(2),'[',minidx(2),']'
-       LOG_INFO("PROF_PAPI_rapreport",'(1x,A,A,F10.3,A,F10.3,A,I5,A,A,F10.3,A,I5,A,A,I7)') &
+       LOG_INFO("PROF_PAPI_rapreport",'(1x,A,A,F10.3,A,F10.3,A,I6,A,A,F10.3,A,I6,A)') &
                   'FLOP    [GFLOP]',' N(avg)=',avgvar(3), &
                   ', N(max)=',maxvar(3),'[',maxidx(3),']',', N(min)=',minvar(3),'[',minidx(3),']'
        LOG_NEWLINE
@@ -436,13 +520,13 @@ contains
           if ( PRC_IsMaster ) then ! master node
              write(*,*)
              write(*,*) '*** PAPI Report'
-             write(*,'(1x,A,A,F10.3,A,F10.3,A,I5,A,A,F10.3,A,I5,A,A,I7)') &
+             write(*,'(1x,A,A,F10.3,A,F10.3,A,I6,A,A,F10.3,A,I6,A)') &
                   '*** Real time [sec]',' T(avg)=',avgvar(1), &
                   ', T(max)=',maxvar(1),'[',maxidx(1),']',', T(min)=',minvar(1),'[',minidx(1),']'
-             write(*,'(1x,A,A,F10.3,A,F10.3,A,I5,A,A,F10.3,A,I5,A,A,I7)') &
+             write(*,'(1x,A,A,F10.3,A,F10.3,A,I6,A,A,F10.3,A,I6,A)') &
                   '*** CPU  time [sec]',' T(avg)=',avgvar(2), &
                   ', T(max)=',maxvar(2),'[',maxidx(2),']',', T(min)=',minvar(2),'[',minidx(2),']'
-             write(*,'(1x,A,A,F10.3,A,F10.3,A,I5,A,A,F10.3,A,I5,A,A,I7)') &
+             write(*,'(1x,A,A,F10.3,A,F10.3,A,I6,A,A,F10.3,A,I6,A)') &
                   '*** FLOP    [GFLOP]',' N(avg)=',avgvar(3), &
                   ', N(max)=',maxvar(3),'[',maxidx(3),']',', N(min)=',minvar(3),'[',minidx(3),']'
              write(*,*)
@@ -463,6 +547,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Get item ID or register item
   function get_rapid( rapname, level ) result(id)
+    use scale_prc, only: &
+       PRC_abort
     implicit none
 
     character(len=*), intent(in)    :: rapname !< name of item
@@ -470,6 +556,7 @@ contains
 
     character (len=H_SHORT) :: trapname
 
+    integer :: lev
     integer :: id
     !---------------------------------------------------------------------------
 
@@ -477,7 +564,14 @@ contains
 
     do id = 1, PROF_rapnmax
        if ( trapname == PROF_rapname(id) ) then
-          level = PROF_raplevel(id)
+          lev = PROF_raplevel(id)
+#ifdef QUICKDEBUG
+          if ( level > 0 .and. lev .ne. level ) then
+             LOG_ERROR("PROF_get_rapid",*) 'level is different ', trim(rapname), lev, level
+             call PRC_abort
+          end if
+#endif
+          level = lev
           return
        endif
     enddo
@@ -489,6 +583,7 @@ contains
     PROF_rapnstr(id) = 0
     PROF_rapnend(id) = 0
     PROF_rapttot(id) = 0.0_DP
+    PROF_rapcnt (id) = 0
 
     PROF_grpid   (id) = get_grpid(trapname)
     PROF_raplevel(id) = level

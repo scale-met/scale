@@ -424,7 +424,7 @@ contains
 
     ! restart files can be different for different models
 
-    ! cread restart netCDF file(s)
+    ! create restart netCDF file(s)
     if( OCEAN_RESTART_OUTPUT .AND. TIME_DOOCEAN_restart ) call OCEAN_vars_restart_create
     if(  LAND_RESTART_OUTPUT .AND. TIME_DOLAND_restart  ) call  LAND_vars_restart_create
     if( URBAN_RESTART_OUTPUT .AND. TIME_DOURBAN_restart ) call URBAN_vars_restart_create

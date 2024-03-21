@@ -160,7 +160,9 @@ module scale_atmos_dyn_fvm_flux
      end subroutine flux_j
   end interface
 
+#ifndef _OPENACC
   procedure(valueW), pointer :: ATMOS_DYN_FVM_flux_valueW_Z => NULL()
+#endif
   public :: ATMOS_DYN_FVM_flux_valueW_Z
 
 <% ["Z", "X", "Y"].each do |dir| %>
@@ -201,6 +203,13 @@ module scale_atmos_dyn_fvm_flux
   !
   !++ Private parameters & variables
   !
+#ifdef _OPENACC
+<% order.each_with_index do |ary, i| %>
+  integer, parameter :: I_<%=ary[0].upcase%> = <%=i+1%>
+<% end %>
+  integer :: i_scheme
+  !$acc declare create(i_scheme)
+#endif
   !-----------------------------------------------------------------------------
 contains
   
@@ -213,35 +222,49 @@ contains
     use scale_prc_cartesC, only: &
          PRC_TwoD
 <%
-  funcs = Hash.new
-  order.each do |o, nh|
-    ary = Array.new
-    ary.push "ATMOS_DYN_FVM_flux_valueW_Z_#{o}"
-    ["Z", "X", "Y"].each do |dir|
-      ary.push "ATMOS_DYN_FVM_flux#{dir}_XYZ_#{o}"
+  funcs = Array.new
+  funcs.push [ "ATMOS_DYN_FVM_flux_valueW_Z",
+    [ ["real(RP), intent(out)", "valW (KA)"],
+      ["real(RP), intent(in) ", "mflx (KA)"],
+      ["real(RP), intent(in) ", "val  (KA)"],
+      ["real(RP), intent(in) ", "GSQRT(KA)"],
+      ["real(RP), intent(in) ", "CDZ  (KA)"] ]
+  ]
+  ["Z", "X", "Y"].each do |dir|
+    funcs.push [ "ATMOS_DYN_FVM_flux#{dir}_XYZ", nil ]
+  end
+  ["XYW", "UYZ", "XVZ"].each do |uvw|
+    ["Z", "X", "Y", "J13", "J23"].each do |dir|
+      funcs.push [ "ATMOS_DYN_FVM_flux#{dir}_#{uvw}", nil ]
     end
-    ["XYW", "UYZ", "XVZ"].each do |uvw|
-      ["Z", "X", "Y", "J13", "J23"].each do |dir|
-        ary.push "ATMOS_DYN_FVM_flux#{dir}_#{uvw}_#{o}"
-      end
-    end
-    funcs[o] = ary
+  end
 %>
+<% order.each do |o, nh| %>
    use scale_atmos_dyn_fvm_flux_<%=o%>, only: &
-      <%= ary.join(", &\n      ") %>
+      <%= funcs.map{|a| "#{a[0]}_#{o}"}.join(", &\n      ") %>
 <% end %>
     implicit none
     character(len=*), intent(in) :: scheme
     character(len=*), intent(in) :: scheme_tracer
 
     select case( scheme )
-<%   order.each do |o, nh| %>
+<%   order.each_with_index do |ary, i|
+       o = ary[0]
+       nh = ary[1]
+%>
     case( "<%= o.upcase %>" )
       LOG_INFO("ATMOS_DYN_FVM_flux_setup",*) 'the <%=o%> scheme is used for flux calculation'
-<% funcs[o].each do |func| %>
-      <%= func.sub(/_[^_]+\Z/,"") %> => <%= func %>
-<% end %>
-<%# func %>
+<% funcs.each do |func, args|
+     if args %>
+#ifdef _OPENACC
+      i_scheme = <%= i+1 %>
+#else
+<%   end %>
+      <%= func %> => <%= func %>_<%= o %>
+<%   if args %>
+#endif
+<%   end
+   end %>
 
       if ( ( .not. PRC_TwoD ) .and. IHALO < <%=nh%> ) then
          LOG_ERROR("ATMOS_DYN_FVM_flux_setup",*) 'IHALO must be >= ', <%=nh%>
@@ -258,16 +281,17 @@ contains
        call PRC_abort
     end select
 
+    !$acc update device(i_scheme)
+
     select case( scheme_tracer )
 <%   order.each do |o, nh| %>
     case( "<%= o.upcase %>" )
       LOG_INFO("ATMOS_DYN_FVM_flux_setup",*) 'the <%=o%> scheme is used for flux calculation of tracer'
-<% funcs[o].each do |func|
-     unless /value/ =~ func %>
-      <%= func.sub(/_[^_]+\Z/,"") %>_tracer => <%= func %>
+<% funcs.each do |func, args|
+     unless args %>
+      <%= func %>_tracer => <%= func %>_<%= o %>
 <%   end
    end %>
-<%# func %>
 
       if ( ( .not. PRC_TwoD ) .and. IHALO < <%=nh%> ) then
          LOG_ERROR("ATMOS_DYN_FVM_flux_setup",*) 'IHALO must be >= ', <%=nh%>
@@ -285,6 +309,33 @@ contains
     end select
 
   end subroutine ATMOS_DYN_FVM_flux_setup
+
+#ifdef _OPENACC
+<% funcs.each do |func, args|
+  next unless args
+  arg = args.map{|a| a[1].sub(/\s*\(\w+\)$/,"") }.join(", ") %>
+  subroutine <%=func%>( <%=arg%> )
+    !$acc routine vector
+<% order.each do |o, nh| %>
+   use scale_atmos_dyn_fvm_flux_<%=o%>, only: &
+      <%=func%>_<%=o%>
+<% end %>
+    implicit none
+<% args.each do |a| %>
+    <%=a[0]%> :: <%=a[1]%>
+<% end %>
+
+    select case ( i_scheme )
+<% order.each_with_index do |ary, i| %>
+    case( <%=i+1%> )
+      call <%=func%>_<%=ary[0]%>( <%=arg%> )
+<% end %>
+    end select
+
+    return
+  end subroutine <%=func%>
+<% end %>
+#endif
 
 end module scale_atmos_dyn_fvm_flux
 

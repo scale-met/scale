@@ -7,10 +7,8 @@
 \caption{\scalelib で対応している外部入力データ}
 \begin{tabularx}{150mm}{|l|l|X|} \hline
  \rowcolor[gray]{0.9} データ形式      & \verb|FILETYPE_ORG|  & 備考 \\ \hline
- SCALEデータ形式   & \verb|SCALE-RM|     &  ヒストリファイルのみ対応。latlonカタログを必要とする。 \\ \hline
+ NetCDF データ形式   & \verb|NetCDF|     &  NetCDFファイル \\ \hline
  バイナリ形式 & \verb|GrADS|        & データ読み込み用のネームリストを別途必要とする。       \\ \hline
-% NICAMデータ   & \verb|NICAM-NETCDF| & NetCDF形式の緯度経度格子に変換されたデータに対応する。 \\ \hline
- WRFデータ形式     & \verb|WRF-ARW|      & 「wrfout」、「wrfrst」の両方に対応する。          \\ \hline
 \end{tabularx}
 \label{tab:inputdata_format}
 \end{center}
@@ -20,29 +18,28 @@
 \verb|scale-rm_init|は、表\ref{tab:inputdata_format}に示される様々な種類の外部データを扱える。
 入力データの形式は、\namelist{PARAM_MKINIT_REAL_(ATMOS|OCEAN|LAND)}の\nmitem{FILETYPE_ORG}で指定する。
 
-「SCALEデータ形式」は、主にオフライン・ネスティング実験(第\ref{subsec:nest_offline}節)で使用される。
+「NetCDFデータ形式」は、主にオフライン・ネスティング実験(第\ref{subsec:nest_offline}節)で使用される。
+WRF データなど、他の NetCDF 形式のファイルにも対応している。
 
 
 「バイナリ形式」は、Fortran が直接アクセスできる単精度浮動小数点数のバイナリ形式データである。
 具体的な実行例については、チュートリアル(第\ref{sec:tutorial_real_data}節)に記載がある。
 
-「WRFデータ形式」では、WRFによるモデル出力データを直接読み込める。
-ただし、そのファイルは、{\scalerm}の境界値データを作成するために必要な全てのデータを含んでいる必要がある。
 
 その他の形式のデータ（例えば、GRIB/GRIB2 データなど）は、バイナリ形式に変換することで {\scalerm} で読み込むことができる。
 {\scalelib}の最新版の出力ファイル形式は、バージョン5.3以前の形式とは異なる。
 そのため、バージョン5.3以前で作成された初期値/境界値ファイルは本バージョン（{\scalelib}{\version})では使用できない。
 
 %%%---------------------------------------------------------------------------------%%%%
-\subsubsection{SCALE形式とバイナリ形式で共通の設定} \label{sec:datainput_common_setting}
+\subsubsection{NetCDF形式とバイナリ形式で共通の設定} \label{sec:datainput_common_setting}
 %%
 
 初期値ファイルに関する設定は、設定ファイル\verb|init.conf|の\namelist{PARAM_RESTART}で行う。
 %
 \editboxtwo{
 \verb|&PARAM_RESTART|                      & \\
-\verb| RESTART_OUTPUT       = .false.,|    & ; 初期値（リスタート）ファイルを出力するかどうか\\
-\verb| RESTART_OUT_BASENAME = '',|         & ; 初期値（リスタート）ファイルのベース名\\
+\verb| RESTART_OUTPUT       = .true.,|    & ; 初期値（リスタート）ファイルを出力するかどうか\\
+\verb| RESTART_OUT_BASENAME = 'init',|    & ; 初期値（リスタート）ファイルのベース名\\
 \verb|/|\\
 }
 初期値ファイルを作成する場合には、\nmitem{RESTART_OUTPUT}に\verb|.true.|を設定する。
@@ -57,7 +54,7 @@
 \editboxtwo{
 \verb|&PARAM_MKINIT_REAL_ATMOS|                                      & \\
 \verb| NUMBER_OF_FILES            = 1, |                             & ; 入力ファイルの数\\
-\verb| NUMBER_OF_TSTEPS           = 1, |                             & ; 各入力ファイル内のデータの時間ステップ数\\
+\verb| NUMBER_OF_TSTEPS           = 1, |                             & ; バイナリ形式における各入力ファイル内のデータの時間ステップ数\\
 \verb| FILETYPE_ORG               = '',|                             & ; 表\ref{tab:inputdata_format}から選択\\
 \verb| BASENAME_ORG               = '',|                             & ; 入力ファイルに関する情報\\
                                                                      & ~~~ (指定方法は\verb|FILETYPE_ORG|に依存)\\
@@ -65,16 +62,19 @@
 \verb| BASENAME_BOUNDARY          = '',|                             & ; 境界値ファイルのベース名\\
 \verb| BOUNDARY_UPDATE_DT         = 0.0,|                            & ; 入力データの時間間隔 [s]\\
 \verb| USE_FILE_DENSITY           = .false.,|                        & ; 入力ファイル中の密度データを使用するかどうか\\
+\verb| PT_dry                     = .true.,|                         & ; ファイル中の温位が乾燥空気の定義であるか\\
 \verb| USE_NONHYDRO_DENS_BOUNDARY = .false.,|                        & ; 境界値に静力学平衡を満たさない密度を使用するかどうか\\
 \verb| USE_SFC_DIAGNOSES          = .false.,|                        & ; 親モデルの地上診断変数を使用するかどうか\\
 \verb| USE_DATA_UNDER_SFC         = .true.,|                         & ; 親モデルの地面より下の値を使用するかどうか\\
 \verb| SAME_MP_TYPE               = .false.,|                        & ; (For SCALE形式) 雲微物理スキームは親モデルと同じかどうか\\
-\verb| INTRP_TYPE                 = 'LINEAR',|                       & ; 水平内挿の種類 ("\verb|LINEAR|", "\verb|DIST-WEIGHT|") \\
+\verb| UPPER_QV_TYPE              = 'ZERO',|                         & ; 上層の欠損値の埋め方 (``\verb|ZERO|'', ``\verb|COPY|'')\\
+\verb| INTRP_TYPE                 = 'LINEAR',|                       & ; 水平内挿の種類 (``\verb|LINEAR|'', ``\verb|DIST-WEIGHT|'') \\
 \verb| SERIAL_PROC_READ           = .true.,|                         & ; 入力データへのアクセスをマスタプロセスのみに制限するか\\
+\verb| SKIP_VERTICAL_RANGE_CHEKC  = .false.,|                        & ; ファイルデータの最上層高度がモデル最上層高度よりも低い場合に \verb|.true.| とする\\
 \verb|/| & \\
 \verb|&PARAM_MKINIT_REAL_OCEAN| & \\
 \verb| NUMBER_OF_FILES            = 1, |                             & ; 入力ファイルの数\\
-\verb| NUMBER_OF_TSTEPS           = 1, |                             & ; 各入力ファイル内のデータの時間ステップ数\\
+\verb| NUMBER_OF_TSTEPS           = 1, |                             & ; バイナリ形式における各入力ファイル内のデータの時間ステップ数\\
 \verb| FILETYPE_ORG               = '',|                             & ; 表\ref{tab:inputdata_format}から選択\\
 \verb| BASENAME_ORG               = '',|                             & ; 入力ファイルに関する情報\\
                                                                      & ~~~ (指定方法は\verb|FILETYPE_ORG|に依存)\\
@@ -84,7 +84,7 @@
 \verb|/| & \\
 \verb|&PARAM_MKINIT_REAL_LAND| & \\
 \verb| NUMBER_OF_FILES            = 1, |                             & ; 入力ファイルの数\\
-\verb| NUMBER_OF_TSTEPS           = 1, |                             & ; 各入力ファイル内のデータの時間ステップ数\\
+\verb| NUMBER_OF_TSTEPS           = 1, |                             & ; バイナリ形式における各入力ファイル内のデータの時間ステップ数\\
 \verb| FILETYPE_ORG               = '',|                             & ; 表\ref{tab:inputdata_format}から選択\\
 \verb| BASENAME_ORG               = '',|                             & ; 入力ファイルに関する情報\\
                                                                      & ~~~ (指定方法は\verb|FILETYPE_ORG|に依存)\\
@@ -102,6 +102,7 @@
 ただし、\nmitem{NUMBER_OF_FILES}=1の時は、自動的に番号づけは行われないので、番号のついたファイルを使用する場合には\\
 \nmitem{BASENAME_ADD_NUM}=\verb|.true.|とする。
 \nmitem{NUMBER_OF_TSTEPS}は各ファイル中に保存されているデータの時間ステップ数である。
+NetCDF形式の場合はこの値は無視される。
 
 \nmitem{BOUNDARY_UPDATE_DT}は入力データの時間間隔である。
 出力される境界値データは入力データの時間間隔と同じである。
@@ -116,8 +117,13 @@
 ``\verb|LINEAR|''は、2次元実験データや水平方向に１次元配列に格納された非構造格子データなど、水平方向のいずれかの格子点数が1 (\nmitem{IMAXG}=1 もしくは \nmitem{JMAXG}=1) の場合には使用できない。
 距離重み付け平均(``\verb|DIST-WEIGHT|'')の場合、隣接点の数は\namelist{PARAM_COMM_CARTESC_NEST}の\nmitem{COMM_CARTES_NEST_INTERP_LEVEL}で設定する。
 
+上層で QV のデータが欠損である場合に、どのように値を埋めるかの方法を\nmitem{upper_qv_type}で指定される。
+\nmitem{upper_qv_type}=\verb|ZERO|の場合、QV=0と設定される。
+\nmitem{upper_qv_type}=\verb|COPY|の場合、データがある最も上層のデータをコピーする。
+デフォルトの設定は'\verb|ZERO|'である。
 
-\scalerm では、初期値・境界値データの読込はマスタープロセスのみが行い、broadcast通信によって各ノードに情報を伝播する。
+
+\scalerm では、デフォルトでは、初期値・境界値データの読込はマスタープロセスのみが行い、broadcast通信によって各ノードに情報を伝播する。
 この時、特に大規模並列計算システムなどでは、読み込んだ入力データが大きいと、メモリ容量が足りなくなることがある。
 \nmitem{SERIAL_PROC_READ}に\verb|.false.|を設定することで、各ノードが自身に必要なデータだけを読み込むようになり、
 データ読み込み時のメモリ不足を解消することができる。
@@ -190,13 +196,13 @@
 
 
 %%%---------------------------------------------------------------------------------%%%%
-\subsubsection{SCALE形式データの入力} \label{sec:datainput_scale}
+\subsubsection{NetCDF形式データの入力} \label{sec:datainput_scale}
 
-SCALE 形式データの\namelist{PARAM_MKINIT_REAL_(ATMOS|OCEAN|LAND)}の設定例は以下の通りである。
+NetCDF形式データの\namelist{PARAM_MKINIT_REAL_(ATMOS|OCEAN|LAND)}の設定例は以下の通りである。
 \editbox{
 \verb|&PARAM_MKINIT_REAL_ATMOS|\\
 \verb| NUMBER_OF_FILES            = 2, |             \\
-\verb| FILETYPE_ORG               = "SCALE-RM",|     \\
+\verb| FILETYPE_ORG               = "NetCDF",|     \\
 \verb| BASENAME_ORG               = "history_d01",|  \\
 \verb| BASENAME_ADD_NUM           = .true.,|         \\
 \verb| BASENAME_BOUNDARY          = 'boundary_d01',| \\
@@ -204,12 +210,12 @@ SCALE 形式データの\namelist{PARAM_MKINIT_REAL_(ATMOS|OCEAN|LAND)}の設定
 ... \\
 \verb|/|\\
 \verb|&PARAM_MKINIT_REAL_OCEAN|\\
-\verb| FILETYPE_ORG               = "SCALE-RM",|     \\
+\verb| FILETYPE_ORG               = "NetCDF",|     \\
 \verb| BASENAME_ORG               = "history_d01",|  \\
 ... \\
 \verb|/|\\
 \verb|&PARAM_MKINIT_REAL_LAND|\\
-\verb| FILETYPE_ORG               = "SCALE-RM",|     \\
+\verb| FILETYPE_ORG               = "NetCDF",|     \\
 \verb| BASENAME_ORG               = "history_d01",|  \\
 ... \\
 \verb|/|\\
@@ -218,11 +224,170 @@ SCALE 形式データの\namelist{PARAM_MKINIT_REAL_(ATMOS|OCEAN|LAND)}の設定
 \nmitem{FILETYPE_ORG}は、\verb|"SCALE-RM"|に設定する。
 入力ファイルのベース名は、\nmitem{BASENAME_ORG}で指定する。
 \verb|BASENAME_ORG|を\verb|"history_d01"|としたならば、
-入力ファイル数が1の場合、そのファイルは「\verb|history_d01.nc|」というファイル名で準備する。
+入力ファイル数が1の場合、そのファイルは「\verb|history_d01.peYYYYYY.nc|」もしくは「\verb|history_d01.nc|」というファイル名で準備する。
 入力ファイルが複数ある場合や\nmitem{BASENAME_ADD_NUM} = \verb|.true.|とした場合には、
-「\verb|history_d01_XXXXX.nc|」と\verb|00000|から番号付けされた入力ファイルを準備する。
+「\verb|history_d01_XXXXX.peYYYYYY.nc|」や「\verb|history_d01_XXXXX.nc|」のように\verb|00000|から番号付けされた入力ファイルを準備する。
 
 使用する雲微物理スキームが親モデルと同じである場合は、\nmitem{SAME_MP_TYPE}に\verb|.true.|を指定する。
+
+\scalerm や WRF の出力ファイルの場合は、必要な情報はファイルから取得するなどにより、プログラム内部で自動で決定される。
+その他のファイルの場合は、それらの情報を与えるためのネームリストが必要である。
+ファイルのタイプは \namelist{PARAM_MKINIT_REAL_(ATMOS|LAND|OCEAN)_NetCDF}の\nmitem{FILE_TYPE}で設定する。
+選択肢は``\verb|SCALE-RM|'', ``\verb|WRFARW|'', ``\verb|NAMELIST|'', ``\verb|AUTO|''である。
+``\verb|AUTO|''の場合、ファイルタイプは自動的に決定される。
+ネームリストのファイル名は、\namelist{PARAM_MKINIT_REAL_ATMOS_NETCDF}や\namelist{PARAM_MKINIT_REAL_LAND_NETCDF}、\namelist{PARAM_MKINIT_REAL_OCEAN_NETCDF}の\nmitem{NM_FILE}で与える。
+\editbox{
+\verb|&PARAM_MKINIT_REAL_ATMOS_NetCDF|\\
+\verb| FILE_TYPE    = "NAMELIST",|\\ ! ``SCALE-RM'', ``WRFARW'', ``NAMELIST'' or ``AUTO''\\
+\verb| NM_FILE      = "namelist_netcdf.nml",| ! namelist file name\\
+\verb| MIXING_RATIO = .false.,|\\
+\verb|/|\\
+\verb|&PARAM_MKINIT_REAL_LAND_NetCDF|\\
+\verb| FILE_TYPE    = "NAMELIST",|\\
+\verb| NM_FILE = "namelist_netcdf.nml",|\\
+\verb|/|\\
+\verb|&PARAM_MKINIT_REAL_OCEAN_NetCDF|\\
+\verb| FILE_TYPE    = "NAMELIST",|\\
+\verb| NM_FILE = "namelist_netcdf.nml",|\\
+\verb|/|\\
+}
+
+水物質量の定義を\nmitem{MIXING_RATION}で指定する。
+混合比、つまり乾燥空気に対する質量比の場合は``\verb|.true.|''を指定し、例えば比湿のように全質量比の場合は''\verb|.false.|''とする。
+
+ネームリストの設定例は以下の通りである。
+\editbox{
+\verb|&NetCDF_MAPPROJECTION| ; 地図投影法の設定\\
+\verb| mapping_name                   = "lambert_conformal_conic",|\\
+\verb| longitude_of_central_meridian  = 135.0, |\\
+\verb| longitude_of_projection_origin = 135.0, |\\
+\verb| latitude_of_projection_origin  = 34.5, |\\
+\verb| standard_parallel              = 30.0, 40.0, |\\
+\verb| rotation                       = 0.0D0 |\\
+\verb|/|\\
+\verb|&NetCDF_DIMS|\\
+\verb| zname  =  "z",|    ! z軸の座標変数名\\
+\verb| zhname =  "zh",|   ! スタッガード格子のz軸の座標変数名\\
+\verb| xname  =  "x",|    ! x軸の座標変数名\\
+\verb| xhname =  "xh",|   ! スタッガード格子のx軸の座標変数名\\
+\verb| yname  =  "y",|    ! y軸の座標変数名\\
+\verb| yhname =  "yh",|   ! スタッガード格子のy軸の座標変数名\\
+\verb| tname  =  "time",| ! 時間軸の座標変数名\\
+\verb|/|\\
+\verb|&NetCDF_ITEM item="Umet", name="u", xstg=.true. /|\\
+\verb|&NetCDF_ITEM item="Vmet", name="v", ystg=.true. /|\\
+\verb|&NetCDF_ITEM item="T",    name="t", offset=273.0 /|\\
+... \\
+}
+
+
+座標軸の名前の対応関係を\namelist{NetCDF_DIMS}で指定する。
+スタッガード格子の座標変数名は大気にのみ必要である。
+
+変数名の対応は\namelist{NetCDF_ITEM}で指定する。
+\namelist{NetCDF_ITEM}の説明を表\ref{tbl:namelist_netcdf_item}に示す。
+また、\nmitem{item}のリストを表\ref{tab:netcdf_item}に示す。
+ここに示しているもの以外にも、実験設定に依存するトレーサー変数も指定可能である。
+
+{\small
+\begin{table}[tbh]
+\begin{center}
+\caption{\namelist{NetCDF_ITEM}のパラメタ}
+\label{tab:netcdf_item}
+\begin{tabularx}{150mm}{llX} \hline
+\rowcolor[gray]{0.9}
+パラメタ名 & 説明    & 注釈 \\ \hline
+item     & 変数名 & 表\ref{tab:netcdf_item}から選択   \\ \hline
+name     & NetCDFファイル中の変数名 & \\ \hline
+zstg     & z方向のスタッガード位置に定義されているかどうか & (optional) \\ \hline
+xstg     & x方向のスタッガード位置に定義されているかどうか & (optional) \\ \hline
+ystg     & y方向のスタッガード位置に定義されているかどうか & (optional) \\ \hline
+offset   & オフセット値 & (optional) \\ \hline
+factor   & ファクター値 & (optional) \\ \hline
+\end{tabularx}
+\end{center}
+\end{table}
+}
+
+{\small
+\begin{table}[tbh]
+\begin{center}
+\caption{\namelist{NetCDF_ITEM}の\nmitem{item}のリスト}
+\label{tab:netcdf_item}
+\begin{tabularx}{150mm}{llX} \hline
+\rowcolor[gray]{0.9}
+アイテム名 \nmitem{item} & 説明 & 注釈 \\ \hline
+\verb|lon|      & 経度 & \\ \hline
+\verb|lat|      & 緯度 & \\ \hline
+\verb|height|   & 高度 & \\ \hline
+\verb|pressure| & 気圧 & \\ \hline
+\verb|DENS| & 大気密度 & \\ \hline
+\verb|W|    & 鉛直風速 & \\ \hline
+\verb|MOMZ| & 鉛直運動量 & \\ \hline
+\verb|Umet| & 東西風速 & \\ \hline
+\verb|U|    & x軸方向風速 & \\ \hline
+\verb|MOMX| & x軸方向運動量 & \\ \hline
+\verb|Vmet| & 南北風速 & \\ \hline
+\verb|V|    & y軸方向風速 & \\ \hline
+\verb|MOMY| & y軸方向運動量    & \\ \hline
+\verb|PT|   & 温位             &\namelist{PARAM_MKINIT_REAL_ATMOS}の\nmitem{PT_dry}を参照 \\ \hline
+\verb|RHOT| & 密度重みつき温位 &\namelist{PARAM_MKINIT_REAL_ATMOS}の\nmitem{PT_dry}を参照\\ \hline
+\verb|T|    & 気温             & \\ \hline
+\verb|QV| & 水蒸気量 & \namelist{PARAM_MKINIT_REAL_ATMOS_NETCDF}の\nmitem{mixing_ratio}を参照 \\ \hline
+\verb|RH| & 相対湿度 & \\ \hline
+\verb|QC| & 雲水量  & \namelist{PARAM_MKINIT_REAL_ATMOS_NETCDF}の\nmitem{mixing_ratio}を参照 \\ \hline
+\verb|QR| & 雨水量  & \namelist{PARAM_MKINIT_REAL_ATMOS_NETCDF}の\nmitem{mixing_ratio}を参照 \\ \hline
+\verb|QI| & 雲氷量  & \namelist{PARAM_MKINIT_REAL_ATMOS_NETCDF}の\nmitem{mixing_ratio}を参照 \\ \hline
+\verb|QS| & 雪量  & \namelist{PARAM_MKINIT_REAL_ATMOS_NETCDF}の\nmitem{mixing_ratio}を参照 \\ \hline
+\verb|QG| & あられ量  & \namelist{PARAM_MKINIT_REAL_ATMOS_NETCDF}の\nmitem{mixing_ratio}を参照 \\ \hline
+\verb|MSLP| & 平均海面更正気圧 & \\ \hline
+\verb|SFC_PRES| & 地表気圧 & \\ \hline
+\verb|Umet10| & 10m 東西風速 & \\ \hline
+\verb|U10| & 10m x軸方向風速 & \\ \hline
+\verb|Vmet10| & 10m 南北風速 & \\ \hline
+\verb|V10| & 10m y軸方向風速 & \\ \hline
+\verb|T2| & 2m 気温 & \\ \hline
+\verb|Q2| & 2m 水蒸気量 & \\ \hline
+\verb|RH2| & 2m 相対湿度 & \\ \hline
+\end{tabularx}
+\end{center}
+\end{table}
+
+\begin{table}[tbh]
+\begin{center}
+\caption{\namelist{NetCDF_ITEM}の\nmitem{item}のリスト。前頁からの続き。}
+\label{tab:netcdf_item}
+\begin{tabularx}{150mm}{llp{55mm}} \hline
+\rowcolor[gray]{0.9}
+アイテム名 \nmitem{item} & 説明 & 注釈 \\ \hline
+\verb|lz| & 土壌層厚 & \\ \hline
+\verb|topo| & 地表高度 & \\ \hline
+\verb|lsmask| & ランドマスク & \\ \hline
+\verb|LAND_TEMP| & 土壌温度 & \\ \hline
+\verb|LANS_WATER| & 土壌水分量 & \\ \hline
+\verb|LAND_SFC_TEMP| & 地表面温度 & \\ \hline
+\verb|LAND_SFC_ALB_IR_dir|  & 地表面アルベド 赤外 (直達)   & \\ \hline
+\verb|LAND_SFC_ALB_IR_dif|  & 地表面アルベド 赤外 (散乱) & \\ \hline
+\verb|LAND_SFC_ALB_NIR_dir| & 地表面アルベド 近赤外 (直達)  & \\ \hline
+\verb|LAND_SFC_ALB_NIR_dif| & 地表面アルベド 近赤外 (散乱) & \\ \hline
+\verb|LAND_SFC_ALB_VIS_dir| & 地表面アルベド 可視 (直達)  & \\ \hline
+\verb|LAND_SFC_ALB_VIS_dif| & 地表面アルベド 可視 (散乱) & \\ \hline
+\verb|LAND_SFC_EMIS_IR_dif| & 地表面射出率 赤外 (散乱) & \\ \hline
+\verb|URBAN_SFC_TEMP| & 都市表面温度 & \\ \hline
+\verb|OCEAN_TEMP| & 海水温度 & \\ \hline
+\verb|OCEAN_SFC_TEMP| & 海水面温度 & \\ \hline
+\verb|OCEAN_SFC_Z0M| & 海水面粗度 & \\ \hline
+\verb|OCEAN_SFC_ALB_IR_dir|  & 海水面アルベド 赤外 (直達)   & \\ \hline
+\verb|OCEAN_SFC_ALB_IR_dif|  & 海水面アルベド 赤外 (散乱) & \\ \hline
+\verb|OCEAN_SFC_ALB_NIR_dir| & 海水面アルベド 近赤外 (直達)  & \\ \hline
+\verb|OCEAN_SFC_ALB_NIR_dif| & 海水面アルベド 近赤外 (散乱) & \\ \hline
+\verb|OCEAN_SFC_ALB_VIS_dir| & 海水面アルベド 可視 (直達)  & \\ \hline
+\verb|OCEAN_SFC_ALB_VIS_dif| & 海水面アルベド 可視 (散乱) & \\ \hline
+\verb|OCEAN_SFC_EMIS_IR_dif| & 海水面アルベド射出率 赤外 (散乱) & \\ \hline
+\end{tabularx}
+\end{center}
+\end{table}
+}
 
 
 %%%---------------------------------------------------------------------------------%%%%
@@ -237,7 +402,7 @@ GrADS 形式データの\namelist{PARAM_MKINIT_REAL_(ATMOS|OCEAN|LAND)}の設定
 \verb|&PARAM_MKINIT_REAL_ATMOS|\\
 \verb| NUMBER_OF_FILES            = 2, |     \\
 \verb| FILETYPE_ORG               = "GrADS",|\\
-\verb| BASENAME_ORG               = "namelist.grads_boundary.FNL.2005053112-2016051106",|\\
+\verb| BASENAME_ORG               = "namelist.grads_boundary.FNL.2005053112-2015011400",|\\
 \verb| BASENAME_ADD_NUM           = .true.,| \\
 \verb| BASENAME_BOUNDARY          = 'boundary_d01',| \\
 \verb| BOUNDARY_UPDATE_DT         = 21600.0,|\\
@@ -245,14 +410,14 @@ GrADS 形式データの\namelist{PARAM_MKINIT_REAL_(ATMOS|OCEAN|LAND)}の設定
 \verb|/|\\
 \verb|&PARAM_MKINIT_REAL_OCEAN|\\
 \verb| FILETYPE_ORG               = "GrADS",|\\
-\verb| BASENAME_ORG               = "namelist.grads_boundary.FNL.2005053112-2016051106",|\\
+\verb| BASENAME_ORG               = "namelist.grads_boundary.FNL.2005053112-2015011400",|\\
 \verb| INTRP_OCEAN_SFC_TEMP       = "mask",|\\
 \verb| INTRP_OCEAN_TEMP           = "mask",|\\
 ... \\
 \verb|/|\\
 \verb|&PARAM_MKINIT_REAL_LAND|\\
 \verb| FILETYPE_ORG               = "GrADS",|\\
-\verb| BASENAME_ORG               = "namelist.grads_boundary.FNL.2005053112-2016051106",|\\
+\verb| BASENAME_ORG               = "namelist.grads_boundary.FNL.2005053112-2015011400",|\\
 \verb| INTRP_LAND_TEMP            = "fill",|\\
 \verb| INTRP_LAND_WATER           = "fill",|\\
 \verb| INTRP_LAND_SFC_TEMP        = "fill",|\\
@@ -281,29 +446,29 @@ GrADS 形式データの\namelist{PARAM_MKINIT_REAL_(ATMOS|OCEAN|LAND)}の設定
 \verb|#              |  \\
 \verb|# Variables    |  \\
 \verb|#              |  \\
-\verb|&GrADS_ITEM  name='lon',     dtype='linear',  swpoint=0.0d0,   dd=1.0d0 /  |  \\
-\verb|&GrADS_ITEM  name='lat',     dtype='linear',  swpoint=90.0d0,  dd=-1.0d0 / |  \\
-\verb|&GrADS_ITEM  name='plev',    dtype='levels',  lnum=26,| \\
+\verb|&GrADS_ITEM  name='lon',         dtype='linear',  swpoint=0.0d0,   dd=1.0d0 /  |  \\
+\verb|&GrADS_ITEM  name='lat',         dtype='linear',  swpoint=90.0d0,  dd=-1.0d0 / |  \\
+\verb|&GrADS_ITEM  name='pressure',    dtype='levels',  lnum=26,| \\
 ~~~\verb|      lvars=100000,97500,.........,2000,1000, /     |  \\
-\verb|&GrADS_ITEM  name='HGT',     dtype='map',     fname='FNLatm', startrec=1,  totalrec=125 / |  \\
-\verb|&GrADS_ITEM  name='U',       dtype='map',     fname='FNLatm', startrec=27, totalrec=125 / |  \\
-\verb|&GrADS_ITEM  name='V',       dtype='map',     fname='FNLatm', startrec=53, totalrec=125 / |  \\
-\verb|&GrADS_ITEM  name='T',       dtype='map',     fname='FNLatm', startrec=79, totalrec=125 / |  \\
-\verb|&GrADS_ITEM  name='RH',      dtype='map',     fname='FNLatm', startrec=105,totalrec=125, nz=21 /  |  \\
-\verb|&GrADS_ITEM  name='MSLP',    dtype='map',     fname='FNLsfc', startrec=1,  totalrec=9   / |  \\
-\verb|&GrADS_ITEM  name='PSFC',    dtype='map',     fname='FNLsfc', startrec=2,  totalrec=9   / |  \\
-\verb|&GrADS_ITEM  name='SKINT',   dtype='map',     fname='FNLsfc', startrec=3,  totalrec=9   / |  \\
-\verb|&GrADS_ITEM  name='topo',    dtype='map',     fname='FNLsfc', startrec=4,  totalrec=9   / |  \\
-\verb|&GrADS_ITEM  name='lsmask',  dtype='map',     fname='FNLsfc', startrec=5,  totalrec=9  /  |  \\
-\verb|&GrADS_ITEM  name='U10',     dtype='map',     fname='FNLsfc', startrec=6,  totalrec=9   / |  \\
-\verb|&GrADS_ITEM  name='V10',     dtype='map',     fname='FNLsfc', startrec=7,  totalrec=9   / |  \\
-\verb|&GrADS_ITEM  name='T2',      dtype='map',     fname='FNLsfc', startrec=8,  totalrec=9   / |  \\
-\verb|&GrADS_ITEM  name='RH2',     dtype='map',     fname='FNLsfc', startrec=9,  totalrec=9   / |  \\
-\verb|&GrADS_ITEM  name='llev',    dtype='levels',  nz=4, lvars=0.05,0.25,0.70,1.50, /        |  \\
+\verb|&GrADS_ITEM  name='height',      dtype='map',     fname='FNLatm', startrec=1,  totalrec=125 / |  \\
+\verb|&GrADS_ITEM  name='U',           dtype='map',     fname='FNLatm', startrec=27, totalrec=125 / |  \\
+\verb|&GrADS_ITEM  name='V',           dtype='map',     fname='FNLatm', startrec=53, totalrec=125 / |  \\
+\verb|&GrADS_ITEM  name='T',           dtype='map',     fname='FNLatm', startrec=79, totalrec=125 / |  \\
+\verb|&GrADS_ITEM  name='RH',          dtype='map',     fname='FNLatm', startrec=105,totalrec=125, nz=21 /  |  \\
+\verb|&GrADS_ITEM  name='MSLP',        dtype='map',     fname='FNLsfc', startrec=1,  totalrec=9   / |  \\
+\verb|&GrADS_ITEM  name='SFC_PRES',    dtype='map',     fname='FNLsfc', startrec=2,  totalrec=9   / |  \\
+\verb|&GrADS_ITEM  name='SFC_TEMP',    dtype='map',     fname='FNLsfc', startrec=3,  totalrec=9   / |  \\
+\verb|&GrADS_ITEM  name='topo',        dtype='map',     fname='FNLsfc', startrec=4,  totalrec=9   / |  \\
+\verb|&GrADS_ITEM  name='lsmask',      dtype='map',     fname='FNLsfc', startrec=5,  totalrec=9  /  |  \\
+\verb|&GrADS_ITEM  name='U10',         dtype='map',     fname='FNLsfc', startrec=6,  totalrec=9   / |  \\
+\verb|&GrADS_ITEM  name='V10',         dtype='map',     fname='FNLsfc', startrec=7,  totalrec=9   / |  \\
+\verb|&GrADS_ITEM  name='T2',          dtype='map',     fname='FNLsfc', startrec=8,  totalrec=9   / |  \\
+\verb|&GrADS_ITEM  name='RH2',         dtype='map',     fname='FNLsfc', startrec=9,  totalrec=9   / |  \\
+\verb|&GrADS_ITEM  name='llev',        dtype='levels',  lnum=4, lvars=0.05,0.25,0.70,1.50, /        |  \\
 ~~~~~~~~\verb| missval=9.999e+20 /|  \\
-\verb|&GrADS_ITEM  name='STEMP',   dtype='map',     fname='FNLland', nz=4, startrec=1, totalrec=8,|\\
+\verb|&GrADS_ITEM  name='LAND_TEMP',   dtype='map',     fname='FNLland', nz=4, startrec=1, totalrec=8,|\\
 ~~~~~~~~\verb| missval=9.999e+20 /|  \\
-\verb|&GrADS_ITEM  name='SMOISVC', dtype='map',     fname='FNLland', nz=4, startrec=5, totalrec=8,|\\
+\verb|&GrADS_ITEM  name='LAND_WATERC', dtype='map',     fname='FNLland', nz=4, startrec=5, totalrec=8,|\\
 ~~~~~~~~\verb| missval=9.999e+20 /|  \\
 }
 
@@ -321,18 +486,6 @@ GrADS 形式データの\namelist{PARAM_MKINIT_REAL_(ATMOS|OCEAN|LAND)}の設定
 ある変数の格子数がデフォルト値と異なる場合には、\namelist{GrADS_ITEM}の\verb|nx, ny, nz|でその変数の格子数を設定する。
 例えば、ある層から上では、比湿(QV)や相対湿度(RH)のデータが利用できない場合がある。
 その場合には、データが存在する層数を\verb|nz|で指定する。
-
-\verb|nz|より上層でのQVの与え方は、\namelist{PARAM_MKINIT_REAL_GrADS}の\nmitem{upper_qv_type}で指定される。
-\nmitem{upper_qv_type}=\verb|ZERO|の場合、QV=0と設定される。
-\nmitem{upper_qv_type}=\verb|COPY|の場合、湿度の入力データが存在する最上層のRHをデータの存在しない上層にコピーして、
-QV の値を決める。
-デフォルトの設定は'\verb|ZERO|'である。
-\editboxtwo{
-\verb|&PARAM_MKINIT_REAL_GrADS|  & \\
-\verb| upper_qv_type = "ZERO"|   & ; \verb|nz|より上層でのQVの与え方\\
-                                 & ~~~("\verb|ZERO|", "\verb|COPY|")\\
-\verb|/|\\
-}
 
 
 \scalerm の計算に必要な変数のリストは、表\ref{tab:grdvar_item}に示す。
@@ -379,8 +532,8 @@ yrev     & データが北から南の順に記録されている場合は\verb|
  \rowcolor[gray]{0.9} & 変数名 \nmitem{name} & 説明 & 単位 & データタイプ \nmitem{dtype} \\ \hline
            &\verb|lon|     & 経度                              & [deg.]   & \verb|linear, map| \\
            &\verb|lat|     & 緯度                              & [deg.]   & \verb|linear, map| \\
-           &\verb|plev|    & 気圧                              & [Pa]     & \verb|levels, map| \\
-    $\ast$ &\verb|HGT|     & 高度(ジオポテンシャル)            & [m]      & \verb|map| \\
+           &\verb|pressure|, \verb|plev|    & 気圧                              & [Pa]     & \verb|levels, map| \\
+    $\ast$ &\verb|height|, \verb|HGT|     & 高度(ジオポテンシャル)            & [m]      & \verb|map| \\
     $\ast$ &\verb|DENS|    & 密度                              & [kg/m3]  & \verb|map| \\
            &\verb|U|       & 東西風速                          & [m/s]    & \verb|map| \\
            &\verb|V|       & 南北風速                          & [m/s]    & \verb|map| \\
@@ -394,7 +547,7 @@ $\ast\ast$ &\verb|QI|      & 雲氷の質量比                      & [kg/kg]  
 $\ast\ast$ &\verb|QS|      & 雪の質量比                        & [kg/kg]  & \verb|map| \\
 $\ast\ast$ &\verb|QG|      & 霰の質量比                        & [kg/kg]  & \verb|map| \\
 $\ast\ast$ &\verb|MSLP|    & 海面更正気圧                      & [Pa]     & \verb|map| \\
-$\ast\ast$ &\verb|PSFC|    & 地上気圧                          & [Pa]     & \verb|map| \\
+$\ast\ast$ &\verb|SFC_RRES|, \verb|PSFC|    & 地上気圧                          & [Pa]     & \verb|map| \\
 $\ast\ast$ &\verb|U10|     & 10m 東西風速                      & [m/s]    & \verb|map| \\
 $\ast\ast$ &\verb|V10|     & 10m 南北風速                      & [m/s]    & \verb|map| \\
 $\ast\ast$ &\verb|T2|      & 2m 気温                           & [K]      & \verb|map| \\
@@ -402,14 +555,14 @@ $\ast\ast$ &\verb|RH2|     & 2m 相対湿度 (Q2がある場合は省略可) & [
 $\ast\ast$ &\verb|Q2|      & 2m 比湿 (RH2がある場合は省略可)    & [kg/kg] & \verb|map| \\
     $\ast$ &\verb|TOPO|    & GCMの地形                         & [m]      & \verb|map| \\
     $\ast$ &\verb|lsmask|  & GCMの海陸分布                     & 0:海1:陸 & \verb|map| \\
-           &\verb|SKINT|   & 地表面温度                        & [K]      & \verb|map| \\
+           &\verb|LAND_SFC_TEMP|, \verb|SFC_TEMP|, \verb|SKINT|   & 地表面温度                        & [K]      & \verb|map| \\
            &\verb|llev|    & 土壌の深さ                        & [m]      & \verb|levels| \\
-           &\verb|STEMP|   & 土壌温度                          & [K]      & \verb|map| \\
-           &\verb|SMOISVC| & 土壌水分(体積含水率)              & [-]      & \verb|map| \\
+           &\verb|LAND_TEMP|, \verb|STEMP|   & 土壌温度                          & [K]      & \verb|map| \\
+           &\verb|LAND_WATER|, \verb|SMOISVC| & 土壌水分(体積含水率)              & [-]      & \verb|map| \\
            &               & (SMOISDS がある場合は省略可)      &          &            \\
            &\verb|SMOISDS| & 土壌水分(飽和度)                  & [-]      & \verb|map| \\
            &               & (SMOISVC がある場合は省略可)      &          &            \\
-           &\verb|SST|     & 海面温度(SKINTがある場合は省略可) & [K]      & \verb|map| \\ \hline
+           &\verb|OCEAN_SFC_TEMP| or \verb|SST|     & 海面温度(SKINTがある場合は省略可) & [K]      & \verb|map| \\ \hline
 \end{tabularx}
 \end{center}
 \end{table}

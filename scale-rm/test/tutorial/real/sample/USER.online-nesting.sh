@@ -2,7 +2,6 @@
 
 #################################################
 #
-# &PARAM_COMM_CARTESC_NEST(ALL configs)
 # &PARAM_TIME             (ALL configs)
 # &PARAM_FILE_HISTORY     (run config)
 # &PARAM_ATMOS_BOUNDARY   (run config)
@@ -37,9 +36,9 @@ TIME_DT_ATMOS_PHY_RD=( "900.0" "300.0" ) # required parameters for each domain -
 TIME_DT_ATMOS_PHY_SF=(  "90.0"  "30.0" ) # required parameters for each domain - unit: SEC only
 TIME_DT_ATMOS_PHY_TB=(  "90.0"  "30.0" ) # required parameters for each domain - unit: SEC only
 TIME_DT_ATMOS_PHY_BL=(  "90.0"  "30.0" ) # required parameters for each domain - unit: SEC only
-TIME_DT_OCEAN=(        "450.0" "150.0" ) # required parameters for each domain - unit: SEC only
-TIME_DT_LAND=(         "450.0" "150.0" ) # required parameters for each domain - unit: SEC only
-TIME_DT_URBAN=(        "450.0" "150.0" ) # required parameters for each domain - unit: SEC only
+TIME_DT_OCEAN=(         "90.0"  "30.0" ) # required parameters for each domain - unit: SEC only
+TIME_DT_LAND=(          "90.0"  "30.0" ) # required parameters for each domain - unit: SEC only
+TIME_DT_URBAN=(         "90.0"  "30.0" ) # required parameters for each domain - unit: SEC only
 
 #################################################
 #
@@ -103,11 +102,20 @@ BUFFER_DZ=( "0.0"      "0.0"      ) # required parameters for each domain
 BUFFER_DX=( "400000.0" "140000.0" ) # required parameters for each domain
 BUFFER_DY=( "400000.0" "140000.0" ) # required parameters for each domain
 
-MAPPROJECTION_BASEPOINT_LON="135.220404"
-MAPPROJECTION_BASEPOINT_LAT="34.653396"
+MAPPROJECTION_BASEPOINT_LON="135.220404" # can be given for each domain, if you like
+MAPPROJECTION_BASEPOINT_LAT="34.653396"  # can be given for each domain, if you like
 MAPPROJECTION_TYPE="LC"
 MAPPROJECTION_LC_LAT1="30.0"
 MAPPROJECTION_LC_LAT2="40.0"
+
+
+#################################################
+# &PARAM_COMM_CARTESC_NEST  (run config)
+#################################################
+
+# .true.  => parent domain does not wait for child domain
+# .false. => parent domain wait for child domain
+ONLINE_AGGRESSIVE_COMM=".false."
 
 #################################################
 #
@@ -159,7 +167,7 @@ HIST_ITEMS_AVERAGE_3D=(
 
 INIT_BASENAME="init"
 
-BASENAME_ORG="namelist.grads_boundary.FNL.2005053112-2016051106"
+BASENAME_ORG="namelist.grads_boundary.FNL.2005053112-2015011400"
 FILETYPE_ORG="GrADS"
 USE_FILE_DENSITY=".false."
 USE_FILE_LANDWATER=".true."

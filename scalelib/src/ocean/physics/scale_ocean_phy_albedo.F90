@@ -139,7 +139,9 @@ contains
 
     integer :: i, j
     !---------------------------------------------------------------------------
+    !$acc data copyout(SFC_albedo)
 
+    !$acc kernels
     do j = OJS, OJE
     do i = OIS, OIE
        SFC_albedo(i,j,I_R_direct ,I_R_IR ) = OCEAN_PHY_ALBEDO_IR_dir
@@ -150,7 +152,9 @@ contains
        SFC_albedo(i,j,I_R_diffuse,I_R_VIS) = OCEAN_PHY_ALBEDO_VIS_dif
     enddo
     enddo
+    !$acc end kernels
 
+    !$acc end data
     return
   end subroutine OCEAN_PHY_ALBEDO_const
 
@@ -167,7 +171,9 @@ contains
 
     integer :: i, j
     !---------------------------------------------------------------------------
+    !$acc data copyout(SFC_albedo)
 
+    !$acc kernels
     do j = OJS, OJE
     do i = OIS, OIE
        SFC_albedo(i,j,I_R_direct ,I_R_IR ) = OCEAN_PHY_ALBEDO_seaice_IR_dir
@@ -178,6 +184,9 @@ contains
        SFC_albedo(i,j,I_R_diffuse,I_R_VIS) = OCEAN_PHY_ALBEDO_seaice_VIS_dif
     enddo
     enddo
+    !$acc end kernels
+
+    !$acc end data
 
     return
   end subroutine OCEAN_PHY_ALBEDO_seaice

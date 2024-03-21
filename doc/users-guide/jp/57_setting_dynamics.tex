@@ -65,11 +65,11 @@ C-grid において、密度・熱力学変数・水蒸気といったスカラ�
   \begin{tabularx}{150mm}{llXX} \hline
     \rowcolor[gray]{0.9} & \multicolumn{1}{l}{設定名} & \multicolumn{1}{l}{スキーム名} & \\ \hline
     \multicolumn{3}{l}{時間積分スキーム} &  \\ \hline
-    & \multicolumn{1}{l}{\verb|RK3|} & \multicolumn{2}{l}{Heun 型の3段3次精度のルンゲ・クッタスキーム} \\
+    & \multicolumn{1}{l}{\verb|RK3|}       & \multicolumn{2}{l}{Heun 型の3段3次精度のルンゲ・クッタスキーム} \\
     & \multicolumn{1}{l}{\verb|RK3WS2002|} & \multicolumn{2}{l}{Wicker and Skamarock (2002) の3段(一般には)2次精度のルンゲ・クッタスキーム} \\
-    & \multicolumn{1}{l}{\verb|RK4|} & \multicolumn{2}{l}{4段4次精度のルンゲ・クッタスキーム} \\
-    & \multicolumn{1}{l}{\verb|RK7s6o|} & \multicolumn{2}{l}{Lawson (1967) の7段6次精度ルンゲ・クッタスキーム(HEVE でのみ利用可)} \\
-    & \multicolumn{1}{l}{\verb|RK11s8o|} & \multicolumn{2}{l}{Cooper and Verner (1972) の11段8次精度ルンゲ・クッタスキーム(HEVE でのみ利用可)} \\
+    & \multicolumn{1}{l}{\verb|RK4|}       & \multicolumn{2}{l}{4段4次精度のルンゲ・クッタスキーム} \\
+    & \multicolumn{1}{l}{\verb|RK7s6o|}    & \multicolumn{2}{l}{Lawson (1967) の7段6次精度ルンゲ・クッタスキーム(HEVE でのみ利用可)} \\
+    & \multicolumn{1}{l}{\verb|RK11s8o|}   & \multicolumn{2}{l}{Cooper and Verner (1972) の11段8次精度ルンゲ・クッタスキーム(HEVE でのみ利用可)} \\
     \hline
     \multicolumn{3}{l}{空間差分スキーム} & 最小のハロ格子数\\ \hline
     & \multicolumn{1}{l}{\verb|CD2|} & \multicolumn{1}{l}{2次精度の中心系フラックス} & \multicolumn{1}{l}{1}\\
@@ -91,11 +91,12 @@ C-grid において、密度・熱力学変数・水蒸気といったスカラ�
 この格子スケールの流れは、\verb|UD3|を使用することで緩和される。
 そのため、地形の起伏が大きい実験では\verb|UD3|を使用することを推奨する。
 
-\subsection{数値拡散}
+\subsection{数値拡散} \label{subsec:numdiff}
 
-数値安定性は、計算で用いるスキームに依存する。
-数値拡散は安定性を良くするだろう。
+数値安定性は、計算で用いる力学スキームに依存する (第\ref{subsec:atmos_dyn_scheme}節)。
+数値拡散を適用することで、安定性を良くすることができる。
 \scalerm では、数値拡散として超粘性と発散減衰(divergence damping)を使用できる。
+
 これらの設定例を以下に示す。
 \editboxtwo{
  \verb|&PARAM_ATMOS_DYN  | & \\
@@ -106,19 +107,30 @@ C-grid において、密度・熱力学変数・水蒸気といったスカラ�
 \verb|/                  | & \\
 }
 
-超粘性と関連したラプラス演算子の数は、\nmitem{ATMOS_DYN_NUMERICAL_DIFF_LAPLACIAN_NUM}で指定する。
+超粘性は、対象とする変数の高波数成分を小さくするもので、主に、数値ノイズの除去のために使われる。
+変数 $\phi$ に対する超粘性は以下のように定義されている。
+\begin{equation}
+  \nu \Delta^n \rho ( \phi - \phi_0 ).
+\end{equation}
+ここで、$\nu$ は粘性係数、$\phi_0$ はその変数に対する基準状態 (\ref{subsec:refstat} 節参照)、$\Delta$ はラプラシアン演算子
+\begin{equation}
+  \Delta^n = \nabla^{2n} = \frac{\partial^{2n}}{\partial x^{2n}} + \frac{\partial^{2n}}{\partial y^{2n}} + \frac{\partial^{2n}}{\partial z^{2n}}.
+\end{equation}
+である。
+超粘性の階数は、\nmitem{ATMOS_DYN_NUMERICAL_DIFF_LAPLACIAN_NUM}で指定する。\\
 \nmitem{ATMOS_DYN_NUMERICAL_DIFF_COEF}と\nmitem{ATMOS_DYN_NUMERICAL_DIFF_COEF_TRACER}は、
 超粘性に対する無次元の係数である。
-この係数の値が大きいほど減衰は強く、
-もしこの係数が 1 であれば、2-grid scale のノイズは1タイムステップで$1/e$倍まで減衰する。
-係数が1よりも大きい場合には、超粘性自体が数値不安定を引き起こす可能性がある。
 \nmitem{ATMOS_DYN_NUMERICAL_DIFF_COEF}は密度・運動量・温位といった力学の予報変数に対する係数であり、
 \nmitem{ATMOS_DYN_NUMERICAL_DIFF_COEF_TRACER}は比湿・水物質・乱流運動エネルギーといった
 トレーサー変数に対する係数である。
+この係数の値が大きいほど減衰は強く、
+もしこの係数が 1 であれば、2-grid scale のノイズは1タイムステップで$1/e$倍まで減衰する。
+係数が1よりも大きい場合には、超粘性自体が数値不安定を引き起こす可能性がある。
 \verb|UD3, UD5|等の風上スキームを用いる場合は既に数値拡散が含まれているので、
 \nmitem{ATMOS_DYN_NUMERICAL_DIFF_COEF}をゼロに設定できる。
 
 発散減衰もまた、数値安定性を向上させるために利用できる。
+発散減衰は、3次元の発散成分を小さくするもので、主に音波の除去のために使用する。
 その係数は\nmitem{ATMOS_DYN_DIVDMP_COEF}で設定する。
 
 \subsection{正定値性}
@@ -197,3 +209,60 @@ $f$-面や$\beta$-面による実験においては、南北境界側面境界�
 ナッジングを行う境界の詳細は、第\ref{subsec:buffer}節を参照されたい。\\
 \verb|scale-rm/test/case/rossby_wave/beta-plane|のテストケースは、
 ナッジングを行う南北境界を適用した$\beta$-面上での実験例である。
+
+
+
+\subsection{基準状態} \label{subsec:refstat}
+%----------------------------------------------------------
+
+\ref{subsec:numdiff}節で説明したとおり、基準状態は力学過程の数値粘性の計算で使用される。
+また、運動方程式の気圧傾度力の計算にも使用される。
+基準状態は静水圧バランスが成り立つように定義されるため、基準状態からの偏差で気圧傾度力を計算することができる。
+
+
+基準状態の設定は以下の通りである。
+\editboxtwo{
+ \verb|&PARAM_ATMOS_REFSTATE  | & \\
+ \verb|ATMOS_REFSTATE_IN_BASENAME  = "",                 | & ! 入力ファイル名 \\
+ \verb|ATMOS_REFSTATE_OUT_BASENAME = "",                 | & ! 出力ファイル名 \\
+ \verb|ATMOS_REFSTATE_OUT_TITLE    = "SCALE-RM RefState, | & ! 出力ファイル中のタイトル \\
+ \verb|ATMOS_REFSTATE_OUT_DTYPE    = "DEFAULT",          | & ! 出力ファイル中のデータタイプ \\
+ \verb|ATMOS_REFSTATE_TYPE         = "UNIFORM",          | & ! 基準状態のタイプ \\
+ \verb|ATMOS_REFSTATE_TEMP_SFC     = 300.0D0,            | & ! 地表面温位 \\
+ \verb|ATMOS_REFSTATE_RH           = 0.0D0,              | & ! 相対湿度 \\
+ \verb|ATMOS_REFSTATE_POTT_UNIFORM = 300.0D0,            | & ! 温位 \\
+ \verb|ATMOS_REFSTATE_UPDATE_DT    = -1.0D0,             | & ! 更新間隔 [秒] \\
+\verb|/                                                  | & \\
+}
+
+\nmitem{ATMOS_REFSTATE_IN_BASENAME} が指定された場合、基準状態はそのファイルから読み込まれる。
+そうでなければ、計算開始時に、\nmitem{ATMOS_REFSTATE_TYPE} で指定されたタイプに従って基準状態が作られる。
+\nmitem{ATMOS_REFSTATE_TYPE} が取りうる値は \verb|"ISA"|, \verb|"UNIFORM"|, \verb|"ZERO"|, \verb|"INIT"| であり、それぞれの説明は以下の通り。
+\begin{description}
+\item[ISA] 国際標準大気。地表面温位、相対湿度、地表面気圧は、それぞれ \nmitem{ATMOS_REFSTATE_TEMP_SFC}, \nmitem{ATMOS_REFSTATE_RH}, \nmitem{CONST_Pstd} (Section \ref{subsec:const} 節参照) で指定する。
+\item[UNIFORM] 温位と相対湿度が一定のプロファイル。
+  温位と相対湿度は、それぞれ \\
+  \nmitem{ATMOS_REFSTATE_POTT_UNIFORM}, \nmitem{ATMOS_REFSTATE_RH} で指定する。
+\item[ZERO]
+  すべての変数が 0 であるプロファイル。
+\item[INIT]
+  水平平均された初期値。
+\end{description}
+
+\nmitem{ATMOS_REFSTATE_TYPE} が \verb|"INIT"| の場合、シミュレーションの途中で、
+基準状態を更新することができる。
+更新間隔は、\nmitem{ATMOS_REFSTATE_UPDATE_DT} で指定する。単位は秒である。
+基準状態は、更新時における水平平均値となる。
+\nmitem{ATMOS_REFSTATE_UPDATE_DT}が負の値の場合、基準状態はシミュレーションの間、更新されない。
+
+
+シミュレーションをリスタートする場合には、基準状態の設定に気をつける必要がある。
+リスタートシミュレーションの結果が継続シミュレーションと一致するためには、両者の基準状態が同じになるよう設定をする必要がある。
+%
+\verb|"INIT"| タイプを使用し、基準状態を更新する場合（\nmitem{ATMOS_REFSTATE_UPDATE_DT} $>$ 0）、
+更新間隔をリスタート間隔の約数に設定することで、
+リスタートシミュレーションと継続シミュレーションの基準状態を一致させることができる。
+%
+また、\verb|"INIT"| タイプを使用し、基準状態を更新しない場合（\nmitem{ATMOS_REFSTATE_UPDATE_DT} $<$ 0）、
+リスタート前のランで基準状態をファイルに出力し、リスタート後のランでそのファイルを読み込むことで同じ基準状態を使用することができる。
+リスタート前のランでの出力ファイル名は \nmitem{ATMOS_REFSTATE_OUT_BASENAME} で、リスタート後のランでの入力ファイル名は \nmitem{ATMOS_REFSTATE_IN_BASENAME} で指定する。

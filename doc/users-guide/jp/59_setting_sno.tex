@@ -3,9 +3,9 @@
 %-------------------------------------------------------------------------------
 
 \noindent {\Large\em NOTICE} \hrulefill
-
+G
 \sno は、version 5.3以降の\scalelib で作成された\scalenetcdf のための後処理ツールである。
-それより古い \scalenetcdf ファイルでは、グローバル属性や軸データの属性の情報が不足しているために利用できない。net2g (第\ref{sec:net2g}章)は前のバージョンにも使用可能である。
+それより古い \scalenetcdf ファイルでは、グローバル属性や軸データの属性の情報が不足しているために利用できない。
 
 \noindent \hrulefill\\
 
@@ -21,9 +21,10 @@ Parallel \netcdf (\pnetcdf) (第\ref{subsec:single_io}節) を使用して
 これらの分割ファイルの扱いづらさを軽減し、補助するため、\sno は以下の機能を備えている。
 括弧内は、対応している \sno の出力データ形式を示す。
 \begin{itemize}
- \item 分割された複数のファイルを結合して、1個のファイルにまとめる (\scalenetcdf, \grads バイナリ)。
+ \item 分割された複数のファイルを結合して、1個のファイルにまとめる (\scalenetcdf)。
  \item 1個のファイル、あるいは、複数のファイルを、別の分割数のファイルに変換する (\scalenetcdf)。
-% \item 単一の{\Netcdf}ファイルを{\grads}で読み込むためのコントロールファイル(*.ctl)を作成する。
+ \item モデル面高度座標系をモデル高度座標系へとリグリッドする (\scalenetcdf)。
+ \item モデル面高度座標系を実高度座標系へとリグリッドする (\scalenetcdf)。
  \item モデル面高度座標系を気圧面高度座標系へとリグリッドする (\scalenetcdf)。
  \item モデル格子から測地線(緯度経度)格子系へとリグリッドする (NetCDF : \scalenetcdf 形式ではなくなるので注意)。
  \item 出力データを複数時間ステップに渡って平均する (\scalenetcdf)。
@@ -108,8 +109,8 @@ SNO に与える MPI プロセス数は、$\nmitemeq{nprocs_x_out} \times \nmite
 %このオプションは、実行プロセス数が1つの場合にのみ有効である。
 %
 一般的に、単一の \netcdf ファイルは外部メタデータファイルが無くても{\grads}で読み込める。
-しかし、\grads のインターフェイスは制限的であり、関連する座標や地図投影を含む \scalenetcdf 形式を解釈できない。そのため、コントロールファイルが必要である。
-以下は、出力されるコントロールファイルの例である。
+しかし、\grads のインターフェイスは制限的であり、関連する座標や地図投影を含む \scalenetcdf 形式を解釈できない。
+その場合、コントロールファイルが必要である。以下は、コントロールファイルの例である。
 %
 \msgbox{
 \verb|SET ^history_d02_new.pe000000.nc| \\
@@ -131,7 +132,9 @@ SNO に与える MPI プロセス数は、$\nmitemeq{nprocs_x_out} \times \nmite
 \verb|OCEAN_SFC_TEMP=>OCEAN_SFC_TEMP    0 t,y,x ocean surface skin temperature| \\
 \verb|ENDVARS| \\
 }
-
+%
+メルカトル図法などのシンプルなLATLON出力でも問題ない場合は、\sno を用いて単一ファイルに結合することで、
+ctlファイルを作成しなくとも\grads のsdfopenコマンドで読み込むことができるようになる。
 
 
 \subsubsection{複数の \scalenetcdf ファイルから単一の NetCDF ファイルへの変換（複数実行プロセス）}
@@ -151,8 +154,6 @@ SNO に与える MPI プロセス数は、$\nmitemeq{nprocs_x_out} \times \nmite
 また、出力ファイルには全ての変数が含まれる。
 ただし、この例では MPIプロセスの数は 24 ($=4\times6$) とする必要がある。
 %\nmitem{nprocs_x_out} と \nmitem{nprocs_y_out} が 1 でないため、\grads コントロールファイルを出力することはできない。
-自分でGrADS用のctlファイルを記述すれば、GrADSで読み込むことが可能になる。
-また、現時点で、この出力方法は周期境界を使用した実験のhistoryファイルには対応していないことに注意すること。
 
 
 \subsubsection{複数の \scalenetcdf ファイルから異なる分割数を持つ複数の \scalenetcdf ファイルへの変換}
@@ -313,9 +314,31 @@ SNO に与える MPI プロセス数は、$\nmitemeq{nprocs_x_out} \times \nmite
 この場合、リマッピングの過程で外挿は許されず、内挿値を持たない格子には欠損値が埋められる。
 
 
-\subsubsection{気圧高度座標への変換}
+\subsubsection{モデル高度座標への変換}
 
-モデル面から等気圧面へ変換するための設定は、\namelist{PARAM_SNOPLGIN_VGRIDOPE}で行う。
+モデル面の鉛直座標を別の座標系へ変換するための設定は、\namelist{PARAM_SNOPLGIN_VGRIDOPE}で行う。
+鉛直座標系の変換は、出力ファイルが複数であっても利用できる。
+
+%
+\editbox{
+\verb|&PARAM_SNO                                                        | \\
+\verb| basename_in  = 'input/history_d02',                              | \\
+\verb| basename_out = 'output/history_d02',                             | \\
+\verb|/                                                                 | \\
+\verb|                                                                  | \\
+\verb|&PARAM_SNOPLGIN_VGRIDOPE                                          | \\
+\verb| SNOPLGIN_vgridope_type     = 'model',                            | \\
+\verb| SNOPLGIN_vgridope_lev_num  = 5,                                  | \\
+\verb| SNOPLGIN_vgridope_lev_data = 80.0, 160.0, 400.0, 1000.0, 2000.0, | \\
+\verb|/                                                                 | \\
+}
+
+\nmitem{SNOPLGIN_vgridope_type}を\verb|'model'|に設定した場合は、モデル高度座標系への鉛直方向のリマッピングが行われる。
+\nmitem{SNOPLGIN_vgridope_lev_num}で鉛直層の数を設定し、\nmitem{SNOPLGIN_vgridope_lev_data}で座標情報を与える必要がある。
+座標単位は [m] で設定する。
+
+\subsubsection{実高度座標への変換}
+
 %
 \editbox{
 \verb|&PARAM_SNO                                               | \\
@@ -324,14 +347,33 @@ SNO に与える MPI プロセス数は、$\nmitemeq{nprocs_x_out} \times \nmite
 \verb|/                                                        | \\
 \verb|                                                         | \\
 \verb|&PARAM_SNOPLGIN_VGRIDOPE                                 | \\
-\verb| SNOPLGIN_vgridope_type     = 'PLEV',                    | \\
+\verb| SNOPLGIN_vgridope_type     = 'z',                       | \\
+\verb| SNOPLGIN_vgridope_lev_num  = 3,                         | \\
+\verb| SNOPLGIN_vgridope_lev_data = 100.0, 300.0, 500.0,       | \\
+\verb|/                                                        | \\
+}
+
+\nmitem{SNOPLGIN_vgridope_type}を\verb|'z'|に設定した場合は、実高度座標系への鉛直方向のリマッピングが行われる。
+\nmitem{SNOPLGIN_vgridope_lev_num}で鉛直層の数を設定し、\nmitem{SNOPLGIN_vgridope_lev_data}で座標情報を与える必要がある。
+座標単位は [m] で設定する。
+
+\subsubsection{気圧高度座標への変換}
+
+%
+\editbox{
+\verb|&PARAM_SNO                                               | \\
+\verb| basename_in  = 'input/history_d02',                     | \\
+\verb| basename_out = 'output/history_d02',                    | \\
+\verb|/                                                        | \\
+\verb|                                                         | \\
+\verb|&PARAM_SNOPLGIN_VGRIDOPE                                 | \\
+\verb| SNOPLGIN_vgridope_type     = 'pressure',                | \\
 \verb| SNOPLGIN_vgridope_lev_num  = 3,                         | \\
 \verb| SNOPLGIN_vgridope_lev_data = 850.e+2, 500.e+2, 200.e+2, | \\
 \verb|/                                                        | \\
 }
 
-\nmitem{SNOPLGIN_vgridope_type}を\verb|'PLEV'|に設定した場合は、気圧高度座標系への鉛直方向のリマッピングが行われる。
-\nmitem{SNOPLGIN_vgridope_lev_num}で鉛直層の数を設定し、\nmitem{SNOPLGIN_vgridope_lev_data}で気圧高度座標の情報を与える必要がある。
-気圧高度座標の単位は [Pa] で設定する。
+\nmitem{SNOPLGIN_vgridope_type}を\verb|'pressure'|に設定した場合は、気圧高度座標系への鉛直方向のリマッピングが行われる。
+\nmitem{SNOPLGIN_vgridope_lev_num}で鉛直層の数を設定し、\nmitem{SNOPLGIN_vgridope_lev_data}で座標情報を与える必要がある。
+座標単位は [Pa] で設定する。
 ただし、気圧高度の情報を必要とするため、入力ファイルに気圧データ（\verb|PRES|）が含まれていなければなければならない。
-気圧高度への変換は、出力ファイルが複数であっても利用できる。

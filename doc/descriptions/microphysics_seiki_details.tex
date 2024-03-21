@@ -176,7 +176,7 @@ f_{vt,n}=(\rho_{0}/\rho)^{\gamma_{n}}, \;\;\;(n=c,r,i,s,g)
 \label{sn30}
 \end{eqnarray}
 
-where $\gamma_{c}$ = 1.0 and $\gamma_{r}$ = $\gamma_{i}$ = $\gamma_{s}$ = $\gamma_{g}$ = 0.5 This simplified formula of the adjustment factor is intended to avoid dependency on the Reynolds number. However, $\gamma_{n}$ = 0.5 is only valid for high Reynolds number particles with diameters > several millimeters, as shown in eq.\ref{sn21}. The above formula therefore always underestimates the terminal velocity of cirrus clouds. Another simplified formula for cirrus clouds was suggested by Heymsfield and Iaquinta (2000), as follows:
+where $\gamma_{c}$ = 1.0 and $\gamma_{r}$ = $\gamma_{i}$ = $\gamma_{s}$ = $\gamma_{g}$ = 0.5 This simplified formula of the adjustment factor is intended to avoid dependency on the Reynolds number. However, $\gamma_{n}$ = 0.5 is only valid for high Reynolds number particles with diameters $>$ several millimeters, as shown in eq.\ref{sn21}. The above formula therefore always underestimates the terminal velocity of cirrus clouds. Another simplified formula for cirrus clouds was suggested by Heymsfield and Iaquinta (2000), as follows:
 
 \begin{eqnarray}
 f_{vt}=(p/p_{0})^{-0.178}(T/T_{0})^{-0.394}
@@ -602,7 +602,7 @@ This study employed two simple ice nucleation schemes, which do not require the 
 N_{IN}=10^{3}exp(-0.639+12.96S_{sol})\nonumber
 \end{eqnarray}
 
-where $N_{IN}$ is nucleated ice nuclei and $S_{sol}$ is supersaturation for solid water. While this scheme is widely used in CRMs (e.g., Walko et al. 1995; Khain et al., 2000; Seifert and Beheng, 2006), it is not acceptable for temperature conditions < -20 $^\circ$C or supersaturation > 0.25, where observational data were not available in their study. For simulating cirrus clouds around the tropopause, application of this scheme to CRMs may cause significant error. Phillips et al. (2007) proposed an alternative scheme to modify Meyers’s scheme by fitting observational data at temperatures between -30 $^\circ$C and -80 $^\circ$C obtained by Demott et al. (2003):
+where $N_{IN}$ is nucleated ice nuclei and $S_{sol}$ is supersaturation for solid water. While this scheme is widely used in CRMs (e.g., Walko et al. 1995; Khain et al., 2000; Seifert and Beheng, 2006), it is not acceptable for temperature conditions $<$ -20 $^\circ$C or supersaturation $>$ 0.25, where observational data were not available in their study. For simulating cirrus clouds around the tropopause, application of this scheme to CRMs may cause significant error. Phillips et al. (2007) proposed an alternative scheme to modify Meyers’s scheme by fitting observational data at temperatures between -30 $^\circ$C and -80 $^\circ$C obtained by Demott et al. (2003):
 
 \begin{eqnarray}
 N_{IN}=10^{3}exp[0.3\times12.96(S_{i}-0.1)]\label{sn117}
@@ -663,7 +663,7 @@ Heterogeneous freezing is based on Bigg’s (1953) empirical formulation, which 
 where $J_{het}$ is the heterogeneous freezing rate. $J_{het}$ is formulated as a function of temperature, as follows:
 
 \begin{eqnarray}
-J_{het}=A_{het}exp(-B_{het}T_{c}-1)\label{sn125}
+J_{het}=A_{het}(exp(-B_{het}T_{c})-1)\label{sn125}
 \end{eqnarray}
 
 where $A_{het}=0.2kg^{-1}s^{-1}$ and $B_{het}=0.65K^{-1}$ are empirically determined parameters. Similar to homogeneous freezing, we can derive the equation for moments, as follows:
@@ -674,7 +674,7 @@ where $A_{het}=0.2kg^{-1}s^{-1}$ and $B_{het}=0.65K^{-1}$ are empirically determ
 \end{eqnarray}
 
 Although heterogeneous freezing should also be formulated as a function of aerosol concentration, here we apply a simple formulation because our model is not yet coupled with an aerosol transport model.\\
-These parameterizations thus do not include aerosol information and are considered to assume background aerosols. The validity of parameterization was demonstrated by Khain et al. (2001). Nevertheless their model also applied the same simple freezing parameterizations, representing observational features of supercooled liquid water as per Rosenfeld and Woodley (2000). Both freezing rates are shown in Fig. \ref{figsn2-22}. Heterogeneous freezing is dominant at temperatures > -35 $^\circ$C. At these temperatures, supercooled liquid water is mixed with ice particles. In contrast, the homogeneous freezing rate suddenly increases < -35 $^\circ$C. Liquid water droplets have hardly been observed < -40 $^\circ$C (Rosenfeld and Woodley, 2000). This can be represented by using the parameterization.
+These parameterizations thus do not include aerosol information and are considered to assume background aerosols. The validity of parameterization was demonstrated by Khain et al. (2001). Nevertheless their model also applied the same simple freezing parameterizations, representing observational features of supercooled liquid water as per Rosenfeld and Woodley (2000). Both freezing rates are shown in Fig. \ref{figsn2-22}. Heterogeneous freezing is dominant at temperatures $>$ -35 $^\circ$C. At these temperatures, supercooled liquid water is mixed with ice particles. In contrast, the homogeneous freezing rate suddenly increases $<$ -35 $^\circ$C. Liquid water droplets have hardly been observed $<$ -40 $^\circ$C (Rosenfeld and Woodley, 2000). This can be represented by using the parameterization.
 
 \subsubsection{Melting}
 The melting process is the same as that of Seifert and Beheng (2006a), based on Pruppacher and Klett (1997). Theoretical treatment of this process is similar to that of the condensation process. The differences are:\\
@@ -758,7 +758,7 @@ These functions are shown in Fig.\ref{figsn2-21}.\\
 Here, we mention that the fitting curves of the universal functions highly depend on calculation by a bin cloud microphysics model. In fact, the functions proposed by Seifert and Beheng (2006a) were modified from the original functions by Seifert and Beheng (2001), with progress in the estimation of the collection kernel. We will have to update the parameterizations when more sophisticated collection kernels than the one used by Seifert and Beheng (2006a) become available.
 
 \subsubsection{Break-up}
-Large rain droplets are not always stable in the collision process. It was observed that large rain droplets could break up into many small droplets after the collision ( Low and Lists, 1982 ). Collisional break-up sustains mean droplet size so as not to grow extremely large and cause strong precipitation. As discussed by Hu and Srivastava (1995), the system of collision, coalescence, and break-up reaches the equilibrium condition between coalescence and break-up after a sufficiently long time. Consequently the DSD form of rain is led to the self-similar equilibrium DSD with equilibrium mean diameter $\bar{D}_{eq}$ . Seifert and Beheng (2006a) simply parameterized the break-up process as a relaxation of DSD with mean diameter > $\bar{D}_{eq}$ to the self-similar equilibrium DSD.
+Large rain droplets are not always stable in the collision process. It was observed that large rain droplets could break up into many small droplets after the collision ( Low and Lists, 1982 ). Collisional break-up sustains mean droplet size so as not to grow extremely large and cause strong precipitation. As discussed by Hu and Srivastava (1995), the system of collision, coalescence, and break-up reaches the equilibrium condition between coalescence and break-up after a sufficiently long time. Consequently the DSD form of rain is led to the self-similar equilibrium DSD with equilibrium mean diameter $\bar{D}_{eq}$ . Seifert and Beheng (2006a) simply parameterized the break-up process as a relaxation of DSD with mean diameter $> \bar{D}_{eq}$ to the self-similar equilibrium DSD.
 
 \begin{eqnarray}
 \frac{\partial N_{r}}{\partial t}\Bigr|_{brk}=-\bigl[\phi_{brk}(\Delta \bar{D}_{r})+1\bigr]\frac{\partial N_{r}}{\partial t}\Bigr|_{slc}\label{sn154}
@@ -778,7 +778,7 @@ k_{brk}\Delta\bar{D}_{r},\;\;(\bar{D}_{eq}\geq \bar{D}_{r}>0.35\times 10^{-3}m) 
 \right.
 \end{eqnarray}
 
-with $\kappa_{brk} = 2.3 \times 10^{3} m^{-1}$, and $k_{brk} = 1000 m^{-1}$. For mean volume diameter < $0.35 \times 10^{-3}m$, break-up is neglected.
+with $\kappa_{brk} = 2.3 \times 10^{3} m^{-1}$, and $k_{brk} = 1000 m^{-1}$. For mean volume diameter $< 0.35 \times 10^{-3}m$, break-up is neglected.
 
 \subsubsection{Mixed-phase collection}
 In the previous sections, collection processes are limited for warm clouds. In this section, we describe the collection processes for mixed phase clouds. In contrast to warm clouds, there exist many kinds of particles in cold clouds, as discussed in section 2.1. Since the variety of shapes and their coexistence conditions differ case by case, there are no systematized theories, observations, and experiments for mixed phase collection processes. Seifert and Beheng (2006a) therefore proposed a general formulation of collisional interactions among hydrometeors starting from simplification of the SCE. Due to the variety of hydrometeor types, the patterns of interaction are categorized into the following five cases.\\
@@ -1089,7 +1089,7 @@ The conversion rate of number concentration is as follows:
 \frac{\partial N_{g}}{\partial t}\Bigr|_{pcon}=\frac{1}{\bar{x}_{js}}\frac{\partial L_{g}}{\partial t}\Bigr|_{pcon}
 \end{eqnarray}
 
-The conversion coefficient of riming particle $\bar{x}/\bar{x}_{crit,pconv}$ is shown in Fig.\ref{figsn2-23}. In this formulation, small ice particles are likely to convert into graupel in riming because small ice particles have simple geometry and are almost spherical. In order to suppress the conversion of small ice particles, partial conversions are limited to ice particles with mean diameter > 500 $\mu m$.
+The conversion coefficient of riming particle $\bar{x}/\bar{x}_{crit,pconv}$ is shown in Fig.\ref{figsn2-23}. In this formulation, small ice particles are likely to convert into graupel in riming because small ice particles have simple geometry and are almost spherical. In order to suppress the conversion of small ice particles, partial conversions are limited to ice particles with mean diameter $> 500 \mu m$.
 
 \subsubsection{Ice multiplication}
 It has been observed that the number concentration of ice particles can be up to several orders of magnitude larger than ice nuclei in atmospheric clouds (Pruppacher and Klett, 1997). Among the possible mechanisms to explain this, the Hallet-Mossop mechanism has been widely discussed and applied in cloud microphysics schemes. The Hallet-Mossop mechanism is based on the fact that ice splintering occurs when many liquid droplets are collected by graupel. Cotton et al. (1986) applied the formulations based on observations by Hallet and Mossop (1974) and Mossop (1976).
@@ -1115,7 +1115,7 @@ The splintering mass concentration is assumed as follows:
 \frac{\partial L_{i}}{\partial t}\Bigr|_{spl1}=\bar{x}_{i}\frac{\partial N_{i}}{\partial t}\Bigr|_{spl1}\label{sn214}
 \end{eqnarray}
 
-On the other hand, Mossop (1976) reported that approximately one ice crystal was produced per 250 drops > 12 $\mu m$ radius accreted onto a graupel at -5 $^\circ$C. Since it is difficult to calculate the number concentration of riming cloud droplets > 12 $\mu m$ ($N_{rime,c}$), here we assume a simple relationship following Cotton et al. (1986), as follows:
+On the other hand, Mossop (1976) reported that approximately one ice crystal was produced per 250 drops $> 12 \mu m$ radius accreted onto a graupel at -5 $^\circ$C. Since it is difficult to calculate the number concentration of riming cloud droplets $> 12 \mu m$ ($N_{rime,c}$), here we assume a simple relationship following Cotton et al. (1986), as follows:
 
 \begin{eqnarray}
 \frac{N_{rime,c}}{N_{rime,c}}\approx\frac{N_{c}}{N_{c}}=Q\bigl(\frac{\nu_{c}+1}{\mu_{c}},x_{12}\bigr)\label{sn215}

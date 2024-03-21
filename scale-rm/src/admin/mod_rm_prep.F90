@@ -18,6 +18,7 @@ module mod_rm_prep
   !
   use scale_precision
   use scale_io
+  use scale_atmos_grid_cartesC_index
   use scale_prof
   !-----------------------------------------------------------------------------
   implicit none
@@ -52,84 +53,122 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine rm_prep( &
-       comm_world,       &
-       intercomm_parent, &
-       intercomm_child,  &
-       cnf_fname         )
+       comm_world, &
+       cnf_fname,  &
+       path,       &
+       add_path    )
     use scale_file, only: &
+       FILE_finalize, &
        FILE_Close_All
     use scale_prc, only: &
        PRC_LOCAL_setup
     use scale_prc_cartesC, only: &
-       PRC_CARTESC_setup
+       PRC_CARTESC_setup, &
+       PRC_CARTESC_finalize
     use scale_const, only: &
-       CONST_setup
+       TEM00  => CONST_TEM00, &
+       LHV0   => CONST_LHV0, &
+       LHF0   => CONST_LHF0, &
+       Rdry   => CONST_Rdry, &
+       Rvap   => CONST_Rvap, &
+       CL     => CONST_CL, &
+       CI     => CONST_CI, &
+       KARMAN => CONST_KARMAN, &
+       GRAV   => CONST_GRAV, &
+       STB    => CONST_STB, &
+       CONST_setup, &
+       CONST_finalize
+    use scale_atmos_solarins, only: &
+       SOLARINS_constant => ATMOS_SOLARINS_constant
     use scale_calendar, only: &
        CALENDAR_setup
     use scale_random, only: &
-       RANDOM_setup
+       RANDOM_setup, &
+       RANDOM_finalize
+    use scale_tracer, only: &
+       TRACER_finalize
     use scale_atmos_grid_cartesC_index, only: &
        ATMOS_GRID_CARTESC_INDEX_setup, &
        IA, JA
     use scale_atmos_grid_cartesC, only: &
        ATMOS_GRID_CARTESC_setup, &
+       ATMOS_GRID_CARTESC_finalize, &
        DOMAIN_CENTER_Y => ATMOS_GRID_CARTESC_DOMAIN_CENTER_Y, &
        CY => ATMOS_GRID_CARTESC_CY, &
        DX, DY
     use scale_comm_cartesC_nest, only: &
-       COMM_CARTESC_NEST_setup
+       COMM_CARTESC_NEST_setup, &
+       COMM_CARTESC_NEST_finalize
     use scale_ocean_grid_cartesC_index, only: &
        OCEAN_GRID_CARTESC_INDEX_setup
     use scale_ocean_grid_cartesC, only: &
-       OCEAN_GRID_CARTESC_setup
+       OCEAN_GRID_CARTESC_setup, &
+       OCEAN_GRID_CARTESC_finalize
     use scale_ocean_grid_cartesC_real, only: &
        OCEAN_GRID_CARTESC_REAL_setup, &
+       OCEAN_GRID_CARTESC_REAL_finalize, &
        OCEAN_GRID_CARTESC_REAL_set_areavol
     use scale_land_grid_cartesC_index, only: &
        LAND_GRID_CARTESC_INDEX_setup
     use scale_land_grid_cartesC, only: &
-       LAND_GRID_CARTESC_setup
+       LAND_GRID_CARTESC_setup, &
+       LAND_GRID_CARTESC_finalize
     use scale_land_grid_cartesC_real, only: &
        LAND_GRID_CARTESC_REAL_setup, &
+       LAND_GRID_CARTESC_REAL_finalize, &
        LAND_GRID_CARTESC_REAL_set_areavol
     use scale_urban_grid_cartesC_index, only: &
        URBAN_GRID_CARTESC_INDEX_setup
     use scale_urban_grid_cartesC, only: &
-       URBAN_GRID_CARTESC_setup
+       URBAN_GRID_CARTESC_setup, &
+       URBAN_GRID_CARTESC_finalize
     use scale_urban_grid_cartesC_real, only: &
        URBAN_GRID_CARTESC_REAL_setup, &
+       URBAN_GRID_CARTESC_REAL_finalize, &
        URBAN_GRID_CARTESC_REAL_set_areavol
     use scale_file_cartesC, only: &
        FILE_CARTESC_setup, &
-       FILE_CARTESC_cleanup
+       FILE_CARTESC_finalize
+    use scale_file_grads, only: &
+       FILE_GrADS_finalize
     use scale_comm_cartesC, only: &
-       COMM_setup
+       COMM_setup,  &
+       COMM_regist, &
+       COMM_finalize
     use scale_topography, only: &
        TOPOGRAPHY_setup, &
-       TOPOGRAPHY_write
+       TOPOGRAPHY_write, &
+       TOPOGRAPHY_finalize
     use scale_landuse, only: &
        LANDUSE_setup, &
-       LANDUSE_write
+       LANDUSE_write, &
+       LANDUSE_finalize
     use scale_atmos_grid_cartesC_real, only: &
        ATMOS_GRID_CARTESC_REAL_setup,        &
        ATMOS_GRID_CARTESC_REAL_calc_Z,       &
        ATMOS_GRID_CARTESC_REAL_calc_areavol, &
-       REAL_LAT => ATMOS_GRID_CARTESC_REAL_LAT
+       REAL_LAT => ATMOS_GRID_CARTESC_REAL_LAT, &
+       ATMOS_GRID_CARTESC_REAL_finalize
     use scale_atmos_grid_cartesC_metric, only: &
        ATMOS_GRID_CARTESC_METRIC_setup, &
+       ATMOS_GRID_CARTESC_METRIC_finalize, &
        ATMOS_GRID_CARTESC_METRIC_MAPF
     use scale_statistics, only: &
        STATISTICS_setup
     use scale_coriolis, only: &
-       CORIOLIS_setup
+       CORIOLIS_setup, &
+       CORIOLIS_finalize
     use scale_atmos_hydrostatic, only: &
        ATMOS_HYDROSTATIC_setup
     use scale_atmos_thermodyn, only: &
        ATMOS_THERMODYN_setup
     use scale_atmos_hydrometeor, only: &
-       ATMOS_HYDROMETEOR_setup
+       ATMOS_HYDROMETEOR_setup, &
+       ATMOS_HYDROMETEOR_finalize
     use scale_atmos_saturation, only: &
        ATMOS_SATURATION_setup
+    use scale_bulkflux, only: &
+       BULKFLUX_setup
     use mod_atmos_driver, only: &
        ATMOS_driver_tracer_setup
     use mod_admin_restart, only: &
@@ -143,25 +182,29 @@ contains
        ATMOS_PHY_MP_TYPE, &
        ATMOS_do
     use mod_atmos_vars, only: &
-       ATMOS_vars_setup
+       ATMOS_vars_setup, &
+       ATMOS_vars_finalize
     use mod_atmos_phy_mp_vars, only: &
        QA_MP
     use mod_ocean_admin, only: &
        OCEAN_admin_setup, &
        OCEAN_do
     use mod_ocean_vars, only: &
-       OCEAN_vars_setup
+       OCEAN_vars_setup, &
+       OCEAN_vars_finalize
     use mod_land_admin, only: &
        LAND_admin_setup, &
        LAND_do
     use mod_land_vars, only: &
-       LAND_vars_setup
+       LAND_vars_setup, &
+       LAND_vars_finalize
     use mod_urban_admin, only: &
        URBAN_admin_setup, &
        URBAN_do, &
        URBAN_land
     use mod_urban_vars, only: &
-       URBAN_vars_setup
+       URBAN_vars_setup, &
+       URBAN_vars_finalize
     use mod_lake_admin, only: &
        LAKE_admin_setup, &
        LAKE_do
@@ -169,7 +212,8 @@ contains
        CPL_admin_setup, &
        CPL_sw
     use mod_cpl_vars, only: &
-       CPL_vars_setup
+       CPL_vars_setup, &
+       CPL_vars_finalize
     use mod_convert, only: &
        CONVERT_setup, &
        CONVERT
@@ -178,13 +222,17 @@ contains
        MKTOPO
     use mod_mkinit, only: &
        MKINIT_setup, &
+       MKINIT_finalize, &
        MKINIT
     use mod_user, only: &
        USER_tracer_setup, &
-       USER_setup, &
+       USER_setup,    &
+       USER_finalize, &
        USER_mkinit
     use mod_atmos_driver, only: &
-       ATMOS_SURFACE_GET
+       ATMOS_SURFACE_GET, &
+       ATMOS_driver_setup, &
+       ATMOS_driver_finalize
     use mod_ocean_driver, only: &
        OCEAN_SURFACE_SET
     use mod_land_driver, only: &
@@ -198,23 +246,35 @@ contains
        TIME_DOLAND_restart,   &
        TIME_DOURBAN_restart,  &
        TIME_DOOCEAN_restart
+#ifdef JMAPPLIB
+    use pp_print_parm, only: &
+       pp_print_parm_set_flg_out_msg
+    use pp_phys_const, only: &
+       pp_phys_const_set
+#endif
     implicit none
 
     integer,          intent(in) :: comm_world
-    integer,          intent(in) :: intercomm_parent
-    integer,          intent(in) :: intercomm_child
     character(len=*), intent(in) :: cnf_fname
+    character(len=*), intent(in) :: path
+    logical,          intent(in) :: add_path
 
     integer :: myrank
     logical :: ismaster
 
     logical :: output
+
+    integer :: id
     !---------------------------------------------------------------------------
 
     !########## Initial setup ##########
 
     ! setup standard I/O
-    call IO_setup( MODELNAME, cnf_fname )
+    if ( add_path .and. path /= "" ) then
+       call IO_setup( MODELNAME, trim(path)//cnf_fname, prefix=path )
+    else
+       call IO_setup( MODELNAME, trim(path)//cnf_fname )
+    end if
 
     ! setup MPI
     call PRC_LOCAL_setup( comm_world, & ! [IN]
@@ -287,6 +347,7 @@ contains
 
     ! setup mpi communication
     call COMM_setup
+    call COMM_regist( KA, IA, JA, IHALO, JHALO, id )
 
     ! setup topography
     call TOPOGRAPHY_setup
@@ -307,7 +368,7 @@ contains
     call STATISTICS_setup
 
     ! setup nesting grid
-    call COMM_CARTESC_NEST_setup ( QA_MP, ATMOS_PHY_MP_TYPE, intercomm_parent, intercomm_child )
+    call COMM_CARTESC_NEST_setup( QA_MP, ATMOS_PHY_MP_TYPE )
 
     ! setup coriolis parameter
     call CORIOLIS_setup( IA, JA, REAL_LAT(:,:), CY(:), DOMAIN_CENTER_Y )
@@ -317,12 +378,33 @@ contains
     call ATMOS_THERMODYN_setup
     call ATMOS_SATURATION_setup
 
+#ifdef JMAPPLIB
+    call pp_print_parm_set_flg_out_msg( 0 )
+    call pp_phys_const_set( &
+         tkelvn_in = TEM00, &
+         hlatnt_in = LHV0, &
+         hlf_in    = LHF0, &
+         rd_in     = Rdry, &
+         rv_in     = Rvap, &
+         cwater_in = CL, &
+         cice_in   = CI, &
+         vkman_in  = KARMAN, &
+         grav_in   = GRAV, &
+         stb_in    = STB, &
+         sc0_in    = SOLARINS_constant)
+#endif
+
+    call BULKFLUX_setup( sqrt(DX**2+DY**2) )
+
     ! setup variable container
     if ( ATMOS_do ) call ATMOS_vars_setup
     if ( OCEAN_do ) call OCEAN_vars_setup
     if ( LAND_do  ) call LAND_vars_setup
     if ( URBAN_do ) call URBAN_vars_setup
     if ( CPL_sw   ) call CPL_vars_setup
+
+    ! setup driver
+    if ( ATMOS_do ) call ATMOS_driver_setup( .true. )
 
     ! setup preprocess converter
     call CONVERT_setup
@@ -397,12 +479,76 @@ contains
 
     !########## Finalize ##########
 
-    ! setup file I/O
-    call FILE_CARTESC_cleanup
-
+    ! file I/O
+    call PROF_rapstart('File', 1)
+    call FILE_CARTESC_finalize
+    call FILE_GrADS_finalize
     call FILE_Close_All
+    call FILE_finalize
+    call PROF_rapend  ('File', 1)
+
+    call ATMOS_GRID_CARTESC_METRIC_finalize
+
+    ! finalize mkinit
+    call MKINIT_finalize
+
+    ! finalize atmosphere
+    if ( ATMOS_do ) call ATMOS_driver_finalize( .true. )
+
+    ! finalize variable container
+    if ( ATMOS_do ) call ATMOS_vars_finalize
+    if ( OCEAN_do ) call OCEAN_vars_finalize
+    if ( LAND_do )  call LAND_vars_finalize
+    if ( URBAN_do ) call URBAN_vars_finalize
+    if ( CPL_sw   ) call CPL_vars_finalize
+
+    ! finalize coriolis parameter
+    call CORIOLIS_finalize
+
+    ! finalize nesting grid
+    call COMM_CARTESC_NEST_finalize 
+
+    ! finalize grid coordinates (real world)
+    if ( ATMOS_do ) call ATMOS_GRID_CARTESC_REAL_finalize
+    if ( OCEAN_do ) call OCEAN_GRID_CARTESC_REAL_finalize
+    if ( LAND_do  ) call LAND_GRID_CARTESC_REAL_finalize
+    if ( URBAN_do ) call URBAN_GRID_CARTESC_REAL_finalize
+
+    ! finalize land use category index/fraction
+    call LANDUSE_finalize
+
+    ! finalize topography
+    call TOPOGRAPHY_finalize
+
+    ! finalize communication
+    call COMM_finalize
+
+    ! user module
+    call USER_finalize
+
+    ! finalize tracer
+    call ATMOS_HYDROMETEOR_finalize
+    call TRACER_finalize
+
+    ! finalize horizontal/vertical grid coordinates (cartesian, idealized)
+    if ( ATMOS_do ) call ATMOS_GRID_CARTESC_finalize
+    if ( OCEAN_do ) call OCEAN_GRID_CARTESC_finalize
+    if ( LAND_do  ) call LAND_GRID_CARTESC_finalize
+    if ( URBAN_do ) call URBAN_GRID_CARTESC_finalize
+
+    call PRC_CARTESC_finalize
+
+    call RANDOM_finalize
+
+    call CONST_finalize
 
     call PROF_rapreport
+
+    ! finalize profiler
+    call PROF_finalize
+
+    ! finalize io
+    call IO_finalize
 
     return
   end subroutine rm_prep

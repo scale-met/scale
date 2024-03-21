@@ -1,0 +1,92 @@
+################################################################################
+#
+# ------ For Linux64 & NVIDIA HPC SDK
+#
+################################################################################
+
+##### Fortran setting
+#FFLAGS is set in Mkinclude. FFLAGS_DEBUG is used if SCALE_DEBUG=T
+
+FC  = mpif90
+SFC = nvfortran
+MODDIROPT = -module
+
+FFLAGS_FAST  = -Mpreprocess -m64 -fast                \
+               -Mbyteswapio                           \
+               -Mflushz -Mfprelaxed -Mfpapprox -Kieee \
+               -Mvect=assoc
+#FFLAGS_FAST  = -Mpreprocess -m64                      \
+#	       -O1 -Mlre -Mcache_align                \
+#	       -Mbyteswapio                           \
+#	       -Mflushz -Mfprelaxed -Mfpapprox -Kieee \
+
+FFLAGS_AGGRESSIVE = -gpu=safecache
+
+#FFLAGS_QUICKDEBUG = -Ktrap=fp -Mbounds -gopt -g -traceback
+FFLAGS_QUICKDEBUG = -Mbounds -gopt -g -traceback
+
+FFLAGS_DYN   = $(FFLAGS)
+
+FFLAGS_DEBUG = -Mpreprocess -m64 -O0  \
+               -Mbyteswapio -Mneginfo \
+               -Mflushz -Ktrap=fp     \
+#               -Mbounds -Mstandard    \
+               -Mbounds \
+               -g -traceback
+
+
+
+##### C setting
+#CFLAGS is set in Mkinclude. CFLAGS_DEBUG is used if SCALE_DEBUG=T
+
+CC  = mpicc
+
+CFLAGS_FAST  = -fast
+CFLAGS_DEBUG = -O0
+
+
+##### Special setting
+
+FFLAGS_OPENMP = -mp
+
+FFLAGS_OPENACC = -acc -cuda -Minfo=accel -cudalib=cusparse -DUSE_CUDALIB
+#FFLAGS_OPENACC = -acc -ta=tesla,cuda8.0,cc60 -Mcuda -Minfo=accel
+
+FFLAGS_SYSDEPEND = -DNVIDIA
+CFLAGS_SYSDEPEND = -DNVIDIA
+
+
+
+##### Linker setting
+
+LD      = $(FC)
+LDFLAGS = $(FFLAGS)
+
+
+
+##### Execute command
+
+MPIEXEC = "mpiexec --oversubscribe -np"
+
+
+
+################################################################################
+
+###### NetCDF library
+# Settings are inquired by using nf-config & nc-config command (see scale/Mkinclude)
+# Or, please set environment variable
+# example:
+# export SCALE_NETCDF_INCLUDE="-I/opt/netcdf4-nvidia/netcdf4/include -DNDEBUG -DpgiFortran -fPIC /opt/netcdf4-nvidia/netcdf4/include"
+# export SCALE_NETCDF_LIBS="-L/opt/netcdf4-nvidia/netcdf4/lib -lnetcdff -lnetcdf"
+
+###### Math library
+# Please set environment variable
+# example:
+# export SCALE_MATHLIB_LIBS="-lacml"
+
+##### for frontend
+INSTALL = install
+AR      = ar
+ARFLAGS = r
+RANLIB  = ranlib
+JOBSUB  = sh

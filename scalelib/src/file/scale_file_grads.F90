@@ -23,8 +23,10 @@ module scale_file_grads
   !
   !++ Public procedure
   !
+  public :: FILE_GrADS_finalize
   public :: FILE_GrADS_open
   public :: FILE_GrADS_varid
+  public :: FILE_GrADS_varcheck
   public :: FILE_GrADS_isOneD
   public :: FILE_GrADS_get_shape
   public :: FILE_GrADS_read
@@ -155,12 +157,14 @@ contains
     integer :: n
     !---------------------------------------------------------------------------
 
+    call IO_get_fname(fname, file_name)
+
     LOG_NEWLINE
-    LOG_INFO("FILE_GrADS_open",*) 'open namelist file :', trim(file_name)
+    LOG_INFO("FILE_GrADS_open",*) 'open namelist file :', trim(fname)
 
     ! check exist
     do n = 1, nnmls
-       if ( nmls(n)%fname == file_name ) then
+       if ( nmls(n)%fname == fname ) then
           ! alread read
           file_id = n
           return
@@ -171,13 +175,13 @@ contains
     fid = IO_get_available_fid()
     !--- open namelist
     open( fid, &
-          file   = trim(file_name), &
-          form   = 'formatted',    &
-          status = 'old',          &
-          action = 'read',         &
-          iostat = ierr            )
+          file   = fname,       &
+          form   = 'formatted', &
+          status = 'old',       &
+          action = 'read',      &
+          iostat = ierr         )
     if ( ierr /= 0 ) then
-       LOG_ERROR("FILE_GrADS_open",*) 'Input file is not found! ', trim(file_name)
+       LOG_ERROR("FILE_GrADS_open",*) 'Input file is not found! ', trim(fname)
        call PRC_abort
     endif
 
@@ -186,13 +190,17 @@ contains
     !--- read namelist dims
     read(fid,nml=GrADS_DIMS,iostat=ierr)
     if( ierr /= 0 ) then !--- missing or fatal error
-       LOG_ERROR("FILE_GrADS_open",*) 'Not appropriate names in GrADS_DIMS in ', trim(file_name),'. Check!'
+       LOG_ERROR("FILE_GrADS_open",*) 'Not appropriate names in GrADS_DIMS in ', trim(fname),'. Check!'
        call PRC_abort
     endif
     LOG_NML(GrADS_DIMS)
 
 
     nnmls = nnmls + 1
+    if ( nnmls > nmls_max ) then
+       LOG_ERROR("FILE_GrADS_open",*) 'Number of GrADS file to be open is exceeded the maximum', nmls_max
+       call PRC_abort
+    end if
     file_id = nnmls
 
     nmls(file_id)%fname = file_name
@@ -269,6 +277,10 @@ contains
        nmls(file_id)%vars(n)%dd      = dd
        nmls(file_id)%vars(n)%lnum    = lnum
        if ( lnum > 0 ) then
+          if ( lnum > lvars_max ) then
+             LOG_ERROR("FILE_GrADS_open",*) 'lnum exceeds the limit', lvars_max
+             call PRC_abort
+          end if
           allocate( nmls(file_id)%vars(n)%lvars(lnum) )
           nmls(file_id)%vars(n)%lvars(:) = lvars(1:lnum)
        end if
@@ -324,6 +336,35 @@ contains
 
     return
   end subroutine FILE_GrADS_varid
+
+  subroutine FILE_GrADS_varcheck( &
+       file_id,  &
+       var_name, &
+       exist     )
+    use scale_prc, only: &
+       PRC_abort
+    implicit none
+    integer,          intent(in)  :: file_id
+    character(len=*), intent(in)  :: var_name
+    logical,          intent(out) :: exist
+
+    integer :: var_id
+
+    if ( file_id < 0 ) then
+       LOG_ERROR("FILE_GrADS_varcheck",*) 'file_id is invalid: ', file_id
+       call PRC_abort
+    end if
+
+    exist = .true.
+
+    call FILE_GrADS_varid( file_id, var_name, & ! (in)
+                           var_id             ) ! (out)
+    if ( var_id < 0 ) then
+       exist = .false.
+    end if
+
+    return
+  end subroutine FILE_GrADS_varcheck
 
   function FILE_GrADS_isOneD( &
        file_id,  &
@@ -418,6 +459,8 @@ contains
        var_name, &
        var,      &
        step,     &
+       start,    &
+       count,    &
        postfix   )
     use scale_prc, only: &
        PRC_abort
@@ -426,6 +469,8 @@ contains
     character(len=*), intent(in)  :: var_name
     real(RP),         intent(out) :: var(:)
     integer,          intent(in), optional :: step
+    integer,          intent(in), optional :: start(1)
+    integer,          intent(in), optional :: count(1)
     character(len=*), intent(in), optional :: postfix
 
     integer :: var_id
@@ -443,6 +488,8 @@ contains
     call FILE_GrADS_read_1D_id( file_id, var_id,   & ! (in)
                                 var(:),            & ! (out)
                                 step = step,       & ! (in)
+                                start = start,     & ! (in)
+                                count = count,     & ! (in)
                                 postfix = postfix  ) ! (in)
 
     return
@@ -453,12 +500,16 @@ contains
        var_id,  &
        var,     &
        step,    &
+       start,   &
+       count,   &
        postfix  )
     implicit none
     integer,          intent(in)  :: file_id
     integer,          intent(in)  :: var_id
     real(RP),         intent(out) :: var(:)
     integer,          intent(in), optional :: step
+    integer,          intent(in), optional :: start(1)
+    integer,          intent(in), optional :: count(1)
     character(len=*), intent(in), optional :: postfix
 
     logical :: exist
@@ -475,9 +526,11 @@ contains
     end if
 
     call FILE_GrADS_read_data( nmls(file_id)%vars(var_id), & ! (in)
-                               1, size(var),               & ! (in)
+                               1, size(var), shape(var),   & ! (in)
                                var(:),                     & ! (out)
                                step = step,                & ! (int)
+                               start = start,              & ! (int)
+                               count = count,              & ! (int)
                                postfix = postfix           ) ! (in)
 
     return
@@ -489,6 +542,8 @@ contains
        var_name, &
        var,      &
        step,     &
+       start,    &
+       count,    &
        postfix   )
     use scale_prc, only: &
        PRC_abort
@@ -497,6 +552,8 @@ contains
     character(len=*), intent(in)  :: var_name
     real(RP),         intent(out) :: var(:,:)
     integer,          intent(in), optional :: step
+    integer,          intent(in), optional :: start(2)
+    integer,          intent(in), optional :: count(2)
     character(len=*), intent(in), optional :: postfix
 
     integer :: var_id
@@ -513,6 +570,8 @@ contains
     call FILE_GrADS_read_2D_id( file_id, var_id,   & ! (in)
                                 var(:,:),          & ! (out)
                                 step = step,       & ! (in)
+                                start = start,     & ! (in)
+                                count = count,     & ! (in)
                                 postfix = postfix  ) ! (in)
 
     return
@@ -523,12 +582,16 @@ contains
        var_id,  &
        var,     &
        step,    &
+       start,   &
+       count,   &
        postfix  )
     implicit none
     integer,          intent(in)  :: file_id
     integer,          intent(in)  :: var_id
     real(RP),         intent(out) :: var(:,:)
     integer,          intent(in), optional :: step
+    integer,          intent(in), optional :: start(2)
+    integer,          intent(in), optional :: count(2)
     character(len=*), intent(in), optional :: postfix
 
     integer :: vid
@@ -543,9 +606,11 @@ contains
     end if
 
     call FILE_GrADS_read_data( nmls(file_id)%vars(var_id), & ! (in)
-                               2, size(var),               & ! (in)
+                               2, size(var), shape(var),   & ! (in)
                                var(:,:),                   & ! (out)
                                step = step,                & ! (in)
+                               start = start,              & ! (in)
+                               count = count,              & ! (in)
                                postfix = postfix           ) ! (in)
 
     return
@@ -557,6 +622,8 @@ contains
        var_name, &
        var,      &
        step,     &
+       start,    &
+       count,    &
        postfix   )
     use scale_prc, only: &
        PRC_abort
@@ -565,6 +632,8 @@ contains
     character(len=*), intent(in)  :: var_name
     real(RP),         intent(out) :: var(:,:,:)
     integer,          intent(in), optional :: step
+    integer,          intent(in), optional :: start(3)
+    integer,          intent(in), optional :: count(3)
     character(len=*), intent(in), optional :: postfix
 
     integer :: var_id
@@ -581,6 +650,8 @@ contains
     call FILE_GrADS_read_3D_id( file_id, var_id,   & ! (in)
                                 var(:,:,:),        & ! (out)
                                 step = step,       & ! (in)
+                                start = start,     & ! (in)
+                                count = count,     & ! (in)
                                 postfix = postfix  ) ! (in)
 
     return
@@ -591,12 +662,16 @@ contains
        var_id,  &
        var,     &
        step,    &
+       start,   &
+       count,   &
        postfix  )
     implicit none
     integer,          intent(in)  :: file_id
     integer,          intent(in)  :: var_id
     real(RP),         intent(out) :: var(:,:,:)
     integer,          intent(in), optional :: step
+    integer,          intent(in), optional :: start(3)
+    integer,          intent(in), optional :: count(3)
     character(len=*), intent(in), optional :: postfix
 
     integer :: vid
@@ -610,13 +685,27 @@ contains
        LOG_ERROR("FILE_GrADS_read_3D_vid",*) 'var_id is invalid: ', var_id
     end if
 
-    call FILE_GrADS_read_data( nmls(file_id)%vars(var_id),     & ! (in)
-                               3, size(var),                   & ! (in)
-                               var(:,:,:),                     & ! (out)
-                               step = step, postfix = postfix  ) ! (in)
+    call FILE_GrADS_read_data( nmls(file_id)%vars(var_id), & ! (in)
+                               3, size(var), shape(var),   & ! (in)
+                               var(:,:,:),                 & ! (out)
+                               step = step,                & ! (in)
+                               start = start,              & ! (in)
+                               count = count,              & ! (in)
+                               postfix = postfix           ) ! (in)
 
     return
   end subroutine FILE_GrADS_read_3D_id
+
+  subroutine FILE_GrADS_finalize
+    integer :: n
+
+    do n = 1, nnmls
+       call FILE_GrADS_close(n)
+    end do
+    nnmls = 0
+
+    return
+  end subroutine FILE_GrADS_finalize
 
   !-----------------------------------------------------------------------------
   subroutine FILE_GrADS_close( &
@@ -656,8 +745,11 @@ contains
   subroutine FILE_GrADS_read_data( &
        var_info, &
        ndims, n, &
+       shape,    &
        var,      &
        step,     &
+       start,    &
+       count,    &
        postfix   )
     use scale_prc, only: &
        PRC_abort
@@ -668,8 +760,11 @@ contains
     type(t_var), intent(in)  :: var_info
     integer,     intent(in)  :: ndims
     integer,     intent(in)  :: n
+    integer,     intent(in)  :: shape(ndims)
     real(RP),    intent(out) :: var(n)
     integer,          intent(in), optional :: step
+    integer,          intent(in), optional :: start(ndims)
+    integer,          intent(in), optional :: count(ndims)
     character(len=*), intent(in), optional :: postfix
 
     integer               :: fid
@@ -677,17 +772,19 @@ contains
     real(SP)              :: buf(var_info%nx,var_info%ny)
 
     integer                :: step_
+    integer                :: start_(3)
+    integer                :: count_(3)
     character(len=H_SHORT) :: postfix_
 
-    integer :: nxy, nz
-    integer :: irecl, isize, ierr
-    integer :: i, j, k
+    integer :: nxy, nz, ka
+    integer :: pos, isize, ierr
+    integer :: i, j, k, ii, jj, kk
 
     abstract interface
-       subroutine rd( fid, irecl, nx, ny, nz, k, yrev, var, ierr )
+       subroutine rd( fid, pos, nx, cz, k, sx, cx, cy, yrev, var, ierr )
          use scale_precision
-         integer, intent(in) :: fid, irecl
-         integer, intent(in) :: nx, ny, nz, k
+         integer, intent(in) :: fid, pos
+         integer, intent(in) :: nx, cz, k, sx, cx, cy
          logical, intent(in) :: yrev
          real(RP), intent(out) :: var(:)
          integer,  intent(out) :: ierr
@@ -707,8 +804,20 @@ contains
           call PRC_abort
        endif
 
-       do i = 1, n
-          var(i) = var_info%swpoint + (i-1) * var_info%dd
+       if ( present(start) ) then
+          start_(1) = start(1)
+       else
+          start_(1) = 1
+       end if
+       if ( present(count) ) then
+          count_(1) = count(1)
+       else
+          count_(1) = n - start_(1) + 1
+       end if
+
+       do i = 1, count_(1)
+          ii = i + start_(1) - 2 ! from 0
+          var(i) = var_info%swpoint + ii * var_info%dd
        end do
 
     case("levels")
@@ -726,8 +835,21 @@ contains
           call PRC_abort
        end if
 
-       do k = 1, var_info%lnum
-          var(k) = var_info%lvars(k)
+       if ( present(start) ) then
+          start_(1) = start(1)
+       else
+          start_(1) = 1
+       end if
+       if ( present(count) ) then
+          count_(1) = count(1)
+       else
+          count_(1) = var_info%lnum - start_(1) + 1
+       end if
+
+       do k = 1, count_(1)
+          kk = k + start_(1) - 1
+          if ( kk > var_info%lnum ) exit
+          var(k) = var_info%lvars(kk)
           if( var(k) == UNDEF ) then
              LOG_ERROR("FILE_GrADS_read_data",*) '"lvars" must be specified for levels data! '
              call PRC_abort
@@ -770,13 +892,17 @@ contains
        end do
        if ( fid < 0 ) then
           nfiles = nfiles + 1
+          if ( nfiles > vars_max ) then
+             LOG_ERROR("FILE_GrADS_read_data",*) 'The number of files exceeds the limit', vars_max
+             call PRC_abort
+          end if
           fid = nfiles
           files(fid)%fname   = var_info%fname
           files(fid)%postfix = ""
           files(fid)%fid     = -1
        end if
 
-       gfile = trim(var_info%fname)//trim(postfix_)//'.grd'
+       call IO_get_fname(gfile, trim(var_info%fname)//trim(postfix_)//'.grd')
 
        if ( files(fid)%postfix == postfix_ .and. files(fid)%fid > 0 ) then
           fid = files(fid)%fid
@@ -785,24 +911,10 @@ contains
           files(fid)%fid = IO_get_available_fid()
           files(fid)%postfix = postfix_
           fid = files(fid)%fid
-          select case ( var_info%bintype )
-          case ( 'int1' )
-             isize = 1
-          case ( 'int2' )
-             isize = 2
-          case ( 'real4', 'int4' )
-             isize = 4
-          case ( 'real8', 'int8' )
-             isize = 8
-          case default
-             LOG_ERROR("FILE_GrADS_read_data",*) 'bintype is invalid for ', trim(var_info%name)
-          end select
-          irecl = var_info%nx * var_info%ny * isize
           open( fid, &
                 file   = gfile, &
                 form   = 'unformatted', &
-                access = 'direct', &
-                recl   = irecl, &
+                access = 'stream', &
                 status = 'old', &
                 iostat = ierr )
           if ( ierr /= 0 ) then
@@ -813,244 +925,309 @@ contains
 
        if ( ndims == 2 ) then
           nz = 1
+          ka = 1
+          start_(1) = 1
+          if ( present(start) ) then
+             start_(2:3) = start(:)
+          else
+             start_(2:3) = 1
+          end if
+          count_(1) = 1
+          if ( present(count) ) then
+             count_(2:3) = count(:)
+          else
+             count_(2:3) = (/ var_info%nx, var_info%ny /)
+          end if
+          if ( shape(1) .ne. count_(2) .or. shape(2) .ne. count_(3) ) then
+             LOG_ERROR("FILE_GrADS_read_data",*) 'nx or ny is different', shape(:), count_(2:3)
+             call PRC_abort
+          end if
        else
           nz = var_info%nz
+          ka = shape(1)
+          if ( present(start) ) then
+             start_(:) = start(:)
+          else
+             start_(:) = 1
+          end if
+          if ( present(count) ) then
+             count_(:) = count(:)
+          else
+             count_(:) = (/ nz, var_info%nx, var_info%ny /)
+          end if
+          if ( ka < count_(1) ) then
+             LOG_ERROR("FILE_GrADS_read_data",*) 'size is too small for the 1st dimension'
+             call PRC_abort
+          end if
+          if ( shape(2) .ne. count_(2) .or. shape(3) .ne. count_(3) ) then
+             LOG_ERROR("FILE_GrADS_read_data",*) 'nx or ny is different', shape(2:), count_(2:)
+             call PRC_abort
+          end if
+          count_(1) = min( count_(1), nz )
        end if
-       nxy = var_info%nx * var_info%ny
+       nxy = count_(2) * count_(3)
 
-       if ( n .ne. nxy * nz ) then
-          LOG_ERROR("FILE_GrADS_read_data",*) 'size of var is not consitent with namelist info! ', n, var_info%nx, var_info%ny, var_info%nz
+
+       if ( n .ne. nxy * ka ) then
+          LOG_ERROR("FILE_GrADS_read_data",*) 'size of var is not consitent with namelist info! ', n, ka, count_(2:3)
           call PRC_abort
        end if
 
        select case ( var_info%bintype )
        case ( 'int1' )
           read_data => read_data_int1
+          isize = 1
        case ( 'int2' )
           read_data => read_data_int2
+          isize = 2
        case ( 'int4' )
           read_data => read_data_int4
+          isize = 4
        case ( 'real4' )
           read_data => read_data_real4
+          isize = 4
        case ( 'int8' )
           read_data => read_data_int8
+          isize = 8
        case ( 'real8' )
           read_data => read_data_real8
+          isize = 8
+       case default
+          LOG_ERROR("FILE_GrADS_read_data",*) 'bintype is invalid for ', trim(var_info%name)
        end select
 
-       do k = 1, nz
-          irecl = var_info%totalrec * (step_-1) + var_info%startrec + k - 1
-          call read_data( fid, irecl, var_info%nx, var_info%ny, nz, k, var_info%yrev, var(:), ierr )
+       do k = 1, count_(1)
+          kk = k + start_(1) - 2 ! from 0
+          pos = ( var_info%totalrec * ( step_ - 1 ) + var_info%startrec - 1 + kk ) * var_info%ny
+          if ( var_info%yrev ) then
+             pos = pos + var_info%ny - ( start_(3) + count_(3) - 1 )
+          else
+             pos = pos + start_(3) - 1
+          end if
+          pos = pos * var_info%nx * isize + 1
+          call read_data( fid, pos, ka, var_info%nx, k, start_(2), count_(2), count_(3), var_info%yrev, var(:), ierr )
           if ( ierr /= 0 ) then
              LOG_ERROR("FILE_GrADS_read_data",*) 'Failed to read data! ', trim(var_info%name), ', k=',k,', step=',step_, ' in ', trim(gfile)
-             LOG_ERROR_CONT(*) 'irec=', irecl
+             LOG_ERROR_CONT(*) 'pos=', pos
              call PRC_abort
           end if
        end do
        if ( var_info%missval .ne. UNDEF ) then
-          !$omp parallel do
-          do i = 1, nz * nxy
-             if ( abs( var(i) - var_info%missval ) < EPS ) var(i) = UNDEF
+          !$omp parallel do &
+          !$omp private(ii)
+          do i = 1, nxy
+          do k = 1, count_(1)
+             ii = (i-1) * ka + k
+             if ( abs( var(ii) - var_info%missval ) < EPS ) var(ii) = UNDEF
+          end do
           end do
        end if
+       !$omp parallel do &
+       !$omp private(ii)
+       do i = 1, nxy
+       do k = count_(1)+1, ka
+          ii = (i-1) * ka + k
+          var(ii) = UNDEF
+       end do
+       end do
 
     end select
 
     return
   end subroutine FILE_GrADS_read_data
 
-  subroutine read_data_int1( fid, irecl, nx, ny, nz, k, yrev, var, ierr )
-    integer, intent(in) :: fid, irecl
-    integer, intent(in) :: nx, ny, nz, k
+  subroutine read_data_int1( fid, pos, ka, nx, k, sx, cx, cy, yrev, var, ierr )
+    integer, intent(in) :: fid, pos
+    integer, intent(in) :: ka, nx, k, sx, cx, cy
     logical, intent(in) :: yrev
 
     real(RP), intent(out) :: var(:)
     integer,  intent(out) :: ierr
 
-    integer(1) :: buf(nx,ny)
+    integer(1) :: buf(nx,cy)
     integer :: i, j
 
-    read(fid, rec=irecl, iostat=ierr) buf(:,:)
+    read(fid, pos=pos, iostat=ierr) buf(:,:)
     if ( ierr /= 0 ) return
 
     if ( yrev ) then
-       !$omp parallel do collapse(2)
-       do j = 1, ny
-          do i = 1, nx
-             var(k+(i-1)*nz+(j-1)*nx*nz) = buf(i,ny-j+1)
-          end do
+       !$omp parallel do
+       do j = 1, cy
+       do i = 1, cx
+          var(k+(i-1)*ka+(j-1)*cx*ka) = buf(sx+i-1,cy-j+1)
+       end do
        end do
     else
-       !$omp parallel do collapse(2)
-       do j = 1, ny
-          do i = 1, nx
-             var(k+(i-1)*nz+(j-1)*nx*nz) = buf(i,j)
-          end do
+       !$omp parallel do
+       do j = 1, cy
+       do i = 1, cx
+          var(k+(i-1)*ka+(j-1)*cx*ka) = buf(sx+i-1,j)
+       end do
        end do
     end if
 
     return
   end subroutine read_data_int1
 
-  subroutine read_data_int2( fid, irecl, nx, ny, nz, k, yrev, var, ierr )
-    integer, intent(in) :: fid, irecl
-    integer, intent(in) :: nx, ny, nz, k
+  subroutine read_data_int2( fid, pos, ka, nx, k, sx, cx, cy, yrev, var, ierr )
+    integer, intent(in) :: fid, pos
+    integer, intent(in) :: ka, nx, k, sx, cx, cy
     logical, intent(in) :: yrev
 
     real(RP), intent(out) :: var(:)
     integer,  intent(out) :: ierr
 
-    integer(2) :: buf(nx,ny)
+    integer(2) :: buf(nx,cy)
     integer :: i, j
 
-    read(fid, rec=irecl, iostat=ierr) buf(:,:)
+    read(fid, pos=pos, iostat=ierr) buf(:,:)
     if ( ierr /= 0 ) return
 
     if ( yrev ) then
-       !$omp parallel do collapse(2)
-       do j = 1, ny
-          do i = 1, nx
-             var(k+(i-1)*nz+(j-1)*nx*nz) = buf(i,ny-j+1)
-          end do
+       !$omp parallel do
+       do j = 1, cy
+       do i = 1, cx
+          var(k+(i-1)*ka+(j-1)*cx*ka) = buf(sx+i-1,cy-j+1)
+       end do
        end do
     else
-       !$omp parallel do collapse(2)
-       do j = 1, ny
-          do i = 1, nx
-             var(k+(i-1)*nz+(j-1)*nx*nz) = buf(i,j)
-          end do
+       !$omp parallel do
+       do j = 1, cy
+       do i = 1, cx
+          var(k+(i-1)*ka+(j-1)*cx*ka) = buf(sx+i-1,j)
+       end do
        end do
     end if
 
     return
   end subroutine read_data_int2
 
-  subroutine read_data_int4( fid, irecl, nx, ny, nz, k, yrev, var, ierr )
-    integer, intent(in) :: fid, irecl
-    integer, intent(in) :: nx, ny, nz, k
+  subroutine read_data_int4( fid, pos, ka, nx, k, sx, cx, cy, yrev, var, ierr )
+    integer, intent(in) :: fid, pos
+    integer, intent(in) :: ka, nx, k, sx, cx, cy
     logical, intent(in) :: yrev
 
     real(RP), intent(out) :: var(:)
     integer,  intent(out) :: ierr
 
-    integer(4) :: buf(nx,ny)
+    integer(4) :: buf(nx,cy)
     integer :: i, j
 
-    read(fid, rec=irecl, iostat=ierr) buf(:,:)
+    read(fid, pos=pos, iostat=ierr) buf(:,:)
     if ( ierr /= 0 ) return
 
     if ( yrev ) then
-       !$omp parallel do collapse(2)
-       do j = 1, ny
-          do i = 1, nx
-             var(k+(i-1)*nz+(j-1)*nx*nz) = buf(i,ny-j+1)
-          end do
+       !$omp parallel do
+       do j = 1, cy
+       do i = 1, cx
+          var(k+(i-1)*ka+(j-1)*cx*ka) = buf(sx+i-1,cy-j+1)
+       end do
        end do
     else
-       !$omp parallel do collapse(2)
-       do j = 1, ny
-          do i = 1, nx
-             var(k+(i-1)*nz+(j-1)*nx*nz) = buf(i,j)
-          end do
+       !$omp parallel do
+       do j = 1, cy
+       do i = 1, cx
+          var(k+(i-1)*ka+(j-1)*cx*ka) = buf(sx+i-1,j)
+       end do
        end do
     end if
 
     return
   end subroutine read_data_int4
 
-  subroutine read_data_real4( fid, irecl, nx, ny, nz, k, yrev, var, ierr )
-    integer, intent(in) :: fid, irecl
-    integer, intent(in) :: nx, ny, nz, k
+  subroutine read_data_real4( fid, pos, ka, nx, k, sx, cx, cy, yrev, var, ierr )
+    integer, intent(in) :: fid, pos
+    integer, intent(in) :: ka, nx, k, sx, cx, cy
     logical, intent(in) :: yrev
 
     real(RP), intent(out) :: var(:)
     integer,  intent(out) :: ierr
 
-    real(4) :: buf(nx,ny)
+    real(4) :: buf(nx,cy)
     integer :: i, j
 
-    read(fid, rec=irecl, iostat=ierr) buf(:,:)
+    read(fid, pos=pos, iostat=ierr) buf(:,:)
     if ( ierr /= 0 ) return
 
     if ( yrev ) then
-       !$omp parallel do collapse(2)
-       do j = 1, ny
-          do i = 1, nx
-             var(k+(i-1)*nz+(j-1)*nx*nz) = buf(i,ny-j+1)
-          end do
+       !$omp parallel do
+       do j = 1, cy
+       do i = 1, cx
+          var(k+(i-1)*ka+(j-1)*cx*ka) = buf(sx+i-1,cy-j+1)
+       end do
        end do
     else
-       !$omp parallel do collapse(2)
-       do j = 1, ny
-          do i = 1, nx
-             var(k+(i-1)*nz+(j-1)*nx*nz) = buf(i,j)
-          end do
+       !$omp parallel do
+       do j = 1, cy
+       do i = 1, cx
+          var(k+(i-1)*ka+(j-1)*cx*ka) = buf(sx+i-1,j)
+       end do
        end do
     end if
 
     return
   end subroutine read_data_real4
 
-  subroutine read_data_int8( fid, irecl, nx, ny, nz, k, yrev, var, ierr )
-    integer, intent(in) :: fid, irecl
-    integer, intent(in) :: nx, ny, nz, k
+  subroutine read_data_int8( fid, pos, ka, nx, k, sx, cx, cy, yrev, var, ierr )
+    integer, intent(in) :: fid, pos
+    integer, intent(in) :: ka, nx, k, sx, cx, cy
     logical, intent(in) :: yrev
 
     real(RP), intent(out) :: var(:)
     integer,  intent(out) :: ierr
 
-    integer(8) :: buf(nx,ny)
+    integer(8) :: buf(nx,cy)
     integer :: i, j
 
-    read(fid, rec=irecl, iostat=ierr) buf(:,:)
+    read(fid, pos=pos, iostat=ierr) buf(:,:)
     if ( ierr /= 0 ) return
 
     if ( yrev ) then
-       !$omp parallel do collapse(2)
-       do j = 1, ny
-          do i = 1, nx
-             var(k+(i-1)*nz+(j-1)*nx*nz) = buf(i,ny-j+1)
-          end do
+       !$omp parallel do
+       do j = 1, cy
+       do i = 1, cx
+          var(k+(i-1)*ka+(j-1)*cx*ka) = buf(sx+i-1,cy-j+1)
+       end do
        end do
     else
-       !$omp parallel do collapse(2)
-       do j = 1, ny
-          do i = 1, nx
-             var(k+(i-1)*nz+(j-1)*nx*nz) = buf(i,j)
-          end do
+       !$omp parallel do
+       do j = 1, cy
+       do i = 1, cx
+          var(k+(i-1)*ka+(j-1)*cx*ka) = buf(sx+i-1,j)
+       end do
        end do
     end if
 
     return
   end subroutine read_data_int8
 
-  subroutine read_data_real8( fid, irecl, nx, ny, nz, k, yrev, var, ierr )
-    integer, intent(in) :: fid, irecl
-    integer, intent(in) :: nx, ny, nz, k
+  subroutine read_data_real8( fid, pos, ka, nx, k, sx, cx, cy, yrev, var, ierr )
+    integer, intent(in) :: fid, pos
+    integer, intent(in) :: ka, nx, k, sx, cx, cy
     logical, intent(in) :: yrev
 
     real(RP), intent(out) :: var(:)
     integer,  intent(out) :: ierr
 
-    real(8) :: buf(nx,ny)
+    real(8) :: buf(nx,cy)
     integer :: i, j
 
-    read(fid, rec=irecl, iostat=ierr) buf(:,:)
+    read(fid, pos=pos, iostat=ierr) buf(:,:)
     if ( ierr /= 0 ) return
 
     if ( yrev ) then
-       !$omp parallel do collapse(2)
-       do j = 1, ny
-          do i = 1, nx
-             var(k+(i-1)*nz+(j-1)*nx*nz) = buf(i,ny-j+1)
-          end do
+       !$omp parallel do
+       do j = 1, cy
+       do i = 1, cx
+          var(k+(i-1)*ka+(j-1)*cx*ka) = buf(sx+i-1,cy-j+1)
+       end do
        end do
     else
-       !$omp parallel do collapse(2)
-       do j = 1, ny
-          do i = 1, nx
-             var(k+(i-1)*nz+(j-1)*nx*nz) = buf(i,j)
-          end do
+       !$omp parallel do
+       do j = 1, cy
+       do i = 1, cx
+          var(k+(i-1)*ka+(j-1)*cx*ka) = buf(sx+i-1,j)
+       end do
        end do
     end if
 

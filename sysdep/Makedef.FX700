@@ -1,0 +1,116 @@
+################################################################################
+#
+# ------ For FX700/FX1000 -----
+#
+################################################################################
+
+##### Fortran setting
+#FFLAGS is set in Mkinclude. FFLAGS_DEBUG is used if SCALE_DEBUG=T
+
+FC  = mpifrtpx
+SFC = frtpx
+MODDIROPT = -M
+
+FFLAGS_FAST  = -Kfast,parallel,ocl,preex,array_private,noalias=s,mfunc=2 \
+               -Nlst=i,lst=t -X03 -Ncompdisp -Koptmsg=1 -Cpp             \
+               -x-                                                       \
+               -Ksimd,loop_fission                                       \
+               -Kauto,threadsafe                                         \
+               -Nfjomplib
+
+FFLAGS_AGGRESSIVE = -Kinstance=12,swp_weak
+
+FFLAGS_QUICKDEBUG = -Nquickdbg -NRtrap
+
+FFLAGS_DYN   = $(FFLAGS) -Knoprefetch,loop_nofission,loop_nofusion,nounroll,parallel_strong -Ksimd=2 -x100
+
+FFLAGS_DEBUG = -O0                                                       \
+               -Nlst=i,lst=t -X03 -v03s -v03d -v03o -Ncompdisp -Koptmsg=1 -Cpp \
+               -Ec -Eg -Ha -He -Hf -Ho -Hs -Hu -Hx -Ncheck_global
+
+
+
+##### C setting
+#CFLAGS is set in Mkinclude. CFLAGS_DEBUG is used if SCALE_DEBUG=T
+
+CC = mpifccpx
+
+CFLAGS_FAST  = -Kfast,parallel,ocl,preex,array_private,region_extension,restp=all -Ksimd
+CFLAGS_DEBUG = -O0
+
+
+##### Vector length
+ifeq ($(SCALE_USE_SINGLEFP),T)
+   LSIZE = 32
+else
+   LSIZE = 16
+endif
+
+
+##### Special setting
+
+FFLAGS_OPENMP = -Kopenmp
+# enable + disable parallel
+# FFLAGS_OPENMP = -Kopenmp,noparallel
+
+### Performance monitor
+# disable
+#PERF_MONIT ?= -Nnofjprof -UFIPP -UFAPP
+# fipp
+#PERF_MONIT ?= -Nfjprof -DFIPP
+# fapp
+#PERF_MONIT ?= -Nfjprof -DFAPP
+
+FFLAGS_SYSDEPEND = $(PERF_MONIT)
+CFLAGS_SYSDEPEND = $(PERF_MONIT)
+
+
+
+##### Linker setting
+
+LD      = $(FC)
+LDFLAGS = $(FFLAGS)
+
+
+
+##### Execute command
+
+MPIEXEC = "mpiexec -np"
+
+
+
+################################################################################
+
+###### NetCDF library
+# Default settings
+# if nc-config is not available, please set environment variable
+# example:
+# export SCALE_NETCDF_INCLUDE="-I/home/user/tool/cross-K/include"
+# export SCALE_NETCDF_LIBS="-L/home/user/tool/cross-K/lib -lnetcdff -lnetcdf -lhdf5_hl -lhdf5 -lsz -lz"
+#SPACK_FJVER ?= 4.6.1
+#SCALE_NETCDF_C = $(shell spack location --install-dir netcdf-c%fj@$(SPACK_FJVER))
+#SCALE_NETCDF_F = $(shell spack location --install-dir netcdf-fortran%fj@$(SPACK_FJVER))
+#SCALE_PNETCDF = $(shell spack location --install-dir parallel-netcdf%fj@$(SPACK_FJVER))
+#SCALE_HDF = $(shell spack location --install-dir hdf5%fj@$(SPACK_FJVER)+hl)
+#SCALE_NETCDF_INCLUDE ?= -I$(SCALE_NETCDF_C)/include -I$(SCALE_NETCDF_F)/include
+#SCALE_NETCDF_LIBS ?= -L$(SCALE_NETCDF_C)/lib -L$(SCALE_NETCDF_F)/lib -L$(SCALE_HDF)/lib -L$(SCALE_PNETCDF)/lib -lpnetcdf -lnetcdff -lnetcdf -lhdf5_hl -lhdf5 -lfjprofmpi -lmpi_cxx
+#SCALE_ENABLE_PNETCDF ?= T
+
+###### Math library
+# Default settings
+SCALE_MATHLIB_LIBS ?=
+# Or, please set environment variable
+# example:
+# export SCALE_MATHLIB_LIBS="-SSL2"
+
+##### for frontend
+INSTALL = install
+AR      = ar
+ARFLAGS = r
+RANLIB  = ranlib
+JOBSUB  = pjsub
+
+
+#### other parameters
+SCALE_ENABLE_OPENMP     ?= T
+SCALE_USE_AGGRESSIVEOPT ?= T

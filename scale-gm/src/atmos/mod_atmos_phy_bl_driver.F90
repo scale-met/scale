@@ -110,7 +110,6 @@ contains
        select case ( ATMOS_PHY_BL_TYPE )
        case ( 'MYNN' )
           call ATMOS_PHY_BL_MYNN_setup( &
-               KA, KS, KE, IA, IS, IE, JA, JS, JE, &
                BULKFLUX_type ) ! (in)
        end select
     else
@@ -125,13 +124,16 @@ contains
   subroutine ATMOS_PHY_BL_driver_step
     use scale_const, only: &
        PRE00 => CONST_PRE00
-    use scale_file_history, only: &
-       FILE_HISTORY_in
+   !  use scale_file_history, only: &
+   !     FILE_HISTORY_in
+    use mod_history, only: &
+       history_in
     use scale_time, only: &
        dt_BL => TIME_DTSEC_ATMOS_PHY_BL
+    use scale_atmos_phy_bl_common, only: &
+       ATMOS_PHY_BL_tendency_tracer
     use scale_atmos_phy_bl_mynn, only: &
-       ATMOS_PHY_BL_MYNN_tendency, &
-       ATMOS_PHY_BL_MYNN_tendency_tracer
+       ATMOS_PHY_BL_MYNN_tendency
     use scale_atmos_hydrometeor, only: &
        I_QV
     use scale_bulkflux, only: &
@@ -149,6 +151,7 @@ contains
        QTRC, &
        U,     &
        V,     &
+       W,     &
        TEMP,  &
        POTT,  &
        PRES,  &
@@ -163,9 +166,10 @@ contains
        ATMOS_vars_get_diagnostic
     use mod_atmos_phy_bl_vars, only: &
        QS, QE, &
-       Zi      => ATMOS_PHY_BL_Zi,     &
-       QL      => ATMOS_PHY_BL_QL,     &
-       cldfrac => ATMOS_PHY_BL_cldfrac
+       Zi        => ATMOS_PHY_BL_Zi,     &
+       SFLX_BUOY => ATMOS_PHY_BL_SFLX_BUOY, &
+       QL        => ATMOS_PHY_BL_QL,     &
+       cldfrac   => ATMOS_PHY_BL_cldfrac
     use mod_atmos_phy_sf_vars, only: &
        SFC_DENS => ATMOS_PHY_SF_SFC_DENS, &
        SFLX_MU  => ATMOS_PHY_SF_SFLX_MU, &
@@ -179,7 +183,8 @@ contains
        RLmo     => ATMOS_PHY_SF_RLmo
     use mod_atmos_vars, only: &
        CZ, &
-       FZ
+       FZ, &
+       F2H
     implicit none
 
     real(RP) :: Nu   (KA,IA,JA,ADM_lall) !> eddy viscosity
@@ -196,6 +201,8 @@ contains
     real(RP) :: RHOQV_t(KA,IA,JA)
     real(RP) :: RHOQ_t(KA,IA,JA,QA)
 
+    real(RP) :: frac_land(IA,JA)
+
     integer  :: k, i, j, iq, l
     !---------------------------------------------------------------------------
 
@@ -204,6 +211,11 @@ contains
        call ATMOS_vars_get_diagnostic( "N2",   N2   )
        call ATMOS_vars_get_diagnostic( "POTL", POTL )
        call ATMOS_vars_get_diagnostic( "POTV", POTV )
+       do j = JS, JE
+       do i = IS, IE
+          frac_land(i,j) = 1.0_RP ! tentative
+       end do
+       end do
        do l = 1, ADM_lall
 
           do j = JS, JE
@@ -215,7 +227,7 @@ contains
           end do
           call ATMOS_PHY_BL_MYNN_tendency( &
                KA, KS, KE, IA, IS, IE, JA, JS, JE, &
-               DENS(:,:,:,l), U(:,:,:,l), V(:,:,:,l),                          & ! (in)
+               DENS(:,:,:,l), U(:,:,:,l), V(:,:,:,l), W(:,:,:,l),              & ! (in)
                POTT(:,:,:,l), QTRC(:,:,:,QS:QE,l),                             & ! (in)
                PRES(:,:,:,l), EXNER(:,:,:,l), N2(:,:,:,l),                     & ! (in)
                QDRY(:,:,:,l), QV(:,:,:,l), QW(:,:,:),                          & ! (in)
@@ -223,12 +235,13 @@ contains
                SFC_DENS(:,:,l),                                                & ! (in)
                SFLX_MU(:,:,l), SFLX_MV(:,:,l), SFLX_SH(:,:,l), SFLX_QV(:,:,l), & ! (in)
                Ustar(:,:,l), Tstar(:,:,l), Qstar(:,:,l), RLmo(:,:,l),          & ! (in)
-               CZ(:,:,:,l), FZ(:,:,:,l), dt_BL,                                & ! (in)
+               frac_land(:,:),                                                 & ! (in)
+               CZ(:,:,:,l), FZ(:,:,:,l), F2H(:,:,:,:,l), dt_BL,                & ! (in)
                BULKFLUX_type,                                                  & ! (in)
                RHOU_t(:,:,:), RHOV_t(:,:,:), RHOT_t(:,:,:),                    & ! (out)
                RHOQV_t(:,:,:), RHOQ_t(:,:,:,QS:QE),                            & ! (out)
                Nu(:,:,:,l), Kh(:,:,:,l),                                       & ! (out)
-               QL(:,:,:,l), cldfrac(:,:,:,l), Zi(:,:,l)                        ) ! (out)
+               QL(:,:,:,l), cldfrac(:,:,:,l), Zi(:,:,l), SFLX_BUOY(:,:,l)      ) ! (out)
           do j = JS, JE
           do i = IS, IE
           do k = KS, KE
@@ -251,11 +264,11 @@ contains
 
           do iq = 1, QA
              if ( ( .not. TRACER_ADVC(iq) ) .or. iq==I_QV .or. (iq>=QS .and. iq<=QE) ) cycle
-             call ATMOS_PHY_BL_MYNN_tendency_tracer( &
+             call ATMOS_PHY_BL_tendency_tracer( &
                   KA, KS, KE, IA, IS, IE, JA, JS, JE, &
                   DENS(:,:,:,l), QTRC(:,:,:,iq,l), SFLX_Q(:,:,iq,l), & ! (in)
                   Kh(:,:,:,l), TRACER_MASS(iq),                      & ! (in)
-                  CZ(:,:,:,l), FZ(:,:,:,l),                          & ! (in)
+                  CZ(:,:,:,l), FZ(:,:,:,l), F2H(:,:,:,:,l),          & ! (in)
                   dt_BL, TRACER_NAME(iq),                            & ! (in)
                   RHOQ_t(:,:,:,iq)                                   ) ! (out)
              do j = JS, JE
@@ -270,12 +283,33 @@ contains
        end do
     end select
 
-    call FILE_HISTORY_in( Nu(:,:,:,:),        'Nu_BL',     'eddy viscosity',     'm2/s',      fill_halo=.true. )
-    call FILE_HISTORY_in( Kh(:,:,:,:),        'Kh_BL',     'eddy diffusion',     'm2/s',      fill_halo=.true. )
+   !  call FILE_HISTORY_in( Nu(:,:,:,:),        'Nu_BL',     'eddy viscosity',     'm2/s',      fill_halo=.true. )
+   !  call FILE_HISTORY_in( Kh(:,:,:,:),        'Kh_BL',     'eddy diffusion',     'm2/s',      fill_halo=.true. )
+    do l = 1, ADM_lall
+       call history_in( 'Nu_BL',    var_gk(  Nu(:,:,:,l) ) )  !  'eddy viscosity',     'm2/s'
+       call history_in( 'Kh_BL',    var_gk(  Kh(:,:,:,l) ) )  !  'eddy diffusion',     'm2/s'
+    enddo
 
     call ATMOS_vars_calc_diagnostics
 
     return
   end subroutine ATMOS_PHY_BL_driver_step
+
+  ! the following function is conversion to use history_in(), which will be replaced by FILE_HISTOTY_in in future.
+  function var_gk(var_kij)
+     implicit none
+     real(RP) :: var_kij (KA, IA, JA)
+     real(RP) :: var_gk  (ADM_gall_in, ADM_Kall)
+     integer  :: i, j, k, g
+     do j = 1, JA
+     do i = 1, IA
+        g = i + ( j - 1 ) * ADM_imax
+        do k = 1, KA
+           var_gk(g,k) = var_kij(k,i,j)
+        enddo
+     enddo
+     enddo
+  end function var_gk
+
 
 end module mod_atmos_phy_bl_driver

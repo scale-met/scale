@@ -7,6 +7,8 @@
 PWD         = $(shell pwd)
 TOPDIR      = $(abspath ../../../../..)
 TESTDIR     = ../../..
+DATADIR     = ${TOPDIR}/data
+DATADIR_RM  = ${TESTDIR}/data
 
 
 # user-defined source files
@@ -19,8 +21,8 @@ RUNCONF     = run.conf
 TPROC       = 8
 
 # required data (parameters,distributed files)
-DATPARAM    = " [${TESTDIR}/data/input_sounding/twpice.txt   twpice.txt         ] \
-                [${TESTDIR}/data/forcing/forcing_twpice.l120 forcing_twpice.l120] "
+DATPARAM    = " [${DATADIR_RM}/input_sounding/twpice.txt   twpice.txt         ] \
+                [${DATADIR_RM}/forcing/forcing_twpice.l120 forcing_twpice.l120] "
 DATDISTS    =
 
 

@@ -46,6 +46,7 @@ module scale_time
   real(DP), public :: TIME_DTSEC_OCEAN           !< time interval of ocean step            [sec]
   real(DP), public :: TIME_DTSEC_LAND            !< time interval of land step             [sec]
   real(DP), public :: TIME_DTSEC_URBAN           !< time interval of urban step            [sec]
+  real(DP), public :: TIME_DTSEC_DA              !< time interval of data-assim. step      [sec]
   real(DP), public :: TIME_DTSEC_WALLCLOCK_CHECK !< time interval of wallclock terminator  [sec]
 
   integer,  public :: TIME_DSTEP_ATMOS_DYN       !< step interval of dynamics
@@ -61,6 +62,7 @@ module scale_time
   integer,  public :: TIME_DSTEP_OCEAN           !< step interval of ocean step
   integer,  public :: TIME_DSTEP_LAND            !< step interval of land step
   integer,  public :: TIME_DSTEP_URBAN           !< step interval of urban step
+  integer,  public :: TIME_DSTEP_DA              !< step interval of data-assim. step
   integer,  public :: TIME_DSTEP_WALLCLOCK_CHECK !< step interval of wallclock terminator
 
   integer,  public :: TIME_NOWDATE(6)           !< current time [YYYY MM DD HH MM SS]

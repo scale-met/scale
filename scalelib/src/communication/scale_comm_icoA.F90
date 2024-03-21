@@ -979,6 +979,7 @@ contains
     use scale_prc, only: &
        PRC_myrank
     use scale_prc_icoA, only: &
+       PRC_RGN_ndiamond,    &
        PRC_have_pl,         &
        PRC_RGN_local,       &
        PRC_RGN_vert_pl,     &
@@ -1003,12 +1004,14 @@ contains
 
     integer  :: irank, ipos
 
-    integer, parameter :: Send_size_nglobal_pl = 10
+    integer :: Send_size_nglobal_pl
 
     integer  :: l, l_pl, n, v, vv
     integer  :: i_from, j_from, r_from, g_from, l_from, p_from
     integer  :: i_to, j_to, r_to, g_to, l_to, p_to
     !---------------------------------------------------------------------------
+
+    Send_size_nglobal_pl = PRC_RGN_ndiamond
 
     allocate( Copy_info_p2r(info_vindex) )
     allocate( Recv_info_p2r(info_vindex,Recv_nlim) )
@@ -1643,7 +1646,7 @@ contains
        REQ_count = REQ_count + 1
        totalsize = Recv_info_p2r(I_size    ,irank) * kmax * vmax
        rank      = Recv_info_p2r(I_prc_from,irank)
-       tag       = Recv_info_p2r(I_prc_from,irank) + 1000000
+       tag       = Recv_info_p2r(I_prc_from,irank) + 100000
 
        call MPI_IRECV( recvbuf_p2r_SP(1,irank), & ! [OUT]
                        totalsize,               & ! [IN]
@@ -1660,7 +1663,7 @@ contains
        REQ_count = REQ_count + 1
        totalsize = Recv_info_r2p(I_size    ,irank) * kmax * vmax
        rank      = Recv_info_r2p(I_prc_from,irank)
-       tag       = Recv_info_r2p(I_prc_from,irank) + 2000000
+       tag       = Recv_info_r2p(I_prc_from,irank) + 200000
 
        call MPI_IRECV( recvbuf_r2p_SP(1,irank), & ! [OUT]
                        totalsize,               & ! [IN]
@@ -1751,7 +1754,7 @@ contains
        REQ_count = REQ_count + 1
        totalsize = imax * kmax * vmax
        rank      = Send_info_p2r(I_prc_to  ,irank)
-       tag       = Send_info_p2r(I_prc_from,irank) + 1000000
+       tag       = Send_info_p2r(I_prc_from,irank) + 100000
 
        !$acc wait
        call MPI_ISEND( sendbuf_p2r_SP(1,irank), & ! [IN]
@@ -1795,7 +1798,7 @@ contains
        REQ_count = REQ_count + 1
        totalsize = imax * kmax * vmax
        rank      = Send_info_r2p(I_prc_to  ,irank)
-       tag       = Send_info_r2p(I_prc_from,irank) + 2000000
+       tag       = Send_info_r2p(I_prc_from,irank) + 200000
 
        !$acc wait
        call MPI_ISEND( sendbuf_r2p_SP(1,irank), & ! [IN]
@@ -2122,7 +2125,7 @@ contains
        REQ_count = REQ_count + 1
        totalsize = Recv_info_p2r(I_size    ,irank) * kmax * vmax
        rank      = Recv_info_p2r(I_prc_from,irank)
-       tag       = Recv_info_p2r(I_prc_from,irank) + 1000000
+       tag       = Recv_info_p2r(I_prc_from,irank) + 100000
 
        call MPI_IRECV( recvbuf_p2r_DP(1,irank), & ! [OUT]
                        totalsize,               & ! [IN]
@@ -2139,7 +2142,7 @@ contains
        REQ_count = REQ_count + 1
        totalsize = Recv_info_r2p(I_size    ,irank) * kmax * vmax
        rank      = Recv_info_r2p(I_prc_from,irank)
-       tag       = Recv_info_r2p(I_prc_from,irank) + 2000000
+       tag       = Recv_info_r2p(I_prc_from,irank) + 200000
 
        call MPI_IRECV( recvbuf_r2p_DP(1,irank), & ! [OUT]
                        totalsize,               & ! [IN]
@@ -2230,7 +2233,7 @@ contains
        REQ_count = REQ_count + 1
        totalsize = imax * kmax * vmax
        rank      = Send_info_p2r(I_prc_to  ,irank)
-       tag       = Send_info_p2r(I_prc_from,irank) + 1000000
+       tag       = Send_info_p2r(I_prc_from,irank) + 100000
 
        !$acc wait
        call MPI_ISEND( sendbuf_p2r_DP(1,irank), & ! [IN]
@@ -2274,7 +2277,7 @@ contains
        REQ_count = REQ_count + 1
        totalsize = imax * kmax * vmax
        rank      = Send_info_r2p(I_prc_to  ,irank)
-       tag       = Send_info_r2p(I_prc_from,irank) + 2000000
+       tag       = Send_info_r2p(I_prc_from,irank) + 200000
 
        !$acc wait
        call MPI_ISEND( sendbuf_r2p_DP(1,irank), & ! [IN]
@@ -2748,7 +2751,7 @@ contains
              REQ_count = REQ_count + 1
              totalsize = kmax * vmax
              rank      = Send_info_p2r(I_prc_to  ,irank)
-             tag       = Send_info_p2r(I_prc_from,irank) + 1000000
+             tag       = Send_info_p2r(I_prc_from,irank) + 100000
 
              call MPI_IRECV( recvbuf_h2p_SP(1,I_NPL), & ! [OUT]
                              totalsize,               & ! [IN]
@@ -2764,7 +2767,7 @@ contains
              REQ_count = REQ_count + 1
              totalsize = kmax * vmax
              rank      = Send_info_p2r(I_prc_to  ,irank)
-             tag       = Send_info_p2r(I_prc_from,irank) + 2000000
+             tag       = Send_info_p2r(I_prc_from,irank) + 200000
 
              call MPI_IRECV( recvbuf_h2p_SP(1,I_SPL), & ! [OUT]
                              totalsize,               & ! [IN]
@@ -2796,7 +2799,7 @@ contains
              REQ_count = REQ_count + 1
              totalsize = kmax * vmax
              rank      = Recv_info_p2r(I_prc_from,irank)
-             tag       = Recv_info_p2r(I_prc_from,irank) + 1000000
+             tag       = Recv_info_p2r(I_prc_from,irank) + 100000
 
              call MPI_ISEND( sendbuf_h2p_SP(1,I_NPL), & ! [IN]
                              totalsize,               & ! [IN]
@@ -2819,7 +2822,7 @@ contains
              REQ_count = REQ_count + 1
              totalsize = kmax * vmax
              rank      = Recv_info_p2r(I_prc_from,irank)
-             tag       = Recv_info_p2r(I_prc_from,irank) + 2000000
+             tag       = Recv_info_p2r(I_prc_from,irank) + 200000
 
              call MPI_ISEND( sendbuf_h2p_SP(1,I_SPL), & ! [IN]
                              totalsize,               & ! [IN]
@@ -2956,7 +2959,7 @@ contains
              REQ_count = REQ_count + 1
              totalsize = kmax * vmax
              rank      = Send_info_p2r(I_prc_to  ,irank)
-             tag       = Send_info_p2r(I_prc_from,irank) + 1000000
+             tag       = Send_info_p2r(I_prc_from,irank) + 100000
 
              call MPI_IRECV( recvbuf_h2p_DP(1,I_NPL), & ! [OUT]
                              totalsize,               & ! [IN]
@@ -2972,7 +2975,7 @@ contains
              REQ_count = REQ_count + 1
              totalsize = kmax * vmax
              rank      = Send_info_p2r(I_prc_to  ,irank)
-             tag       = Send_info_p2r(I_prc_from,irank) + 2000000
+             tag       = Send_info_p2r(I_prc_from,irank) + 200000
 
              call MPI_IRECV( recvbuf_h2p_DP(1,I_SPL), & ! [OUT]
                              totalsize,               & ! [IN]
@@ -3004,7 +3007,7 @@ contains
              REQ_count = REQ_count + 1
              totalsize = kmax * vmax
              rank      = Recv_info_p2r(I_prc_from,irank)
-             tag       = Recv_info_p2r(I_prc_from,irank) + 1000000
+             tag       = Recv_info_p2r(I_prc_from,irank) + 100000
 
              call MPI_ISEND( sendbuf_h2p_DP(1,I_NPL), & ! [IN]
                              totalsize,               & ! [IN]
@@ -3027,7 +3030,7 @@ contains
              REQ_count = REQ_count + 1
              totalsize = kmax * vmax
              rank      = Recv_info_p2r(I_prc_from,irank)
-             tag       = Recv_info_p2r(I_prc_from,irank) + 2000000
+             tag       = Recv_info_p2r(I_prc_from,irank) + 200000
 
              call MPI_ISEND( sendbuf_h2p_DP(1,I_SPL), & ! [IN]
                              totalsize,               & ! [IN]

@@ -1,0 +1,22 @@
+$(BUILD_DIR)/mod_sno.o: base/mod_sno.F90 $(DEPENDLIB) $(BUILD_DIR)/mod_sno_h.o
+$(BUILD_DIR)/mod_sno_axis.o: base/mod_sno_axis.F90 $(DEPENDLIB) $(BUILD_DIR)/mod_sno.o $(BUILD_DIR)/mod_sno_h.o
+$(BUILD_DIR)/mod_sno_comm.o: base/mod_sno_comm.F90 $(DEPENDLIB) $(BUILD_DIR)/mod_sno_h.o
+$(BUILD_DIR)/mod_sno_grads.o: base/mod_sno_grads.F90 $(DEPENDLIB) $(BUILD_DIR)/mod_sno_h.o
+$(BUILD_DIR)/mod_sno_h.o: base/mod_sno_h.F90 $(DEPENDLIB)
+$(BUILD_DIR)/mod_sno_map.o: base/mod_sno_map.F90 $(DEPENDLIB) $(BUILD_DIR)/mod_sno_h.o
+$(BUILD_DIR)/mod_sno_vars.o: base/mod_sno_vars.F90 $(DEPENDLIB) $(BUILD_DIR)/mod_sno.o $(BUILD_DIR)/mod_sno_axis.o $(BUILD_DIR)/mod_sno_comm.o $(BUILD_DIR)/mod_sno_grads.o $(BUILD_DIR)/mod_sno_h.o
+$(BUILD_DIR)/mod_snoplugin_hgridope.o: plugin/mod_snoplugin_hgridope.F90 $(DEPENDLIB) $(BUILD_DIR)/mod_sno_comm.o $(BUILD_DIR)/mod_sno_h.o $(BUILD_DIR)/mod_sno_vars.o
+$(BUILD_DIR)/mod_snoplugin_timeave.o: plugin/mod_snoplugin_timeave.F90 $(DEPENDLIB) $(BUILD_DIR)/mod_sno_h.o $(BUILD_DIR)/mod_sno_vars.o
+$(BUILD_DIR)/mod_snoplugin_vgridope.o: plugin/mod_snoplugin_vgridope.F90 $(DEPENDLIB) $(BUILD_DIR)/mod_sno_h.o $(BUILD_DIR)/mod_sno_vars.o
+
+MODS =	\
+	mod_sno.mod	\
+	mod_sno_axis.mod	\
+	mod_sno_comm.mod	\
+	mod_sno_grads.mod	\
+	mod_sno_h.mod	\
+	mod_sno_map.mod	\
+	mod_sno_vars.mod	\
+	mod_snoplugin_hgridope.mod	\
+	mod_snoplugin_timeave.mod	\
+	mod_snoplugin_vgridope.mod

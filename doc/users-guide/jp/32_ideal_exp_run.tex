@@ -79,8 +79,6 @@
  *** Start Launch System for SCALE-RM\\
  *** Execute preprocess? :  T\\
  *** Execute model?      :  F\\
- *** a single comunicator\\
- *** a single comunicator\\
  *** End   Launch System for SCALE-RM\\
 \end{tabularx}
 }}}\\
@@ -100,8 +98,7 @@
 デフォルト設定では 0 番目のプロセス(マスターランク)に対するログファイルだけが出力される。
 実行が正常に終了すれば、LOGファイルの最後に\\
 \msgbox{
- +++++ finalize MPI...\\
- +++++ MPI is peacefully finalized\\
+ +++++ Closing LOG file\\
 }
 が出力される。
 
@@ -130,8 +127,7 @@ GPhys/Ruby-DCL や ncview によって直接読み込める。
 が、現在のディレクトリ下に作成される。
 実行が正常に終了すれば、LOGファイルの最後に
 \msgbox{
- +++++ finalize MPI...\\
- +++++ MPI is peacefully finalized\\
+ +++++ Closing LOG file\\
 }
 と出力される。
 \verb|history.pe000000.nc| と \verb|history.pe000001.nc|

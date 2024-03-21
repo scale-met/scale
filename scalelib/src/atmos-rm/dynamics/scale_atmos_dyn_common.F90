@@ -71,32 +71,45 @@ contains
        EPS => CONST_EPS
     implicit none
 
-    real(RP), intent(inout) :: wdamp_coef(KA)
-    real(RP), intent(in)    :: wdamp_tau
-    real(RP), intent(in)    :: wdamp_height
-    real(RP), intent(in)    :: FZ(0:KA)
+    real(RP), intent(out) :: wdamp_coef(KA)
+    real(RP), intent(in)  :: wdamp_tau
+    real(RP), intent(in)  :: wdamp_height
+    real(RP), intent(in)  :: FZ(0:KA)
 
     real(RP) :: alpha, sw
 
     integer :: k
     !---------------------------------------------------------------------------
 
+    !$acc data copyout(wdamp_coef) copyin(FZ)
+
     if ( wdamp_height < 0.0_RP ) then
+       !$acc kernels
        wdamp_coef(:) = 0.0_RP
+       !$acc end kernels
     elseif( FZ(KE)-wdamp_height < EPS ) then
+       !$acc kernels
        wdamp_coef(:) = 0.0_RP
+       !$acc end kernels
     else
        alpha = 1.0_RP / wdamp_tau
 
+       !$acc kernels
        do k = KS, KE
           sw = 0.5_RP + sign( 0.5_RP, FZ(k)-wdamp_height )
 
           wdamp_coef(k) = alpha * sw &
                         * 0.5_RP * ( 1.0_RP - cos( PI * (FZ(k)-wdamp_height) / (FZ(KE)-wdamp_height)) )
        enddo
+       !$acc end kernels
+       !$acc kernels
        wdamp_coef(   1:KS-1) = wdamp_coef(KS)
+       !$acc end kernels
+       !$acc kernels
        wdamp_coef(KE+1:KA  ) = wdamp_coef(KE)
+       !$acc end kernels
 
+       !$acc update host(wdamp_coef)
        LOG_NEWLINE
        LOG_INFO("ATMOS_DYN_wdamp_setup",*)                          'Setup Rayleigh damping coefficient'
        LOG_INFO_CONT('(1x,A)')                   '|=== Rayleigh Damping Coef ===|'
@@ -119,6 +132,8 @@ contains
        LOG_INFO_CONT('(1x,A)')                   '|=============================|'
     endif
 
+    !$acc end data
+
     return
   end subroutine ATMOS_DYN_wdamp_setup
 
@@ -136,7 +151,10 @@ contains
    integer :: i, j, k
    !----------------------------
 
+   !$acc data copy(var)
+
    if (lateral_halo) then
+      !$acc kernels
 !OCL XFILL
       do j = 1, JA
       do i = 1, ISB-1
@@ -150,6 +168,8 @@ contains
       enddo
       enddo
       enddo
+      !$acc end kernels
+      !$acc kernels
 !OCL XFILL
       do j = 1, JSB-1
       do i = 1, IA
@@ -158,6 +178,8 @@ contains
       enddo
       enddo
       enddo
+      !$acc end kernels
+      !$acc kernels
 !OCL XFILL
       do j = JEB+1, JA
       do i = 1, IA
@@ -166,17 +188,22 @@ contains
       enddo
       enddo
       enddo
+      !$acc end kernels
    end if
 
    if (top_bottom_halo) then
-   !OCL XFILL
+      !$acc kernels
+!OCL XFILL
       do j = JS, JE
       do i = IS, IE
          var(   1:KS-1,i,j) = fill_constval
          var(KE+1:KA  ,i,j) = fill_constval
       enddo
       enddo
+      !$acc end kernels
    end if
+
+   !$acc end data
 
    return
   end subroutine ATMOS_DYN_fill_halo
@@ -206,10 +233,14 @@ contains
 
     integer :: k, i, j, iv
 
+    !$acc data copy(DENS, MOMZ, MOMX, MOMY, RHOT, PROG) &
+    !$acc      copyin(DENS0, MOMZ0, MOMX0, MOMY0, RHOT0, PROG0)
+
     if ( BND_W .and. (.not. TwoD) ) then
        !$omp parallel do default(none) private(j,k) OMP_SCHEDULE_ collapse(2) &
        !$omp private(i,iv) &
        !$omp shared(JA,IS,KS,KE,DENS,DENS0,MOMZ,MOMZ0,MOMX,MOMX0,MOMY,MOMY0,RHOT,RHOT0,VA,PROG,PROG0)
+       !$acc kernels
 !OCL XFILL
        do j = 1, JA
        do i = 1, IS-1
@@ -219,17 +250,20 @@ contains
           MOMX(k,i,j) = MOMX0(k,i,j)
           MOMY(k,i,j) = MOMY0(k,i,j)
           RHOT(k,i,j) = RHOT0(k,i,j)
+          !$acc loop seq
           do iv = 1, VA
              PROG(k,i,j,iv) = PROG0(k,i,j,iv)
           end do
        enddo
        enddo
        enddo
+       !$acc end kernels
     end if
     if ( BND_E .and. (.not. TwoD) ) then
        !$omp parallel do default(none) private(j,k) OMP_SCHEDULE_ collapse(2) &
        !$omp private(i,iv) &
        !$omp shared(JA,IE,IA,KS,KE,DENS,DENS0,MOMZ,MOMZ0,MOMX,MOMX0,MOMY,MOMY0,RHOT,RHOT0,VA,PROG,PROG0)
+       !$acc kernels
 !OCL XFILL
        do j = 1, JA
        do i = IE+1, IA
@@ -239,24 +273,29 @@ contains
           MOMX(k,i,j) = MOMX0(k,i,j)
           MOMY(k,i,j) = MOMY0(k,i,j)
           RHOT(k,i,j) = RHOT0(k,i,j)
+          !$acc loop seq
           do iv = 1, VA
              PROG(k,i,j,iv) = PROG0(k,i,j,iv)
           end do
        enddo
        enddo
        enddo
+       !$acc end kernels
        !$omp parallel do private(j,k) OMP_SCHEDULE_ collapse(2)
+       !$acc kernels
 !OCL XFILL
        do j = 1, JA
        do k = KS, KE
           MOMX(k,IE,j) = MOMX0(k,IE,j)
        enddo
        enddo
+       !$acc end kernels
     end if
     if ( BND_S ) then
        !$omp parallel do default(none) private(j,k) OMP_SCHEDULE_ collapse(2) &
        !$omp private(i,iv) &
        !$omp shared(JS,IA,KS,KE,DENS,DENS0,MOMZ,MOMZ0,MOMX,MOMX0,MOMY,MOMY0,RHOT,RHOT0,VA,PROG,PROG0)
+       !$acc kernels
 !OCL XFILL
        do j = 1, JS-1
        do i = 1, IA
@@ -266,17 +305,20 @@ contains
           MOMX(k,i,j) = MOMX0(k,i,j)
           MOMY(k,i,j) = MOMY0(k,i,j)
           RHOT(k,i,j) = RHOT0(k,i,j)
+          !$acc loop seq
           do iv = 1, VA
              PROG(k,i,j,iv) = PROG0(k,i,j,iv)
           end do
        enddo
        enddo
        enddo
+       !$acc end kernels
     end if
     if ( BND_N ) then
        !$omp parallel do default(none) private(j,k) OMP_SCHEDULE_ collapse(2) &
        !$omp private(i,iv) &
        !$omp shared(JA,JE,IA,KS,KE,DENS,DENS0,MOMZ,MOMZ0,MOMX,MOMX0,MOMY,MOMY0,RHOT,RHOT0,VA,PROG,PROG0)
+       !$acc kernels
 !OCL XFILL
        do j = JE+1, JA
        do i = 1, IA
@@ -286,20 +328,26 @@ contains
           MOMX(k,i,j) = MOMX0(k,i,j)
           MOMY(k,i,j) = MOMY0(k,i,j)
           RHOT(k,i,j) = RHOT0(k,i,j)
+          !$acc loop seq
           do iv = 1, VA
              PROG(k,i,j,iv) = PROG0(k,i,j,iv)
           end do
        enddo
        enddo
        enddo
+       !$acc end kernels
        !$omp parallel do private(i,k) OMP_SCHEDULE_ collapse(2)
+       !$acc kernels
 !OCL XFILL
        do i = 1, IA
        do k = KS, KE
           MOMY(k,i,JE) = MOMY0(k,i,JE)
        enddo
        enddo
+       !$acc end kernels
     end if
+
+    !$acc end data
 
     return
   end subroutine ATMOS_DYN_Copy_boundary
@@ -319,9 +367,12 @@ contains
 
     integer :: k, i, j
 
+    !$acc data copy(QTRC) copyin(QTRC0)
+
     if ( BND_W .and. (.not. TwoD) ) then
        !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
        !$omp shared(JA,IS,KS,KE,QTRC,QTRC0)
+       !$acc kernels
 !OCL XFILL
        do j = 1, JA
        do i = 1, IS-1
@@ -330,10 +381,12 @@ contains
        enddo
        enddo
        enddo
+       !$acc end kernels
     end if
     if ( BND_E .and. (.not. TwoD) ) then
        !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
        !$omp shared(JA,IE,IA,KS,KE,QTRC,QTRC0)
+       !$acc kernels
 !OCL XFILL
        do j = 1, JA
        do i = IE+1, IA
@@ -342,10 +395,12 @@ contains
        enddo
        enddo
        enddo
+       !$acc end kernels
     end if
     if ( BND_S ) then
        !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
        !$omp shared(JS,IA,KS,KE,QTRC,QTRC0)
+       !$acc kernels
 !OCL XFILL
        do j = 1, JS-1
        do i = 1, IA
@@ -354,10 +409,12 @@ contains
        enddo
        enddo
        enddo
+       !$acc end kernels
     end if
     if ( BND_N ) then
        !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
        !$omp shared(JA,JE,IA,KS,KE,QTRC,QTRC0)
+       !$acc kernels
 !OCL XFILL
        do j = JE+1, JA
        do i = 1, IA
@@ -366,7 +423,10 @@ contains
        enddo
        enddo
        enddo
+       !$acc end kernels
     end if
+
+    !$acc end data
 
     return
   end subroutine ATMOS_DYN_Copy_boundary_tracer
@@ -400,10 +460,13 @@ contains
 
     call PROF_rapstart("DYN_divercence", 2)
 
+    !$acc data copyout(DDIV) copyin(MOMZ, MOMX, MOMY, GSQRT, J13G, J23G, MAPF, RCDZ, RCDX, RCDY, RFDZ, FDZ)
+
     ! 3D divergence
 
     if ( TwoD ) then
        !$omp parallel do private(j,k) OMP_SCHEDULE_
+       !$acc kernels
        do j = JS, JE+1
        do k = KS-1, KE+1
           DDIV(k,IS,j) = J33G * ( MOMZ(k,IS,j) - MOMZ(k-1,IS,j) ) * RCDZ(k) &
@@ -414,10 +477,12 @@ contains
                         - MOMY(k,IS,j-1) * GSQRT(k,IS,j-1,I_XVZ) / MAPF(IS,j-1,1,I_XV) ) * RCDY(j)
        enddo
        enddo
+       !$acc end kernels
 #ifdef DEBUG
        k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
        !$omp parallel do private(j) OMP_SCHEDULE_
+       !$acc kernels
        do j = JS, JE+1
           DDIV(KS,IS,j) = J33G * ( MOMZ(KS,IS,j) ) * RCDZ(KS) &
                          + ( ( MOMY(KS+1,IS,j) + MOMY(KS+1,IS,j-1) ) * J23G(KS+1,IS,j,I_XYW) &
@@ -432,11 +497,13 @@ contains
                        * ( MOMY(KE,IS,j  ) * GSQRT(KE,IS,j  ,I_XVZ) / MAPF(IS,j  ,1,I_XV) &
                          - MOMY(KE,IS,j-1) * GSQRT(KE,IS,j-1,I_XVZ) / MAPF(IS,j-1,1,I_XV) ) * RCDY(j)
        enddo
+       !$acc end kernels
 #ifdef DEBUG
        k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
     else
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+       !$acc kernels
        do j = JS, JE+1
        do i = IS, IE+1
        do k = KS-1, KE+1
@@ -453,10 +520,12 @@ contains
        enddo
        enddo
        enddo
+       !$acc end kernels
 #ifdef DEBUG
        k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
        !$omp parallel do private(i,j) OMP_SCHEDULE_ collapse(2)
+       !$acc kernels
        do j = JS, JE+1
        do i = IS, IE+1
           DDIV(KS,i,j) = J33G * ( MOMZ(KS,i,j) ) * RCDZ(KS) &
@@ -481,10 +550,14 @@ contains
                            - MOMY(KE,i,  j-1) * GSQRT(KE,i  ,j-1,I_XVZ) / MAPF(i  ,j-1,1,I_XV) ) * RCDY(j) )
        enddo
        enddo
+       !$acc end kernels
 #ifdef DEBUG
        k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
     end if
+
+    !$acc end data
+
     call PROF_rapend  ("DYN_divercence", 2)
 
     return
@@ -507,7 +580,6 @@ contains
   subroutine ATMOS_DYN_prep_pres_linearization( &
    DPRES, RT2P, REF_rhot,                            & ! (out)
    RHOT, QTRC, REF_pres, AQ_R, AQ_CV, AQ_CP, AQ_MASS ) ! (in)
-   
    use scale_const, only: &
       P0     => CONST_PRE00, &
       Rdry   => CONST_Rdry,  &
@@ -528,11 +600,11 @@ contains
 
    integer :: i, j, k
    integer :: iq    
-   real(RP) :: QDRY  ! dry air
-   real(RP) :: Rtot  ! total R
-   real(RP) :: CVtot ! total CV
-   real(RP) :: CPtot ! total CP
-   real(RP) :: PRES  ! pressure
+   real(RP) :: QDRY (KA) ! dry air
+   real(RP) :: Rtot (KA) ! total R
+   real(RP) :: CVtot(KA) ! total CV
+   real(RP) :: CPtot(KA) ! total CP
+   real(RP) :: PRES      ! pressure
 
 #ifdef DRY
    real(RP) :: CPovCV
@@ -553,29 +625,33 @@ contains
 #endif
    !$omp private(i,j,k,iq) &
    !$omp private(PRES,Rtot,CVtot,CPtot,QDRY)
+   !$acc kernels copyout(DPRES, RT2P, REF_rhot) copyin(RHOT, QTRC, REF_pres, AQ_R, AQ_CV, AQ_CP, AQ_MASS)
    do j = 1, JA
+   !$acc loop private(Rtot, CVtot, CPtot, QDRY)
    do i = 1, IA
       do k = KS, KE
-#ifdef DRY
-        PRES = P0 * ( Rdry * RHOT(k,i,j) / P0 )**CPovCV
-        RT2P(k,i,j) = CPovCV * PRES / RHOT(k,i,j)
-#else
-        Rtot  = 0.0_RP
-        CVtot = 0.0_RP
-        CPtot = 0.0_RP
-        QDRY  = 1.0_RP
-        do iq = 1, QA
-           Rtot  = Rtot + AQ_R(iq) * QTRC(k,i,j,iq)
-           CVtot = CVtot + AQ_CV(iq) * QTRC(k,i,j,iq)
-           CPtot = CPtot + AQ_CP(iq) * QTRC(k,i,j,iq)
-           QDRY  = QDRY  - QTRC(k,i,j,iq) * AQ_MASS(iq)
-        enddo
-        Rtot  = Rtot  + Rdry  * QDRY
-        CVtot = CVtot + CVdry * QDRY
-        CPtot = CPtot + CPdry * QDRY
-        PRES = P0 * ( Rtot * RHOT(k,i,j) / P0 )**( CPtot / CVtot )
-        RT2P(k,i,j) = CPtot / CVtot * PRES / RHOT(k,i,j)
-#endif
+         Rtot (k) = 0.0_RP
+         CVtot(k) = 0.0_RP
+         CPtot(k) = 0.0_RP
+         QDRY (k) = 1.0_RP
+      end do
+      !$acc loop seq
+      do iq = 1, QA
+         do k = KS, KE
+            Rtot (k) = Rtot (k) + AQ_R (iq) * QTRC(k,i,j,iq)
+            CVtot(k) = CVtot(k) + AQ_CV(iq) * QTRC(k,i,j,iq)
+            CPtot(k) = CPtot(k) + AQ_CP(iq) * QTRC(k,i,j,iq)
+            QDRY (k) = QDRY (k) - QTRC(k,i,j,iq) * AQ_MASS(iq)
+         enddo
+      end do
+      do k = KS, KE
+         Rtot (k) = Rtot (k) + Rdry  * QDRY(k)
+         CVtot(k) = CVtot(k) + CVdry * QDRY(k)
+         CPtot(k) = CPtot(k) + CPdry * QDRY(k)
+      end do
+      do k = KS, KE
+        PRES = P0 * ( Rtot(k) * RHOT(k,i,j) / P0 )**( CPtot(k) / CVtot(k) )
+        RT2P(k,i,j) = CPtot(k) / CVtot(k) * PRES / RHOT(k,i,j)
         DPRES(k,i,j) = PRES - REF_pres(k,i,j)
         REF_rhot(k,i,j) = RHOT(k,i,j)
       end do
@@ -583,6 +659,7 @@ contains
       DPRES(KE+1,i,j) = DPRES(KE-1,i,j) + ( REF_pres(KE-1,i,j) - REF_pres(KE+1,i,j) )
    end do
    end do
+   !$acc end kernels
 
    return
  end subroutine ATMOS_DYN_prep_pres_linearization

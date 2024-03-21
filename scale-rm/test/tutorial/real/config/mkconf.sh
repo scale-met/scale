@@ -41,6 +41,28 @@ echo ""
 
 #################################################
 #
+# Support functions
+#
+#################################################
+
+multiply() {
+  factor=$1
+  shift
+  for x in "$@"; do
+    bc -l <<< "$factor * $x"
+  done
+}
+
+replicate() {
+  n=$1
+  value=$2
+  for (( i = 0; i < n; ++i )); do
+    echo "$value"
+  done
+}
+
+#################################################
+#
 # check parameters
 #
 #################################################
@@ -48,7 +70,20 @@ echo ""
 if [ ! -n "${SCALE_DB-}" ]; then echo "Error: SCALE_DB is not defined. Check!"; exit 1; fi
 
 if [ ${NUM_DOMAIN} -ne ${#TIME_DT[*]} ];              then echo "Error: Wrong array size (TIME_DT).";              exit 1; fi
+
+if [[ -z ${TIME_DT_ATMOS_DYN+x} ]];    then TIME_DT_ATMOS_DYN=( $(multiply 0.5 "${TIME_DT[@]}") );   fi
+if [[ -z ${TIME_DT_ATMOS_PHY_CP+x} ]]; then TIME_DT_ATMOS_PHY_CP=( "${TIME_DT[@]}" );                fi
+if [[ -z ${TIME_DT_ATMOS_PHY_MP+x} ]]; then TIME_DT_ATMOS_PHY_MP=( "${TIME_DT[@]}" );                fi
+if [[ -z ${TIME_DT_ATMOS_PHY_RD+x} ]]; then TIME_DT_ATMOS_PHY_RD=( $(multiply 10 "${TIME_DT[@]}") ); fi
+if [[ -z ${TIME_DT_ATMOS_PHY_SF+x} ]]; then TIME_DT_ATMOS_PHY_SF=( "${TIME_DT[@]}" );                fi
+if [[ -z ${TIME_DT_ATMOS_PHY_TB+x} ]]; then TIME_DT_ATMOS_PHY_TB=( "${TIME_DT[@]}" );                fi
+if [[ -z ${TIME_DT_ATMOS_PHY_BL+x} ]]; then TIME_DT_ATMOS_PHY_BL=( "${TIME_DT[@]}" );                fi
+if [[ -z ${TIME_DT_OCEAN+x} ]];        then TIME_DT_OCEAN=( "${TIME_DT[@]}" );                       fi
+if [[ -z ${TIME_DT_LAND+x} ]];         then TIME_DT_LAND=(  "${TIME_DT[@]}" );                       fi
+if [[ -z ${TIME_DT_URBAN+x} ]];        then TIME_DT_URBAN=( "${TIME_DT[@]}" );                       fi
+
 if [ ${NUM_DOMAIN} -ne ${#TIME_DT_ATMOS_DYN[*]} ];    then echo "Error: Wrong array size (TIME_DT_ATMOS_DYN).";    exit 1; fi
+if [ ${NUM_DOMAIN} -ne ${#TIME_DT_ATMOS_PHY_CP[*]} ]; then echo "Error: Wrong array size (TIME_DT_ATMOS_PHY_CP)."; exit 1; fi
 if [ ${NUM_DOMAIN} -ne ${#TIME_DT_ATMOS_PHY_MP[*]} ]; then echo "Error: Wrong array size (TIME_DT_ATMOS_PHY_MP)."; exit 1; fi
 if [ ${NUM_DOMAIN} -ne ${#TIME_DT_ATMOS_PHY_RD[*]} ]; then echo "Error: Wrong array size (TIME_DT_ATMOS_PHY_RD)."; exit 1; fi
 if [ ${NUM_DOMAIN} -ne ${#TIME_DT_ATMOS_PHY_SF[*]} ]; then echo "Error: Wrong array size (TIME_DT_ATMOS_PHY_SF)."; exit 1; fi
@@ -72,10 +107,35 @@ if [ ${NUM_DOMAIN} -ne ${#DX[*]} ];    then echo "Error: Wrong array size (DX)."
 if [ ${NUM_DOMAIN} -ne ${#DY[*]} ];    then echo "Error: Wrong array size (DY).";    exit 1; fi
 if [ ${NUM_DOMAIN} -ne ${#DEF_Z[*]} ]; then echo "Error: Wrong array size (DEF_Z)."; exit 1; fi
 
+if [[ $NUM_DOMAIN -gt 1 ]]; then
+  if [[ ${#BUFFER_DZ[@]} -eq 1 ]]; then BUFFER_DZ=( $(replicate "$NUM_DOMAIN" "$BUFFER_DZ") ); fi
+fi
+if [[ -z ${BUFFER_DX+x} ]]; then BUFFER_DX=( $(multiply 20 "${DX[@]}") ); fi
+if [[ -z ${BUFFER_DY+x} ]]; then BUFFER_DY=( $(multiply 20 "${DY[@]}") ); fi
 if [ ${NUM_DOMAIN} -ne ${#BUFFER_DZ[*]} ]; then echo "Error: Wrong array size (BUFFER_DZ)."; exit 1; fi
 if [ ${NUM_DOMAIN} -ne ${#BUFFER_DX[*]} ]; then echo "Error: Wrong array size (BUFFER_DX)."; exit 1; fi
 if [ ${NUM_DOMAIN} -ne ${#BUFFER_DY[*]} ]; then echo "Error: Wrong array size (BUFFER_DY)."; exit 1; fi
 
+if [[ $NUM_DOMAIN -gt 1 ]]; then
+  if [[ ${#MAPPROJECTION_BASEPOINT_LON[@]} -eq 1 ]]; then MAPPROJECTION_BASEPOINT_LON=( $(replicate "$NUM_DOMAIN" "$MAPPROJECTION_BASEPOINT_LON") ); fi
+  if [[ ${#MAPPROJECTION_BASEPOINT_LAT[@]} -eq 1 ]]; then MAPPROJECTION_BASEPOINT_LAT=( $(replicate "$NUM_DOMAIN" "$MAPPROJECTION_BASEPOINT_LAT") ); fi
+fi
+if [ ${NUM_DOMAIN} -ne ${#MAPPROJECTION_BASEPOINT_LON[*]} ]; then echo "Error: Wrong array size (MAPPROJECTION_BASEPOINT_LON)."; exit 1; fi
+if [ ${NUM_DOMAIN} -ne ${#MAPPROJECTION_BASEPOINT_LAT[*]} ]; then echo "Error: Wrong array size (MAPPROJECTION_BASEPOINT_LAT)."; exit 1; fi
+
+if [[ $NUM_DOMAIN -gt 1 ]]; then
+  if [[ ${#ATMOS_DYN_TYPE[@]} -eq 1 ]];    then ATMOS_DYN_TYPE=( $(replicate "$NUM_DOMAIN" "$ATMOS_DYN_TYPE") );       fi
+  if [[ ${#ATMOS_PHY_CP_TYPE[@]} -eq 1 ]]; then ATMOS_PHY_CP_TYPE=( $(replicate "$NUM_DOMAIN" "$ATMOS_PHY_CP_TYPE") ); fi
+  if [[ ${#ATMOS_PHY_MP_TYPE[@]} -eq 1 ]]; then ATMOS_PHY_MP_TYPE=( $(replicate "$NUM_DOMAIN" "$ATMOS_PHY_MP_TYPE") ); fi
+  if [[ ${#ATMOS_PHY_RD_TYPE[@]} -eq 1 ]]; then ATMOS_PHY_RD_TYPE=( $(replicate "$NUM_DOMAIN" "$ATMOS_PHY_RD_TYPE") ); fi
+  if [[ ${#ATMOS_PHY_SF_TYPE[@]} -eq 1 ]]; then ATMOS_PHY_SF_TYPE=( $(replicate "$NUM_DOMAIN" "$ATMOS_PHY_SF_TYPE") ); fi
+  if [[ ${#ATMOS_PHY_TB_TYPE[@]} -eq 1 ]]; then ATMOS_PHY_TB_TYPE=( $(replicate "$NUM_DOMAIN" "$ATMOS_PHY_TB_TYPE") ); fi
+  if [[ ${#ATMOS_PHY_BL_TYPE[@]} -eq 1 ]]; then ATMOS_PHY_BL_TYPE=( $(replicate "$NUM_DOMAIN" "$ATMOS_PHY_BL_TYPE") ); fi
+  if [[ ${#OCEAN_DYN_TYPE[@]} -eq 1 ]];    then OCEAN_DYN_TYPE=( $(replicate "$NUM_DOMAIN" "$OCEAN_DYN_TYPE") );       fi
+  if [[ ${#LAND_DYN_TYPE[@]} -eq 1 ]];     then LAND_DYN_TYPE=( $(replicate "$NUM_DOMAIN" "$LAND_DYN_TYPE") );         fi
+  if [[ ${#LAND_SFC_TYPE[@]} -eq 1 ]];     then LAND_SFC_TYPE=( $(replicate "$NUM_DOMAIN" "$LAND_SFC_TYPE") );         fi
+  if [[ ${#URBAN_DYN_TYPE[@]} -eq 1 ]];    then URBAN_DYN_TYPE=( $(replicate "$NUM_DOMAIN" "$URBAN_DYN_TYPE") );       fi
+fi
 if [ ${NUM_DOMAIN} -ne ${#ATMOS_DYN_TYPE[*]} ];    then echo "Error: Wrong array size (ATMOS_DYN_TYPE).";    exit 1; fi
 if [ ${NUM_DOMAIN} -ne ${#ATMOS_PHY_CP_TYPE[*]} ]; then echo "Error: Wrong array size (ATMOS_PHY_CP_TYPE)."; exit 1; fi
 if [ ${NUM_DOMAIN} -ne ${#ATMOS_PHY_MP_TYPE[*]} ]; then echo "Error: Wrong array size (ATMOS_PHY_MP_TYPE)."; exit 1; fi
@@ -88,9 +148,16 @@ if [ ${NUM_DOMAIN} -ne ${#LAND_DYN_TYPE[*]} ];     then echo "Error: Wrong array
 if [ ${NUM_DOMAIN} -ne ${#LAND_SFC_TYPE[*]} ];     then echo "Error: Wrong array size (LAND_SFC_TYPE).";     exit 1; fi
 if [ ${NUM_DOMAIN} -ne ${#URBAN_DYN_TYPE[*]} ];    then echo "Error: Wrong array size (URBAN_DYN_TYPE).";    exit 1; fi
 
+if [[ $NUM_DOMAIN -gt 1 ]]; then
+  if [[ ${#TOPOTYPE[@]} -eq 1 ]];    then TOPOTYPE=( $(replicate "$NUM_DOMAIN" "$TOPOTYPE") );       fi
+  if [[ ${#LANDUSETYPE[@]} -eq 1 ]]; then LANDUSETYPE=( $(replicate "$NUM_DOMAIN" "$LANDUSETYPE") ); fi
+fi
 if [ ${NUM_DOMAIN} -ne ${#TOPOTYPE[*]} ];    then echo "Error: Wrong array size (TOPOTYPE).";     exit 1; fi
 if [ ${NUM_DOMAIN} -ne ${#LANDUSETYPE[*]} ]; then echo "Error: Wrong array size (LANDUSETYPE).";  exit 1; fi
 if [ ${NUM_DOMAIN} -ne ${#COPYTOPO[*]} ];    then echo "Error: Wrong array size (COPYTOPO).";     exit 1; fi
+if [ ${NUM_DOMAIN} -ne ${#SMOOTH_LOCAL[*]} ]; then echo "Error: Wrong array size (COPYTOPO).";    exit 1; fi
+
+if [[ -z ${ONLINE_AGGRESSIVE_COMM+x} ]]; then ONLINE_AGGRESSIVE_COMM=".false."; fi
 
 #################################################
 #
@@ -108,17 +175,6 @@ SEC=`printf '%1.f' ${RUN_DATE_SEC}`
 MSEC=`printf '%1.f' ${RUN_DATE_MSEC}`
 
 STARTDATE=( ${YEAR} ${MON} ${DAY} ${HOUR} ${MIN} ${SEC} ${MSEC} )
-BND_STARTDATE=( ${YEAR} ${MON} ${DAY} ${HOUR} ${MIN} ${SEC} ${MSEC} )
-
-# set converting variables
-POPSCA_2D=(
-  ${HIST_ITEMS_SNAPSHOT_2D[*]}
-  ${HIST_ITEMS_AVERAGE_2D[*]}
-)
-POPSCA_3D=(
-  ${HIST_ITEMS_SNAPSHOT_3D[*]}
-  ${HIST_ITEMS_AVERAGE_3D[*]}
-)
 
 # set number of files for boundary
 case ${TIME_DURATION_UNIT} in
@@ -130,7 +186,7 @@ case ${TIME_DURATION_UNIT} in
 esac
 INT_DURATION=`expr ${TIME_DURATION%%.*} \* ${TIME_DURATION_UNIT_SEC}`
 INT_BOUNDARY_DT=`echo ${TIME_DT_BOUNDARY%%.*}`
-if [ ${FILETYPE_ORG} = "SCALE-RM" ]; then
+if [ ${FILETYPE_ORG} = "NetCDF" ]; then
   NUMBER_OF_FILES=1
   NUMBER_OF_TSTEPS=`expr ${INT_DURATION} / ${INT_BOUNDARY_DT} + 1`
   if [ ${NUMBER_OF_TSTEPS} -le 1 ]; then
@@ -160,7 +216,7 @@ PP_CONF="${INPUT_CONFIGDIR}/base.pp.conf.sh"
 INIT_CONF="${INPUT_CONFIGDIR}/base.init.conf.sh"
 RUN_CONF="${INPUT_CONFIGDIR}/base.run.conf.sh"
 PARAM_CONF="${INPUT_CONFIGDIR}/param.conf.sh"
-NET2G_CONF="${INPUT_CONFIGDIR}/base.net2g.conf.sh"
+SNO_CONF="${INPUT_CONFIGDIR}/base.sno.conf.sh"
 LAUNCH_CONF="${INPUT_CONFIGDIR}/base.launch.conf.sh"
 
 # set time parameters
@@ -168,9 +224,6 @@ TIME_STARTDATE="${STARTDATE[0]}, ${STARTDATE[1]}, ${STARTDATE[2]}, ${STARTDATE[3
 TIME_STARTMS="${STARTDATE[6]}.0"
 
 TIME_DT_UNIT="SEC" # SEC only
-
-TIME_BND_STARTDATE="${BND_STARTDATE[0]}, ${BND_STARTDATE[1]}, ${BND_STARTDATE[2]}, ${BND_STARTDATE[3]}, ${BND_STARTDATE[4]}, ${BND_STARTDATE[5]}"
-TIME_BND_STARTMS="${BND_STARTDATE[6]}.0"
 
 eval 'STARTDATE[0]=`printf "%04d" ${STARTDATE[0]}`'
 eval 'STARTDATE[1]=`printf "%02d" ${STARTDATE[1]}`'
@@ -186,15 +239,19 @@ IFS="," eval 'LIST_ODZ="${ODZ[*]}"'
 IFS="," eval 'LIST_LDZ="${LDZ[*]}"'
 IFS="," eval 'LIST_UDZ="${UDZ[*]}"'
 
+if [[ -z ${DOM_NUMBER+x} ]]; then DOM_NUMBER=1; fi
+
 DNUM=1
 TPROC=0
 while [ $DNUM -le $NUM_DOMAIN ]
 do
   D=`expr $DNUM - 1`
   PD=`expr $DNUM - 2`
-  PDNUM=$D
 
-  FNUM=`printf "%02d" $DNUM`
+  DN=`expr $DNUM + $DOM_NUMBER - 1`
+  PDNUM=`expr $DN - 1`
+
+  FNUM=`printf "%02d" $DN`
   PFNUM=`printf "%02d" $PDNUM`
 
   # set numbers of domain process
@@ -205,18 +262,23 @@ do
   eval 'PP_CONF_FILES[$D]="pp.d${FNUM}.conf"'
   eval 'INIT_CONF_FILES[$D]="init.d${FNUM}.conf"'
   eval 'RUN_CONF_FILES[$D]="run.d${FNUM}.conf"'
-  eval 'N2G_CONF_FILES[$D]="net2g.2D.d${FNUM}.conf,net2g.3D.d${FNUM}.conf"'
+  eval 'SNO_CONF_FILES[$D]="sno.vgridope.d${FNUM}.conf,sno.hgridope.d${FNUM}.conf"'
+  eval 'PRC_SNO[$D]="${PRC_DOMAINS[$D]},1"'
 
   # set vertical axis
   LINE_Z="${DEF_Z[$D]}"
 
+  # set output directory
+  if [ -z "${OUT_DIR_PP}" ]; then OUT_DIR_PP="."; fi
+  if [ -z "${OUT_DIR_INIT}" ]; then OUT_DIR_INIT="."; fi
+  if [ -z "${OUT_DIR_RUN}" ]; then OUT_DIR_RUN="."; fi
+  if [ -z "${OUT_DIR_SNO}" ]; then OUT_DIR_SNO="."; fi
+
   # set filenames for each domain
   PP_IO_LOG_BASENAME="pp_LOG_d${FNUM}"
-  DOMAIN_CATALOGUE_FNAME="latlon_domain_catalogue_d${FNUM}.txt"
-  TOPOGRAPHY_OUT_BASENAME="topo_d${FNUM}"
-  COPYTOPO_IN_BASENAME="topo_d${PFNUM}"
-  LANDUSE_OUT_BASENAME="landuse_d${FNUM}"
-  LATLON_CATALOGUE_FNAME="latlon_domain_catalogue_d${PFNUM}.txt"
+  TOPOGRAPHY_OUT_BASENAME="${OUT_DIR_PP}/topo_d${FNUM}"
+  COPYTOPO_IN_BASENAME="${OUT_DIR_PP}/topo_d${PFNUM}"
+  LANDUSE_OUT_BASENAME="${OUT_DIR_PP}/landuse_d${FNUM}"
 
   TOPO_IN_DIR="${TOPODIR}/${TOPOTYPE[$D]}/Products"
   TOPO_IN_CATALOGUE="${TOPOTYPE[$D]}_catalogue.txt"
@@ -224,25 +286,19 @@ do
   LANDUSE_IN_DIR="${LANDUSEDIR}/${LANDUSETYPE[$D]}/Products"
   LANDUSE_IN_CATALOGUE="${LANDUSETYPE[$D]}_catalogue.txt"
 
-  INIT_TOPOGRAPHY_IN_BASENAME="${PPDIR}/topo_d${FNUM}"
-  INIT_LANDUSE_IN_BASENAME="${PPDIR}/landuse_d${FNUM}"
+  INIT_TOPOGRAPHY_IN_BASENAME="${PPDIR}/${OUT_DIR_PP}/topo_d${FNUM}"
+  INIT_LANDUSE_IN_BASENAME="${PPDIR}/${OUT_DIR_PP}/landuse_d${FNUM}"
   INIT_IO_LOG_BASENAME="init_LOG_d${FNUM}"
-  INIT_RESTART_OUT_BASENAME="init_d${FNUM}"
-  BASENAME_BOUNDARY="boundary_d${FNUM}"
+  INIT_RESTART_OUT_BASENAME="${OUT_DIR_INIT}/init_d${FNUM}"
+  BASENAME_BOUNDARY="${OUT_DIR_INIT}/boundary_d${FNUM}"
 
-  RUN_TOPOGRAPHY_IN_BASENAME="${PPDIR}/topo_d${FNUM}"
-  RUN_LANDUSE_IN_BASENAME="${PPDIR}/landuse_d${FNUM}"
+  RUN_TOPOGRAPHY_IN_BASENAME="${PPDIR}/${OUT_DIR_PP}/topo_d${FNUM}"
+  RUN_LANDUSE_IN_BASENAME="${PPDIR}/${OUT_DIR_PP}/landuse_d${FNUM}"
   RUN_IO_LOG_BASENAME="LOG_d${FNUM}"
-  RUN_RESTART_IN_BASENAME="${INITDIR}/${INIT_BASENAME}_d${FNUM}_${INITTIME}"
+  RUN_RESTART_IN_BASENAME="${INITDIR}/${OUT_DIR_INIT}/${INIT_BASENAME}_d${FNUM}_${INITTIME}"
   ATMOS_BOUNDARY_IN_BASENAME="${INITDIR}/${BASENAME_BOUNDARY}"
-  RESTART_OUT_BASENAME="restart_d${FNUM}"
-  FILE_HISTORY_DEFAULT_BASENAME="history_d${FNUM}"
-
-  NET2G_2D_IO_LOG_BASENAME="net2g_2D_LOG_d${FNUM}"
-  NET2G_3D_IO_LOG_BASENAME="net2g_3D_LOG_d${FNUM}"
-
-  # copy parameters
-  ATMOS_BOUNDARY_START_DATE="${TIME_BND_STARTDATE}"
+  RESTART_OUT_BASENAME="${OUT_DIR_RUN}/restart_d${FNUM}"
+  FILE_HISTORY_DEFAULT_BASENAME="${OUT_DIR_RUN}/history_d${FNUM}"
 
   # set nesting parameters
   if [ $DNUM -lt $NUM_DOMAIN ]; then
@@ -259,16 +315,11 @@ do
     IAM_DAUGHTER=".false."
   fi
 
-
-
   # set boundary parameters
   if [ $DNUM -gt 1 ]; then
     ATMOS_BOUNDARY_IN_BASENAME=""
-    ATMOS_BOUNDARY_START_DATE=""
-    ATMOS_BOUNDARY_UPDATE_DT="0.0"
     ATMOS_BOUNDARY_USE_QHYD=".true."
   else
-    ATMOS_BOUNDARY_UPDATE_DT="${TIME_DT_BOUNDARY}"
     ATMOS_BOUNDARY_USE_QHYD=".false."
   fi
 
@@ -281,11 +332,11 @@ do
   mkdir -p ${OUTPUT_CONFIGDIR}/pp
   mkdir -p ${OUTPUT_CONFIGDIR}/init
   mkdir -p ${OUTPUT_CONFIGDIR}/run
-  mkdir -p ${OUTPUT_CONFIGDIR}/net2g
+  mkdir -p ${OUTPUT_CONFIGDIR}/sno
 
   source ${PP_CONF}
 
-  if [ ${FILETYPE_ORG} = "SCALE-RM" ]; then
+  if [ ${FILETYPE_ORG} = "NetCDF" ]; then
     PARENT_BASENAME="${BASENAME_ORG}"
   else
     PARENT_BASENAME=""
@@ -294,13 +345,12 @@ do
   source ${INIT_CONF}
   source ${RUN_CONF}
   source ${PARAM_CONF}
-  source ${NET2G_CONF}
+  source ${SNO_CONF}
 
   cat base.pp.conf \
       param.region.conf \
       param.admin.conf \
   > ${OUTPUT_CONFIGDIR}/pp/pp.d${FNUM}.conf
-
 
   cat base.init.conf \
       param.region.conf \
@@ -314,8 +364,8 @@ do
       param.history.conf \
   > ${OUTPUT_CONFIGDIR}/run/run.d${FNUM}.conf
 
-  cat base.net2g.2D.conf > ${OUTPUT_CONFIGDIR}/net2g/net2g.2D.d${FNUM}.conf
-  cat base.net2g.3D.conf > ${OUTPUT_CONFIGDIR}/net2g/net2g.3D.d${FNUM}.conf
+  cat base.sno.vgridope.conf > ${OUTPUT_CONFIGDIR}/sno/sno.vgridope.d${FNUM}.conf
+  cat base.sno.hgridope.conf > ${OUTPUT_CONFIGDIR}/sno/sno.hgridope.d${FNUM}.conf
 
   rm -f base.*.conf param.*.conf
 
@@ -333,7 +383,7 @@ IFS="," eval 'LIST_PRC_DOMAINS="${PRC_DOMAINS[*]}"'
 IFS="," eval 'LIST_PP_CONF_FILES="${PP_CONF_FILES[*]}"'
 IFS="," eval 'LIST_INIT_CONF_FILES="${INIT_CONF_FILES[*]}"'
 IFS="," eval 'LIST_RUN_CONF_FILES="${RUN_CONF_FILES[*]}"'
-IFS="," eval 'LIST_N2G_CONF_FILES="${N2G_CONF_FILES[*]}"'
+IFS="," eval 'LIST_SNO_CONF_FILES="${SNO_CONF_FILES[*]}"'
 
 LIST_INIT_CONF_FILES=`echo ${LIST_INIT_CONF_FILES} | sed -e "s/,/\",\"/g"`
 LIST_RUN_CONF_FILES=`echo ${LIST_RUN_CONF_FILES} | sed -e "s/,/\",\"/g"`
@@ -357,25 +407,13 @@ else
   RUN_CONF_FILE=run.launch.conf
 fi
 
-if [ ${FILETYPE_ORG} = "SCALE-RM" ]; then
-  eval 'NP=`expr ${PARENT_PRC_NUM_X} + ${PARENT_PRC_NUM_Y}`'
-  DATPARAM="\" [../../data/${LATLON_CATALOGUE} ${LATLON_CATALOGUE}] \""
+if [ ${FILETYPE_ORG} = "NetCDF" ]; then
+  eval 'NP=`expr ${PARENT_PRC_NUM_X} "*" ${PARENT_PRC_NUM_Y}`'
+  DATPARAM="\"\""
   DATDISTS="\" [${NP} ../../data/${BASENAME_ORG} ${BASENAME_ORG}] \""
 else
   DATPARAM="\" [../../data/${BASENAME_ORG} ${BASENAME_ORG}] \""
 fi
-
-DNUM=1
-while [ $DNUM -le $NUM_DOMAIN ]
-do
-  D=`expr $DNUM - 1`
-  DD1=`expr $D \* 2`
-  DD2=`expr $DD1 + 1`
-  eval 'N2G_PRC_DOMAINS[${DD1}]=${PRC_DOMAINS[$D]}'
-  eval 'N2G_PRC_DOMAINS[${DD2}]=${PRC_DOMAINS[$D]}'
-  DNUM=`expr $DNUM + 1`
-done
-IFS="," eval 'LIST_N2G_PRC_DOMAINS="${N2G_PRC_DOMAINS[*]}"'
 
 source ${INPUT_CONFIGDIR}/mklink.sh
 

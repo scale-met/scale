@@ -174,10 +174,14 @@ module scale_atmos_dyn_tstep_large
        logical , intent(in)    :: Llast
      end subroutine large
 
+     subroutine finalize
+     end subroutine finalize
   end interface
 
   procedure(large), pointer :: ATMOS_DYN_Tstep_large => NULL()
   public :: ATMOS_DYN_Tstep_large
+  procedure(finalize), pointer :: ATMOS_DYN_Tstep_large_finalize => NULL()
+  public :: ATMOS_DYN_Tstep_large_finalize
 
   !-----------------------------------------------------------------------------
   !
@@ -204,7 +208,8 @@ contains
     use scale_prc, only: &
        PRC_abort
     use scale_atmos_dyn_tstep_large_fvm_heve, only: &
-       ATMOS_DYN_Tstep_large_fvm_heve_setup, &
+       ATMOS_DYN_Tstep_large_fvm_heve_setup,    &
+       ATMOS_DYN_Tstep_large_fvm_heve_finalize, &
        ATMOS_DYN_Tstep_large_fvm_heve
     implicit none
     character(len=*), intent(in) :: Tstep_large_type
@@ -218,11 +223,14 @@ contains
 
     !---------------------------------------------------------------------------
 
+    ATMOS_DYN_Tstep_large_finalize => DYN_Tstep_large_finalize
+
     select case( Tstep_large_type )
     case( 'FVM-HEVE' )
        call ATMOS_DYN_Tstep_large_fvm_heve_setup( &
             DENS, MOMZ, MOMX, MOMY, RHOT, QTRC, PROG )
        ATMOS_DYN_Tstep_large => ATMOS_DYN_Tstep_large_fvm_heve
+       ATMOS_DYN_Tstep_large_finalize => ATMOS_DYN_Tstep_large_fvm_heve_finalize
     case default
        LOG_ERROR("ATMOS_DYN_Tstep_large_setup",*) 'ATMOS_DYN_Tstep_large_type is invalid: ', Tstep_large_type
        call PRC_abort
@@ -230,5 +238,10 @@ contains
 
     return
   end subroutine ATMOS_DYN_Tstep_large_setup
+
+  subroutine DYN_Tstep_large_finalize
+
+    return
+  end subroutine DYN_Tstep_large_finalize
 
 end module scale_atmos_dyn_tstep_large

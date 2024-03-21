@@ -2,18 +2,15 @@
 ** Initial set
 **
 'set display color white'
-'set xlopts 1 4 0.15'
+'set xlab off'
 'set ylopts 1 4 0.15'
 'set mproj off'
-'set xlint 20'
 'set ylint 20'
 'c'
 **
 ** Open file
 **
-'open QHYD_d01z-3d.ctl'
-'open V_d01z-3d.ctl'
-'open W_d01z-3d.ctl'
+'sdfopen merged_history.pe000000.nc'
 'set x 1'
 'set t 5'
 'set z 1 70'
@@ -32,7 +29,7 @@
 *
 'set ccolor 1'
 'set cthick 3'
-'d skip(v.2,2);w.3'
+'d skip(v,2);w'
 'cbarn'
 'draw title (a) QHYD (10^3 kg/kg) & V;W (m/s)'
 'printim ideal_qhyd.png'
@@ -44,15 +41,15 @@
 'set grads off'
 'set gxout shaded'
 'set clevs -8 -6.4 -4.8 -3.2 -1.6 0 1.6 3.2 4.8 6.4 8'
-'d W.3'
+'d W'
 'set gxout contour'
 'set cthick 0.5'
 'set clevs 0.5'
-'d W.3'
+'d W'
 *
 'set ccolor 1'
 'set cthick 3'
-'d skip(v.2,2);w.3'
+'d skip(v,2);w'
 'cbarn'
 'draw title (b) W (m/s) & V;W (m/s)'
 'printim ideal_W.png'

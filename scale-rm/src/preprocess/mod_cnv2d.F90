@@ -64,8 +64,6 @@ module mod_cnv2d
   real(RP), allocatable :: hfact(:,:,:)
   logical :: zonal, pole
 
-  logical :: first = .true.
-
   ! TILE data
   character(len=H_SHORT) :: CNV2D_tile_dtype
   character(len=H_LONG)  :: CNV2D_tile_dir
@@ -172,11 +170,14 @@ contains
     TILE_DLAT = dlat * D2R
     TILE_DLON = dlon * D2R
 
-    if ( .not. first ) then
-       deallocate( TILE_fname, TILE_hit )
-       deallocate( TILE_JS, TILE_JE, TILE_IS, TILE_IE )
-       deallocate( LAT_1d, LON_1d )
-    end if
+    if (allocated(TILE_fname)) deallocate(TILE_fname)
+    if (allocated(TILE_hit)) deallocate(TILE_hit)
+    if (allocated(TILE_JS)) deallocate(TILE_JS)
+    if (allocated(TILE_JE)) deallocate(TILE_JE)
+    if (allocated(TILE_IS)) deallocate(TILE_IS)
+    if (allocated(TILE_IE)) deallocate(TILE_IE)
+    if (allocated(LAT_1d)) deallocate(LAT_1d)
+    if (allocated(LON_1d)) deallocate(LON_1d)
 
     allocate( TILE_fname(TILE_nlim), TILE_hit(TILE_nlim) )
     allocate( TILE_JS(TILE_nlim), TILE_JE(TILE_nlim), TILE_IS(TILE_nlim), TILE_IE(TILE_nlim) )
@@ -207,7 +208,7 @@ contains
     CNV2D_tile_dtype = DTYPE
     CNV2D_tile_dir   = dir
 
-    call CNV2D_init( interp_type, &
+    call CNV2D_init( interp_type,                 &
                      interp_level = interp_level, &
                      ll_struct = .true.           )
 
@@ -238,7 +239,7 @@ contains
     character(len=*), intent(in) :: LAT_NAME
     character(len=*), intent(in) :: LON_NAME
     character(len=*), intent(in) :: INTERP_TYPE
-    integer,          intent(in), optional :: interp_level
+    integer,          intent(in) :: interp_level
     real(RP),         intent(in), optional :: search_limit
     character(len=*), intent(in), optional :: POSTFIX
 
@@ -255,7 +256,10 @@ contains
     nLON = shape(1)
     nLAT = shape(2)
 
-    if ( .not. first ) deallocate( LAT_org, LON_org, LAT_1d, LON_1d )
+    if (allocated(LAT_org)) deallocate(LAT_org)
+    if (allocated(LON_org)) deallocate(LON_org)
+    if (allocated(LAT_1d)) deallocate(LAT_1d)
+    if (allocated(LON_1d)) deallocate(LON_1d)
     allocate( LAT_org(nLON,nLAT), LON_org(nLON,nLAT) )
     allocate( LAT_1d(nLAT), LON_1d(nLON) )
 
@@ -314,10 +318,10 @@ contains
     CNV2D_GrADS_fid = file_id
     CNV2D_GrADS_vid = var_id
 
-    call CNV2D_init( interp_type, &
+    call CNV2D_init( interp_type,                 &
                      interp_level = interp_level, &
                      search_limit = search_limit, &
-                     ll_struct = .false.          )
+                     ll_struct    = .false.       )
 
     return
   end subroutine CNV2D_grads_init
@@ -405,7 +409,10 @@ contains
     real(RP), allocatable :: X_org(:,:), Y_org(:,:)
     !---------------------------------------------------------------------------
 
-    if ( .not. first ) deallocate( idx_i, idx_j, hfact, data_org )
+    if (allocated(idx_i)) deallocate(idx_i)
+    if (allocated(idx_j)) deallocate(idx_j)
+    if (allocated(hfact)) deallocate(hfact)
+    if (allocated(data_org)) deallocate(data_org)
 
     select case ( INTERP_TYPE )
     case ( 'LINEAR' )
@@ -450,7 +457,8 @@ contains
                                           CX(:), CY(:),               & ! [IN]
                                           idx_i(:,:,:), idx_j(:,:,:), & ! [OUT]
                                           hfact(:,:,:),               & ! [OUT]
-                                          zonal = zonal, pole = pole  ) ! [IN]
+                                          zonal = zonal, pole = pole, & ! [IN]
+                                          missing = .true.            ) ! [IN, optional]
           deallocate( X_org, Y_org )
        end if
     case ( 'DIST-WEIGHT' )
@@ -468,8 +476,6 @@ contains
     end select
 
     allocate( data_org(nLON,nLAT) )
-
-    first = .false.
 
     return
   end subroutine CNV2D_init

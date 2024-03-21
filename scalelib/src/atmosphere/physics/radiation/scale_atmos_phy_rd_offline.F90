@@ -79,7 +79,6 @@ contains
     logical                :: ATMOS_PHY_RD_offline_enable_periodic_month = .false.
     logical                :: ATMOS_PHY_RD_offline_enable_periodic_day   = .false.
     integer                :: ATMOS_PHY_RD_offline_step_fixed            = 0
-    real(RP)               :: ATMOS_PHY_RD_offline_offset                = 0.0_RP
     real(RP)               :: ATMOS_PHY_RD_offline_defval               ! = UNDEF
     logical                :: ATMOS_PHY_RD_offline_check_coordinates     = .true.
     integer                :: ATMOS_PHY_RD_offline_step_limit            = 0
@@ -93,7 +92,6 @@ contains
        ATMOS_PHY_RD_offline_enable_periodic_month, &
        ATMOS_PHY_RD_offline_enable_periodic_day,   &
        ATMOS_PHY_RD_offline_step_fixed,            &
-       ATMOS_PHY_RD_offline_offset,                &
        ATMOS_PHY_RD_offline_defval,                &
        ATMOS_PHY_RD_offline_check_coordinates,     &
        ATMOS_PHY_RD_offline_step_limit,            &
@@ -135,7 +133,6 @@ contains
                                         ATMOS_PHY_RD_offline_enable_periodic_month, & ! [IN]
                                         ATMOS_PHY_RD_offline_enable_periodic_day,   & ! [IN]
                                         ATMOS_PHY_RD_offline_step_fixed,            & ! [IN]
-                                        ATMOS_PHY_RD_offline_offset,                & ! [IN]
                                         ATMOS_PHY_RD_offline_defval,                & ! [IN]
                                         check_coordinates = ATMOS_PHY_RD_offline_check_coordinates, & ! [IN]
                                         step_limit        = ATMOS_PHY_RD_offline_step_limit         ) ! [IN]
@@ -151,7 +148,6 @@ contains
                                         ATMOS_PHY_RD_offline_enable_periodic_month, & ! [IN]
                                         ATMOS_PHY_RD_offline_enable_periodic_day,   & ! [IN]
                                         ATMOS_PHY_RD_offline_step_fixed,            & ! [IN]
-                                        ATMOS_PHY_RD_offline_offset,                & ! [IN]
                                         ATMOS_PHY_RD_offline_defval,                & ! [IN]
                                         check_coordinates = ATMOS_PHY_RD_offline_check_coordinates, & ! [IN]
                                         step_limit        = ATMOS_PHY_RD_offline_step_limit         ) ! [IN]
@@ -167,7 +163,6 @@ contains
                                         ATMOS_PHY_RD_offline_enable_periodic_month, & ! [IN]
                                         ATMOS_PHY_RD_offline_enable_periodic_day,   & ! [IN]
                                         ATMOS_PHY_RD_offline_step_fixed,            & ! [IN]
-                                        ATMOS_PHY_RD_offline_offset,                & ! [IN]
                                         ATMOS_PHY_RD_offline_defval,                & ! [IN]
                                         check_coordinates = ATMOS_PHY_RD_offline_check_coordinates, & ! [IN]
                                         step_limit        = ATMOS_PHY_RD_offline_step_limit,        & ! [IN]
@@ -242,11 +237,13 @@ contains
        !$omp private(i,j) &
        !$omp shared(KS,IS,IE,JS,JE) &
        !$omp shared(flux_rad,buffer)
+       !$acc kernels
        do j = JS, JE
        do i = IS, IE
           flux_rad(KS-1,i,j,I_LW,I_up) = buffer(i,j)
        end do
        end do
+       !$acc end kernels
     end if
 
     call FILE_EXTERNAL_INPUT_update( 'SFLX_LW_dn', time_now, buffer(:,:), error )
@@ -257,11 +254,13 @@ contains
        !$omp private(i,j) &
        !$omp shared(KS,IS,IE,JS,JE) &
        !$omp shared(flux_rad,buffer)
+       !$acc kernels
        do j = JS, JE
        do i = IS, IE
           flux_rad(KS-1,i,j,I_LW,I_dn) = buffer(i,j)
        end do
        end do
+       !$acc end kernels
     end if
 
     call FILE_EXTERNAL_INPUT_update( 'SFLX_SW_up', time_now, buffer(:,:), error )
@@ -272,11 +271,13 @@ contains
        !$omp private(i,j) &
        !$omp shared(KS,IS,IE,JS,JE) &
        !$omp shared(flux_rad,buffer)
+       !$acc kernels
        do j = JS, JE
        do i = IS, IE
           flux_rad(KS-1,i,j,I_SW,I_up) = buffer(i,j)
        end do
        end do
+       !$acc end kernels
     end if
 
     call FILE_EXTERNAL_INPUT_update( 'SFLX_SW_dn', time_now, buffer(:,:), error )
@@ -287,23 +288,27 @@ contains
        !$omp private(i,j) &
        !$omp shared(KS,IS,IE,JS,JE) &
        !$omp shared(flux_rad,buffer)
+       !$acc kernels
        do j = JS, JE
        do i = IS, IE
           flux_rad(KS-1,i,j,I_SW,I_dn) = buffer(i,j)
        end do
        end do
+       !$acc end kernels
     end if
 
     !$omp parallel do default(none) OMP_SCHEDULE_ &
     !$omp private(i,j) &
     !$omp shared(KS,IS,IE,JS,JE,ATMOS_PHY_RD_offline_diffuse_rate) &
     !$omp shared(SFLX_rad_dn,flux_rad)
+    !$acc kernels
     do j = JS, JE
     do i = IS, IE
        SFLX_rad_dn(i,j,I_R_direct ,I_R_IR) = 0.0_RP
        SFLX_rad_dn(i,j,I_R_diffuse,I_R_IR) = flux_rad(KS-1,i,j,I_LW,I_dn)
     end do
     end do
+    !$acc end kernels
 
     ! 2D optional
 
@@ -342,6 +347,7 @@ contains
        !$omp private(i,j) &
        !$omp shared(KS,IS,IE,JS,JE,ATMOS_PHY_RD_offline_diffuse_rate,ATMOS_PHY_RD_offline_NIR_rate) &
        !$omp shared(SFLX_rad_dn,flux_rad)
+       !$acc kernels
        do j = JS, JE
        do i = IS, IE
           SFLX_rad_dn(i,j,I_R_direct ,I_R_NIR) = ( 1.0_RP-ATMOS_PHY_RD_offline_diffuse_rate ) &
@@ -354,6 +360,7 @@ contains
                                                * ( 1.0_RP-ATMOS_PHY_RD_offline_NIR_rate     ) * flux_rad(KS-1,i,j,I_SW,I_dn)
        enddo
        enddo
+       !$acc end kernels
     endif
 
     if ( error_sum ) then

@@ -23,27 +23,31 @@ module scale_const
   !++ Public procedure
   !
   public :: CONST_setup
+  public :: CONST_finalize
 
   !-----------------------------------------------------------------------------
   !
   !++ Public parameters & variables
   !
-  real(RP), public            :: CONST_PI      = 3.14159265358979_RP !< pi
+  real(RP), public, parameter :: CONST_PI      = 4.0_RP * atan( 1.0_RP ) !< pi
   real(RP), public            :: CONST_D2R                           !< degree to radian
+  real(RP), public            :: CONST_R2D                           !< radian to degree
   real(RP), public            :: CONST_EPS     = 1.E-16_RP           !< small number
   real(RP), public            :: CONST_EPS1    = 0.99999999999999_RP !< small number
   real(RP), public            :: CONST_HUGE    = 1.E+30_RP           !< huge  number
-  !$acc declare create(CONST_PI, CONST_EPS, CONST_EPS1, CONST_HUGE)
+  !$acc declare create(CONST_D2R, CONST_EPS, CONST_EPS1, CONST_HUGE)
 
   integer,  public, parameter :: CONST_UNDEF2  = -32768              !< undefined value (INT2)
   real(SP), public, parameter :: CONST_UNDEF4  = -9.9999E30          !< undefined value (REAL4)
   real(DP), public, parameter :: CONST_UNDEF8  = -9.9999D30          !< undefined value (REAL8)
   real(RP), public            :: CONST_UNDEF
+  !$acc declare create(CONST_UNDEF)
 
   ! adopted constants
-  real(RP), public            :: CONST_RADIUS  = 6.37122E+6_RP       !< radius of the planet [m]
-  real(RP), public            :: CONST_OHM     = 7.2920E-5_RP        !< angular velocity of the planet [1/s]
-  real(RP), public            :: CONST_GRAV    = 9.80665_RP          !< standard acceleration of gravity [m/s2]
+  real(RP), public            :: CONST_RADIUS                        !< radius of the planet [m]
+  real(RP), public            :: CONST_OHM                           !< angular velocity of the planet [1/s]
+  real(RP), public            :: CONST_GRAV                          !< standard acceleration of gravity [m/s2]
+  !$acc declare create(CONST_RADIUS, CONST_OHM, CONST_GRAV)
 
   ! physical constants
   real(RP), public, parameter :: CONST_STB     = 5.670373E-8_RP      !< Stefan-Boltzman constant [W/m2/K4]
@@ -52,11 +56,12 @@ module scale_const
 
   ! dry air constants
   real(RP), public            :: CONST_Mdry    =  28.966_RP          !< mass weight (dry air)                     [g/mol]
-  real(RP), public            :: CONST_Rdry    =  287.04_RP          !< specific gas constant (dry air)           [J/kg/K]
-  real(RP), public            :: CONST_CPdry   = 1004.64_RP          !< specific heat (dry air,constant pressure) [J/kg/K]
+  real(RP), public            :: CONST_Rdry                          !< specific gas constant (dry air)           [J/kg/K]
+  real(RP), public            :: CONST_CPdry                         !< specific heat (dry air,constant pressure) [J/kg/K]
   real(RP), public            :: CONST_CVdry                         !< specific heat (dry air,constant volume)   [J/kg/K]
-  real(RP), public            :: CONST_LAPS    = 6.5E-3_RP           !< lapse rate of ISA                         [K/m]
+  real(RP), public            :: CONST_LAPS                          !< lapse rate of ISA                         [K/m]
   real(RP), public            :: CONST_LAPSdry                       !< dry adiabatic lapse rate                  [K/m]
+  !$acc declare create(CONST_Mdry, CONST_Rdry, CONST_CPdry, CONST_CVdry, CONST_LAPS, CONST_LAPSdry)
 
   ! water constants
   real(RP), public            :: CONST_Mvap    =  18.016_RP          !< mass weight (water vapor)                      [g/mol]
@@ -65,9 +70,11 @@ module scale_const
   real(RP), public            :: CONST_CVvap                         !< specific heat (water vapor, constant volume)   [J/kg/K]
   real(RP), public, parameter :: CONST_CL      = 4218.0_RP           !< specific heat (liquid water)                   [J/kg/K]
   real(RP), public, parameter :: CONST_CI      = 2106.0_RP           !< specific heat (ice)                            [J/kg/K]
+  !$acc declare create(CONST_Mvap)
 
   real(RP), public            :: CONST_EPSvap                        !< Rdry / Rvap
   real(RP), public            :: CONST_EPSTvap                       !< 1 / epsilon - 1
+  !$acc declare create(CONST_EPSvap, CONST_EPSTvap)
 
   real(RP), public, parameter :: CONST_EMELT   = 3.4E5_RP
   real(RP), public, parameter :: CONST_TMELT   = 273.15_RP
@@ -81,22 +88,28 @@ module scale_const
   real(RP), public, parameter :: CONST_PSAT0   =  610.78_RP          !< saturate pressure of water vapor at 0C [Pa]
   real(RP), public, parameter :: CONST_DWATR   = 1000.0_RP           !< density of water [kg/m3]
   real(RP), public, parameter :: CONST_DICE    =  916.8_RP           !< density of ice   [kg/m3]
+  !$acc declare create(CONST_LHV00, CONST_LHS00, CONST_LHF0, CONST_LHF00)
 
   real(RP), public            :: CONST_SOUND                         !< speed of sound (dry air at 0C) [m/s]
+  !$acc declare create(CONST_SOUND)
 
-  real(RP), public            :: CONST_Pstd    = 101325.0_RP         !< standard pressure [Pa]
-  real(RP), public            :: CONST_PRE00   = 100000.0_RP         !< pressure reference [Pa]
-  real(RP), public            :: CONST_Tstd    = 288.15_RP           !< standard temperature (15C) [K]
+  real(RP), public            :: CONST_Pstd                          !< standard pressure [Pa]
+  real(RP), public            :: CONST_PRE00                         !< pressure reference [Pa]
+  real(RP), public            :: CONST_Tstd                          !< standard temperature (15C) [K]
   real(RP), public, parameter :: CONST_TEM00   = 273.15_RP           !< temperature reference (0C) [K]
   real(RP), public, parameter :: CONST_PPM     = 1.E-6_RP            !< parts par million
+  !$acc declare create(CONST_Pstd, CONST_PRE00, CONST_Tstd)
 
-  real(RP), public, parameter :: CONST_EPSvac  = 8.854187817E-12_RP            !< parts par million
-  real(RP), public            :: CONST_EPSair  = 1.00059_RP            !< parts par million
+  real(RP), public, parameter :: CONST_EPSvac  = 8.854187817E-12_RP  !< parts par million
+  real(RP), public            :: CONST_EPSair  = 1.00059_RP          !< parts par million
+  !$acc declare create(CONST_EPSair)
 
   integer,  public            :: CONST_I_LW    = 1                   !< long-wave radiation index
   integer,  public            :: CONST_I_SW    = 2                   !< short-wave radiation index
+  !$acc declare create(CONST_I_LW, CONST_I_SW)
 
   character(len=H_SHORT), public :: CONST_THERMODYN_TYPE = 'EXACT'   !< internal energy type
+  !$acc declare create(CONST_THERMODYN_TYPE)
 
   !-----------------------------------------------------------------------------
   !
@@ -116,7 +129,7 @@ contains
        PRC_abort
     implicit none
 
-    real(RP) :: CONST_SmallPlanetFactor = 1.0_RP !< factor for small planet
+    real(RP) :: CONST_SmallPlanetFactor !< factor for small planet
 
     namelist / PARAM_CONST / &
        CONST_RADIUS,           &
@@ -140,6 +153,20 @@ contains
     LOG_NEWLINE
     LOG_INFO("CONST_setup",*) 'Setup'
 
+    CONST_RADIUS = 6.37122E+6_RP
+    CONST_OHM    = 7.2920E-5_RP
+    CONST_GRAV   = 9.80665_RP
+    CONST_Rdry   =  287.04_RP
+    CONST_CPdry  = 1004.64_RP
+    CONST_LAPS   = 6.5E-3_RP
+    CONST_Pstd   = 101325.0_RP
+    CONST_PRE00  = 100000.0_RP
+    CONST_Tstd   = 288.15_RP
+
+    CONST_THERMODYN_TYPE    = 'EXACT'
+
+    CONST_SmallPlanetFactor = 1.0_RP
+
     !--- read namelist
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_CONST,iostat=ierr)
@@ -160,8 +187,8 @@ contains
        call PRC_abort
     endif
 
-    CONST_PI      = 4.0_RP * atan( 1.0_RP )
     CONST_D2R     = CONST_PI / 180.0_RP
+    CONST_R2D     = 180.0_RP / CONST_PI
     CONST_EPS     =          epsilon(0.0_RP)
     CONST_EPS1    = 1.0_RP - epsilon(0.0_RP)
     CONST_HUGE    =             huge(0.0_RP)
@@ -236,7 +263,29 @@ contains
     LOG_INFO_CONT(*) 'standard temperature (15C)                    [K] : Tstd    = ', CONST_Tstd
     LOG_INFO_CONT(*) 'temperature reference (0C)                    [K] : TEM00   = ', CONST_TEM00
 
+    !$acc update device(CONST_D2R, CONST_EPS, CONST_EPS1, CONST_HUGE)
+    !$acc update device(CONST_UNDEF)
+    !$acc update device(CONST_RADIUS, CONST_OHM, CONST_GRAV)
+    !$acc update device(CONST_Mdry, CONST_Rdry, CONST_CPdry, CONST_CVdry, CONST_LAPS, CONST_LAPSdry)
+    !$acc update device(CONST_Mvap)
+    !$acc update device(CONST_EPSvap, CONST_EPSTvap)
+    !$acc update device(CONST_LHV00, CONST_LHS00, CONST_LHF0, CONST_LHF00)
+    !$acc update device(CONST_SOUND)
+    !$acc update device(CONST_Pstd, CONST_PRE00, CONST_Tstd)
+    !$acc update device(CONST_EPSair)
+    !$acc update device(CONST_I_LW, CONST_I_SW)
+    !$acc update device(CONST_THERMODYN_TYPE)
+
     return
   end subroutine CONST_setup
+
+  !-----------------------------------------------------------------------------
+  !> Finalize
+  subroutine CONST_finalize
+
+    initialized = .false.
+
+    return
+  end subroutine CONST_finalize
 
 end module scale_const

@@ -28,6 +28,7 @@ module mod_atmos_phy_rd_driver
   !++ Public procedure
   !
   public :: ATMOS_PHY_RD_driver_setup
+  public :: ATMOS_PHY_RD_driver_finalize
   public :: ATMOS_PHY_RD_driver_calc_tendency
 
   !-----------------------------------------------------------------------------
@@ -111,6 +112,7 @@ contains
 
        LOG_INFO("ATMOS_PHY_RD_driver_setup",*) 'this component is never called.'
        LOG_INFO("ATMOS_PHY_RD_driver_setup",*) 'radiation fluxes are set to zero.'
+       !$acc kernels
        SFCFLX_LW_up(:,:)     = 0.0_RP
        SFCFLX_LW_dn(:,:)     = 0.0_RP
        SFCFLX_SW_up(:,:)     = 0.0_RP
@@ -122,11 +124,41 @@ contains
        SFLX_rad_dn (:,:,:,:) = 0.0_RP
        solins      (:,:)     = 0.0_RP
        cosSZA      (:,:)     = 0.0_RP
+       !$acc end kernels
 
     endif
 
     return
   end subroutine ATMOS_PHY_RD_driver_setup
+
+  !-----------------------------------------------------------------------------
+  !> finalize
+  subroutine ATMOS_PHY_RD_driver_finalize
+    use scale_atmos_phy_rd_mstrnx, only: &
+       ATMOS_PHY_RD_MSTRNX_finalize
+    use scale_atmos_phy_rd_profile, only: &
+       ATMOS_PHY_RD_PROFILE_finalize
+    use mod_atmos_admin, only: &
+       ATMOS_PHY_RD_TYPE, &
+       ATMOS_sw_phy_rd
+    implicit none
+    !---------------------------------------------------------------------------
+
+    LOG_NEWLINE
+    LOG_INFO("ATMOS_PHY_RD_driver_finalize",*) 'Finalize'
+
+    if ( ATMOS_sw_phy_rd ) then
+       select case ( ATMOS_PHY_RD_TYPE )
+       case ( "MSTRNX" )
+          call ATMOS_PHY_RD_MSTRNX_finalize
+       case ( "OFFLINE" )
+       end select
+    end if
+
+    call ATMOS_PHY_RD_PROFILE_finalize
+
+    return
+  end subroutine ATMOS_PHY_RD_driver_finalize
 
   !-----------------------------------------------------------------------------
   !> Driver
@@ -256,6 +288,8 @@ contains
 
     if ( update_flag ) then
 
+       !$acc data create(TEMP_t,flux_rad,flux_rad_top,dtau_s,dem_s,flux_up,flux_dn,flux_net,flux_net_sfc,flux_net_toa,flux_net_tom,TOAFLX_LW_up,TOAFLX_LW_dn,TOAFLX_SW_up,TOAFLX_SW_dn,SFCFLX_LW_up_c,SFCFLX_LW_dn_c,SFCFLX_SW_up_c,SFCFLX_SW_dn_c,TOAFLX_LW_up_c,TOAFLX_LW_dn_c,TOAFLX_SW_up_c,TOAFLX_SW_dn_c,TOMFLX_LW_up_c,TOMFLX_LW_dn_c,TOMFLX_SW_up_c,TOMFLX_SW_dn_c,CLDFRAC,MP_Re,MP_Qe,AE_Re,AE_Qe,RH)
+
        call SOLARINS_insolation( IA, IS, IE, JA, JS, JE, &
                                  REAL_LON(:,:), REAL_LAT(:,:),      & ! [IN]
                                  TIME_NOWDATE(:), TIME_OFFSET_YEAR, & ! [IN]
@@ -263,10 +297,11 @@ contains
 
        call ATMOS_PHY_MP_vars_get_diagnostic( &
             DENS(:,:,:), TEMP(:,:,:), QTRC(:,:,:,:), & ! [IN]
-            CLDFRAC=CLDFRAC, Re=MP_Re, Qe=MP_Qe      ) ! [IN]
+            CLDFRAC=CLDFRAC, Re=MP_Re, Qe=MP_Qe      ) ! [OUT]
 
        if ( RD_use_PBL_cloud ) then
           !$omp parallel do
+          !$acc kernels
           do j = JS, JE
           do i = IS, IE
           do k = KS, KE
@@ -283,6 +318,7 @@ contains
           end do
           end do
           end do
+          !$acc end kernels
           
        end if
 
@@ -315,16 +351,20 @@ contains
                TIME_NOWDAYSEC,        & ! [IN]
                flux_rad(:,:,:,:,:,2), & ! [OUT]
                SFLX_rad_dn(:,:,:,:)   ) ! [OUT]
+          !$acc kernels
           flux_rad(:,:,:,:,:,1)   = 0.0_RP ! clear sky
           flux_rad_top(:,:,:,:,:) = 0.0_RP
           dtau_s(:,:,:) = 0.0_RP
           dem_s(:,:,:) = 0.0_RP
+          !$acc end kernels
 
        end select
 
 
        ! surface
 !OCL XFILL
+       !$omp parallel do
+       !$acc kernels
        do j = JS, JE
        do i = IS, IE
           ! for clear-sky
@@ -342,9 +382,12 @@ contains
           flux_net_sfc(i,j,I_SW) = SFCFLX_SW_up(i,j) - SFCFLX_SW_dn(i,j)
        enddo
        enddo
+       !$acc end kernels
 
        ! top of the atmosphere
 !OCL XFILL
+       !$omp parallel do
+       !$acc kernels
        do j = JS, JE
        do i = IS, IE
           ! for clear-sky
@@ -362,9 +405,12 @@ contains
           flux_net_toa(i,j,I_SW) = TOAFLX_SW_up(i,j) - TOAFLX_SW_dn(i,j)
        enddo
        enddo
+       !$acc end kernels
 
        ! top of the model
 !OCL XFILL
+       !$omp parallel do
+       !$acc kernels
        do j = JS, JE
        do i = IS, IE
           ! for clear-sky
@@ -382,8 +428,11 @@ contains
           flux_net_tom(i,j,I_SW) = TOMFLX_SW_up(i,j) - TOMFLX_SW_dn(i,j)
        enddo
        enddo
+       !$acc end kernels
 
 !OCL XFILL
+       !$omp parallel do collapse(2)
+       !$acc kernels
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
@@ -397,6 +446,7 @@ contains
        enddo
        enddo
        enddo
+       !$acc end kernels
 
        ! apply radiative flux convergence -> heating rate
        call ATMOS_PHY_RD_calc_heating( &
@@ -485,8 +535,11 @@ contains
        call FILE_HISTORY_in( dtau_s(:,:,:), 'dtau_s', '0.67 micron cloud optical depth', '1', fill_halo=.true. )
        call FILE_HISTORY_in( dem_s (:,:,:), 'dem_s',  '10.5 micron cloud emissivity',    '1', fill_halo=.true. )
 
+       !$acc end data
+
     endif
 
+    !$acc kernels
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -494,6 +547,7 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
 
     if ( STATISTICS_checktotal ) then
        call STATISTICS_total( KA, KS, KE, IA, IS, IE, JA, JS, JE, &

@@ -168,7 +168,9 @@ contains
 
     integer :: i, j
     !---------------------------------------------------------------------------
+    !$acc data copyout(Z0M,Z0H,Z0E)
 
+    !$acc kernels
     do j = OJS, OJE
     do i = OIS, OIE
        Z0M(i,j) = max( OCEAN_PHY_ROUGHNESS_Z0M, OCEAN_PHY_ROUGHNESS_Z0M_min )
@@ -176,7 +178,9 @@ contains
        Z0E(i,j) = max( OCEAN_PHY_ROUGHNESS_Z0E, OCEAN_PHY_ROUGHNESS_Z0E_min )
     enddo
     enddo
+    !$acc end kernels
 
+    !$acc end data
     return
   end subroutine OCEAN_PHY_ROUGHNESS_const
 
@@ -195,7 +199,9 @@ contains
 
     integer :: i, j
     !---------------------------------------------------------------------------
+    !$acc data copyout(Z0M,Z0H,Z0E)
 
+    !$acc kernels
     do j = OJS, OJE
     do i = OIS, OIE
        Z0M(i,j) = max( OCEAN_PHY_ROUGHNESS_seaice_Z0M, OCEAN_PHY_ROUGHNESS_Z0M_min )
@@ -203,7 +209,9 @@ contains
        Z0E(i,j) = max( OCEAN_PHY_ROUGHNESS_seaice_Z0E, OCEAN_PHY_ROUGHNESS_Z0E_min )
     enddo
     enddo
+    !$acc end kernels
 
+    !$acc end data
     return
   end subroutine OCEAN_PHY_ROUGHNESS_seaice
 

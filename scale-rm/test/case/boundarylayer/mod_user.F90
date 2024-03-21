@@ -28,6 +28,7 @@ module mod_user
   !
   public :: USER_tracer_setup
   public :: USER_setup
+  public :: USER_finalize
   public :: USER_mkinit
   public :: USER_calc_tendency
   public :: USER_update
@@ -72,10 +73,9 @@ module mod_user
   real(RP), private, allocatable :: divf(:)  ! large scale divergence (full level)
   real(RP), private, allocatable :: divh(:)  ! large scale divergence (half level)
 
-  integer,                private, parameter :: QA = 3
-  character(len=H_SHORT), private            :: QNAME(QA)
-  character(len=H_MID),   private            :: QDESC(QA)
-  character(len=H_SHORT), private            :: QUNIT(QA)
+  character(len=H_SHORT), private            :: QNAME(3)
+  character(len=H_MID),   private            :: QDESC(3)
+  character(len=H_SHORT), private            :: QUNIT(3)
 
   data QNAME / 'QV', &
                'QC', &
@@ -135,10 +135,10 @@ contains
        call ATMOS_HYDROMETEOR_regist( 1, 1,                & ! (in)
                                       QNAME, QDESC, QUNIT, & ! (in)
                                       QS_MP                ) ! (out)
+       QA_MP = 3
+       QE_MP = QS_MP + 2
     end if
 
-    QA_MP = 3
-    QE_MP = QS_MP + 2
 
     ATMOS_PHY_MP_USER_qhyd2qtrc => USER_qhyd2qtrc
 
@@ -186,6 +186,18 @@ contains
   end subroutine USER_setup
 
   !-----------------------------------------------------------------------------
+  !> Finalization
+  subroutine USER_finalize
+    implicit none
+    !---------------------------------------------------------------------------
+
+    deallocate( fluxf, fluxh )
+    deallocate( divf, divh )
+
+    return
+  end subroutine USER_finalize
+
+  !-----------------------------------------------------------------------------
   !> Make initial state
   subroutine USER_mkinit
     use scale_atmos_hydrometeor, only: &
@@ -194,6 +206,9 @@ contains
        NOWDAYSEC => TIME_NOWDAYSEC
     use scale_atmos_hydrostatic, only: &
        buildrho => ATMOS_HYDROSTATIC_buildrho
+    use scale_atmos_grid_cartesC, only: &
+       CZ => ATMOS_GRID_CARTESC_CZ, &
+       FZ => ATMOS_GRID_CARTESC_FZ
     use mod_atmos_vars, only: &
        DENS, &
        MOMZ, &
@@ -207,9 +222,11 @@ contains
        ATMOS_PHY_SF_SFC_Z0M,    &
        ATMOS_PHY_SF_SFC_Z0H,    &
        ATMOS_PHY_SF_SFC_Z0E
-    use scale_atmos_grid_cartesC, only: &
-       CZ => ATMOS_GRID_CARTESC_CZ, &
-       FZ => ATMOS_GRID_CARTESC_FZ
+    use mod_atmos_phy_bl_vars, only: &
+       QS_BL => QS, &
+       QE_BL => QE
+    use mod_atmos_phy_bl_driver, only: &
+       atmos_phy_bl_driver_mkinit
     implicit none
 
     real(RP) :: RHO (KA)
@@ -221,7 +238,9 @@ contains
     real(RP) :: Ts
     real(RP) :: QVs
 
-    integer  :: k, i, j
+    logical :: converged
+
+    integer  :: k, i, j, iq
     !---------------------------------------------------------------------------
 
     call interporate( PT(:), pt_ini )
@@ -235,10 +254,11 @@ contains
     QC(:) = 0.0_RP
 
     call buildrho( KA, KS, KE, &
-                   PT(:), QV(:), QC(:),         & ! (in)
-                   Ps, pt_ini(1), QVs, 0.0_RP,  & ! (in)
-                   CZ(:), FZ(:),                & ! (in)
-                   RHO(:), TEMP(:), PRES(:), Ts ) ! (out)
+                   PT(:), QV(:), QC(:),          & ! (in)
+                   Ps, pt_ini(1), QVs, 0.0_RP,   & ! (in)
+                   CZ(:), FZ(:),                 & ! (in)
+                   RHO(:), TEMP(:), PRES(:), Ts, & ! (out)
+                   converged                     ) ! (out)
 
     do j = 1, JA
     do i = 1, IA
@@ -252,7 +272,6 @@ contains
     end do
     end do
 
-    QTRC(:,:,:,:) = 0.0_RP
     if ( .not. dry ) then
        do j = 1, JA
        do i = 1, IA
@@ -262,6 +281,27 @@ contains
        end do
        end do
     end if
+    do iq = QS_BL, QE_BL
+       if ( (.not. dry) .and. iq == I_QV ) then
+          do j = 1, JA
+          do i = 1, IA
+          do k = 1, KA
+             QTRC(k,i,j,I_QV) = QV(k)
+          end do
+          end do
+          end do
+       else if ( iq < QS_BL .or. iq > QE_BL ) then
+          do j = 1, JA
+          do i = 1, IA
+          do k = 1, KA
+             QTRC(k,i,j,I_QV) = 0.0_RP
+          end do
+          end do
+          end do
+       end if
+    end do
+
+    call atmos_phy_bl_driver_mkinit( 0.0_RP )
 
     call set_tg( NOWDAYSEC, Ts )
 
@@ -282,6 +322,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Calculate tendency
   subroutine USER_calc_tendency
+    use scale_tracer, only: &
+       QA
     use scale_time, only: &
        NOWDAYSEC => TIME_NOWDAYSEC, &
        dt     => TIME_DTSEC

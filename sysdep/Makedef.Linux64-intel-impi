@@ -55,8 +55,8 @@ ifeq ($(SCALE_DISABLE_INTELVEC),T)
    NOVEC = -no-vec
 endif
 
-FFLAGS_SYSDEPEND = $(NOVEC)
-CFLAGS_SYSDEPEND =
+FFLAGS_SYSDEPEND = -DINTELMPI $(NOVEC)
+CFLAGS_SYSDEPEND = -DINTELMPI
 
 FFLAGS_TENTATIVE = -no-ip -no-ipo
 
@@ -64,6 +64,12 @@ FFLAGS_TENTATIVE = -no-ip -no-ipo
 
 LD      = $(FC)
 LDFLAGS = $(FFLAGS)
+
+
+
+##### Execute command
+
+MPIEXEC = "mpirun -n"
 
 
 

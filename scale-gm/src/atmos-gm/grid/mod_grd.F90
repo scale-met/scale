@@ -150,10 +150,7 @@ module mod_grd
   !++ Private parameters & variables
   !
   character(len=H_SHORT), private :: hgrid_io_mode  = 'ADVANCED'
-  character(len=H_SHORT), private :: topo_io_mode   = 'ADVANCED'
   character(len=H_LONG),  private :: hgrid_fname    = ''         ! horizontal grid file
-  character(len=H_LONG),  private :: topo_fname     = ''         ! topography file
-  character(len=H_LONG),  private :: toposd_fname   = ''         ! topography file
 
   character(len=H_LONG),  private :: vgrid_fname    = ''         ! vertical grid file
   character(len=H_SHORT), private :: vgrid_scheme   = 'LINEAR'   ! vertical coordinate scheme
@@ -178,16 +175,20 @@ contains
        UNDEF  => CONST_UNDEF,  &
        RADIUS => CONST_RADIUS
     use scale_comm_icoA, only:  &
-       COMM_data_transfer
+       COMM_data_transfer, &
+       COMM_var
+    use mod_gm_topography, only:  &
+       TOPOGRAPHY_IN_IDEAL, &
+       TOPOGRAPHY_Zsfc,     &
+       TOPOGRAPHY_Zsfc_pl
+    use mod_ideal_topo, only: &
+       IDEAL_topo
     implicit none
 
     namelist / GRDPARAM / &
        GRD_grid_type,  &
        hgrid_io_mode,  &
-       topo_io_mode,   &
        hgrid_fname,    &
-       topo_fname,     &
-       toposd_fname,   &
        vgrid_fname,    &
        vgrid_scheme,   &
        h_efold,        &
@@ -287,9 +288,16 @@ contains
     GRD_zs   (:,:,:,:) = 0.0_RP
     GRD_zs_pl(:,:,:,:) = 0.0_RP
 
-    call GRD_input_topograph( topo_fname,   & ![IN]
-                              toposd_fname, & ![IN]
-                              topo_io_mode  ) ![IN]
+    if ( TOPOGRAPHY_IN_IDEAL ) then
+       call IDEAL_topo( GRD_s          (:,:,:,I_LAT),   & ! [IN]
+                        GRD_s          (:,:,:,I_LON),   & ! [IN]
+                        TOPOGRAPHY_Zsfc(:,:,:,1)        ) ! [OUT]
+
+       call COMM_var( TOPOGRAPHY_Zsfc, TOPOGRAPHY_Zsfc_pl, ADM_KNONE, 1 )
+    endif
+
+    GRD_zs   (:,:,:,GRD_ZSFC) = TOPOGRAPHY_Zsfc   (:,:,:,1)
+    GRD_zs_pl(:,:,:,GRD_ZSFC) = TOPOGRAPHY_Zsfc_pl(:,:,:,1)
 
 
 
@@ -696,56 +704,6 @@ contains
 
     return
   end subroutine GRD_output_vgrid
-
-  !-----------------------------------------------------------------------------
-  !> Input topography data
-  subroutine GRD_input_topograph( &
-       topo_basename,   &
-       toposd_basename, &
-       io_mode          )
-    use scale_prc, only: &
-       PRC_abort
-    use scale_comm_icoA, only: &
-       COMM_var
-    use mod_fio, only: &
-       FIO_input
-    use mod_ideal_topo, only: &
-       IDEAL_topo
-    implicit none
-
-    character(len=*), intent(in) :: topo_basename   ! input basename (topography)
-    character(len=*), intent(in) :: toposd_basename ! input basename (std.dev. of topography)
-    character(len=*), intent(in) :: io_mode         ! io_mode
-    !---------------------------------------------------------------------------
-
-    if( IO_L ) write(IO_FID_LOG,*) '*** topography data input'
-
-    if ( io_mode == 'ADVANCED' ) then
-
-       if ( topo_basename /= 'NONE' ) then
-          call FIO_input(GRD_zs(:,:,:,GRD_ZSFC),topo_basename,  'topo'       ,'ZSSFC1',1,1,1)
-       endif
-       if ( toposd_basename /= 'NONE' ) then
-          call FIO_input(GRD_zs(:,:,:,GRD_ZSD ),toposd_basename,'topo_stddev','ZSSFC1',1,1,1)
-       endif
-
-    elseif( io_mode == 'IDEAL' ) then
-
-       if( IO_L ) write(IO_FID_LOG,*) '*** make ideal topography'
-
-       call IDEAL_topo( GRD_s (:,:,:,I_LAT),   & ! [IN]
-                        GRD_s (:,:,:,I_LON),   & ! [IN]
-                        GRD_zs(:,:,:,GRD_ZSFC) ) ! [OUT]
-
-    else
-       write(*,*) 'xxx [grd/GRD_input_topograph] Invalid io_mode!', trim(io_mode)
-       call PRC_abort
-    endif ! io_mode
-
-    call COMM_var( GRD_zs, GRD_zs_pl, ADM_KNONE, 2 )
-
-    return
-  end subroutine GRD_input_topograph
 
   !-----------------------------------------------------------------------------
   !> Communicate grid data for pole region: This routine is NOT same as COMM_var

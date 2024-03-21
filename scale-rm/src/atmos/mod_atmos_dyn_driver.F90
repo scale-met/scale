@@ -27,6 +27,7 @@ module mod_atmos_dyn_driver
   !++ Public procedure
   !
   public :: ATMOS_DYN_driver_setup
+  public :: ATMOS_DYN_driver_finalize
   public :: ATMOS_DYN_driver
 
   !-----------------------------------------------------------------------------
@@ -62,25 +63,25 @@ module mod_atmos_dyn_driver
   !++ Private parameters & variables
   !
   ! Numerical filter
-  integer,  private :: ATMOS_DYN_NUMERICAL_DIFF_LAPLACIAN_NUM = 2
-  real(RP), private :: ATMOS_DYN_NUMERICAL_DIFF_coef          = 1.0E-4_RP ! nondimensional numerical diffusion
-  real(RP), private :: ATMOS_DYN_NUMERICAL_DIFF_coef_TRACER   = 0.0_RP    ! nondimensional numerical diffusion for tracer
-  real(RP), private :: ATMOS_DYN_NUMERICAL_DIFF_sfc_fact      = 1.0_RP
-  logical , private :: ATMOS_DYN_NUMERICAL_DIFF_use_refstate  = .true.
+  integer,  private :: ATMOS_DYN_NUMERICAL_DIFF_LAPLACIAN_NUM
+  real(RP), private :: ATMOS_DYN_NUMERICAL_DIFF_coef          ! nondimensional numerical diffusion
+  real(RP), private :: ATMOS_DYN_NUMERICAL_DIFF_coef_TRACER   ! nondimensional numerical diffusion for tracer
+  real(RP), private :: ATMOS_DYN_NUMERICAL_DIFF_sfc_fact
+  logical , private :: ATMOS_DYN_NUMERICAL_DIFF_use_refstate
 
-  real(RP), private :: ATMOS_DYN_wdamp_tau                    = -1.0_RP   ! maximum tau for Rayleigh damping of w [s]
-  real(RP), private :: ATMOS_DYN_wdamp_height                 = -1.0_RP   ! height       to start apply Rayleigh damping [m]
-  integer,  private :: ATMOS_DYN_wdamp_layer                  = -1        ! layer number to start apply Rayleigh damping [num]
+  real(RP), private :: ATMOS_DYN_wdamp_tau                    ! maximum tau for Rayleigh damping of w [s]
+  real(RP), private :: ATMOS_DYN_wdamp_height                 ! height       to start apply Rayleigh damping [m]
+  integer,  private :: ATMOS_DYN_wdamp_layer                  ! layer number to start apply Rayleigh damping [num]
 
   ! Divergence damping
-  real(RP), private :: ATMOS_DYN_divdmp_coef                  = 0.0_RP    ! Divergence dumping coef
+  real(RP), private :: ATMOS_DYN_divdmp_coef                  ! Divergence dumping coef
 
   ! Flux-Corrected Transport limiter
-  logical,  private :: ATMOS_DYN_FLAG_TRACER_SPLIT_TEND       = .false.
-  logical,  private :: ATMOS_DYN_FLAG_FCT_momentum            = .false.
-  logical,  private :: ATMOS_DYN_FLAG_FCT_T                   = .false.
-  logical,  private :: ATMOS_DYN_FLAG_FCT_TRACER              = .false.
-  logical,  private :: ATMOS_DYN_FLAG_FCT_along_stream        = .true.
+  logical,  private :: ATMOS_DYN_FLAG_TRACER_SPLIT_TEND
+  logical,  private :: ATMOS_DYN_FLAG_FCT_momentum
+  logical,  private :: ATMOS_DYN_FLAG_FCT_T
+  logical,  private :: ATMOS_DYN_FLAG_FCT_TRACER
+  logical,  private :: ATMOS_DYN_FLAG_FCT_along_stream
 
   !-----------------------------------------------------------------------------
 contains
@@ -149,6 +150,24 @@ contains
 
     if ( ATMOS_sw_dyn ) then
 
+       ATMOS_DYN_NUMERICAL_DIFF_LAPLACIAN_NUM = 2
+       ATMOS_DYN_NUMERICAL_DIFF_coef          = 1.0E-4_RP
+       ATMOS_DYN_NUMERICAL_DIFF_coef_TRACER   = 0.0_RP
+       ATMOS_DYN_NUMERICAL_DIFF_sfc_fact      = 1.0_RP
+       ATMOS_DYN_NUMERICAL_DIFF_use_refstate  = .true.
+
+       ATMOS_DYN_wdamp_tau    = -1.0_RP
+       ATMOS_DYN_wdamp_height = -1.0_RP
+       ATMOS_DYN_wdamp_layer  = -1
+
+       ATMOS_DYN_divdmp_coef = 0.0_RP
+
+       ATMOS_DYN_FLAG_TRACER_SPLIT_TEND = .false.
+       ATMOS_DYN_FLAG_FCT_momentum      = .false.
+       ATMOS_DYN_FLAG_FCT_T             = .false.
+       ATMOS_DYN_FLAG_FCT_TRACER        = .false.
+       ATMOS_DYN_FLAG_FCT_along_stream  = .true.
+
        !--- read namelist
        rewind(IO_FID_CONF)
        read(IO_FID_CONF,nml=PARAM_ATMOS_DYN,iostat=ierr)
@@ -203,6 +222,20 @@ contains
     return
   end subroutine ATMOS_DYN_driver_setup
 
+  !-----------------------------------------------------------------------------
+  !> finalize
+  subroutine ATMOS_DYN_driver_finalize
+    use scale_atmos_dyn, only: &
+       ATMOS_DYN_finalize
+    use mod_atmos_admin, only: &
+       ATMOS_sw_dyn
+
+    if ( ATMOS_sw_dyn ) then
+       call ATMOS_DYN_finalize
+    end if
+
+    return
+  end subroutine ATMOS_DYN_driver_finalize
   !-----------------------------------------------------------------------------
   !> Dynamical Process (Wrapper)
   subroutine ATMOS_DYN_driver( do_flag )
@@ -311,6 +344,15 @@ contains
 
     if ( do_flag ) then
 
+       !$acc data &
+       !$acc copy(DENS,MOMZ,MOMX,MOMY,RHOT,QTRC) &
+       !$acc copyin(DENS_tp,RHOU_tp,RHOV_tp,RHOT_tp,RHOQ_tp,RHOH_p,MOMZ_tp,MOMX_tp,MOMY_tp, &
+       !$acc        coriolis_f, &
+       !$acc        atmos_boundary_dens,atmos_boundary_velz,atmos_boundary_velx,atmos_boundary_vely,atmos_boundary_pott,atmos_boundary_qtrc, &
+       !$acc        atmos_boundary_alpha_dens,atmos_boundary_alpha_velz,atmos_boundary_alpha_velx,atmos_boundary_alpha_vely,atmos_boundary_alpha_pott,atmos_boundary_alpha_qtrc, &
+       !$acc        atmos_boundary_mflux_offset_x,atmos_boundary_mflux_offset_y)
+
+
        if ( .not. PRC_TwoD ) &
        call COMM_vars8( RHOU_tp, 1 )
        call COMM_vars8( RHOV_tp, 2 )
@@ -323,6 +365,7 @@ contains
        !$omp private(k,i,j) &
        !$omp shared (KA,KS,KE,IS,IE,JS,JE, &
        !$omp         RHOT_tp,RHOH_p,CPtot,EXNER)
+       !$acc kernels
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
@@ -331,6 +374,7 @@ contains
        end do
        end do
        end do
+       !$acc end kernels
        call COMM_vars8( RHOT_tp, 4 )
 
        if ( PRC_TwoD ) then
@@ -338,17 +382,20 @@ contains
           !$omp private(k,j) &
           !$omp shared (KA,KS,KE,IS,JS,JE, &
           !$omp         MOMX_tp,RHOU_tp)
+          !$acc kernels
           do j = JS, JE
           do k = KS, KE
              MOMX_tp(k,IS,j) = MOMX_tp(k,IS,j) + RHOU_tp(k,IS,j)
           end do
           end do
+          !$acc end kernels
        else
           call COMM_wait ( RHOU_tp, 1 )
           !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
           !$omp private(k,i,j) &
           !$omp shared (KA,KS,KE,IS,IE,JS,JE, &
           !$omp         MOMX_tp,RHOU_tp)
+          !$acc kernels
           do j = JS, JE
           do i = IS, IE
           do k = KS, KE
@@ -357,6 +404,7 @@ contains
           end do
           end do
           end do
+          !$acc end kernels
           call COMM_vars8( MOMX_tp, 1 )
        end if
 
@@ -365,6 +413,7 @@ contains
        !$omp private(k,i,j) &
        !$omp shared (KA,KS,KE,IS,IE,JS,JE, &
        !$omp         MOMY_tp,RHOV_tp)
+       !$acc kernels
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
@@ -373,6 +422,7 @@ contains
        end do
        end do
        end do
+       !$acc end kernels
        call COMM_vars8( MOMY_tp, 2 )
 
        call COMM_wait ( MOMZ_tp, 3 )
@@ -401,7 +451,7 @@ contains
                        ATMOS_REFSTATE_pres,                                  & ! [IN]
                        ATMOS_DYN_NUMERICAL_DIFF_coef,                        & ! [IN]
                        ATMOS_DYN_NUMERICAL_DIFF_COEF_TRACER,                 & ! [IN]
-                       ATMOS_DYN_NUMERICAL_DIFF_LAPLACIAN_NUM,                    & ! [IN]
+                       ATMOS_DYN_NUMERICAL_DIFF_LAPLACIAN_NUM,               & ! [IN]
                        ATMOS_DYN_NUMERICAL_DIFF_sfc_fact,                    & ! [IN]
                        ATMOS_DYN_NUMERICAL_DIFF_use_refstate,                & ! [IN]
                        BND_QA, BND_IQ, ATMOS_BOUNDARY_SMOOTHER_FACT,         & ! [IN]
@@ -431,6 +481,8 @@ contains
                        TIME_DTSEC_ATMOS_DYN                                  ) ! [IN]
 
        call ATMOS_vars_check
+
+       !$acc end data
     endif
 
     return

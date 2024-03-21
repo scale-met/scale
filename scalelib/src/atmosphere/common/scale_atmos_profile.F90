@@ -78,6 +78,7 @@ contains
        pres_sfc,   &
        z,          &
        pott        )
+    !$acc routine vector
     implicit none
 
     integer,  intent(in)  :: KA, KS, KE
@@ -103,6 +104,7 @@ contains
     temp_isa(1) = temp_sfc
     pres_isa(1) = pres_sfc
 
+    !$acc loop seq
     do n = 2, nref
        temp_isa(n) = temp_isa(n-1) + GAMMA(n-1) * ( z_isa(n)-z_isa(n-1) )
 
@@ -113,6 +115,7 @@ contains
        endif
     enddo
 
+#ifndef _OPENACC
     LOG_NEWLINE
     LOG_INFO("ATMOS_PROFILE_isa_1D",*) '###### ICAO International Standard Atmosphere ######'
     LOG_INFO_CONT(*) '      height:  lapse rate:    pressure: temperature'
@@ -120,6 +123,7 @@ contains
        LOG_INFO_CONT('(4F13.5)') z_isa(n), GAMMA(n), pres_isa(n), temp_isa(n)
     enddo
     LOG_INFO_CONT(*) '####################################################'
+#endif
 
     !--- make reference state
     do k = KS, KE
@@ -184,17 +188,22 @@ contains
     integer  :: k, i, j, n
     !---------------------------------------------------------------------------
 
+    !$acc data copyin(temp_sfc, pres_sfc, z) copyout(pott) create(temp_isa, pres_isa)
+
     gmr   = GRAV / Rdry
     RovCP = Rdry / CPdry
 
     !--- ISA profile
+    !$acc kernels
     do j = JS, JE
     do i = IS, IE
        temp_isa(1,i,j) = temp_sfc(i,j)
        pres_isa(1,i,j) = pres_sfc(i,j)
     enddo
     enddo
+    !$acc end kernels
 
+    !$acc kernels
     do j = JS, JE
     do i = IS, IE
     do n = 2, nref
@@ -208,6 +217,7 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
 
     LOG_NEWLINE
     LOG_INFO("ATMOS_PROFILE_isa_3D",*) 'ICAO International Standard Atmosphere'
@@ -219,7 +229,10 @@ contains
     LOG_INFO_CONT(*) '####################################################'
 
     !--- make reference state
+    !$acc kernels
+    !$acc loop private(temp, pres)
     do j = JS, JE
+    !$acc loop private(temp, pres)
     do i = IS, IE
     do k = KS, KE
        if ( z(k,i,j) <= z_isa(1)    ) then
@@ -251,6 +264,9 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
+
+    !$acc end data
 
     return
   end subroutine ATMOS_PROFILE_isa_3D

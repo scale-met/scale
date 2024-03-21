@@ -29,6 +29,7 @@ module mod_ocean_vars
   !++ Public procedure
   !
   public :: OCEAN_vars_setup
+  public :: OCEAN_vars_finalize
   public :: OCEAN_vars_restart_read
   public :: OCEAN_vars_restart_write
   public :: OCEAN_vars_history
@@ -326,9 +327,11 @@ contains
     OCEAN_SALT       (:,:,:)   = UNDEF
     OCEAN_UVEL       (:,:,:)   = UNDEF
     OCEAN_VVEL       (:,:,:)   = UNDEF
+    !$acc enter data create(OCEAN_TEMP,OCEAN_SALT,OCEAN_UVEL,OCEAN_VVEL)
 
     allocate( OCEAN_OCN_Z0M    (OIA,OJA) )
     OCEAN_OCN_Z0M    (:,:)     = UNDEF
+    !$acc enter data create(OCEAN_OCN_Z0M)
 
     allocate( OCEAN_SFC_TEMP   (OIA,OJA)                     )
     allocate( OCEAN_SFC_albedo (OIA,OJA,N_RAD_DIR,N_RAD_RGN) )
@@ -340,6 +343,7 @@ contains
     OCEAN_SFC_Z0M    (:,:)     = UNDEF
     OCEAN_SFC_Z0H    (:,:)     = UNDEF
     OCEAN_SFC_Z0E    (:,:)     = UNDEF
+    !$acc enter data create(OCEAN_SFC_TEMP,OCEAN_SFC_albedo,OCEAN_SFC_Z0M,OCEAN_SFC_Z0H,OCEAN_SFC_Z0E)
 
     allocate( OCEAN_TEMP_t     (OKMAX,OIA,OJA) )
     allocate( OCEAN_SALT_t     (OKMAX,OIA,OJA) )
@@ -349,18 +353,20 @@ contains
     OCEAN_SALT_t     (:,:,:)   = UNDEF
     OCEAN_UVEL_t     (:,:,:)   = UNDEF
     OCEAN_VVEL_t     (:,:,:)   = UNDEF
+    !$acc enter data create(OCEAN_TEMP_t,OCEAN_SALT_t,OCEAN_UVEL_t,OCEAN_VVEL_t)
 
     if ( ICE_flag ) then
        allocate( OCEAN_ICE_TEMP   (OIA,OJA) )
        allocate( OCEAN_ICE_MASS   (OIA,OJA) )
        OCEAN_ICE_TEMP   (:,:)     = UNDEF
        OCEAN_ICE_MASS   (:,:)     = UNDEF
+       !$acc enter data create(OCEAN_ICE_TEMP,OCEAN_ICE_MASS)
 
        allocate( OCEAN_ICE_TEMP_t (OIA,OJA) )
        allocate( OCEAN_ICE_MASS_t (OIA,OJA) )
        OCEAN_ICE_TEMP_t (:,:)     = UNDEF
        OCEAN_ICE_MASS_t (:,:)     = UNDEF
-
+       !$acc enter data create(OCEAN_ICE_TEMP_t,OCEAN_ICE_MASS_t)
     end if
 
     allocate( ATMOS_TEMP       (OIA,OJA)                     )
@@ -391,6 +397,7 @@ contains
     ATMOS_cosSZA     (:,:)     = UNDEF
     ATMOS_SFLX_water (:,:)     = UNDEF
     ATMOS_SFLX_ENGI  (:,:)     = UNDEF
+    !$acc enter data create(ATMOS_TEMP,ATMOS_PRES,ATMOS_W,ATMOS_U,ATMOS_V,ATMOS_DENS,ATMOS_QV,ATMOS_PBL,ATMOS_SFC_DENS,ATMOS_SFC_PRES,ATMOS_SFLX_rad_dn,ATMOS_cosSZA,ATMOS_SFLX_water,ATMOS_SFLX_ENGI)
 
     allocate( OCEAN_SFLX_GH   (OIA,OJA) )
     allocate( OCEAN_SFLX_water(OIA,OJA) )
@@ -398,6 +405,7 @@ contains
     OCEAN_SFLX_GH   (:,:) = UNDEF
     OCEAN_SFLX_water(:,:) = UNDEF
     OCEAN_SFLX_ENGI (:,:) = UNDEF
+    !$acc enter data create(OCEAN_SFLX_GH,OCEAN_SFLX_water,OCEAN_SFLX_ENGI)
     if ( ICE_flag ) then
        allocate( OCEAN_OFLX_GH   (OIA,OJA) )
        allocate( OCEAN_OFLX_water(OIA,OJA) )
@@ -405,6 +413,7 @@ contains
        OCEAN_OFLX_GH   (:,:) = UNDEF
        OCEAN_OFLX_water(:,:) = UNDEF
        OCEAN_OFLX_ENGI (:,:) = UNDEF
+       !$acc enter data create(OCEAN_OFLX_GH,OCEAN_OFLX_water,OCEAN_OFLX_ENGI)
     else
        OCEAN_OFLX_GH    => OCEAN_SFLX_GH
        OCEAN_OFLX_water => OCEAN_SFLX_water
@@ -416,7 +425,7 @@ contains
     allocate( OCEAN_SFLX_MV  (OIA,OJA) )
     allocate( OCEAN_SFLX_SH  (OIA,OJA) )
     allocate( OCEAN_SFLX_LH  (OIA,OJA) )
-    allocate( OCEAN_SFLX_QTRC(OIA,OJA,QA) )
+    allocate( OCEAN_SFLX_QTRC(OIA,OJA,max(QA,1)) )
     allocate( OCEAN_U10      (OIA,OJA) )
     allocate( OCEAN_V10      (OIA,OJA) )
     allocate( OCEAN_T2       (OIA,OJA) )
@@ -431,6 +440,7 @@ contains
     OCEAN_V10      (:,:)   = UNDEF
     OCEAN_T2       (:,:)   = UNDEF
     OCEAN_Q2       (:,:)   = UNDEF
+    !$acc enter data create(OCEAN_SFLX_MW,OCEAN_SFLX_MU,OCEAN_SFLX_MV,OCEAN_SFLX_SH,OCEAN_SFLX_LH,OCEAN_SFLX_QTRC,OCEAN_U10,OCEAN_V10,OCEAN_T2,OCEAN_Q2)
 
     allocate( OCEAN_Ustar(OIA,OJA) )
     allocate( OCEAN_Tstar(OIA,OJA) )
@@ -442,6 +452,7 @@ contains
     OCEAN_Qstar(:,:) = UNDEF
     OCEAN_Wstar(:,:) = UNDEF
     OCEAN_RLmo (:,:) = UNDEF
+    !$acc enter data create(OCEAN_Ustar,OCEAN_Tstar,OCEAN_Qstar,OCEAN_Wstar,OCEAN_RLmo)
     if ( ICE_flag ) then
        allocate( OCEAN_OCN_Ustar(OIA,OJA) )
        allocate( OCEAN_OCN_Tstar(OIA,OJA) )
@@ -453,6 +464,7 @@ contains
        OCEAN_OCN_Qstar(:,:) = UNDEF
        OCEAN_OCN_Wstar(:,:) = UNDEF
        OCEAN_OCN_RLmo (:,:) = UNDEF
+       !$acc enter data create(OCEAN_OCN_Ustar,OCEAN_OCN_Tstar,OCEAN_OCN_Qstar,OCEAN_OCN_Wstar,OCEAN_OCN_RLmo)
     else
        OCEAN_OCN_Ustar => OCEAN_Ustar
        OCEAN_OCN_Tstar => OCEAN_Tstar
@@ -471,15 +483,18 @@ contains
        OCEAN_ICE_Qstar(:,:) = UNDEF
        OCEAN_ICE_Wstar(:,:) = UNDEF
        OCEAN_ICE_RLmo (:,:) = UNDEF
+       !$acc enter data create(OCEAN_ICE_Ustar,OCEAN_ICE_Tstar,OCEAN_ICE_Qstar,OCEAN_ICE_Wstar,OCEAN_ICE_RLmo)
     end if
 
     allocate( OCEAN_ICE_FRAC(OIA,OJA) )
     OCEAN_ICE_FRAC(:,:) = UNDEF
+    !$acc enter data create(OCEAN_ICE_FRAC)
 
     allocate( OCEAN_MASS_SUPL  (OIA,OJA) )
     allocate( OCEAN_ENGI_SUPL  (OIA,OJA) )
     OCEAN_MASS_SUPL  (:,:)     = UNDEF
     OCEAN_ENGI_SUPL  (:,:)     = UNDEF
+    !$acc enter data create(OCEAN_MASS_SUPL,OCEAN_ENGI_SUPL)
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -521,12 +536,14 @@ contains
     call MONITOR_reg( 'OCN_TEMP',          'sea water temperature',            'K m3', & ! (in)
                       MONIT_id(IM_O_TEMP),                                             & ! (out)
                       dim_type='OXY', is_tendency=.false.                              ) ! (in)
-    call MONITOR_reg( 'OCN_ICE_TEMP',      'sea ice temperature',              'K m3', & ! (in)
-                      MONIT_id(IM_I_TEMP),                                             & ! (out)
-                      dim_type='XY',  is_tendency=.false.                              ) ! (in)
-    call MONITOR_reg( 'OCN_ICE_MASS',      'sea ice mass',                     'kg',   & ! (in)
-                      MONIT_id(IM_I_MASS),                                             & ! (out)
-                      dim_type='XY',  is_tendency=.false.                              ) ! (in)
+    if ( ICE_flag ) then
+       call MONITOR_reg( 'OCN_ICE_TEMP',      'sea ice temperature',              'K m3', & ! (in)
+                         MONIT_id(IM_I_TEMP),                                             & ! (out)
+                         dim_type='XY',  is_tendency=.false.                              ) ! (in)
+       call MONITOR_reg( 'OCN_ICE_MASS',      'sea ice mass',                     'kg',   & ! (in)
+                         MONIT_id(IM_I_MASS),                                             & ! (out)
+                         dim_type='XY',  is_tendency=.false.                              ) ! (in)
+    end if
     call MONITOR_reg( 'OCN_MASFLX_TOP',    'SFC mass flux',                    'kg',   & ! (in)
                       MONIT_id(IM_SFC),                                                & ! (out)
                       dim_type='XY',  is_tendency=.true.                               ) ! (in)
@@ -542,15 +559,19 @@ contains
     call MONITOR_reg( 'OCN_WTR_MASCNV',    'sea water mass convergence',       'kg',   & ! (in)
                       MONIT_id(IM_O_MASFLX),                                           & ! (out)
                       dim_type='XY',  is_tendency=.true.                               ) ! (in)
-    call MONITOR_reg( 'OCN_ICE_MASCNV',    'sea ice mass convergence',         'kg',   & ! (in)
-                      MONIT_id(IM_I_MASFLX),                                           & ! (out)
-                      dim_type='XY',  is_tendency=.true.                               ) ! (in)
+    if ( ICE_flag ) then
+       call MONITOR_reg( 'OCN_ICE_MASCNV',    'sea ice mass convergence',         'kg',   & ! (in)
+                          MONIT_id(IM_I_MASFLX),                                           & ! (out)
+                          dim_type='XY',  is_tendency=.true.                               ) ! (in)
+    end if
     call MONITOR_reg( 'OCN_WTR_ENGI',      'sea water internal energy',        'J',    & ! (in)
-                      MONIT_id(IM_O_ENGI),                                             & ! (out)
-                      dim_type='OXY', is_tendency=.false.                              ) ! (in)
-    call MONITOR_reg( 'OCN_ICE_ENGI',      'sea ice internal energy',          'J',    & ! (in)
-                      MONIT_id(IM_I_ENGI),                                             & ! (out)
-                      dim_type='XY',  is_tendency=.false.                              ) ! (in)
+                       MONIT_id(IM_O_ENGI),                                             & ! (out)
+                       dim_type='OXY', is_tendency=.false.                              ) ! (in)
+    if ( ICE_flag ) then
+       call MONITOR_reg( 'OCN_ICE_ENGI',      'sea ice internal energy',          'J',    & ! (in)
+                          MONIT_id(IM_I_ENGI),                                             & ! (out)
+                          dim_type='XY',  is_tendency=.false.                              ) ! (in)
+    end if
     call MONITOR_reg( 'OCN_GHFLX_TOP',     'SFC ground heat flux',             'J',    & ! (in)
                       MONIT_id(IM_ENGSFC_GH),                                          & ! (out)
                       dim_type='XY',  is_tendency=.true.                               ) ! (in)
@@ -572,12 +593,139 @@ contains
     call MONITOR_reg( 'OCN_WTR_ENGICNV',   'sea water internal energy convergence', 'J',    & ! (in)
                       MONIT_id(IM_O_ENGFLX),                                           & ! (out)
                       dim_type='XY',  is_tendency=.true.                               ) ! (in)
-    call MONITOR_reg( 'OCN_ICE_ENGICNV',   'sea ice internal energy convergence',   'J',    & ! (in)
-                      MONIT_id(IM_I_ENGFLX),                                           & ! (out)
-                      dim_type='XY',  is_tendency=.true.                               ) ! (in)
+    if ( ICE_flag ) then
+       call MONITOR_reg( 'OCN_ICE_ENGICNV',   'sea ice internal energy convergence',   'J',    & ! (in)
+                         MONIT_id(IM_I_ENGFLX),                                           & ! (out)
+                         dim_type='XY',  is_tendency=.true.                               ) ! (in)
+    end if
 
     return
   end subroutine OCEAN_vars_setup
+
+  !-----------------------------------------------------------------------------
+  !> Finalize
+  subroutine OCEAN_vars_finalize
+    use mod_ocean_admin, only: &
+       OCEAN_ICE_TYPE
+    implicit none
+    !---------------------------------------------------------------------------
+
+    LOG_NEWLINE
+    LOG_INFO("OCEAN_vars_finalize",*) 'Finalize'
+
+    select case ( OCEAN_ICE_TYPE )
+    case ( 'NONE','OFF' )
+       ICE_flag = .false.
+    case default
+       ICE_flag = .true.
+    end select
+
+    !$acc exit data delete(OCEAN_TEMP,OCEAN_SALT,OCEAN_UVEL,OCEAN_VVEL)
+    deallocate( OCEAN_TEMP        )
+    deallocate( OCEAN_SALT        )
+    deallocate( OCEAN_UVEL        )
+    deallocate( OCEAN_VVEL        )
+
+    !$acc exit data delete(OCEAN_OCN_Z0M)
+    deallocate( OCEAN_OCN_Z0M     )
+
+    !$acc exit data delete(OCEAN_SFC_TEMP,OCEAN_SFC_albedo,OCEAN_SFC_Z0M,OCEAN_SFC_Z0H,OCEAN_SFC_Z0E)
+    deallocate( OCEAN_SFC_TEMP    )
+    deallocate( OCEAN_SFC_albedo  )
+    deallocate( OCEAN_SFC_Z0M     )
+    deallocate( OCEAN_SFC_Z0H     )
+    deallocate( OCEAN_SFC_Z0E     )
+
+    !$acc exit data delete(OCEAN_TEMP_t,OCEAN_SALT_t,OCEAN_UVEL_t,OCEAN_VVEL_t)
+    deallocate( OCEAN_TEMP_t      )
+    deallocate( OCEAN_SALT_t      )
+    deallocate( OCEAN_UVEL_t      )
+    deallocate( OCEAN_VVEL_t      )
+
+    if ( ICE_flag ) then
+       !$acc exit data delete(OCEAN_ICE_TEMP,OCEAN_ICE_MASS)
+       deallocate( OCEAN_ICE_TEMP  )
+       deallocate( OCEAN_ICE_MASS  )
+
+       !$acc exit data delete(OCEAN_ICE_TEMP_t,OCEAN_ICE_MASS_t)
+       deallocate( OCEAN_ICE_TEMP_t )
+       deallocate( OCEAN_ICE_MASS_t )
+
+    end if
+
+    !$acc exit data delete(ATMOS_TEMP,ATMOS_PRES,ATMOS_W,ATMOS_U,ATMOS_V,ATMOS_DENS,ATMOS_QV,ATMOS_PBL,ATMOS_SFC_DENS,ATMOS_SFC_PRES,ATMOS_SFLX_rad_dn,ATMOS_cosSZA,ATMOS_SFLX_water,ATMOS_SFLX_ENGI)
+    deallocate( ATMOS_TEMP        )
+    deallocate( ATMOS_PRES        )
+    deallocate( ATMOS_W           )
+    deallocate( ATMOS_U           )
+    deallocate( ATMOS_V           )
+    deallocate( ATMOS_DENS        )
+    deallocate( ATMOS_QV          )
+    deallocate( ATMOS_PBL         )
+    deallocate( ATMOS_SFC_DENS    )
+    deallocate( ATMOS_SFC_PRES    )
+    deallocate( ATMOS_SFLX_rad_dn )
+    deallocate( ATMOS_cosSZA      )
+    deallocate( ATMOS_SFLX_water  )
+    deallocate( ATMOS_SFLX_ENGI   )
+
+    !$acc exit data delete(OCEAN_SFLX_GH,OCEAN_SFLX_water,OCEAN_SFLX_ENGI)
+    deallocate( OCEAN_SFLX_GH    )
+    deallocate( OCEAN_SFLX_water )
+    deallocate( OCEAN_SFLX_ENGI  )
+    if ( ICE_flag ) then
+       !$acc exit data delete(OCEAN_OFLX_GH,OCEAN_OFLX_water,OCEAN_OFLX_ENGI)
+       deallocate( OCEAN_OFLX_GH    )
+       deallocate( OCEAN_OFLX_water )
+       deallocate( OCEAN_OFLX_ENGI  )
+    endif
+
+    !$acc exit data delete(OCEAN_SFLX_MW,OCEAN_SFLX_MU,OCEAN_SFLX_MV,OCEAN_SFLX_SH,OCEAN_SFLX_LH,OCEAN_SFLX_QTRC,OCEAN_U10,OCEAN_V10,OCEAN_T2,OCEAN_Q2)
+    deallocate( OCEAN_SFLX_MW   )
+    deallocate( OCEAN_SFLX_MU   )
+    deallocate( OCEAN_SFLX_MV   )
+    deallocate( OCEAN_SFLX_SH   )
+    deallocate( OCEAN_SFLX_LH   )
+    deallocate( OCEAN_SFLX_QTRC )
+    deallocate( OCEAN_U10       )
+    deallocate( OCEAN_V10       )
+    deallocate( OCEAN_T2        )
+    deallocate( OCEAN_Q2        )
+
+    !$acc exit data delete(OCEAN_Ustar,OCEAN_Tstar,OCEAN_Qstar,OCEAN_Wstar,OCEAN_RLmo)
+    deallocate( OCEAN_Ustar )
+    deallocate( OCEAN_Tstar )
+    deallocate( OCEAN_Qstar )
+    deallocate( OCEAN_Wstar )
+    deallocate( OCEAN_RLmo  )
+
+    if ( ICE_flag ) then
+       !$acc exit data delete(OCEAN_OCN_Ustar,OCEAN_OCN_Tstar,OCEAN_OCN_Qstar,OCEAN_OCN_Wstar,OCEAN_OCN_RLmo)
+       deallocate( OCEAN_OCN_Ustar )
+       deallocate( OCEAN_OCN_Tstar )
+       deallocate( OCEAN_OCN_Qstar )
+       deallocate( OCEAN_OCN_Wstar )
+       deallocate( OCEAN_OCN_RLmo  )
+    end if
+
+    if ( ICE_flag ) then
+       !$acc exit data delete(OCEAN_ICE_Ustar,OCEAN_ICE_Tstar,OCEAN_ICE_Qstar,OCEAN_ICE_Wstar,OCEAN_ICE_RLmo)
+       deallocate( OCEAN_ICE_Ustar )
+       deallocate( OCEAN_ICE_Tstar )
+       deallocate( OCEAN_ICE_Qstar )
+       deallocate( OCEAN_ICE_Wstar )
+       deallocate( OCEAN_ICE_RLmo  )
+    end if
+
+    !$acc exit data delete(OCEAN_ICE_FRAC)
+    deallocate( OCEAN_ICE_FRAC )
+
+    !$acc exit data delete(OCEAN_MASS_SUPL,OCEAN_ENGI_SUPL)
+    deallocate( OCEAN_MASS_SUPL )
+    deallocate( OCEAN_ENGI_SUPL )
+
+    return
+  end subroutine OCEAN_vars_finalize
 
   !-----------------------------------------------------------------------------
   !> Open ocean restart file for read
@@ -594,6 +742,8 @@ contains
     character(len=19)     :: timelabel
     character(len=H_LONG) :: basename
     !---------------------------------------------------------------------------
+
+    call PROF_rapstart('OCN_Restart', 1)
 
     LOG_NEWLINE
     LOG_INFO("OCEAN_vars_restart_open",*) 'Open restart file (OCEAN) '
@@ -616,6 +766,8 @@ contains
        LOG_INFO_CONT(*) 'restart file for ocean is not specified.'
     endif
 
+    call PROF_rapend('OCN_Restart', 1)
+
     return
   end subroutine OCEAN_vars_restart_open
 
@@ -636,6 +788,8 @@ contains
        OCEAN_ICE_TYPE
     implicit none
     !---------------------------------------------------------------------------
+
+    call PROF_rapstart('OCN_Restart', 1)
 
     if ( restart_fid /= -1 ) then
        LOG_NEWLINE
@@ -680,15 +834,21 @@ contains
 
        if( FILE_get_AGGREGATE(restart_fid) ) call FILE_CARTESC_flush( restart_fid ) ! commit all pending read requests
 
+       !$acc update device(OCEAN_TEMP,OCEAN_OCN_Z0M,OCEAN_SFC_TEMP,OCEAN_SFC_albedo,OCEAN_SFC_Z0M,OCEAN_SFC_Z0H,OCEAN_SFC_Z0E)
+       !$acc update device(OCEAN_ICE_TEMP,OCEAN_ICE_MASS)
 
        if ( ICE_flag ) then
+          !$acc kernels
           OCEAN_ICE_TEMP(:,:) = min( OCEAN_ICE_TEMP(:,:), OCEAN_PHY_ICE_freezetemp )
+          !$acc end kernels
           call OCEAN_PHY_ICE_fraction( OIA, OIS, OIE,       & ! [IN]
                                        OJA, OJS, OJE,       & ! [IN]
                                        OCEAN_ICE_MASS(:,:), & ! [IN]
                                        OCEAN_ICE_FRAC(:,:)  ) ! [OUT]
        else
+          !$acc kernels
           OCEAN_ICE_FRAC(:,:) = 0.0_RP
+          !$acc end kernels
        endif
 
        call OCEAN_vars_check( force = .true. )
@@ -696,6 +856,8 @@ contains
        LOG_ERROR("OCEAN_vars_restart_read",*) 'invalid restart file ID for ocean.'
        call PRC_abort
     endif
+
+    call PROF_rapend('OCN_Restart', 1)
 
     return
   end subroutine OCEAN_vars_restart_read
@@ -1037,9 +1199,13 @@ contains
     integer  :: k, i, j
     !---------------------------------------------------------------------------
 
+    !$acc data create(WORK3D,WORK2D)
+
     call MONITOR_put( MONIT_id(IM_O_TEMP), OCEAN_TEMP    (:,:,:) )
-    call MONITOR_put( MONIT_id(IM_I_TEMP), OCEAN_ICE_TEMP(:,:) )
-    call MONITOR_put( MONIT_id(IM_I_MASS), OCEAN_ICE_MASS(:,:) )
+    if ( ICE_flag ) then
+       call MONITOR_put( MONIT_id(IM_I_TEMP), OCEAN_ICE_TEMP(:,:) )
+       call MONITOR_put( MONIT_id(IM_I_MASS), OCEAN_ICE_MASS(:,:) )
+    end if
 
 
     ! mass budget
@@ -1048,29 +1214,35 @@ contains
     call MONITOR_put( MONIT_id(IM_MAS_SUPL), OCEAN_MASS_SUPL(:,:) )
     if ( MONIT_id(IM_T_MASFLX) > 0 ) then
        !$omp parallel do
+       !$acc kernels
        do j = OJS, OJE
        do i = OIS, OIE
           WORK2D(i,j) = OCEAN_SFLX_water(i,j) + OCEAN_MASS_SUPL(i,j)
        end do
        end do
+       !$acc end kernels
        call MONITOR_put( MONIT_id(IM_T_MASFLX), WORK2D(:,:) )
     end if
     if ( MONIT_id(IM_O_MASFLX) > 0 ) then
        !$omp parallel do
+       !$acc kernels
        do j = OJS, OJE
        do i = OIS, OIE
           WORK2D(i,j) = OCEAN_OFLX_water(i,j) + OCEAN_MASS_SUPL(i,j)
        end do
        end do
+       !$acc end kernels
        call MONITOR_put( MONIT_id(IM_O_MASFLX), WORK2D(:,:) )
     end if
-    if ( MONIT_id(IM_I_MASFLX) > 0 ) then
+    if ( ICE_flag .and. MONIT_id(IM_I_MASFLX) > 0 ) then
        !$omp parallel do
+       !$acc kernels
        do j = OJS, OJE
        do i = OIS, OIE
           WORK2D(i,j) = OCEAN_SFLX_water(i,j) - OCEAN_OFLX_water(i,j)
        end do
        end do
+       !$acc end kernels
        call MONITOR_put( MONIT_id(IM_I_MASFLX), WORK2D(:,:) )
     end if
 
@@ -1078,6 +1250,7 @@ contains
     ! energy budget
     if ( MONIT_id(IM_O_ENGI) > 0 ) then
        !$omp parallel do
+       !$acc kernels
        do j = OJS, OJE
        do i = OIS, OIE
        do k = OKS, OKE
@@ -1085,15 +1258,18 @@ contains
        end do
        end do
        end do
+       !$acc end kernels
        call MONITOR_put( MONIT_id(IM_O_ENGI), WORK3D(:,:,:) )
     end if
-    if ( MONIT_id(IM_I_ENGI) > 0 ) then
+    if ( ICE_flag .and. MONIT_id(IM_I_ENGI) > 0 ) then
        !$omp parallel do
+       !$acc kernels
        do j = OJS, OJE
        do i = OIS, OIE
           WORK2D(i,j) = ( CV_ICE * OCEAN_ICE_TEMP(i,j) - LHF ) * OCEAN_ICE_MASS(i,j)
        end do
        end do
+       !$acc end kernels
        call MONITOR_put( MONIT_id(IM_I_ENGI), WORK2D(:,:) )
     end if
 
@@ -1105,35 +1281,42 @@ contains
     call MONITOR_put( MONIT_id(IM_ENG_SUPL) , OCEAN_ENGI_SUPL(:,:) )
     if ( MONIT_id(IM_T_ENGFLX) > 0 ) then
        !$omp parallel do
+       !$acc kernels
        do j = OJS, OJE
        do i = OIS, OIE
           WORK2D(i,j) = OCEAN_SFLX_GH(i,j) + OCEAN_SFLX_ENGI(i,j) &
                       + OCEAN_ENGI_SUPL(i,j)
        end do
        end do
+       !$acc end kernels
        call MONITOR_put( MONIT_id(IM_T_ENGFLX), WORK2D(:,:) )
     end if
     if ( MONIT_id(IM_O_ENGFLX) > 0 ) then
        !$omp parallel do
+       !$acc kernels
        do j = OJS, OJE
        do i = OIS, OIE
           WORK2D(i,j) = OCEAN_OFLX_GH(i,j) + OCEAN_OFLX_ENGI(i,j) &
                       + OCEAN_ENGI_SUPL(i,j)
        end do
        end do
+       !$acc end kernels
        call MONITOR_put( MONIT_id(IM_O_ENGFLX), WORK2D(:,:) )
     end if
     if ( MONIT_id(IM_I_ENGFLX) > 0 ) then
        !$omp parallel do
+       !$acc kernels
        do j = OJS, OJE
        do i = OIS, OIE
           WORK2D(i,j) = OCEAN_SFLX_GH(i,j) + OCEAN_SFLX_ENGI(i,j) &
                       - OCEAN_OFLX_GH(i,j) - OCEAN_OFLX_ENGI(i,j)
        end do
        end do
+       !$acc end kernels
        call MONITOR_put( MONIT_id(IM_I_ENGFLX), WORK2D(:,:) )
     end if
 
+    !$acc end data
 
     return
   end subroutine OCEAN_vars_monitor
@@ -1152,6 +1335,8 @@ contains
     character(len=19)     :: timelabel
     character(len=H_LONG) :: basename
     !---------------------------------------------------------------------------
+
+    call PROF_rapstart('OCN_Restart', 1)
 
     if ( OCEAN_do .and. OCEAN_RESTART_OUT_BASENAME /= '' ) then
        LOG_NEWLINE
@@ -1172,6 +1357,8 @@ contains
                                  aggregate = OCEAN_RESTART_OUT_AGGREGATE ) ! [IN]
     endif
 
+    call PROF_rapend('OCN_Restart', 1)
+
     return
   end subroutine OCEAN_vars_restart_create
 
@@ -1183,9 +1370,13 @@ contains
     implicit none
     !---------------------------------------------------------------------------
 
+    call PROF_rapstart('OCN_Restart', 1)
+
     if ( restart_fid /= -1 ) then
        call FILE_CARTESC_enddef( restart_fid ) ! [IN]
     endif
+
+    call PROF_rapend('OCN_Restart', 1)
 
     return
   end subroutine OCEAN_vars_restart_enddef
@@ -1198,6 +1389,8 @@ contains
     implicit none
     !---------------------------------------------------------------------------
 
+    call PROF_rapstart('OCN_Restart', 1)
+
     if ( restart_fid /= -1 ) then
        LOG_NEWLINE
        LOG_INFO("OCEAN_vars_restart_close",*) 'Close restart file (OCEAN) '
@@ -1206,6 +1399,8 @@ contains
 
        restart_fid = -1
     endif
+
+    call PROF_rapend('OCN_Restart', 1)
 
     return
   end subroutine OCEAN_vars_restart_close
@@ -1219,6 +1414,8 @@ contains
 
     integer :: i
     !---------------------------------------------------------------------------
+
+    call PROF_rapstart('OCN_Restart', 1)
 
     if ( restart_fid /= -1 ) then
        do i = I_TEMP, I_TEMP
@@ -1246,6 +1443,8 @@ contains
        end if
     endif
 
+    call PROF_rapend('OCN_Restart', 1)
+
     return
   end subroutine OCEAN_vars_restart_def_var
 
@@ -1256,6 +1455,8 @@ contains
        FILE_CARTESC_write_var
     implicit none
     !---------------------------------------------------------------------------
+
+    call PROF_rapstart('OCN_Restart', 1)
 
     if ( restart_fid /= -1 ) then
        call OCEAN_vars_check( force = .true. )
@@ -1315,6 +1516,8 @@ contains
                                        VAR_NAME(I_ICE_MASS),        'XY',  fill_halo=.true. ) ! [IN]
        end if
     endif
+
+    call PROF_rapend('OCN_Restart', 1)
 
     return
   end subroutine OCEAN_vars_restart_write

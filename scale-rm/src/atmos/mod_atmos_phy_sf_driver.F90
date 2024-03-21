@@ -42,6 +42,10 @@ module mod_atmos_phy_sf_driver
   !
   !++ Private parameters & variables
   !
+  integer :: hist_uabs10, hist_u10m, hist_v10m
+  integer :: hist_t2, hist_q2, hist_rh2
+  integer :: hist_mslp
+
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
@@ -53,6 +57,8 @@ contains
        ATMOS_PHY_SF_bulk_setup
     use scale_atmos_phy_sf_const, only: &
        ATMOS_PHY_SF_const_setup
+    use scale_file_history, only: &
+       FILE_HISTORY_reg
     use mod_atmos_admin, only: &
        ATMOS_PHY_SF_TYPE, &
        ATMOS_sw_phy_sf
@@ -103,6 +109,7 @@ contains
 
        LOG_INFO("ATMOS_PHY_SF_driver_setup",*) 'this component is never called.'
        LOG_INFO("ATMOS_PHY_SF_driver_setup",*) 'surface fluxes are set to zero.'
+       !$acc kernels
        SFLX_MW  (:,:) = 0.0_RP
        SFLX_MU  (:,:) = 0.0_RP
        SFLX_MV  (:,:) = 0.0_RP
@@ -115,12 +122,23 @@ contains
        Qstar    (:,:) = 0.0_RP
        Wstar    (:,:) = 0.0_RP
        RLmo     (:,:) = 0.0_RP
+       !$acc end kernels
        LOG_INFO("ATMOS_PHY_SF_driver_setup",*) 'SFC_TEMP, SFC_albedo is set in ATMOS_PHY_SF_vars.'
 
     endif
 
+    !$acc kernels
     SFLX_QTRC(:,:,:) = 0.0_RP
     SFLX_ENGI(:,:)   = 0.0_RP
+    !$acc end kernels
+
+    call FILE_HISTORY_reg( 'Uabs10', '10m absolute wind',         'm/s'  , hist_uabs10, ndims=2, fill_halo=.true. )
+    call FILE_HISTORY_reg( 'U10m',   '10m eastward wind',         'm/s'  , hist_u10m,   ndims=2, fill_halo=.true. )
+    call FILE_HISTORY_reg( 'V10m',   '10m northward wind',        'm/s'  , hist_v10m,   ndims=2, fill_halo=.true. )
+    call FILE_HISTORY_reg( 'T2',     '2m air temperature',        'K'    , hist_t2,     ndims=2, fill_halo=.true. )
+    call FILE_HISTORY_reg( 'Q2',     '2m specific humidity',      'kg/kg', hist_q2,     ndims=2, fill_halo=.true. )
+    call FILE_HISTORY_reg( 'RH2',    '2m relative humidity',      '%',     hist_rh2,    ndims=2, fill_halo=.true. )
+    call FILE_HISTORY_reg( 'MSLP',   'mean sea-level pressure',   'Pa'   , hist_mslp,   ndims=2, fill_halo=.true., standard_name='air_pressure_at_mean_sea_level' )
 
     return
   end subroutine ATMOS_PHY_SF_driver_setup
@@ -130,7 +148,12 @@ contains
   subroutine ATMOS_PHY_SF_driver_calc_tendency( update_flag )
     use scale_const, only: &
        UNDEF  => CONST_UNDEF, &
-       PRE00  => CONST_PRE00
+       PRE00  => CONST_PRE00, &
+       Rdry   => CONST_Rdry,  &
+       Rvap   => CONST_Rvap,  &
+       CPdry  => CONST_CPdry, &
+       CPvap  => CONST_CPvap, &
+       EPSTvap => CONST_EPSTvap
     use scale_atmos_grid_cartesC_real, only: &
        CZ => ATMOS_GRID_CARTESC_REAL_CZ, &
        FZ => ATMOS_GRID_CARTESC_REAL_FZ, &
@@ -226,17 +249,21 @@ contains
     real(RP) :: ATM_TEMP(IA,JA)
     real(RP) :: ATM_PRES(IA,JA)
     real(RP) :: ATM_QV  (IA,JA)
+    real(RP) :: SFC_POTV(IA,JA)
     real(RP) :: SFLX_SH2(IA,JA)
     real(RP) :: SFLX_QV (IA,JA)
     real(RP) :: CP_t, CV_t
     real(RP) :: ENGI_t
     real(RP) :: rdz
     real(RP) :: work
+    real(RP) :: kappa
 
     integer  :: i, j, iq
     !---------------------------------------------------------------------------
 
     if ( update_flag ) then
+
+       !$acc data create(ATM_DENS,ATM_TEMP,ATM_PRES,SFLX_QV)
 
        ! update surface density, surface pressure
        call BOTTOM_estimate( KA, KS,  KE, IA, IS, IE, JA, JS, JE, &
@@ -246,6 +273,7 @@ contains
                              SFC_DENS(:,:), SFC_PRES(:,:)         ) ! [OUT]
 
        !$omp parallel do
+       !$acc kernels
        do j = JS, JE
        do i = IS, IE
           ATM_DENS(i,j) = DENS(KS,i,j)
@@ -253,41 +281,60 @@ contains
           ATM_PRES(i,j) = PRES(KS,i,j)
        end do
        end do
+       !$acc end kernels
 
        if ( CPL_sw ) then
 
+          !$acc data create(SFLX_SH2)
+
           !$omp parallel do
+          !$acc kernels
           do j = JS, JE
           do i = IS, IE
              SFLX_SH2(i,j) = SFLX_SH(i,j) - SFLX_SHEX(i,j)
           end do
           end do
+          !$acc end kernels
 
           if ( ATMOS_HYDROMETEOR_dry ) then
              !$omp parallel do
+             !$acc kernels
              do j = JS, JE
              do i = IS, IE
                 SFLX_QV(i,j) = 0.0_RP
+                SFC_POTV(i,j) = SFC_TEMP(i,j) * ( PRE00 / SFC_PRES(i,j) )**( Rdry / CPdry )
              end do
              end do
+             !$acc end kernels
           else
-             !$omp parallel do
+             !$omp parallel do private(kappa)
+             !$acc kernels
              do j = JS, JE
              do i = IS, IE
                 SFLX_QV(i,j) = SFLX_QTRC(i,j,I_QV) - SFLX_QVEX(i,j)
+                kappa = ( Rdry + ( Rvap - Rdry ) * QV(KS,i,j) ) &
+                     / ( CPdry + ( CPvap - CPdry ) * QV(KS,i,j) )
+                SFC_POTV(i,j) = SFC_TEMP(i,j) * ( PRE00 / SFC_PRES(i,j) )**kappa &
+                              * ( 1.0_RP + EPSTvap * QV(KS,i,j) )
              end do
              end do
+             !$acc end kernels
           end if
 
           call BULKFLUX_diagnose_scales( IA, IS, IE, JA, JS, JE, &
                                          SFLX_MW(:,:), SFLX_MU(:,:), SFLX_MV(:,:),  & ! [IN]
                                          SFLX_SH2(:,:), SFLX_QV(:,:),               & ! [IN]
-                                         SFC_DENS(:,:), SFC_TEMP(:,:), PBL_Zi(:,:), & ! [IN]
+                                         SFC_DENS(:,:), SFC_POTV(:,:), PBL_Zi(:,:), & ! [IN]
                                          Ustar(:,:), Tstar(:,:), Qstar(:,:),        & ! [OUT]
                                          Wstar(:,:), RLmo(:,:)                      ) ! [OUT]
+          !$acc end data
+
        else
 
+          !$acc data create(ATM_U,ATM_V,ATM_W,ATM_QV)
+
           !$omp parallel do
+          !$acc kernels
           do j = JS, JE
           do i = IS, IE
              ATM_U   (i,j) = U   (KS,i,j)
@@ -296,6 +343,7 @@ contains
              ATM_QV  (i,j) = QV  (KS,i,j)
           enddo
           enddo
+          !$acc end kernels
 
           select case ( ATMOS_PHY_SF_TYPE )
           case ( 'BULK' )
@@ -315,6 +363,7 @@ contains
 
           case ( 'CONST' )
 
+             !$acc update host(ATM_W,ATM_U,ATM_V,ATM_TEMP,SFC_DENS)
              call ATMOS_PHY_SF_const_flux( IA, IS, IE, JA, JS, JE,                            & ! [IN]
                                            ATM_W(:,:), ATM_U(:,:), ATM_V(:,:), SFC_TEMP(:,:), & ! [IN]
                                            Z1(:,:), SFC_DENS(:,:),                            & ! [IN]
@@ -327,13 +376,18 @@ contains
              RLmo (:,:) = UNDEF
              T2(:,:) = ATM_TEMP(:,:)
              Q2(:,:) = ATM_QV(:,:)
+             !$acc update device(SFLX_MW,SFLX_MU,SFLX_MV,SFLX_SH,SFLX_LH,SFLX_QV,Ustar,Tstar,Qstar,Wstar,RLmo,U10,V10,T2,Q2)
 
           end select
 
           if ( .NOT. ATMOS_HYDROMETEOR_dry ) then
+             !$acc kernels
              SFLX_QTRC(:,:,I_QV) = SFLX_QV(:,:)
              SFLX_ENGI(:,:)      = SFLX_QV(:,:) * ( TRACER_CV(I_QV) * SFC_TEMP(:,:) + LHV )
+             !$acc end kernels
           endif
+
+          !$acc end data
 
        endif
 
@@ -342,6 +396,7 @@ contains
 !OCL XFILL
        !$omp parallel do &
        !$omp private(rdz)
+       !$acc kernels
        do j = JS, JE
        do i = IS, IE
           rdz = 1.0_RP / ( FZ(KS,i,j) - FZ(KS-1,i,j) )
@@ -350,9 +405,11 @@ contains
           RHOV_t_SF(i,j) = SFLX_MV(i,j) * rdz
        enddo
        enddo
+       !$acc end kernels
 
        !$omp parallel do &
        !$omp private(work,rdz,CP_t,CV_t,ENGI_t)
+       !$acc kernels
        do j = JS, JE
        do i = IS, IE
           rdz = 1.0_RP / ( FZ(KS,i,j) - FZ(KS-1,i,j) )
@@ -360,6 +417,7 @@ contains
           CP_t = 0.0_RP
           CV_t = 0.0_RP
           ENGI_t = SFLX_ENGI(i,j) * rdz
+          !$acc loop seq
           do iq = 1, QA
              work = SFLX_QTRC(i,j,iq) * rdz
 
@@ -376,10 +434,14 @@ contains
                        - ( CP_t + log( ATM_PRES(i,j) / PRE00 ) * ( CVtot(KS,i,j) / CPtot(KS,i,j) * CP_t - CV_t ) ) * ATM_DENS(i,j) * ATM_TEMP(i,j)
        enddo
        enddo
+       !$acc end kernels
+
+       !$acc end data
 
     endif
 
     !$omp parallel do
+    !$acc kernels
     do j = JS, JE
     do i = IS, IE
        MOMZ_t(KS,i,j) = MOMZ_t(KS,i,j) + MOMZ_t_SF(i,j)
@@ -389,8 +451,10 @@ contains
        DENS_t(KS,i,j) = DENS_t(KS,i,j) + DENS_t_SF(i,j)
     enddo
     enddo
+    !$acc end kernels
 
     !$omp parallel
+    !$acc kernels
     do iq = 1, QA
     !$omp do
     do j = JS, JE
@@ -400,6 +464,7 @@ contains
     enddo
     !$omp end do nowait
     enddo
+    !$acc end kernels
     !$omp end parallel
 
     if ( STATISTICS_checktotal ) then
@@ -449,11 +514,16 @@ contains
   !-----------------------------------------------------------------------------
   subroutine history_output
     use scale_const, only: &
-       UNDEF => CONST_UNDEF
+       UNDEF => CONST_UNDEF, &
+       Rvap  => CONST_Rvap
     use scale_file_history, only: &
-       FILE_HISTORY_in
+       FILE_HISTORY_query, &
+       FILE_HISTORY_in, &
+       FILE_HISTORY_put
     use scale_atmos_hydrostatic, only: &
        barometric_law_mslp => ATMOS_HYDROSTATIC_barometric_law_mslp
+    use scale_atmos_saturation, only: &
+       ATMOS_SATURATION_psat_liq
     use scale_atmos_grid_cartesC_real, only: &
        REAL_CZ => ATMOS_GRID_CARTESC_REAL_CZ
     use scale_atmos_grid_cartesC_metric, only: &
@@ -492,29 +562,11 @@ contains
        Q2         => ATMOS_PHY_SF_Q2
     implicit none
 
-    real(RP) :: MSLP  (IA,JA) ! mean sea-level pressure [Pa]
-    real(RP) :: Uabs10(IA,JA) ! 10m absolute wind [m/s]
-    real(RP) :: U10m  (IA,JA) ! eastward 10m wind
-    real(RP) :: V10m  (IA,JA) ! northward 10m wind
+    real(RP) :: work(IA,JA)
 
+    logical :: do_put
     integer :: i, j, iq
     !---------------------------------------------------------------------------
-
-!OCL XFILL
-    !$omp parallel do
-    do j = JS, JE
-    do i = IS, IE
-       Uabs10(i,j) = sqrt( U10(i,j)**2 + V10(i,j)**2 )
-       U10m  (i,j) = U10(i,j) * ROTC(i,j,1) - V10(i,j) * ROTC(i,j,2)
-       V10m  (i,j) = U10(i,j) * ROTC(i,j,2) + V10(i,j) * ROTC(i,j,1)
-    enddo
-    enddo
-
-
-    call barometric_law_mslp( KA, KS, KE, IA, IS, IE, JA, JS, JE,  & ! [IN]
-                              PRES(:,:,:), TEMP(:,:,:), QV(:,:,:), & ! [IN]
-                              REAL_CZ(:,:,:),                      & ! [IN]
-                              MSLP(:,:)                            ) ! [OUT]
 
     call FILE_HISTORY_in( SFC_DENS  (:,:),                     'SFC_DENS',        'surface atmospheric density',          'kg/m3'   )
     call FILE_HISTORY_in( SFC_PRES  (:,:),                     'SFC_PRES',        'surface atmospheric pressure',         'Pa'      )
@@ -546,14 +598,84 @@ contains
     call FILE_HISTORY_in( Qstar (:,:), 'Qstar',  'moisuter scale',            'kg/kg', fill_halo=.true. )
     call FILE_HISTORY_in( Wstar (:,:), 'Wstar',  'convective velocity scale', 'm/s',   fill_halo=.true. )
     call FILE_HISTORY_in( RLmo  (:,:), 'RLmo',   'inverse of Obukhov length', '1/m'  , fill_halo=.true. )
-    call FILE_HISTORY_in( Uabs10(:,:), 'Uabs10', '10m absolute wind',         'm/s'  , fill_halo=.true. )
+
     call FILE_HISTORY_in( U10   (:,:), 'U10',    '10m x-wind',                'm/s'  , fill_halo=.true. )
     call FILE_HISTORY_in( V10   (:,:), 'V10',    '10m y-wind',                'm/s'  , fill_halo=.true. )
-    call FILE_HISTORY_in( U10m  (:,:), 'U10m',   '10m eastward wind',         'm/s'  , fill_halo=.true. )
-    call FILE_HISTORY_in( V10m  (:,:), 'V10m',   '10m northward wind',        'm/s'  , fill_halo=.true. )
     call FILE_HISTORY_in( T2    (:,:), 'T2 ',    '2m air temperature',        'K'    , fill_halo=.true. )
     call FILE_HISTORY_in( Q2    (:,:), 'Q2 ',    '2m specific humidity',      'kg/kg', fill_halo=.true. )
-    call FILE_HISTORY_in( MSLP  (:,:), 'MSLP',   'mean sea-level pressure',   'Pa'   , fill_halo=.true., standard_name='air_pressure_at_mean_sea_level' )
+
+
+    !$acc data create(work)
+
+    call FILE_HISTORY_query( hist_uabs10, do_put )
+    if ( do_put ) then
+       !$omp parallel do
+       !$acc kernels
+       do j = JS, JE
+       do i = IS, IE
+          work(i,j) = sqrt( U10(i,j)**2 + V10(i,j)**2 )
+       enddo
+       enddo
+       !$acc end kernels
+       call FILE_HISTORY_put( hist_uabs10, work(:,:) )
+    end if
+
+    call FILE_HISTORY_query( hist_u10m, do_put )
+    if ( do_put ) then
+       !$omp parallel do
+       !$acc kernels
+       do j = JS, JE
+       do i = IS, IE
+          work(i,j) = U10(i,j) * ROTC(i,j,1) - V10(i,j) * ROTC(i,j,2)
+       enddo
+       enddo
+       !$acc end kernels
+       call FILE_HISTORY_put( hist_u10m, work(:,:) )
+    end if
+
+    call FILE_HISTORY_query( hist_v10m, do_put )
+    if ( do_put ) then
+       !$omp parallel do
+       !$acc kernels
+       do j = JS, JE
+       do i = IS, IE
+          work(i,j) = U10(i,j) * ROTC(i,j,2) + V10(i,j) * ROTC(i,j,1)
+       enddo
+       enddo
+       !$acc end kernels
+       call FILE_HISTORY_put( hist_v10m, work(:,:) )
+    end if
+
+    call FILE_HISTORY_query( hist_rh2, do_put )
+    if ( do_put ) then
+       call ATMOS_SATURATION_psat_liq( &
+            IA, IS, IE, JA, JS, JE, &
+            T2(:,:), & ! (in)
+            work(:,:)  ) ! (out)
+       !$omp parallel do
+       !$acc kernels
+       do j = JS, JE
+       do i = IS, IE
+          work(i,j) = SFC_DENS(i,j) * Q2(i,j) &
+                     / work(i,j) * Rvap * T2(i,j) &
+                     * 100.0_RP
+       enddo
+       enddo
+       !$acc end kernels
+       call FILE_HISTORY_put( hist_rh2, work(:,:) )
+    end if
+
+
+    call FILE_HISTORY_query( hist_mslp, do_put )
+    if ( do_put ) then
+       call barometric_law_mslp( KA, KS, KE, IA, IS, IE, JA, JS, JE,  & ! [IN]
+                                 PRES(:,:,:), TEMP(:,:,:), QV(:,:,:), & ! [IN]
+                                 REAL_CZ(:,:,:),                      & ! [IN]
+                                 work(:,:)                            ) ! [OUT]
+       call FILE_HISTORY_put( hist_mslp, work(:,:) )
+    end if
+
+    !$acc end data
 
     return
   end subroutine history_output

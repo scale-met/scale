@@ -156,7 +156,9 @@ module scale_atmos_dyn_fvm_flux
      end subroutine flux_j
   end interface
 
+#ifndef _OPENACC
   procedure(valueW), pointer :: ATMOS_DYN_FVM_flux_valueW_Z => NULL()
+#endif
   public :: ATMOS_DYN_FVM_flux_valueW_Z
 
 
@@ -271,6 +273,29 @@ module scale_atmos_dyn_fvm_flux
   !
   !++ Private parameters & variables
   !
+#ifdef _OPENACC
+
+  integer, parameter :: I_UD1 = 1
+
+  integer, parameter :: I_CD2 = 2
+
+  integer, parameter :: I_UD3 = 3
+
+  integer, parameter :: I_UD3KOREN1993 = 4
+
+  integer, parameter :: I_CD4 = 5
+
+  integer, parameter :: I_UD5 = 6
+
+  integer, parameter :: I_CD6 = 7
+
+  integer, parameter :: I_UD7 = 8
+
+  integer, parameter :: I_CD8 = 9
+
+  integer :: i_scheme
+  !$acc declare create(i_scheme)
+#endif
   !-----------------------------------------------------------------------------
 contains
   
@@ -282,6 +307,7 @@ contains
          PRC_abort
     use scale_prc_cartesC, only: &
          PRC_TwoD
+
 
    use scale_atmos_dyn_fvm_flux_ud1, only: &
       ATMOS_DYN_FVM_flux_valueW_Z_ud1, &
@@ -481,7 +507,13 @@ contains
     case( "UD1" )
       LOG_INFO("ATMOS_DYN_FVM_flux_setup",*) 'the ud1 scheme is used for flux calculation'
 
+#ifdef _OPENACC
+      i_scheme = 1
+#else
+
       ATMOS_DYN_FVM_flux_valueW_Z => ATMOS_DYN_FVM_flux_valueW_Z_ud1
+
+#endif
 
       ATMOS_DYN_FVM_fluxZ_XYZ => ATMOS_DYN_FVM_fluxZ_XYZ_ud1
 
@@ -520,7 +552,6 @@ contains
       ATMOS_DYN_FVM_fluxJ23_XVZ => ATMOS_DYN_FVM_fluxJ23_XVZ_ud1
 
 
-
       if ( ( .not. PRC_TwoD ) .and. IHALO < 1 ) then
          LOG_ERROR("ATMOS_DYN_FVM_flux_setup",*) 'IHALO must be >= ', 1
          call PRC_abort
@@ -534,7 +565,13 @@ contains
     case( "CD2" )
       LOG_INFO("ATMOS_DYN_FVM_flux_setup",*) 'the cd2 scheme is used for flux calculation'
 
+#ifdef _OPENACC
+      i_scheme = 2
+#else
+
       ATMOS_DYN_FVM_flux_valueW_Z => ATMOS_DYN_FVM_flux_valueW_Z_cd2
+
+#endif
 
       ATMOS_DYN_FVM_fluxZ_XYZ => ATMOS_DYN_FVM_fluxZ_XYZ_cd2
 
@@ -573,7 +610,6 @@ contains
       ATMOS_DYN_FVM_fluxJ23_XVZ => ATMOS_DYN_FVM_fluxJ23_XVZ_cd2
 
 
-
       if ( ( .not. PRC_TwoD ) .and. IHALO < 1 ) then
          LOG_ERROR("ATMOS_DYN_FVM_flux_setup",*) 'IHALO must be >= ', 1
          call PRC_abort
@@ -587,7 +623,13 @@ contains
     case( "UD3" )
       LOG_INFO("ATMOS_DYN_FVM_flux_setup",*) 'the ud3 scheme is used for flux calculation'
 
+#ifdef _OPENACC
+      i_scheme = 3
+#else
+
       ATMOS_DYN_FVM_flux_valueW_Z => ATMOS_DYN_FVM_flux_valueW_Z_ud3
+
+#endif
 
       ATMOS_DYN_FVM_fluxZ_XYZ => ATMOS_DYN_FVM_fluxZ_XYZ_ud3
 
@@ -626,7 +668,6 @@ contains
       ATMOS_DYN_FVM_fluxJ23_XVZ => ATMOS_DYN_FVM_fluxJ23_XVZ_ud3
 
 
-
       if ( ( .not. PRC_TwoD ) .and. IHALO < 2 ) then
          LOG_ERROR("ATMOS_DYN_FVM_flux_setup",*) 'IHALO must be >= ', 2
          call PRC_abort
@@ -640,7 +681,13 @@ contains
     case( "UD3KOREN1993" )
       LOG_INFO("ATMOS_DYN_FVM_flux_setup",*) 'the ud3Koren1993 scheme is used for flux calculation'
 
+#ifdef _OPENACC
+      i_scheme = 4
+#else
+
       ATMOS_DYN_FVM_flux_valueW_Z => ATMOS_DYN_FVM_flux_valueW_Z_ud3Koren1993
+
+#endif
 
       ATMOS_DYN_FVM_fluxZ_XYZ => ATMOS_DYN_FVM_fluxZ_XYZ_ud3Koren1993
 
@@ -679,7 +726,6 @@ contains
       ATMOS_DYN_FVM_fluxJ23_XVZ => ATMOS_DYN_FVM_fluxJ23_XVZ_ud3Koren1993
 
 
-
       if ( ( .not. PRC_TwoD ) .and. IHALO < 2 ) then
          LOG_ERROR("ATMOS_DYN_FVM_flux_setup",*) 'IHALO must be >= ', 2
          call PRC_abort
@@ -693,7 +739,13 @@ contains
     case( "CD4" )
       LOG_INFO("ATMOS_DYN_FVM_flux_setup",*) 'the cd4 scheme is used for flux calculation'
 
+#ifdef _OPENACC
+      i_scheme = 5
+#else
+
       ATMOS_DYN_FVM_flux_valueW_Z => ATMOS_DYN_FVM_flux_valueW_Z_cd4
+
+#endif
 
       ATMOS_DYN_FVM_fluxZ_XYZ => ATMOS_DYN_FVM_fluxZ_XYZ_cd4
 
@@ -732,7 +784,6 @@ contains
       ATMOS_DYN_FVM_fluxJ23_XVZ => ATMOS_DYN_FVM_fluxJ23_XVZ_cd4
 
 
-
       if ( ( .not. PRC_TwoD ) .and. IHALO < 2 ) then
          LOG_ERROR("ATMOS_DYN_FVM_flux_setup",*) 'IHALO must be >= ', 2
          call PRC_abort
@@ -746,7 +797,13 @@ contains
     case( "UD5" )
       LOG_INFO("ATMOS_DYN_FVM_flux_setup",*) 'the ud5 scheme is used for flux calculation'
 
+#ifdef _OPENACC
+      i_scheme = 6
+#else
+
       ATMOS_DYN_FVM_flux_valueW_Z => ATMOS_DYN_FVM_flux_valueW_Z_ud5
+
+#endif
 
       ATMOS_DYN_FVM_fluxZ_XYZ => ATMOS_DYN_FVM_fluxZ_XYZ_ud5
 
@@ -785,7 +842,6 @@ contains
       ATMOS_DYN_FVM_fluxJ23_XVZ => ATMOS_DYN_FVM_fluxJ23_XVZ_ud5
 
 
-
       if ( ( .not. PRC_TwoD ) .and. IHALO < 3 ) then
          LOG_ERROR("ATMOS_DYN_FVM_flux_setup",*) 'IHALO must be >= ', 3
          call PRC_abort
@@ -799,7 +855,13 @@ contains
     case( "CD6" )
       LOG_INFO("ATMOS_DYN_FVM_flux_setup",*) 'the cd6 scheme is used for flux calculation'
 
+#ifdef _OPENACC
+      i_scheme = 7
+#else
+
       ATMOS_DYN_FVM_flux_valueW_Z => ATMOS_DYN_FVM_flux_valueW_Z_cd6
+
+#endif
 
       ATMOS_DYN_FVM_fluxZ_XYZ => ATMOS_DYN_FVM_fluxZ_XYZ_cd6
 
@@ -838,7 +900,6 @@ contains
       ATMOS_DYN_FVM_fluxJ23_XVZ => ATMOS_DYN_FVM_fluxJ23_XVZ_cd6
 
 
-
       if ( ( .not. PRC_TwoD ) .and. IHALO < 3 ) then
          LOG_ERROR("ATMOS_DYN_FVM_flux_setup",*) 'IHALO must be >= ', 3
          call PRC_abort
@@ -852,7 +913,13 @@ contains
     case( "UD7" )
       LOG_INFO("ATMOS_DYN_FVM_flux_setup",*) 'the ud7 scheme is used for flux calculation'
 
+#ifdef _OPENACC
+      i_scheme = 8
+#else
+
       ATMOS_DYN_FVM_flux_valueW_Z => ATMOS_DYN_FVM_flux_valueW_Z_ud7
+
+#endif
 
       ATMOS_DYN_FVM_fluxZ_XYZ => ATMOS_DYN_FVM_fluxZ_XYZ_ud7
 
@@ -891,7 +958,6 @@ contains
       ATMOS_DYN_FVM_fluxJ23_XVZ => ATMOS_DYN_FVM_fluxJ23_XVZ_ud7
 
 
-
       if ( ( .not. PRC_TwoD ) .and. IHALO < 4 ) then
          LOG_ERROR("ATMOS_DYN_FVM_flux_setup",*) 'IHALO must be >= ', 4
          call PRC_abort
@@ -905,7 +971,13 @@ contains
     case( "CD8" )
       LOG_INFO("ATMOS_DYN_FVM_flux_setup",*) 'the cd8 scheme is used for flux calculation'
 
+#ifdef _OPENACC
+      i_scheme = 9
+#else
+
       ATMOS_DYN_FVM_flux_valueW_Z => ATMOS_DYN_FVM_flux_valueW_Z_cd8
+
+#endif
 
       ATMOS_DYN_FVM_fluxZ_XYZ => ATMOS_DYN_FVM_fluxZ_XYZ_cd8
 
@@ -944,7 +1016,6 @@ contains
       ATMOS_DYN_FVM_fluxJ23_XVZ => ATMOS_DYN_FVM_fluxJ23_XVZ_cd8
 
 
-
       if ( ( .not. PRC_TwoD ) .and. IHALO < 4 ) then
          LOG_ERROR("ATMOS_DYN_FVM_flux_setup",*) 'IHALO must be >= ', 4
          call PRC_abort
@@ -959,6 +1030,8 @@ contains
        LOG_ERROR("ATMOS_DYN_FVM_flux_setup",*) 'scheme is invalid: ', scheme
        call PRC_abort
     end select
+
+    !$acc update device(i_scheme)
 
     select case( scheme_tracer )
 
@@ -1000,7 +1073,6 @@ contains
       ATMOS_DYN_FVM_fluxJ13_XVZ_tracer => ATMOS_DYN_FVM_fluxJ13_XVZ_ud1
 
       ATMOS_DYN_FVM_fluxJ23_XVZ_tracer => ATMOS_DYN_FVM_fluxJ23_XVZ_ud1
-
 
 
       if ( ( .not. PRC_TwoD ) .and. IHALO < 1 ) then
@@ -1053,7 +1125,6 @@ contains
       ATMOS_DYN_FVM_fluxJ23_XVZ_tracer => ATMOS_DYN_FVM_fluxJ23_XVZ_cd2
 
 
-
       if ( ( .not. PRC_TwoD ) .and. IHALO < 1 ) then
          LOG_ERROR("ATMOS_DYN_FVM_flux_setup",*) 'IHALO must be >= ', 1
          call PRC_abort
@@ -1102,7 +1173,6 @@ contains
       ATMOS_DYN_FVM_fluxJ13_XVZ_tracer => ATMOS_DYN_FVM_fluxJ13_XVZ_ud3
 
       ATMOS_DYN_FVM_fluxJ23_XVZ_tracer => ATMOS_DYN_FVM_fluxJ23_XVZ_ud3
-
 
 
       if ( ( .not. PRC_TwoD ) .and. IHALO < 2 ) then
@@ -1155,7 +1225,6 @@ contains
       ATMOS_DYN_FVM_fluxJ23_XVZ_tracer => ATMOS_DYN_FVM_fluxJ23_XVZ_ud3Koren1993
 
 
-
       if ( ( .not. PRC_TwoD ) .and. IHALO < 2 ) then
          LOG_ERROR("ATMOS_DYN_FVM_flux_setup",*) 'IHALO must be >= ', 2
          call PRC_abort
@@ -1204,7 +1273,6 @@ contains
       ATMOS_DYN_FVM_fluxJ13_XVZ_tracer => ATMOS_DYN_FVM_fluxJ13_XVZ_cd4
 
       ATMOS_DYN_FVM_fluxJ23_XVZ_tracer => ATMOS_DYN_FVM_fluxJ23_XVZ_cd4
-
 
 
       if ( ( .not. PRC_TwoD ) .and. IHALO < 2 ) then
@@ -1257,7 +1325,6 @@ contains
       ATMOS_DYN_FVM_fluxJ23_XVZ_tracer => ATMOS_DYN_FVM_fluxJ23_XVZ_ud5
 
 
-
       if ( ( .not. PRC_TwoD ) .and. IHALO < 3 ) then
          LOG_ERROR("ATMOS_DYN_FVM_flux_setup",*) 'IHALO must be >= ', 3
          call PRC_abort
@@ -1306,7 +1373,6 @@ contains
       ATMOS_DYN_FVM_fluxJ13_XVZ_tracer => ATMOS_DYN_FVM_fluxJ13_XVZ_cd6
 
       ATMOS_DYN_FVM_fluxJ23_XVZ_tracer => ATMOS_DYN_FVM_fluxJ23_XVZ_cd6
-
 
 
       if ( ( .not. PRC_TwoD ) .and. IHALO < 3 ) then
@@ -1359,7 +1425,6 @@ contains
       ATMOS_DYN_FVM_fluxJ23_XVZ_tracer => ATMOS_DYN_FVM_fluxJ23_XVZ_ud7
 
 
-
       if ( ( .not. PRC_TwoD ) .and. IHALO < 4 ) then
          LOG_ERROR("ATMOS_DYN_FVM_flux_setup",*) 'IHALO must be >= ', 4
          call PRC_abort
@@ -1410,7 +1475,6 @@ contains
       ATMOS_DYN_FVM_fluxJ23_XVZ_tracer => ATMOS_DYN_FVM_fluxJ23_XVZ_cd8
 
 
-
       if ( ( .not. PRC_TwoD ) .and. IHALO < 4 ) then
          LOG_ERROR("ATMOS_DYN_FVM_flux_setup",*) 'IHALO must be >= ', 4
          call PRC_abort
@@ -1427,6 +1491,87 @@ contains
     end select
 
   end subroutine ATMOS_DYN_FVM_flux_setup
+
+#ifdef _OPENACC
+
+  subroutine ATMOS_DYN_FVM_flux_valueW_Z( valW, mflx, val, GSQRT, CDZ )
+    !$acc routine vector
+
+   use scale_atmos_dyn_fvm_flux_ud1, only: &
+      ATMOS_DYN_FVM_flux_valueW_Z_ud1
+
+   use scale_atmos_dyn_fvm_flux_cd2, only: &
+      ATMOS_DYN_FVM_flux_valueW_Z_cd2
+
+   use scale_atmos_dyn_fvm_flux_ud3, only: &
+      ATMOS_DYN_FVM_flux_valueW_Z_ud3
+
+   use scale_atmos_dyn_fvm_flux_ud3Koren1993, only: &
+      ATMOS_DYN_FVM_flux_valueW_Z_ud3Koren1993
+
+   use scale_atmos_dyn_fvm_flux_cd4, only: &
+      ATMOS_DYN_FVM_flux_valueW_Z_cd4
+
+   use scale_atmos_dyn_fvm_flux_ud5, only: &
+      ATMOS_DYN_FVM_flux_valueW_Z_ud5
+
+   use scale_atmos_dyn_fvm_flux_cd6, only: &
+      ATMOS_DYN_FVM_flux_valueW_Z_cd6
+
+   use scale_atmos_dyn_fvm_flux_ud7, only: &
+      ATMOS_DYN_FVM_flux_valueW_Z_ud7
+
+   use scale_atmos_dyn_fvm_flux_cd8, only: &
+      ATMOS_DYN_FVM_flux_valueW_Z_cd8
+
+    implicit none
+
+    real(RP), intent(out) :: valW (KA)
+
+    real(RP), intent(in)  :: mflx (KA)
+
+    real(RP), intent(in)  :: val  (KA)
+
+    real(RP), intent(in)  :: GSQRT(KA)
+
+    real(RP), intent(in)  :: CDZ  (KA)
+
+
+    select case ( i_scheme )
+
+    case( 1 )
+      call ATMOS_DYN_FVM_flux_valueW_Z_ud1( valW, mflx, val, GSQRT, CDZ )
+
+    case( 2 )
+      call ATMOS_DYN_FVM_flux_valueW_Z_cd2( valW, mflx, val, GSQRT, CDZ )
+
+    case( 3 )
+      call ATMOS_DYN_FVM_flux_valueW_Z_ud3( valW, mflx, val, GSQRT, CDZ )
+
+    case( 4 )
+      call ATMOS_DYN_FVM_flux_valueW_Z_ud3Koren1993( valW, mflx, val, GSQRT, CDZ )
+
+    case( 5 )
+      call ATMOS_DYN_FVM_flux_valueW_Z_cd4( valW, mflx, val, GSQRT, CDZ )
+
+    case( 6 )
+      call ATMOS_DYN_FVM_flux_valueW_Z_ud5( valW, mflx, val, GSQRT, CDZ )
+
+    case( 7 )
+      call ATMOS_DYN_FVM_flux_valueW_Z_cd6( valW, mflx, val, GSQRT, CDZ )
+
+    case( 8 )
+      call ATMOS_DYN_FVM_flux_valueW_Z_ud7( valW, mflx, val, GSQRT, CDZ )
+
+    case( 9 )
+      call ATMOS_DYN_FVM_flux_valueW_Z_cd8( valW, mflx, val, GSQRT, CDZ )
+
+    end select
+
+    return
+  end subroutine ATMOS_DYN_FVM_flux_valueW_Z
+
+#endif
 
 end module scale_atmos_dyn_fvm_flux
 

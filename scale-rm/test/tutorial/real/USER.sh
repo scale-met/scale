@@ -37,9 +37,9 @@ TIME_DT_ATMOS_PHY_RD=( "900.0" ) # required parameters for each domain - unit: S
 TIME_DT_ATMOS_PHY_SF=(  "90.0" ) # required parameters for each domain - unit: SEC only
 TIME_DT_ATMOS_PHY_TB=(  "90.0" ) # required parameters for each domain - unit: SEC only
 TIME_DT_ATMOS_PHY_BL=(  "90.0" ) # required parameters for each domain - unit: SEC only
-TIME_DT_OCEAN=(        "450.0" ) # required parameters for each domain - unit: SEC only
-TIME_DT_LAND=(         "450.0" ) # required parameters for each domain - unit: SEC only
-TIME_DT_URBAN=(        "450.0" ) # required parameters for each domain - unit: SEC only
+TIME_DT_OCEAN=(         "90.0" ) # required parameters for each domain - unit: SEC only
+TIME_DT_LAND=(          "90.0" ) # required parameters for each domain - unit: SEC only
+TIME_DT_URBAN=(         "90.0" ) # required parameters for each domain - unit: SEC only
 
 #################################################
 #
@@ -146,7 +146,7 @@ HIST_ITEMS_AVERAGE_3D=(
 
 INIT_BASENAME="init"
 
-BASENAME_ORG="namelist.grads_boundary.FNL.2005053112-2016051106"
+BASENAME_ORG="namelist.grads_boundary.FNL.2005053112-2015011400"
 FILETYPE_ORG="GrADS"
 USE_FILE_DENSITY=".false."
 USE_FILE_LANDWATER=".true."
@@ -172,11 +172,3 @@ SMOOTH_LOCAL=( ".true."  ) # required parameters for each domain
 SMOOTH_ITELIM="10000"
 MAXSLOPE_RATIO="5.0"
 LIMIT_URBAN_FRACTION="0.3"
-
-#################################################
-#
-# &INFO  (net2g config)
-#
-#################################################
-
-POPSCA_PLEV=( 850 500 200 )

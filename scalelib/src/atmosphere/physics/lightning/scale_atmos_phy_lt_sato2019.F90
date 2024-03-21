@@ -6,8 +6,23 @@
 !!
 !! @author Team SCALE
 !!
+!! @par History
+!! @li      2019-03-19 (Y.Sato) [new] Newly created
+!! @li      2021-02-22 (N. Yamashita, T. Iwashita) [add] Add preprocessing subroutine
+!! @li      2021-06-24 (T. Iwashita) [add] Add OpenMP option for preprocessing subroutine
+!!
 !<
 !-------------------------------------------------------------------------------
+#ifndef COLORING
+#ifdef _OPENACC
+#define COLORING 2
+#elif defined(_OPENMP)
+#define COLORING 1
+#else
+#define COLORING 0
+#endif
+#endif
+
 #include "scalelib.h"
 module scale_atmos_phy_lt_sato2019
   !-----------------------------------------------------------------------------
@@ -26,6 +41,7 @@ module scale_atmos_phy_lt_sato2019
   !++ Public procedure
   !
   public :: ATMOS_PHY_LT_sato2019_setup
+  public :: ATMOS_PHY_LT_sato2019_finalize
   public :: ATMOS_PHY_LT_sato2019_adjustment
   public :: ATMOS_PHY_LT_sato2019_select_dQCRG_from_LUT
 !  public :: ATMOS_PHY_LT_sato2019_mkinit
@@ -59,6 +75,10 @@ module scale_atmos_phy_lt_sato2019
   real(RP), private                 :: fp = 0.3_RP            ! [-]
   real(RP), private                 :: zcg = 0.0_RP           ! lowest grid point of lightning path for MG2001 [m]
   integer,  private                 :: NUTR_ITMAX = 1000
+  integer,  private                 :: FLAG_preprocessing = 2 !> 0: Disable
+                                                              !> 1: Gauss-Seidel
+                                                              !> 2: Synmetric Gauss-Sidel (Default)
+                                                              !> 3: Incomplete LU factorization
   integer,  private                 :: KIJMAXG
   character(len=H_LONG)             :: ATMOS_PHY_LT_LUT_FILENAME !--- LUT file name
   character(len=H_LONG)             :: fname_lut_lt="LUT_TK1978_v.txt" !--- LUT file name
@@ -72,12 +92,19 @@ module scale_atmos_phy_lt_sato2019
   real(RP), allocatable, private    :: d_QCRG_TOT(:,:,:)
   real(RP), allocatable, private    :: LT_PATH_TOT(:,:,:,:)
   real(RP), allocatable, private    :: fls_int_p_tot(:,:,:)
+  real(RP), allocatable, private    :: B_F2013_TOT(:,:)
+  real(RP), allocatable, private    :: G_F2013(:,:)
+  real(RP),              private    :: C_F2013
+
+  real(RP), allocatable, private    :: A(:,:,:,:) !--- A : Laplasian (Coefficient matrix)
+  !$acc declare create(d_QCRG_TOT,LT_PATH_TOT,fls_int_p_tot,B_F2013_TOT,G_F2013,A)
 
   !---
   integer,  parameter, private :: nxlut_lt = 200, nylut_lt = 200
   real(RP), private :: dq_chrg( nxlut_lt,nylut_lt )    !--- charge separation [fC]
   real(RP), private :: grid_lut_t( nxlut_lt )
   real(RP), private :: grid_lut_l( nylut_lt )
+!  !$acc declare create(dq_chrg,grid_lut_t,grid_lut_l)
   real(RP), private :: tcrglimit
   logical, private                  :: Hgt_dependency_Eint = .false.
 
@@ -88,7 +115,7 @@ module scale_atmos_phy_lt_sato2019
   integer, private, parameter :: I_lt_abs = 4
 
   !--- For history output
-  integer, private, parameter :: w_nmax = 10
+  integer, private, parameter :: w_nmax = 11
   integer, private, parameter :: I_Ex = 1
   integer, private, parameter :: I_Ey = 2
   integer, private, parameter :: I_Ez = 3
@@ -99,6 +126,7 @@ module scale_atmos_phy_lt_sato2019
   integer, private, parameter :: I_PosFLASH = 8
   integer, private, parameter :: I_NegFLASH = 9
   integer, private, parameter :: I_FlashPoint = 10
+  integer, private, parameter :: I_FOD = 11
   integer,  private              :: HIST_id(w_nmax)
   character(len=H_SHORT), private :: w_name(w_nmax)
   character(len=H_MID),   private :: w_longname(w_nmax)
@@ -112,7 +140,8 @@ module scale_atmos_phy_lt_sato2019
                 'LTpath', &
                 'PosFLASH', &
                 'NegFLASH', &
-                'FlashPoint' /
+                'FlashPoint', &
+                'FOD' /
   data w_longname / &
                 'X component of Electrical Field', &
                 'Y component of Electrical Field', &
@@ -123,18 +152,20 @@ module scale_atmos_phy_lt_sato2019
                 'Cumulative Number of flash path', &
                 'Cumulative Number of Positive flash', &
                 'Cumulative Number of Negative flash', &
-                'Cumulative Number of Flash point' /
+                'Cumulative Number of Flash point', &
+                'Flash Origin Density' /
   data w_unit / &
                 'kV/m', &
                 'kV/m', &
                 'kV/m', &
                 'kV/m', &
                 'V', &
-                'nC/m3', &
-                'num', &
-                'num', &
-                'num', &
-                'num' /
+                'nC/m3/s', &
+                'num/grid/s', &
+                'num/grid/s', &
+                'num/grid/s', &
+                'num/grid/s', &
+                'num/grid/s' /
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
@@ -156,9 +187,34 @@ contains
     use scale_atmos_grid_cartesC, only: &
        CZ   => ATMOS_GRID_CARTESC_CZ
     use scale_const, only: &
-       T00 => CONST_TEM00
+       T00 => CONST_TEM00, &
+       PI  => CONST_PI
     use scale_file_history, only: &
        FILE_HISTORY_reg
+    use scale_atmos_grid_cartesC, only: &
+       RCDZ => ATMOS_GRID_CARTESC_RCDZ, &
+       RCDX => ATMOS_GRID_CARTESC_RCDX, &
+       RCDY => ATMOS_GRID_CARTESC_RCDY, &
+       RFDZ => ATMOS_GRID_CARTESC_RFDZ, &
+       RFDX => ATMOS_GRID_CARTESC_RFDX, &
+       RFDY => ATMOS_GRID_CARTESC_RFDY
+    use scale_atmos_grid_cartesC_metric, only: &
+       MAPF  => ATMOS_GRID_CARTESC_METRIC_MAPF, &
+       J13G  => ATMOS_GRID_CARTESC_METRIC_J13G, &
+       J23G  => ATMOS_GRID_CARTESC_METRIC_J23G, &
+       J33G  => ATMOS_GRID_CARTESC_METRIC_J33G
+    use scale_atmos_grid_cartesC_index, only: &
+       I_XYZ, &
+       I_XYW, &
+       I_UYW, &
+       I_XVW, &
+       I_UYZ, &
+       I_XVZ, &
+       I_UVZ, &
+       I_XY, &
+       I_UY, &
+       I_XV, &
+       I_UV
     implicit none
     integer,  intent(in)  :: KA, KS, KE
     integer, intent(in)  :: IA, IS, IE
@@ -173,6 +229,7 @@ contains
 
     integer :: n, myu, ip
     integer :: ierr
+    integer :: i, j, k
 
     namelist / PARAM_ATMOS_PHY_LT_SATO2019 / &
          NUTR_TYPE, &
@@ -191,7 +248,8 @@ contains
          zcg, &
          R_neut, &
          Hgt_dependency_Eint, &
-         LT_DO_Lightning
+         LT_DO_Lightning, &
+         FLAG_preprocessing
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -214,6 +272,7 @@ contains
         R_neut = 2.d0 * min( minval( CDX,1 ), minval( CDY,1 ) )
     endif
 
+    !$acc enter data create(dq_chrg,grid_lut_t,grid_lut_l)
     if ( PRC_IsMaster ) then
         fname_lut_lt = ATMOS_PHY_LT_LUT_FILENAME
         fid_lut_lt = IO_get_available_fid()
@@ -228,6 +287,7 @@ contains
              read( fid_lut_lt,* ) grid_lut_t( myu ), grid_lut_l( n ), dq_chrg( myu,n )
           enddo
           enddo
+          !$acc update device(dq_chrg,grid_lut_t,grid_lut_l)
         !--- LUT file does not exist
         else
            LOG_ERROR("ATMOS_PHY_LT_sato2019_setup",*) 'xxx LUT for LT is requied when ATMOS_PHY_LT_TYPE = SATO2019, stop!'
@@ -240,9 +300,9 @@ contains
         endif
     endif
 
-    call COMM_bcast( dq_chrg, nxlut_lt,nylut_lt )
-    call COMM_bcast( grid_lut_t,nxlut_lt )
-    call COMM_bcast( grid_lut_l,nylut_lt )
+    call COMM_bcast( nxlut_lt, nylut_lt, dq_chrg )
+    call COMM_bcast( nxlut_lt, grid_lut_t )
+    call COMM_bcast( nylut_lt, grid_lut_l )
 
 !    KIJMAXG = (IEG-ISG+1)*(JEG-JSG+1)*(KE-KS+1)
     KIJMAXG = IMAXG*JMAXG*KMAX
@@ -254,12 +314,23 @@ contains
     d_QCRG_TOT(:,:,:) = 0.0_RP
     LT_PATH_TOT(:,:,:,:) = 0.0_RP
     fls_int_p_tot(:,:,:) = 0.0_RP
+    !$acc update device(d_QCRG_TOT,LT_PATH_TOT,fls_int_p_tot)
 
     tcrglimit = -60.0_RP+T00
 
     if( NUTR_TYPE == 'F2013' ) then
       LOG_INFO("ATMOS_PHY_LT_sato2019_setup",'(A,F15.7,A)') 'Radius of neutralization is ', R_neut, "[m]"
     endif
+    allocate( B_F2013_TOT(IA,JA) )
+    allocate( G_F2013(IA,JA) )
+    B_F2013_TOT(:,:) = 0.0_RP
+    do i = 1, IA
+    do j = 1, JA
+      G_F2013(i,j) = CDX(i)*CDY(j)*1.0E-6_RP       ! [m2] -> [km2]
+    enddo
+    enddo
+    !$acc update device(B_F2013_TOT,G_F2013)
+    C_F2013 = PI*R_neut*R_neut*1.0E-6_RP  ! [m2] -> [km2]
 
     flg_eint_hgt = 0.0_RP
     if( Hgt_dependency_Eint .and. NUTR_TYPE == 'MG2001') then
@@ -277,752 +348,16 @@ contains
 !    endif
 
     do ip = 1, w_nmax
-       call FILE_HISTORY_reg( w_name(ip), w_longname(ip), w_unit(ip), & ! [IN]
-                              HIST_id(ip)                             ) ! [OUT]
+       if( ip /= I_FOD ) then
+          call FILE_HISTORY_reg( w_name(ip), w_longname(ip), w_unit(ip), & ! [IN]
+                                 HIST_id(ip)                             ) ! [OUT]
+       elseif( ip == I_FOD ) then
+          call FILE_HISTORY_reg( w_name(ip), w_longname(ip), w_unit(ip), & ! [IN]
+                                 HIST_id(ip), dim_type='XY'              ) ! [OUT]
+       endif
     end do
 
-    return
-  end subroutine ATMOS_PHY_LT_sato2019_setup
-
-  !-----------------------------------------------------------------------------
-  !> Update of charge density
-  subroutine ATMOS_PHY_LT_sato2019_adjustment( &
-       KA, KS, KE,   &
-       IA, IS, IE,   &
-       JA, JS, JE,   &
-       KIJMAX,   &
-       IMAX,     &
-       JMAX,     &
-       QA_LT,    &
-       DENS,     &
-       RHOT,     &
-       QHYD,     &
-       Sarea,    &
-       dt_LT,    &
-       QTRC,     &
-       Epot      )
-    use scale_const, only: &
-       SMALL => CONST_EPS
-    use scale_prc, only: &
-       PRC_IsMaster, &
-       PRC_abort
-    use scale_comm_cartesC, only: &
-       COMM_wait, &
-       COMM_vars8
-    use scale_file_history, only: &
-       FILE_HISTORY_query, &
-       FILE_HISTORY_put
-    implicit none
-
-    integer,  intent(in) :: KA, KS, KE
-    integer,  intent(in) :: IA, IS, IE
-    integer,  intent(in) :: JA, JS, JE
-    integer,  intent(in) :: KIJMAX
-    integer,  intent(in) :: IMAX
-    integer,  intent(in) :: JMAX
-!    character(len=H_SHORT)
-    integer,  intent(in) :: QA_LT
-    real(RP), intent(in) :: DENS(KA,IA,JA)
-    real(RP), intent(in) :: RHOT(KA,IA,JA)
-    real(RP), intent(in) :: QHYD(KA,IA,JA)
-    real(RP), intent(in) :: Sarea(KA,IA,JA,QA_LT)       !--- Surface area and that of each catergory [m2]
-    real(DP), intent(in) :: dt_LT
-    real(RP), intent(inout) :: QTRC(KA,IA,JA,QA_LT)
-    real(RP), intent(inout) :: Epot(KA,IA,JA) !--- Electrical potential at previous time step [V]
-
-    real(RP) :: QHYD_mass(KA,IA,JA)         !--- Mass of total hydrometeor [kg/m3]
-    real(RP) :: RHOQ0                       !--- Tracer after lightning component
-    real(RP) :: QCRG(KA,IA,JA)              !--- Total charge density [nC/m3]
-    real(RP) :: Efield(KA,IA,JA,I_lt_abs)   !--- Electrical field (1-3 ->x,y,z, 4->abs. )
-    real(RP) :: NUM_end(KA,IA,JA,3)         !--- Number of each flash type (1->negative, 2->ground, 3->positive)
-    real(RP) :: d_QCRG(KA,IA,JA)            !--- Change of charge by charge neutralization [fC/m3]
-    real(RP) :: LT_PATH(KA,IA,JA)           !--- Lightning path (0-> no path, 1-> path)
-    real(RP) :: fls_int_p(KA,IA,JA)
-    real(RP) :: Total_Sarea(2)              !--- Sum of surface area and that of each catergory [m2]
-    real(RP) :: neg_crg, pos_crg
-    real(RP) :: frac, r_totalSarea(2)
-    real(RP) :: dqneut(KA,IA,JA,QA_LT)
-    real(RP) :: dqneut_real(KA,IA,JA,QA_LT)
-    real(RP) :: dqneut_real_tot(KA,IA,JA)
-    logical  :: flg_chrged(QA_LT)
-    real(RP) :: Emax, Emax_old
-    logical  :: output_step
-    integer  :: flg_lt_neut
-    integer  :: i, j, k, m, n, countbin, ip
-    real(RP) :: sw, zerosw, positive, negative
-    integer  :: count_neut
-
-    logical  :: HIST_sw(w_nmax)
-    real(RP) :: w3d(KA,IA,JA)
-
-    real(RP) :: diff_qcrg(0:1), lack(0:1), sum_crg(0:1)
-    real(RP) :: crg_rate(QA_LT), qcrg_before(QA_LT)
-    integer  :: int_sw
-
-    NUM_end(:,:,:,:) = 0.0_RP
-
-    !$omp parallel do &
-    !$omp private(RHOQ0)
-    do j = JS, JE
-    do i = IS, IE
-
-       ! calc total charge density
-       do k = KS, KE
-          QCRG(k,i,j) = 0.0_RP
-          do n = 1, QA_LT
-             QCRG(k,i,j) = QCRG(k,i,j) + QTRC(k,i,j,n)
-          end do
-          QCRG(k,i,j) = QCRG(k,i,j) * DENS(k,i,j) * 1.E-6_RP ![fC/kg] -> [nc/m3]
-       enddo
-
-       do k = KS, KE
-          QHYD_mass(k,i,j) = QHYD(k,i,j) * DENS(k,i,j) ![kg/kg] -> [kg/m3]
-       enddo
-
-    enddo
-    enddo
-
-    !--- Calculate E field
-    call ATMOS_PHY_LT_electric_field( KA, KS, KE,                   &   ! [IN]
-                                      IA, IS, IE,                   &   ! [IN]
-                                      JA, JS, JE,                   &   ! [IN]
-                                      QCRG    (:,:,:),              &   ! [IN]
-                                      DENS    (:,:,:),              &   ! [IN]
-                                      RHOT    (:,:,:),              &   ! [IN]
-                                      Epot    (:,:,:),              &   ! [INOUT]
-                                      Efield  (:,:,:,I_lt_x:I_lt_z) )   ! [OUT]
-
-    !$omp parallel do
-    do j = JS, JE
-    do i = IS, IE
-    do k = KS, KE
-       Efield(k,i,j,I_lt_abs) = sqrt( Efield(k,i,j,I_lt_x)*Efield(k,i,j,I_lt_x) &
-                                    + Efield(k,i,j,I_lt_y)*Efield(k,i,j,I_lt_y) &
-                                    + Efield(k,i,j,I_lt_z)*Efield(k,i,j,I_lt_z) )
-
-
-       LT_PATH(k,i,j) = 0.0_RP
-    enddo
-    enddo
-    enddo
-
-
-    if ( LT_DO_Lightning ) then
-
-       call ATMOS_PHY_LT_judge_absE( KA, KS, KE,             &   ! [IN]
-                                     IA, IS, IE,             &   ! [IN]
-                                     JA, JS, JE,             &   ! [IN]
-                                     DENS(:,:,:),            &   ! [IN]
-                                     Efield(:,:,:,I_lt_abs), &   ! [IN]
-                                     Emax,                   &   ! [OUT]
-                                     flg_lt_neut             )   ! [OUT]
-
-
-       count_neut = 0
-       do while( flg_lt_neut > 0 )
-
-         Emax_old = Emax
-
-         call COMM_vars8( Efield   (:,:,:,I_lt_x),   1 )
-         call COMM_vars8( Efield   (:,:,:,I_lt_y),   2 )
-         call COMM_vars8( Efield   (:,:,:,I_lt_z),   3 )
-         call COMM_vars8( Efield   (:,:,:,I_lt_abs), 4 )
-         call COMM_vars8( QHYD_mass(:,:,:),          5 )
-         call COMM_vars8( QCRG     (:,:,:),          6 )
-         call COMM_vars8( Epot     (:,:,:),          7 )
-         call COMM_wait ( Efield   (:,:,:,I_lt_x),   1 )
-         call COMM_wait ( Efield   (:,:,:,I_lt_y),   2 )
-         call COMM_wait ( Efield   (:,:,:,I_lt_z),   3 )
-         call COMM_wait ( Efield   (:,:,:,I_lt_abs), 4 )
-         call COMM_wait ( QHYD_mass(:,:,:),          5 )
-         call COMM_wait ( QCRG     (:,:,:),          6 )
-         call COMM_wait ( Epot     (:,:,:),          7 )
-
-         !--- Calculate lightning path and charge neutralization
-         if( NUTR_TYPE == 'MG2001' ) then
-           call ATMOS_PHY_LT_neutralization_MG2001(              &
-                                             KA, KS, KE,         & !  [IN]
-                                             IA, IS, IE,         & !  [IN]
-                                             JA, JS, JE,         & !  [IN]
-                                             KIJMAX, IMAX, JMAX, & !  [IN]
-                                             Efield   (:,:,:,:), & !  [IN]
-                                             Epot     (:,:,:),   & !  [IN]
-                                             DENS     (:,:,:),   & !  [IN]
-                                             QCRG     (:,:,:),   & !  [IN]
-                                             QHYD_mass(:,:,:),   & !  [IN]
-                                             NUM_end  (:,:,:,:), & !  [INOUT]
-                                             LT_PATH  (:,:,:),   & !  [INOUT]
-                                             fls_int_p(:,:,:),   & !  [OUT]
-                                             d_QCRG   (:,:,:)    ) !  [OUT]
-         elseif( NUTR_TYPE == 'F2013' ) then
-           call ATMOS_PHY_LT_neutralization_F2013(               &
-                                             KA, KS, KE,         & !  [IN]
-                                             IA, IS, IE,         & !  [IN]
-                                             JA, JS, JE,         & !  [IN]
-                                             KIJMAX,             & !  [IN]
-                                             Efield   (:,:,:,:), & !  [IN]
-                                             Epot     (:,:,:),   & !  [IN]
-                                             DENS     (:,:,:),   & !  [IN]
-                                             QCRG     (:,:,:),   & !  [IN]
-                                             QHYD_mass(:,:,:),   & !  [IN]
-                                             NUM_end  (:,:,:,:), & !  [INOUT]
-                                             LT_PATH  (:,:,:),   & !  [INOUT]
-                                             fls_int_p(:,:,:),   & !  [OUT]
-                                             d_QCRG   (:,:,:)    ) !  [OUT]
-         endif
-
-         call COMM_vars8( LT_path(:,:,:),1 )
-         call COMM_vars8( d_QCRG(:,:,:),2 )
-         call COMM_wait ( LT_path(:,:,:),1 )
-         call COMM_wait ( d_QCRG(:,:,:),2 )
-
-         dqneut(:,:,:,:) = 0.0_RP
-         dqneut_real(:,:,:,:) = 0.0_RP
-         !-- Calculate neutralization of each hydrometeor or each category
-         select case( NUTR_qhyd )
-         case ( 'TOTAL' )
-
-            !$omp parallel do &
-            !$omp private(Total_Sarea,r_totalSarea,zerosw)
-            do j = JS, JE
-            do i = IS, IE
-            do k = KS, KE
-               if( abs( d_QCRG(k,i,j) ) > 0.0_RP ) then
-                  Total_Sarea(1) = 0.0_RP
-                  do n = 1, QA_LT
-                     Total_Sarea(1) = Total_Sarea(1) + Sarea(k,i,j,n)
-                  enddo
-                  zerosw = 0.5_RP - sign( 0.5_RP, Total_Sarea(1)-SMALL )
-                  r_totalSarea(1) = 1.0_RP / ( Total_Sarea(1) + zerosw ) * ( 1.0_RP - zerosw )
-                  do n = 1, QA_LT
-                     dqneut(k,i,j,n) = d_QCRG(k,i,j)*1.0E+6_RP &
-                                     * Sarea(k,i,j,n) * r_totalSarea(1) / DENS(k,i,j)
-                     QTRC(k,i,j,n) = QTRC(k,i,j,n) + dqneut(k,i,j,n)
-                     dqneut_real(k,i,j,n) = dqneut(k,i,j,n)
-                  enddo
-               endif
-            enddo
-            enddo
-            enddo
-
-         case ( 'Each_POLARITY', 'Each_POLARITY2' )
-
-            !$omp parallel do &
-            !$omp private(Total_Sarea,r_totalSarea,flg_chrged,pos_crg,neg_crg,frac, &
-            !$omp         int_sw,lack, &
-            !$omp         positive,negative,zerosw,sw)
-            do j = JS, JE
-            do i = IS, IE
-            do k = KS, KE
-               lack(:) = 0.0_RP
-               if( abs( d_QCRG(k,i,j) ) > 0.0_RP ) then
-
-                  !--- flg whether the charged or not (0.0-> not charged, 1.0->charged)
-                  do n = 1, QA_LT
-                     flg_chrged(n) = abs(QTRC(k,i,j,n)) >= SMALL
-                  enddo
-
-                  Total_Sarea(:) = 0.0_RP
-                  pos_crg = 0.0_RP
-                  neg_crg = 0.0_RP
-                  do n = 1, QA_LT
-                     if ( flg_chrged(n) ) then
-                        positive = 0.5_RP + sign( 0.5_RP, QTRC(k,i,j,n) )
-                        negative = 1.0_RP - positive
-                        !--- total of positive charge
-                        pos_crg = pos_crg + QTRC(k,i,j,n) * positive
-                        !--- total of negative charge
-                        neg_crg = neg_crg + QTRC(k,i,j,n) * negative
-                        !--- Sarea of positively charged hydrometeor
-                        Total_Sarea(1) = Total_Sarea(1) + Sarea(k,i,j,n) * positive
-                        !--- Sarea of negatively charged hydrometeor
-                        Total_Sarea(2) = Total_Sarea(2) + Sarea(k,i,j,n) * negative
-                     end if
-                  end do
-
-                  zerosw = 0.5_RP - sign( 0.5_RP, abs( QCRG(k,i,j) ) - SMALL )
-                  frac = d_QCRG(k,i,j) / ( QCRG(k,i,j) + zerosw ) * ( 1.0_RP - zerosw )
-                  pos_crg = frac * pos_crg
-                  neg_crg = frac * neg_crg
-
-                  !--- remove 0 surface area ( no crg for each porality )
-                  zerosw = 0.5_RP - sign( 0.5_RP, Total_Sarea(1) - SMALL )
-                  r_totalSarea(1) = 1.0_RP / ( Total_Sarea(1) + zerosw ) * ( 1.0_RP - zerosw )
-                  zerosw = 0.5_RP - sign( 0.5_RP, Total_Sarea(2) - SMALL )
-                  r_totalSarea(2) = 1.0_RP / ( Total_Sarea(2) + zerosw ) * ( 1.0_RP - zerosw )
-
-                  diff_qcrg(:) = 0.0_RP
-                  crg_rate(:) = 0.0_RP
-                  sum_crg(:) = 0.0_RP
-                  do n = 1, QA_LT
-                     if ( flg_chrged(n) ) then
-                        sw = 0.5_RP + sign( 0.5_RP, QTRC(k,i,j,n) )
-                        dqneut(k,i,j,n) = &
-                                    + pos_crg * Sarea(k,i,j,n) * r_totalSarea(1) &
-                                    * sw &   ! sw = 1 positive
-                                    + neg_crg * Sarea(k,i,j,n) * r_totalSarea(2)  &
-                                    * ( 1.0_RP - sw ) ! sw = 0 negative
-                        qcrg_before(n) = QTRC(k,i,j,n)
-
-                        if( sw == 1.0_RP ) then
-                          QTRC(k,i,j,n) = max( QTRC(k,i,j,n) + dqneut(k,i,j,n), 0.0_RP )  !--- limiter
-                        elseif( sw == 0.0_RP ) then
-                          QTRC(k,i,j,n) = min( QTRC(k,i,j,n) + dqneut(k,i,j,n), 0.0_RP )  !--- limiter
-                        endif
-
-                        int_sw = int( sw )   ! 0-> negative, 1-> positive
-                        diff_qcrg(int_sw) = diff_qcrg(int_sw) &
-                                          + ( QTRC(k,i,j,n) - qcrg_before(n) )
-                        sum_crg(int_sw) = sum_crg(int_sw) + QTRC(k,i,j,n)
-                     end if
-                  enddo
-
-                  if( NUTR_qhyd == 'Each_POLARITY2' ) then ! Adjust
-                    lack(0) = neg_crg - diff_qcrg(0) ! negative (Should be Positive)
-                    lack(1) = pos_crg - diff_qcrg(1) ! positive (Should be Negative)
-#ifdef DEBUG
-                    if( lack(0) > 0.0_RP .and. abs(lack(0)/diff_qcrg(0)) > 1.0E-10_RP ) then
-                        LOG_INFO("ATMOS_PHY_LT_sato2019_adjustment",'(A,4E15.7)') &
-                          "Large negative for lack(0) ", lack(0)/diff_qcrg(0), neg_crg, lack(0), diff_qcrg(0)
-                    endif
-                    if( lack(1) < 0.0_RP .and. abs(lack(1)/diff_qcrg(1)) > 1.0E-10_RP ) then
-                       LOG_INFO("ATMOS_PHY_LT_sato2019_adjustment",'(A,4E15.7)') &
-                          "Large positive for lack(1) ", lack(1)/diff_qcrg(1), pos_crg, lack(1), diff_qcrg(1)
-                    endif
-#endif
-                    lack(0) = max( lack(0), 0.0_RP ) ! negative (Should be Positive)
-                    lack(1) = min( lack(1), 0.0_RP ) ! positive (Should be Negative)
-                    do n = 1, QA_LT
-                       if ( flg_chrged(n) ) then
-                          sw = 0.5_RP + sign( 0.5_RP, QTRC(k,i,j,n) )
-                          int_sw = int( sw )   ! 0-> negative, 1-> positive
-                          if( sum_crg(int_sw) /= 0.0_RP ) then
-                             crg_rate(n) = QTRC(k,i,j,n)/sum_crg(int_sw)
-                          else
-                             crg_rate(n) = 0.0_RP
-                          endif
-                          QTRC(k,i,j,n) = QTRC(k,i,j,n) + crg_rate(n) * lack(int_sw)
-                       endif
-                    enddo
-                  endif
-
-                  do n = 1, QA_LT
-                     if ( flg_chrged(n) ) then
-                        dqneut_real(k,i,j,n) = QTRC(k,i,j,n) - qcrg_before(n)
-                     endif
-                  enddo
-
-               endif
-
-            enddo
-            enddo
-            enddo
-
-         end select
-
-
-         do j = JS, JE
-         do i = IS, IE
-
-            ! calc total charge density
-            do k = KS, KE
-               QCRG(k,i,j) = 0.0_RP
-               dqneut_real_tot(k,i,j) = 0.0_RP
-               do n = 1, QA_LT
-                  QCRG(k,i,j) = QCRG(k,i,j) + QTRC(k,i,j,n)
-                  dqneut_real_tot(k,i,j) = dqneut_real_tot(k,i,j) + dqneut_real(k,i,j,n)
-               end do
-               QCRG(k,i,j) = QCRG(k,i,j) * DENS(k,i,j) * 1.E-6_RP ![fC/kg] -> [nc/m3]
-            enddo
-
-         enddo
-         enddo
-
-         !--- Calculate E field
-         call ATMOS_PHY_LT_electric_field( KA, KS, KE,                   & ! [IN]
-                                           IA, IS, IE,                   & ! [IN]
-                                           JA, JS, JE,                   & ! [IN]
-                                           QCRG    (:,:,:),              & ! [IN]
-                                           DENS    (:,:,:),              & ! [IN]
-                                           RHOT    (:,:,:),              & ! [IN]
-                                           Epot    (:,:,:),              & ! [INOUT]
-                                           Efield  (:,:,:,I_lt_x:I_lt_z) ) ! [OUT]
-
-         !--- Add Total number of path
-         !$omp parallel do
-         do j = JS, JE
-         do i = IS, IE
-         do k = KS, KE
-            Efield(k,i,j,I_lt_abs) = sqrt( Efield(k,i,j,I_lt_x)*Efield(k,i,j,I_lt_x) &
-                                         + Efield(k,i,j,I_lt_y)*Efield(k,i,j,I_lt_y) &
-                                         + Efield(k,i,j,I_lt_z)*Efield(k,i,j,I_lt_z) )
-         end do
-         end do
-         end do
-
-         !--- Add Total number of charge neutralization and flash point
-         if ( HIST_id(I_Qneut) > 0 ) then
-            !$omp parallel do
-            do j = JS, JE
-            do i = IS, IE
-            do k = KS, KE
-                d_QCRG_TOT(k,i,j) = d_QCRG_TOT(k,i,j) + dqneut_real_tot(k,i,j)*1.E-6_RP ![fC/m3]->[nC/m3]
-            end do
-            end do
-            end do
-         end if
-         if ( HIST_id(I_FlashPoint) > 0 ) then
-            !$omp parallel do
-            do j = JS, JE
-            do i = IS, IE
-            do k = KS, KE
-               fls_int_p_tot(k,i,j) = fls_int_p_tot(k,i,j) + fls_int_p(k,i,j)
-            end do
-            end do
-            end do
-         end if
-
-         if ( HIST_id(I_PosFLASH) > 0 ) then
-            !$omp parallel do
-            do j = JS, JE
-            do i = IS, IE
-            do k = KS, KE
-               LT_PATH_TOT(k,i,j,1) = LT_PATH_TOT(k,i,j,1) &
-                                    + 0.5_RP + sign( 0.5_RP,-dqneut_real_tot(k,i,j)-SMALL )
-            end do
-            end do
-            end do
-         end if
-         if ( HIST_id(I_NegFLASH) > 0 ) then
-            !$omp parallel do
-            do j = JS, JE
-            do i = IS, IE
-            do k = KS, KE
-               LT_PATH_TOT(k,i,j,2) = LT_PATH_TOT(k,i,j,2) &
-                                    + 0.5_RP + sign( 0.5_RP, dqneut_real_tot(k,i,j)-SMALL )
-            end do
-            end do
-            end do
-         end if
-         if ( HIST_id(I_LTpath) > 0 ) then
-            !$omp parallel do
-            do j = JS, JE
-            do i = IS, IE
-            do k = KS, KE
-               LT_PATH_TOT(k,i,j,3) = LT_PATH_TOT(k,i,j,3) + LT_PATH(k,i,j)
-            end do
-            end do
-            end do
-         end if
-
-         call ATMOS_PHY_LT_judge_absE( KA, KS, KE,             &   ! [IN]
-                                       IA, IS, IE,             &   ! [IN]
-                                       JA, JS, JE,             &   ! [IN]
-                                       DENS(:,:,:),            &   ! [IN]
-                                       Efield(:,:,:,I_lt_abs), &   ! [IN]
-                                       Emax,                   &   ! [OUT]
-                                       flg_lt_neut             )   ! [OUT]
-
-         count_neut = count_neut + 1
-#ifdef DEBUG
-         LOG_INFO("ATMOS_PHY_LT_sato2019_adjustment",'(A,F15.7,A,F15.7,1X,I0)')  &
-                   'CHECK', &
-                    Emax_old*1.E-3_RP, ' [kV/m] -> ', Emax*1.E-3_RP, count_neut
-#endif
-
-         if( flg_lt_neut == 1 .and. Emax == Emax_old ) then
-            flg_lt_neut = 0
-            if( PRC_IsMaster ) then
-               LOG_INFO("ATMOS_PHY_LT_sato2019_adjustment",'(A,2E15.7,1X,I0)')  &
-                   'Eabs value after neutralization is same as previous value, Finish', &
-                    Emax_old*1.E-3_RP, ' [kV/m] -> ', Emax*1.E-3_RP, count_neut
-            endif
-         elseif( flg_lt_neut == 1 .and. count_neut == MAX_NUTR ) then
-            flg_lt_neut = 0
-            if( PRC_IsMaster ) then
-               LOG_INFO("ATMOS_PHY_LT_sato2019_adjustment",'(2(E15.7,A),1X,I0)')  &
-                   Emax_old*1.E-3_RP, ' [kV/m] -> ', Emax*1.E-3_RP, &
-                   ' [kV/m], reach maximum neutralization count, Finish', count_neut
-            endif
-         elseif( flg_lt_neut == 1 .and. Emax > Emax_old ) then
-            flg_lt_neut = 0
-            if( PRC_IsMaster ) then
-               LOG_INFO("ATMOS_PHY_LT_sato2019_adjustment",'(2(E15.7,A),1X,I0)')  &
-                   Emax_old*1.E-3_RP, ' [kV/m] -> ', Emax*1.E-3_RP, &
-                   ' [kV/m] larger than previous one by neutralization, back to previous step, Finish', &
-                   count_neut
-            endif
-            !---- Back to Charge density as previous step
-            do j = JS, JE
-            do i = IS, IE
-            do k = KS, KE
-               do n = 1, QA_LT
-                  QTRC(k,i,j,n) = QTRC(k,i,j,n) - dqneut_real(k,i,j,n)
-               enddo
-               d_QCRG_TOT(k,i,j) = d_QCRG_TOT(k,i,j) - dqneut_real_tot(k,i,j)*1.E-6_RP
-               d_QCRG(k,i,j) = 0.0_RP
-            enddo
-            enddo
-            enddo
-         elseif( flg_lt_neut == 2 ) then
-            flg_lt_neut = 0
-            if( PRC_IsMaster ) then
-               LOG_INFO("ATMOS_PHY_LT_sato2019_adjustment",'(2(E15.7,A),1X,I0)')  &
-                   Emax_old*1.E-3_RP, ' [kV/m] -> ', Emax*1.E-3_RP, &
-                   '[kV/m] After neutralization, Finish' , count_neut
-            endif
-         elseif( flg_lt_neut == 0 ) then
-            if( PRC_IsMaster ) then
-               LOG_INFO("ATMOS_PHY_LT_sato2019_adjustment",'(2(F15.7,A),1X,I0)')  &
-                   Emax_old*1.E-3_RP, ' [kV/m] -> ', Emax*1.E-3_RP, &
-                   '[kV/m] After neutralization, Finish', count_neut
-            endif
-         endif
-
-       enddo
-
-    else
-
-       !$omp parallel do
-       do j = JS, JE
-       do i = IS, IE
-       do k = KS, KE
-          d_QCRG(k,i,j) = 0.0_RP
-       end do
-       end do
-       end do
-
-    endif
-
-    !--- For history output
-    do ip = 1, w_nmax
-       call FILE_HISTORY_query( HIST_id(ip), HIST_sw(ip) )
-    end do
-
-    if ( HIST_sw(I_Ex  ) ) then
-       !$omp parallel do
-       do j = JS, JE
-       do i = IS, IE
-       do k = KS, KE
-          w3d(k,i,j) = Efield(k,i,j,I_lt_x  )*1.0E-3_RP ![kV/m]
-       enddo
-       enddo
-       enddo
-       call FILE_HISTORY_put( HIST_id(I_Ex  ), w3d(:,:,:) )
-    endif
-    if ( HIST_sw(I_Ey  ) ) then
-       !$omp parallel do
-       do j = JS, JE
-       do i = IS, IE
-       do k = KS, KE
-          w3d(k,i,j) = Efield(k,i,j,I_lt_y  )*1.0E-3_RP ![kV/m]
-       enddo
-       enddo
-       enddo
-       call FILE_HISTORY_put( HIST_id(I_Ey  ), w3d(:,:,:) )
-    endif
-    if ( HIST_sw(I_Ez  ) ) then
-       !$omp parallel do
-       do j = JS, JE
-       do i = IS, IE
-       do k = KS, KE
-          w3d(k,i,j) = Efield(k,i,j,I_lt_z  )*1.0E-3_RP ![kV/m]
-       enddo
-       enddo
-       enddo
-       call FILE_HISTORY_put( HIST_id(I_Ez  ), w3d(:,:,:) )
-    endif
-    if ( HIST_sw(I_Eabs) ) then
-       !$omp parallel do
-       do j = JS, JE
-       do i = IS, IE
-       do k = KS, KE
-          w3d(k,i,j) = Efield(k,i,j,I_lt_abs)*1.0E-3_RP ![kV/m]
-       enddo
-       enddo
-       enddo
-       call FILE_HISTORY_put( HIST_id(I_Eabs), w3d(:,:,:) )
-    endif
-    if ( HIST_sw(I_Epot) ) then
-       call FILE_HISTORY_put( HIST_id(I_Epot), Epot(:,:,:) )
-    end if
-    if ( HIST_sw(I_Qneut) ) then
-       call FILE_HISTORY_put( HIST_id(I_Qneut), d_QCRG_TOT(:,:,:) )
-       !$omp parallel do
-       do j = JS, JE
-       do i = IS, IE
-       do k = KS, KE
-          d_QCRG_tot(k,i,j) = 0.0_RP
-       end do
-       end do
-       end do
-    endif
-    if ( HIST_sw(I_LTpath)  ) then
-       call FILE_HISTORY_put( HIST_id(I_LTpath), LT_PATH_TOT(:,:,:,3) )
-       !$omp parallel do
-       do j = JS, JE
-       do i = IS, IE
-       do k = KS, KE
-          LT_PATH_TOT(k,i,j,3) = 0.0_RP
-       end do
-       end do
-       end do
-    endif
-    if ( HIST_sw(I_PosFLASH) ) then
-       call FILE_HISTORY_put( HIST_id(I_PosFLASH), LT_PATH_TOT(:,:,:,1) )
-       !$omp parallel do
-       do j = JS, JE
-       do i = IS, IE
-       do k = KS, KE
-          LT_PATH_TOT(k,i,j,1) = 0.0_RP
-       end do
-       end do
-       end do
-    endif
-    if ( HIST_sw(I_NegFLASH) ) then
-       call FILE_HISTORY_put( HIST_id(I_NegFLASH), LT_PATH_TOT(:,:,:,2) )
-       !$omp parallel do
-       do j = JS, JE
-       do i = IS, IE
-       do k = KS, KE
-          LT_PATH_TOT(k,i,j,2) = 0.0_RP
-       end do
-       end do
-       end do
-    endif
-    if ( HIST_sw(I_FlashPoint) ) then
-       call FILE_HISTORY_put( HIST_id(I_FlashPoint), fls_int_p_tot(:,:,:) )
-       !$omp parallel do
-       do j = JS, JE
-       do i = IS, IE
-       do k = KS, KE
-          fls_int_p_tot(k,i,j) = 0.0_RP
-       end do
-       end do
-       end do
-    end if
-
-
-    return
-  end subroutine ATMOS_PHY_LT_sato2019_adjustment
-  !-----------------------------------------------------------------------------
-  !> calculate electric field from charge density of each grid
-  !> temporaly Bi-CGSTAB is used in this component
-  !-----------------------------------------------------------------------------
-  subroutine ATMOS_PHY_LT_electric_field( &
-       KA, KS, KE, & ! [IN]
-       IA, IS, IE, & ! [IN]
-       JA, JS, JE, & ! [IN]
-       QCRG,       & ! [IN]
-       DENS,       & ! [IN]
-       RHOT,       & ! [IN]
-       E_pot,      & ! [OUT]
-       Efield      ) ! [OUT]
-    use scale_prc, only: &
-       PRC_abort, &
-       PRC_IsMaster, &
-       PRC_myrank
-    use scale_const, only: &
-       EPS    => CONST_EPS, &
-       EPSvac => CONST_EPSvac, &
-       EPSair => CONST_EPSair
-    use scale_atmos_grid_cartesC, only: &
-       RCDZ => ATMOS_GRID_CARTESC_RCDZ, &
-       RCDX => ATMOS_GRID_CARTESC_RCDX, &
-       RCDY => ATMOS_GRID_CARTESC_RCDY, &
-       RFDZ => ATMOS_GRID_CARTESC_RFDZ, &
-       RFDX => ATMOS_GRID_CARTESC_RFDX, &
-       RFDY => ATMOS_GRID_CARTESC_RFDY
-    use scale_atmos_grid_cartesC_metric, only: &
-       MAPF  => ATMOS_GRID_CARTESC_METRIC_MAPF, &
-       GSQRT => ATMOS_GRID_CARTESC_METRIC_GSQRT, &
-       J13G  => ATMOS_GRID_CARTESC_METRIC_J13G, &
-       J23G  => ATMOS_GRID_CARTESC_METRIC_J23G, &
-       J33G  => ATMOS_GRID_CARTESC_METRIC_J33G
-    use scale_atmos_grid_cartesC_index, only: &
-       I_XYZ, &
-       I_XYW, &
-       I_UYW, &
-       I_XVW, &
-       I_UYZ, &
-       I_XVZ, &
-       I_UVZ, &
-       I_XY, &
-       I_UY, &
-       I_XV, &
-       I_UV
-    use scale_prc_cartesC, only: &
-       PRC_HAS_W, &
-       PRC_HAS_E, &
-       PRC_HAS_N, &
-       PRC_HAS_S
-    use scale_comm_cartesC, only: &
-       COMM_datatype, &
-       COMM_world, &
-       COMM_vars8, &
-       COMM_wait
-    implicit none
-
-    integer,  intent(in)  :: KA, KS, KE
-    integer,  intent(in)  :: IA, IS, IE
-    integer,  intent(in)  :: JA, JS, JE
-    real(RP), intent(in)  :: QCRG     (KA,IA,JA)      !-- Charge density [nC/m3]
-    real(RP), intent(in)  :: DENS     (KA,IA,JA)      !-- Total density [kg/m3]
-    real(RP), intent(in)  :: RHOT     (KA,IA,JA)      !-- density weighted potential temperature [K kg/m3]
-    real(RP), intent(inout) :: E_pot (KA,IA,JA)      !-- Electric potential [V]
-    real(RP), intent(out)   :: Efield(KA,IA,JA,3)    !-- Electric field [V/m]
-
-    real(RP) :: eps_air(KA,IA,JA)
-    !--- A x E_pott = - QCRG/epsiron
-    real(RP) :: A(KA,15,IA,JA)            !--- A : Laplasian
-    real(RP) :: B(KA,IA,JA)               !--- B : -QCRG*DENS/epsiron
-    real(RP) :: E_pot_N(KA,IA,JA)         !--- electrical potential calculated by Bi-CGSTAB
-
-    integer :: i, j, k, ijk, ierror
-    real(RP) :: iprod, buf
-
-    call PROF_rapstart('LT_E_field', 1)
-
-    iprod = 0.0_RP
-    !$omp parallel do reduction(+:iprod)
-    do j = JS, JE
-    do i = IS, IE
-    do k = KS, KE
-        iprod = iprod + abs( QCRG(k,i,j) )
-    enddo
-    enddo
-    enddo
-
-    call MPI_AllReduce(iprod, buf, 1, COMM_datatype, MPI_SUM, COMM_world, ierror)
-
-    if( buf <= EPS ) then
-       !$omp parallel do
-       do j = JS, JE
-       do i = IS, IE
-       do k = KS, KE
-          E_pot(k,i,j) = 0.0_RP
-          Efield(k,i,j,1:3) = 0.0_RP
-       end do
-       end do
-       end do
-
-       return
-    endif
-
-    !$omp parallel do
-    do j = JS, JE
-    do i = IS, IE
-    do k = KS, KE
-       eps_air(k,i,j) = EPSvac * EPSair   !--- temporary, dependency of epsiron on P and T will be implemented
-       B(k,i,j) = - QCRG(k,i,j)/eps_air(k,i,j) * 1.0E-9_RP ! [nC/m3] -> [C/m3 * m/F] = [V/m2]
-    enddo
-    enddo
-    enddo
-
-    !---- fill halo
-    call COMM_vars8( eps_air,1 )
-    call COMM_vars8( B,      2 )
-
+    allocate( A(KA,15,IA,JA) )
     !---- input vector A
     !$omp parallel do
     do j = JS, JE
@@ -1144,9 +479,923 @@ contains
     enddo
     enddo
     enddo
+    !$acc update device(A)
 
+    return
+  end subroutine ATMOS_PHY_LT_sato2019_setup
+
+  !-----------------------------------------------------------------------------
+  !> finalize
+  subroutine ATMOS_PHY_LT_sato2019_finalize
+
+    !$acc exit data delete(dq_chrg,grid_lut_t,grid_lut_l)
+
+    deallocate( d_QCRG_TOT )
+    deallocate( LT_PATH_TOT )
+    deallocate( fls_int_p_tot )
+
+    deallocate( B_F2013_TOT )
+    deallocate( G_F2013 )
+
+    return
+  end subroutine ATMOS_PHY_LT_sato2019_finalize
+
+  !-----------------------------------------------------------------------------
+  !> Update of charge density
+  subroutine ATMOS_PHY_LT_sato2019_adjustment( &
+       KA, KS, KE,   &
+       IA, IS, IE,   &
+       JA, JS, JE,   &
+       KIJMAX,   &
+       IMAX,     &
+       JMAX,     &
+       QA_LT,    &
+       DENS,     &
+       RHOT,     &
+       QHYD,     &
+       Sarea,    &
+       dt_LT,    &
+       QTRC,     &
+       Epot      )
+    use scale_const, only: &
+       SMALL => CONST_EPS
+    use scale_prc, only: &
+       PRC_IsMaster, &
+       PRC_abort
+    use scale_comm_cartesC, only: &
+       COMM_datatype, &
+       COMM_world, &
+       COMM_wait, &
+       COMM_vars8
+    use scale_file_history, only: &
+       FILE_HISTORY_query, &
+       FILE_HISTORY_put
+    implicit none
+
+    integer,  intent(in) :: KA, KS, KE
+    integer,  intent(in) :: IA, IS, IE
+    integer,  intent(in) :: JA, JS, JE
+    integer,  intent(in) :: KIJMAX
+    integer,  intent(in) :: IMAX
+    integer,  intent(in) :: JMAX
+!    character(len=H_SHORT)
+    integer,  intent(in) :: QA_LT
+    real(RP), intent(in) :: DENS(KA,IA,JA)
+    real(RP), intent(in) :: RHOT(KA,IA,JA)
+    real(RP), intent(in) :: QHYD(KA,IA,JA)
+    real(RP), intent(in) :: Sarea(KA,IA,JA,QA_LT)       !--- Surface area and that of each catergory [m2]
+    real(DP), intent(in) :: dt_LT
+    real(RP), intent(inout) :: QTRC(KA,IA,JA,QA_LT)
+    real(RP), intent(inout) :: Epot(KA,IA,JA) !--- Electrical potential at previous time step [V]
+
+    real(RP) :: QHYD_mass(KA,IA,JA)         !--- Mass of total hydrometeor [kg/m3]
+    real(RP) :: QCRG(KA,IA,JA)              !--- Total charge density [nC/m3]
+    real(RP) :: Efield(KA,IA,JA,I_lt_abs)   !--- Electrical field (1-3 ->x,y,z, 4->abs. )
+    real(RP) :: NUM_end(KA,IA,JA,3)         !--- Number of each flash type (1->negative, 2->ground, 3->positive)
+    real(RP) :: d_QCRG(KA,IA,JA)            !--- Change of charge by charge neutralization [fC/m3]
+    real(RP) :: LT_PATH(KA,IA,JA)           !--- Lightning path (0-> no path, 1-> path)
+    real(RP) :: fls_int_p(KA,IA,JA)
+    real(RP) :: Total_Sarea1, Total_Sarea2  !--- Sum of surface area and that of each category [m2]
+    real(RP) :: r_totalSarea1, r_totalSarea2
+    real(RP) :: neg_crg, pos_crg
+    real(RP) :: frac
+    real(RP) :: dqneut(KA,IA,JA,QA_LT)
+    real(RP) :: dqneut_real(KA,IA,JA,QA_LT)
+    real(RP) :: dqneut_real_tot(KA,IA,JA)
+    logical  :: flg_chrged(QA_LT)
+    real(RP) :: Emax, Emax_old
+    logical  :: output_step
+    integer  :: flg_lt_neut
+    integer  :: i, j, k, m, n, countbin, ip
+    real(RP) :: sw, zerosw, positive, negative
+    integer  :: count_neut
+
+    logical  :: HIST_sw(w_nmax)
+    real(RP) :: w3d(KA,IA,JA)
+
+    real(RP) :: diff_qcrg(0:1), lack(0:1), sum_crg(0:1)
+    real(RP) :: crg_rate(QA_LT), qcrg_before(QA_LT)
+    real(RP) :: B_F2013(IA,JA)
+    integer  :: int_sw
+    real(RP) :: iprod, buf, tmp_qcrg, tmp_dqcrg
+    integer  :: ierror
+
+    !$acc data &
+    !$acc copyin(DENS,RHOT,QHYD,Sarea) &
+    !$acc copy(QTRC,Epot) &
+    !$acc create(QHYD_mass,QCRG,Efield,NUM_end,d_QCRG,LT_PATH,fls_int_p, &
+    !$acc        dqneut,dqneut_real,dqneut_real_tot,flg_chrged,HIST_sw,w3d, &
+    !$acc        diff_qcrg,lack,sum_crg,crg_rate,qcrg_before,B_F2013)
+
+    !$acc kernels
+    NUM_end(:,:,:,:) = 0.0_RP
+    B_F2013(:,:) = 0.0_RP
+    !$acc end kernels
+
+    !$omp parallel do private(tmp_qcrg)
+    !$acc kernels
+    !$acc loop collapse(2)
+    do j = JS, JE
+    do i = IS, IE
+
+       ! calc total charge density
+       do k = KS, KE
+          tmp_qcrg = 0.0_RP
+          !$acc loop seq
+          do n = 1, QA_LT
+             tmp_qcrg = tmp_qcrg + QTRC(k,i,j,n)
+          end do
+          QCRG(k,i,j) = tmp_qcrg * DENS(k,i,j) * 1.E-6_RP ![fC/kg] -> [nc/m3]
+       enddo
+
+       do k = KS, KE
+          QHYD_mass(k,i,j) = QHYD(k,i,j) * DENS(k,i,j) ![kg/kg] -> [kg/m3]
+       enddo
+
+    enddo
+    enddo
+    !$acc end kernels
+
+    iprod = 0.0_RP
+    !$omp parallel do reduction(+:iprod) private(i,j,k)
+    !$acc kernels
+    !$acc loop collapse(3) reduction(+:iprod)
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+        iprod = iprod + abs( QCRG(k,i,j) )
+    enddo
+    enddo
+    enddo
+    !$acc end kernels
+
+    call MPI_AllReduce(iprod, buf, 1, COMM_datatype, MPI_SUM, COMM_world, ierror)
+
+    if( buf <= SMALL ) then
+
+       !$omp parallel do
+       !$acc kernels
+       !$acc loop collapse(3)
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          Epot(k,i,j) = 0.0_RP
+          Efield(k,i,j,I_lt_x) = 0.0_RP
+          Efield(k,i,j,I_lt_y) = 0.0_RP
+          Efield(k,i,j,I_lt_z) = 0.0_RP
+       end do
+       end do
+       end do
+       !$acc end kernels
+
+    else
+
+       !--- Calculate E field
+       call ATMOS_PHY_LT_electric_field( KA, KS, KE,                   &   ! [IN]
+                                         IA, IS, IE,                   &   ! [IN]
+                                         JA, JS, JE,                   &   ! [IN]
+                                         QCRG    (:,:,:),              &   ! [IN]
+                                         DENS    (:,:,:),              &   ! [IN]
+                                         RHOT    (:,:,:),              &   ! [IN]
+                                         Epot    (:,:,:),              &   ! [INOUT]
+                                         Efield  (:,:,:,I_lt_x:I_lt_z) )   ! [INOUT]
+
+    endif
 
     !$omp parallel do
+    !$acc kernels
+    !$acc loop collapse(3)
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       Efield(k,i,j,I_lt_abs) = sqrt( Efield(k,i,j,I_lt_x)*Efield(k,i,j,I_lt_x) &
+                                    + Efield(k,i,j,I_lt_y)*Efield(k,i,j,I_lt_y) &
+                                    + Efield(k,i,j,I_lt_z)*Efield(k,i,j,I_lt_z) )
+
+       LT_PATH(k,i,j) = 0.0_RP
+
+    enddo
+    enddo
+    enddo
+    !$acc end kernels
+
+    if ( LT_DO_Lightning ) then
+
+       !$acc kernels
+       d_QCRG_TOT(:,:,:) = 0.0_RP
+       fls_int_p_tot(:,:,:) = 0.0_RP
+       LT_PATH_TOT(:,:,:,:) = 0.0_RP
+       B_F2013_TOT(:,:) = 0.0_RP
+       !$acc end kernels
+
+       call ATMOS_PHY_LT_judge_absE( KA, KS, KE,             &   ! [IN]
+                                     IA, IS, IE,             &   ! [IN]
+                                     JA, JS, JE,             &   ! [IN]
+                                     DENS(:,:,:),            &   ! [IN]
+                                     Efield(:,:,:,I_lt_abs), &   ! [IN]
+                                     Emax,                   &   ! [OUT]
+                                     flg_lt_neut             )   ! [OUT]
+
+       count_neut = 0
+       do while( flg_lt_neut > 0 )
+
+         Emax_old = Emax
+
+         call COMM_vars8( Efield   (:,:,:,I_lt_x),   1 )
+         call COMM_vars8( Efield   (:,:,:,I_lt_y),   2 )
+         call COMM_vars8( Efield   (:,:,:,I_lt_z),   3 )
+         call COMM_vars8( Efield   (:,:,:,I_lt_abs), 4 )
+         call COMM_vars8( QHYD_mass(:,:,:),          5 )
+         call COMM_vars8( QCRG     (:,:,:),          6 )
+         call COMM_vars8( Epot     (:,:,:),          7 )
+         call COMM_wait ( Efield   (:,:,:,I_lt_x),   1 )
+         call COMM_wait ( Efield   (:,:,:,I_lt_y),   2 )
+         call COMM_wait ( Efield   (:,:,:,I_lt_z),   3 )
+         call COMM_wait ( Efield   (:,:,:,I_lt_abs), 4 )
+         call COMM_wait ( QHYD_mass(:,:,:),          5 )
+         call COMM_wait ( QCRG     (:,:,:),          6 )
+         call COMM_wait ( Epot     (:,:,:),          7 )
+
+         !--- Calculate lightning path and charge neutralization
+         if( NUTR_TYPE == 'MG2001' ) then
+           !$acc update host(Efield,Epot,QCRG,QHYD_mass,NUM_end,LT_PATH)
+           call ATMOS_PHY_LT_neutralization_MG2001(              &
+                                             KA, KS, KE,         & !  [IN]
+                                             IA, IS, IE,         & !  [IN]
+                                             JA, JS, JE,         & !  [IN]
+                                             KIJMAX, IMAX, JMAX, & !  [IN]
+                                             Efield   (:,:,:,:), & !  [IN]
+                                             Epot     (:,:,:),   & !  [IN]
+                                             DENS     (:,:,:),   & !  [IN]
+                                             QCRG     (:,:,:),   & !  [IN]
+                                             QHYD_mass(:,:,:),   & !  [IN]
+                                             NUM_end  (:,:,:,:), & !  [INOUT]
+                                             LT_PATH  (:,:,:),   & !  [INOUT]
+                                             fls_int_p(:,:,:),   & !  [OUT]
+                                             d_QCRG   (:,:,:)    ) !  [OUT]
+           !$acc update device(NUM_end,LT_PATH,fls_int_p,d_QCRG)
+         elseif( NUTR_TYPE == 'F2013' ) then
+           call ATMOS_PHY_LT_neutralization_F2013(               &
+                                             KA, KS, KE,         & !  [IN]
+                                             IA, IS, IE,         & !  [IN]
+                                             JA, JS, JE,         & !  [IN]
+                                             KIJMAX,             & !  [IN]
+                                             Efield   (:,:,:,:), & !  [IN]
+                                             Epot     (:,:,:),   & !  [IN]
+                                             DENS     (:,:,:),   & !  [IN]
+                                             QCRG     (:,:,:),   & !  [IN]
+                                             QHYD_mass(:,:,:),   & !  [IN]
+                                             NUM_end  (:,:,:,:), & !  [INOUT]
+                                             LT_PATH  (:,:,:),   & !  [INOUT]
+                                             fls_int_p(:,:,:),   & !  [OUT]
+                                             d_QCRG   (:,:,:),   & !  [OUT]
+                                             B_F2013  (:,:)      ) !  [OUT]
+         endif
+
+         call COMM_vars8( LT_path(:,:,:),1 )
+         call COMM_vars8( d_QCRG(:,:,:),2 )
+         call COMM_wait ( LT_path(:,:,:),1 )
+         call COMM_wait ( d_QCRG(:,:,:),2 )
+
+         !$acc kernels
+         dqneut(:,:,:,:) = 0.0_RP
+         dqneut_real(:,:,:,:) = 0.0_RP
+         !$acc end kernels
+
+         !-- Calculate neutralization of each hydrometeor or each category
+         select case( NUTR_qhyd )
+         case ( 'TOTAL' )
+
+            !$omp parallel do &
+            !$omp private(Total_Sarea1,Total_Sarea2,r_totalSarea1,r_totalSarea2,zerosw)
+            !$acc kernels
+            !$acc loop collapse(3)
+            do j = JS, JE
+            do i = IS, IE
+            do k = KS, KE
+               if( abs( d_QCRG(k,i,j) ) > 0.0_RP ) then
+                  Total_Sarea1 = 0.0_RP
+                  !$acc loop seq
+                  do n = 1, QA_LT
+                     Total_Sarea1 = Total_Sarea1 + Sarea(k,i,j,n)
+                  enddo
+                  zerosw = 0.5_RP - sign( 0.5_RP, Total_Sarea1-SMALL )
+                  r_totalSarea1 = 1.0_RP / ( Total_Sarea1 + zerosw ) * ( 1.0_RP - zerosw )
+                  !$acc loop seq
+                  do n = 1, QA_LT
+                     dqneut(k,i,j,n) = d_QCRG(k,i,j)*1.0E+6_RP &
+                                     * Sarea(k,i,j,n) * r_totalSarea1 / DENS(k,i,j)
+                     QTRC(k,i,j,n) = QTRC(k,i,j,n) + dqneut(k,i,j,n)
+                     dqneut_real(k,i,j,n) = dqneut(k,i,j,n)
+                  enddo
+               endif
+            enddo
+            enddo
+            enddo
+            !$acc end kernels
+
+         case ( 'Each_POLARITY', 'Each_POLARITY2' )
+
+            !$omp parallel do &
+            !$omp private(Total_Sarea1,Total_Sarea2,r_totalSarea1,r_totalSarea2,flg_chrged,pos_crg,neg_crg,frac,lack, &
+            !$omp         diff_qcrg,crg_rate,sum_crg,qcrg_before, &
+            !$omp         positive,negative,zerosw,sw,int_sw)
+            !$acc parallel
+            !$acc loop collapse(2) gang
+            do j = JS, JE
+            do i = IS, IE
+            !$acc loop vector private(lack,flg_chrged,diff_qcrg,crg_rate,sum_crg)
+            do k = KS, KE
+               lack(:) = 0.0_RP
+               if( abs( d_QCRG(k,i,j) ) > 0.0_RP ) then
+
+                  !--- flg whether the charged or not (0.0-> not charged, 1.0->charged)
+                  !$acc loop seq
+                  do n = 1, QA_LT
+                     flg_chrged(n) = abs(QTRC(k,i,j,n)) >= SMALL
+                  enddo
+
+                  Total_Sarea1 = 0.0_RP
+                  Total_Sarea2 = 0.0_RP
+                  pos_crg = 0.0_RP
+                  neg_crg = 0.0_RP
+                  !$acc loop seq
+                  do n = 1, QA_LT
+                     if ( flg_chrged(n) ) then
+                        positive = 0.5_RP + sign( 0.5_RP, QTRC(k,i,j,n) )
+                        negative = 1.0_RP - positive
+                        !--- total of positive charge
+                        pos_crg = pos_crg + QTRC(k,i,j,n) * positive
+                        !--- total of negative charge
+                        neg_crg = neg_crg + QTRC(k,i,j,n) * negative
+                        !--- Sarea of positively charged hydrometeor
+                        Total_Sarea1 = Total_Sarea1 + Sarea(k,i,j,n) * positive
+                        !--- Sarea of negatively charged hydrometeor
+                        Total_Sarea2 = Total_Sarea2 + Sarea(k,i,j,n) * negative
+                     end if
+                  end do
+
+                  zerosw = 0.5_RP - sign( 0.5_RP, abs( QCRG(k,i,j) ) - SMALL )
+                  frac = d_QCRG(k,i,j) / ( QCRG(k,i,j) + zerosw ) * ( 1.0_RP - zerosw )
+                  pos_crg = frac * pos_crg
+                  neg_crg = frac * neg_crg
+
+                  !--- remove 0 surface area ( no crg for each porality )
+                  zerosw = 0.5_RP - sign( 0.5_RP, Total_Sarea1 - SMALL )
+                  r_totalSarea1 = 1.0_RP / ( Total_Sarea1 + zerosw ) * ( 1.0_RP - zerosw )
+                  zerosw = 0.5_RP - sign( 0.5_RP, Total_Sarea2 - SMALL )
+                  r_totalSarea2 = 1.0_RP / ( Total_Sarea2 + zerosw ) * ( 1.0_RP - zerosw )
+
+                  diff_qcrg(:) = 0.0_RP
+                  !$acc loop seq
+                  do n = 1, QA_LT
+                     crg_rate(n) = 0.0_RP
+                  end do
+                  sum_crg(:) = 0.0_RP
+                  !$acc loop seq
+                  do n = 1, QA_LT
+                     if ( flg_chrged(n) ) then
+                        sw = 0.5_RP + sign( 0.5_RP, QTRC(k,i,j,n) )
+                        dqneut(k,i,j,n) = &
+                                    + pos_crg * Sarea(k,i,j,n) * r_totalSarea1 &
+                                    * sw &   ! sw = 1 positive
+                                    + neg_crg * Sarea(k,i,j,n) * r_totalSarea2  &
+                                    * ( 1.0_RP - sw ) ! sw = 0 negative
+                        qcrg_before(n) = QTRC(k,i,j,n)
+
+                        if( sw == 1.0_RP ) then
+                          QTRC(k,i,j,n) = max( QTRC(k,i,j,n) + dqneut(k,i,j,n), 0.0_RP )  !--- limiter
+                        elseif( sw == 0.0_RP ) then
+                          QTRC(k,i,j,n) = min( QTRC(k,i,j,n) + dqneut(k,i,j,n), 0.0_RP )  !--- limiter
+                        endif
+
+                        int_sw = int( sw )   ! 0-> negative, 1-> positive
+                        diff_qcrg(int_sw) = diff_qcrg(int_sw) &
+                                          + ( QTRC(k,i,j,n) - qcrg_before(n) )
+                        sum_crg(int_sw) = sum_crg(int_sw) + QTRC(k,i,j,n)
+                     end if
+                  enddo
+
+                  if( NUTR_qhyd == 'Each_POLARITY2' ) then ! Adjust
+                    lack(0) = neg_crg - diff_qcrg(0) ! negative (Should be Positive)
+                    lack(1) = pos_crg - diff_qcrg(1) ! positive (Should be Negative)
+#ifdef DEBUG
+                    if( lack(0) > 0.0_RP .and. abs(lack(0)/diff_qcrg(0)) > 1.0E-10_RP ) then
+                        LOG_INFO("ATMOS_PHY_LT_sato2019_adjustment",'(A,4E15.7)') &
+                          "Large negative for lack(0) ", lack(0)/diff_qcrg(0), neg_crg, lack(0), diff_qcrg(0)
+                    endif
+                    if( lack(1) < 0.0_RP .and. abs(lack(1)/diff_qcrg(1)) > 1.0E-10_RP ) then
+                       LOG_INFO("ATMOS_PHY_LT_sato2019_adjustment",'(A,4E15.7)') &
+                          "Large positive for lack(1) ", lack(1)/diff_qcrg(1), pos_crg, lack(1), diff_qcrg(1)
+                    endif
+#endif
+                    lack(0) = max( lack(0), 0.0_RP ) ! negative (Should be Positive)
+                    lack(1) = min( lack(1), 0.0_RP ) ! positive (Should be Negative)
+                    !$acc loop seq
+                    do n = 1, QA_LT
+                       if ( flg_chrged(n) ) then
+                          sw = 0.5_RP + sign( 0.5_RP, QTRC(k,i,j,n) )
+                          int_sw = int( sw )   ! 0-> negative, 1-> positive
+                          if( sum_crg(int_sw) /= 0.0_RP ) then
+                             crg_rate(n) = QTRC(k,i,j,n)/sum_crg(int_sw)
+                          else
+                             crg_rate(n) = 0.0_RP
+                          endif
+                          QTRC(k,i,j,n) = QTRC(k,i,j,n) + crg_rate(n) * lack(int_sw)
+                       endif
+                    enddo
+                  endif
+
+                  !$acc loop seq
+                  do n = 1, QA_LT
+                     if ( flg_chrged(n) ) then
+                        dqneut_real(k,i,j,n) = QTRC(k,i,j,n) - qcrg_before(n)
+                     endif
+                  enddo
+
+               endif
+
+            enddo
+            enddo
+            enddo
+            !$acc end parallel
+
+         end select
+
+         !$acc kernels
+         !$acc loop collapse(3)
+         do j = JS, JE
+         do i = IS, IE
+
+            ! calc total charge density
+            do k = KS, KE
+               tmp_qcrg = 0.0_RP
+               tmp_dqcrg = 0.0_RP
+               !$acc loop seq
+               do n = 1, QA_LT
+                  tmp_qcrg = tmp_qcrg + QTRC(k,i,j,n)
+                  tmp_dqcrg = tmp_dqcrg + dqneut_real(k,i,j,n)
+               end do
+               QCRG(k,i,j) = tmp_qcrg * DENS(k,i,j) * 1.E-6_RP ![fC/kg] -> [nc/m3]
+               dqneut_real_tot(k,i,j) = tmp_dqcrg
+            enddo
+
+         enddo
+         enddo
+         !$acc end kernels
+
+         iprod = 0.0_RP
+         !$omp parallel do reduction(+:iprod) private(i,j,k)
+         !$acc kernels
+         !$acc loop collapse(3) reduction(+:iprod)
+         do j = JS, JE
+         do i = IS, IE
+         do k = KS, KE
+             iprod = iprod + abs( QCRG(k,i,j) )
+         enddo
+         enddo
+         enddo
+         !$acc end kernels
+
+         call MPI_AllReduce(iprod, buf, 1, COMM_datatype, MPI_SUM, COMM_world, ierror)
+
+         if( buf <= SMALL ) then
+
+            !$omp parallel do
+            !$acc kernels
+            !$acc loop collapse(3)
+            do j = JS, JE
+            do i = IS, IE
+            do k = KS, KE
+               Epot(k,i,j) = 0.0_RP
+               Efield(k,i,j,I_lt_x) = 0.0_RP
+               Efield(k,i,j,I_lt_y) = 0.0_RP
+               Efield(k,i,j,I_lt_z) = 0.0_RP
+            end do
+            end do
+            end do
+            !$acc end kernels
+
+         else
+
+            !--- Calculate E field
+            call ATMOS_PHY_LT_electric_field( KA, KS, KE,                   & ! [IN]
+                                              IA, IS, IE,                   & ! [IN]
+                                              JA, JS, JE,                   & ! [IN]
+                                              QCRG    (:,:,:),              & ! [IN]
+                                              DENS    (:,:,:),              & ! [IN]
+                                              RHOT    (:,:,:),              & ! [IN]
+                                              Epot    (:,:,:),              & ! [INOUT]
+                                              Efield  (:,:,:,I_lt_x:I_lt_z) ) ! [INOUT]
+
+         endif
+
+         !--- Add Total number of path
+         !$omp parallel do
+         !$acc kernels
+         !$acc loop collapse(3)
+         do j = JS, JE
+         do i = IS, IE
+         do k = KS, KE
+            Efield(k,i,j,I_lt_abs) = sqrt( Efield(k,i,j,I_lt_x)*Efield(k,i,j,I_lt_x) &
+                                         + Efield(k,i,j,I_lt_y)*Efield(k,i,j,I_lt_y) &
+                                         + Efield(k,i,j,I_lt_z)*Efield(k,i,j,I_lt_z) )
+         end do
+         end do
+         end do
+         !$acc end kernels
+
+         !--- Add Total number of charge neutralization and flash point
+         if ( HIST_id(I_Qneut) > 0 ) then
+            !$omp parallel do
+            !$acc kernels
+            do j = JS, JE
+            do i = IS, IE
+            do k = KS, KE
+                d_QCRG_TOT(k,i,j) = d_QCRG_TOT(k,i,j) + dqneut_real_tot(k,i,j)*1.E-6_RP ![fC/m3]->[nC/m3]
+            end do
+            end do
+            end do
+            !$acc end kernels
+         end if
+         if ( HIST_id(I_FlashPoint) > 0 ) then
+            !$omp parallel do
+            !$acc kernels
+            do j = JS, JE
+            do i = IS, IE
+            do k = KS, KE
+               fls_int_p_tot(k,i,j) = fls_int_p_tot(k,i,j) + fls_int_p(k,i,j)
+            end do
+            end do
+            end do
+            !$acc end kernels
+         end if
+
+         if ( HIST_id(I_PosFLASH) > 0 ) then
+            !$omp parallel do
+            !$acc kernels
+            do j = JS, JE
+            do i = IS, IE
+            do k = KS, KE
+               LT_PATH_TOT(k,i,j,1) = LT_PATH_TOT(k,i,j,1) &
+                                    + 0.5_RP + sign( 0.5_RP,-dqneut_real_tot(k,i,j)-SMALL )
+            end do
+            end do
+            end do
+            !$acc end kernels
+         end if
+         if ( HIST_id(I_NegFLASH) > 0 ) then
+            !$omp parallel do
+            !$acc kernels
+            do j = JS, JE
+            do i = IS, IE
+            do k = KS, KE
+               LT_PATH_TOT(k,i,j,2) = LT_PATH_TOT(k,i,j,2) &
+                                    + 0.5_RP + sign( 0.5_RP, dqneut_real_tot(k,i,j)-SMALL )
+            end do
+            end do
+            end do
+            !$acc end kernels
+         end if
+         if ( HIST_id(I_LTpath) > 0 ) then
+            !$omp parallel do
+            !$acc kernels
+            do j = JS, JE
+            do i = IS, IE
+            do k = KS, KE
+               LT_PATH_TOT(k,i,j,3) = LT_PATH_TOT(k,i,j,3) + LT_PATH(k,i,j)
+            end do
+            end do
+            end do
+            !$acc end kernels
+         end if
+         if ( HIST_id(I_FOD) > 0 ) then
+            !$acc kernels
+            do j = JS, JE
+            do i = IS, IE
+               B_F2013_TOT(i,j) = B_F2013_TOT(i,j) + G_F2013(i,j)/C_F2013*B_F2013(i,j)
+            enddo
+            enddo
+            !$acc end kernels
+         endif
+
+         call ATMOS_PHY_LT_judge_absE( KA, KS, KE,             &   ! [IN]
+                                       IA, IS, IE,             &   ! [IN]
+                                       JA, JS, JE,             &   ! [IN]
+                                       DENS(:,:,:),            &   ! [IN]
+                                       Efield(:,:,:,I_lt_abs), &   ! [IN]
+                                       Emax,                   &   ! [OUT]
+                                       flg_lt_neut             )   ! [OUT]
+
+         count_neut = count_neut + 1
+#ifdef DEBUG
+         LOG_INFO("ATMOS_PHY_LT_sato2019_adjustment",'(A,F15.7,A,F15.7,1X,I0)')  &
+                   'CHECK', &
+                    Emax_old*1.E-3_RP, ' [kV/m] -> ', Emax*1.E-3_RP, count_neut
+#endif
+
+         if( flg_lt_neut == 1 .and. Emax == Emax_old ) then
+            flg_lt_neut = 0
+            if( PRC_IsMaster ) then
+               LOG_INFO("ATMOS_PHY_LT_sato2019_adjustment",'(A,2(E15.7,A),1X,I0)')  &
+                   'Eabs value after neutralization is same as previous value, Finish', &
+                    Emax_old*1.E-3_RP, ' [kV/m] -> ', Emax*1.E-3_RP, count_neut
+            endif
+         elseif( flg_lt_neut == 1 .and. count_neut == MAX_NUTR ) then
+            flg_lt_neut = 0
+            if( PRC_IsMaster ) then
+               LOG_INFO("ATMOS_PHY_LT_sato2019_adjustment",'(2(E15.7,A),1X,I0)')  &
+                   Emax_old*1.E-3_RP, ' [kV/m] -> ', Emax*1.E-3_RP, &
+                   ' [kV/m], reach maximum neutralization count, Finish', count_neut
+            endif
+         elseif( flg_lt_neut == 1 .and. Emax > Emax_old ) then
+            flg_lt_neut = 0
+            if( PRC_IsMaster ) then
+               LOG_INFO("ATMOS_PHY_LT_sato2019_adjustment",'(2(E15.7,A),1X,I0)')  &
+                   Emax_old*1.E-3_RP, ' [kV/m] -> ', Emax*1.E-3_RP, &
+                   ' [kV/m] larger than previous one by neutralization, back to previous step, Finish', &
+                   count_neut
+            endif
+            !---- Back to Charge density as previous step
+            !$acc kernels
+            !$acc loop collapse(3)
+            do j = JS, JE
+            do i = IS, IE
+            do k = KS, KE
+               !$acc loop seq
+               do n = 1, QA_LT
+                  QTRC(k,i,j,n) = QTRC(k,i,j,n) - dqneut_real(k,i,j,n)
+               enddo
+               d_QCRG_TOT(k,i,j) = d_QCRG_TOT(k,i,j) - dqneut_real_tot(k,i,j)*1.E-6_RP
+               d_QCRG(k,i,j) = 0.0_RP
+            enddo
+            enddo
+            enddo
+            !$acc end kernels
+         elseif( flg_lt_neut == 2 ) then
+            flg_lt_neut = 0
+            if( PRC_IsMaster ) then
+               LOG_INFO("ATMOS_PHY_LT_sato2019_adjustment",'(2(E15.7,A),1X,I0)')  &
+                   Emax_old*1.E-3_RP, ' [kV/m] -> ', Emax*1.E-3_RP, &
+                   '[kV/m] After neutralization, Finish' , count_neut
+            endif
+         elseif( flg_lt_neut == 0 ) then
+            if( PRC_IsMaster ) then
+               LOG_INFO("ATMOS_PHY_LT_sato2019_adjustment",'(2(F15.7,A),1X,I0)')  &
+                   Emax_old*1.E-3_RP, ' [kV/m] -> ', Emax*1.E-3_RP, &
+                   '[kV/m] After neutralization, Finish', count_neut
+            endif
+         endif
+
+       enddo
+
+    else
+
+       !$omp parallel do private(i,j,k)
+       !$acc kernels
+       !$acc loop collapse(3)
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          d_QCRG(k,i,j) = 0.0_RP
+       end do
+       end do
+       end do
+       !$acc end kernels
+
+    endif
+
+    !--- For history output
+    do ip = 1, w_nmax
+       call FILE_HISTORY_query( HIST_id(ip), HIST_sw(ip) )
+    end do
+
+    if ( HIST_sw(I_Ex  ) ) then
+       !$omp parallel do private(i,j,k)
+       !$acc kernels
+       !$acc loop collapse(3)
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          w3d(k,i,j) = Efield(k,i,j,I_lt_x  )*1.0E-3_RP ![kV/m]
+       enddo
+       enddo
+       enddo
+       !$acc end kernels
+       call FILE_HISTORY_put( HIST_id(I_Ex  ), w3d(:,:,:) )
+    endif
+    if ( HIST_sw(I_Ey  ) ) then
+       !$omp parallel do private(i,j,k)
+       !$acc kernels
+       !$acc loop collapse(3)
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          w3d(k,i,j) = Efield(k,i,j,I_lt_y  )*1.0E-3_RP ![kV/m]
+       enddo
+       enddo
+       enddo
+       !$acc end kernels
+       call FILE_HISTORY_put( HIST_id(I_Ey  ), w3d(:,:,:) )
+    endif
+    if ( HIST_sw(I_Ez  ) ) then
+       !$omp parallel do private(i,j,k)
+       !$acc kernels
+       !$acc loop collapse(3)
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          w3d(k,i,j) = Efield(k,i,j,I_lt_z  )*1.0E-3_RP ![kV/m]
+       enddo
+       enddo
+       enddo
+       !$acc end kernels
+       call FILE_HISTORY_put( HIST_id(I_Ez  ), w3d(:,:,:) )
+    endif
+    if ( HIST_sw(I_Eabs) ) then
+       !$omp parallel do private(i,j,k)
+       !$acc kernels
+       !$acc loop collapse(3)
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          w3d(k,i,j) = Efield(k,i,j,I_lt_abs)*1.0E-3_RP ![kV/m]
+       enddo
+       enddo
+       enddo
+       !$acc end kernels
+       call FILE_HISTORY_put( HIST_id(I_Eabs), w3d(:,:,:) )
+    endif
+    if ( HIST_sw(I_Epot) ) then
+       call FILE_HISTORY_put( HIST_id(I_Epot), Epot(:,:,:) )
+    end if
+    if ( HIST_sw(I_Qneut) ) then
+       !$omp parallel do private(i,j,k)
+       !$acc kernels
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          w3d(k,i,j) = d_QCRG_TOT(k,i,j)/dt_LT ![nC/m3/s]
+       enddo
+       enddo
+       enddo
+       !$acc end kernels
+       call FILE_HISTORY_put( HIST_id(I_Qneut), w3d(:,:,:) )
+    endif
+    if ( HIST_sw(I_LTpath)  ) then
+       !$omp parallel do private(i,j,k)
+       !$acc kernels
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          w3d(k,i,j) = LT_PATH_TOT(k,i,j,3)/dt_LT ![num/grid/s]
+       enddo
+       enddo
+       enddo
+       !$acc end kernels
+       call FILE_HISTORY_put( HIST_id(I_LTpath), w3d(:,:,:) )
+    endif
+    if ( HIST_sw(I_PosFLASH) ) then
+       !$omp parallel do private(i,j,k)
+       !$acc kernels
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          w3d(k,i,j) = LT_PATH_TOT(k,i,j,1)/dt_LT ![num/grid/s]
+       enddo
+       enddo
+       enddo
+       !$acc end kernels
+       call FILE_HISTORY_put( HIST_id(I_PosFLASH), w3d(:,:,:) )
+    endif
+    if ( HIST_sw(I_NegFLASH) ) then
+       !$omp parallel do private(i,j,k)
+       !$acc kernels
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          w3d(k,i,j) = LT_PATH_TOT(k,i,j,2)/dt_LT ![num/grid/s]
+       enddo
+       enddo
+       enddo
+       !$acc end kernels
+       call FILE_HISTORY_put( HIST_id(I_NegFLASH), w3d(:,:,:) )
+    endif
+    if ( HIST_sw(I_FlashPoint) ) then
+       !$omp parallel do private(i,j,k)
+       !$acc kernels
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          w3d(k,i,j) = fls_int_p_tot(k,i,j)/dt_LT ![num/grid/s]
+       enddo
+       enddo
+       enddo
+       !$acc end kernels
+       call FILE_HISTORY_put( HIST_id(I_FlashPoint), w3d(:,:,:) )
+    end if
+    if ( HIST_sw(I_FOD) ) then
+       !$omp parallel do private(i,j)
+       !$acc kernels
+       do j = JS, JE
+       do i = IS, IE
+          w3d(1,i,j) = B_F2013_TOT(i,j)/dt_LT ![num/grid/s]
+       enddo
+       enddo
+       !$acc end kernels
+       call FILE_HISTORY_put( HIST_id(I_FOD), w3d(1,:,:) )
+    end if
+
+    !$acc end data
+
+    return
+  end subroutine ATMOS_PHY_LT_sato2019_adjustment
+  !-----------------------------------------------------------------------------
+  !> calculate electric field from charge density of each grid
+  !> temporaly Bi-CGSTAB is used in this component
+  !-----------------------------------------------------------------------------
+  subroutine ATMOS_PHY_LT_electric_field( &
+       KA, KS, KE, & ! [IN]
+       IA, IS, IE, & ! [IN]
+       JA, JS, JE, & ! [IN]
+       QCRG,       & ! [IN]
+       DENS,       & ! [IN]
+       RHOT,       & ! [IN]
+       E_pot,      & ! [INOUT]
+       Efield      ) ! [INOUT]
+    use scale_prc, only: &
+       PRC_abort, &
+       PRC_IsMaster, &
+       PRC_myrank
+    use scale_const, only: &
+       EPS    => CONST_EPS, &
+       EPSvac => CONST_EPSvac, &
+       EPSair => CONST_EPSair
+    use scale_atmos_grid_cartesC, only: &
+       RCDZ => ATMOS_GRID_CARTESC_RCDZ, &
+       RCDX => ATMOS_GRID_CARTESC_RCDX, &
+       RCDY => ATMOS_GRID_CARTESC_RCDY, &
+       RFDZ => ATMOS_GRID_CARTESC_RFDZ, &
+       RFDX => ATMOS_GRID_CARTESC_RFDX, &
+       RFDY => ATMOS_GRID_CARTESC_RFDY
+    use scale_atmos_grid_cartesC_metric, only: &
+       MAPF  => ATMOS_GRID_CARTESC_METRIC_MAPF, &
+       GSQRT => ATMOS_GRID_CARTESC_METRIC_GSQRT, &
+       J13G  => ATMOS_GRID_CARTESC_METRIC_J13G, &
+       J23G  => ATMOS_GRID_CARTESC_METRIC_J23G, &
+       J33G  => ATMOS_GRID_CARTESC_METRIC_J33G
+    use scale_atmos_grid_cartesC_index, only: &
+       I_XYZ, &
+       I_XYW, &
+       I_UYW, &
+       I_XVW, &
+       I_UYZ, &
+       I_XVZ, &
+       I_UVZ, &
+       I_XY, &
+       I_UY, &
+       I_XV, &
+       I_UV
+    use scale_prc_cartesC, only: &
+       PRC_HAS_W, &
+       PRC_HAS_E, &
+       PRC_HAS_N, &
+       PRC_HAS_S
+    use scale_comm_cartesC, only: &
+       COMM_datatype, &
+       COMM_world, &
+       COMM_vars8, &
+       COMM_wait
+    implicit none
+
+    integer,  intent(in)  :: KA, KS, KE
+    integer,  intent(in)  :: IA, IS, IE
+    integer,  intent(in)  :: JA, JS, JE
+    real(RP), intent(in)  :: QCRG     (KA,IA,JA)      !-- Charge density [nC/m3]
+    real(RP), intent(in)  :: DENS     (KA,IA,JA)      !-- Total density [kg/m3]
+    real(RP), intent(in)  :: RHOT     (KA,IA,JA)      !-- density weighted potential temperature [K kg/m3]
+    real(RP), intent(inout) :: E_pot (KA,IA,JA)       !-- Electric potential [V]
+    real(RP), intent(inout) :: Efield(KA,IA,JA,3)     !-- Electric field [V/m]
+
+    real(RP) :: eps_air
+    !--- A x E_pott = - QCRG/epsiron
+    real(RP) :: B(KA,IA,JA)               !--- B : -QCRG*DENS/epsiron
+    real(RP) :: E_pot_N(KA,IA,JA)         !--- electrical potential calculated by Bi-CGSTAB
+
+    integer :: i, j, k, ijk, ierror
+    real(RP) :: iprod, buf
+
+    call PROF_rapstart('LT_E_field', 2)
+
+
+    !$acc data &
+    !$acc copy(E_pot,Efield) &
+    !$acc copyin(QCRG,DENS,RHOT) &
+    !$acc create(B,E_pot_N) &
+    !$acc copyin(GSQRT,MAPF,J13G,J23G,RCDX,RCDY,RFDZ)
+
+    !$omp parallel do private(i,j,k)
+    !$acc kernels
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -1154,12 +1403,24 @@ contains
     end do
     end do
     end do
-    call COMM_vars8( E_pot_N, 3 )
+    !$acc end kernels
+
+    call COMM_vars8( E_pot_N, 1 )
 
 
-    call COMM_wait ( eps_air, 1 )
-    call COMM_wait ( B,       2 )
-    call COMM_wait ( E_pot_N, 3 )
+    !$omp parallel do private(i,j,k,eps_air)
+    !$acc kernels
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       eps_air = EPSvac * EPSair   !--- temporary, dependency of epsiron on P and T will be implemented
+       B(k,i,j) = - QCRG(k,i,j)/eps_air * 1.0E-9_RP ! [nC/m3] -> [C/m3 * m/F] = [V/m2]
+    enddo
+    enddo
+    enddo
+    !$acc end kernels
+
+    call COMM_wait ( E_pot_N, 1 )
 
     !--- calcuclate counter matrix
     call ATMOS_PHY_LT_solve_bicgstab( &
@@ -1167,22 +1428,30 @@ contains
        IA, IS, IE, & ! (in)
        JA, JS, JE, & ! (in)
        E_pot,      & ! (out)
-       E_pot_n,    & ! (in)
+       E_pot_N,    & ! (in)
        A, B        ) ! (in)
 
     call COMM_vars8( E_pot, 1 )
     call COMM_wait ( E_pot, 1, .true. )
 
-    !$omp parallel do
+    !$omp parallel do private(i,j)
+    !$acc parallel vector_length(32)
+    !$acc loop collapse(2)
     do j = 1, JA
     do i = 1, IA
-       E_pot(1:KS-1,i,j) = 0.0_RP
-       E_pot(KE+1:KA,i,j) = 0.0_RP
+       do k = 1, KS-1
+          E_pot(k,i,j) = 0.0_RP
+       enddo
+       do k = KE+1, KA
+          E_pot(k,i,j) = 0.0_RP
+       enddo
     enddo
     enddo
+    !$acc end parallel
 
     !---- Calculate Electrical Field
-    !$omp parallel do
+    !$omp parallel do private(i,j,k)
+    !$acc kernels
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -1190,8 +1459,8 @@ contains
                             ( &
                             ( GSQRT(k,i+1,j,I_XYZ)*E_pot(k,i+1,j) - GSQRT(k,i-1,j,I_XYZ)*E_pot(k,i-1,j) ) &
                             * RCDX(i) * 0.5_RP &
-                            + ( J13G(k+1,i,j,I_UYW)*GSQRT(k+1,i,j,I_UYW)*E_pot(k+1,i,j) &
-                              - J13G(k-1,i,j,I_UYW)*GSQRT(k-1,i,j,I_UYW)*E_pot(k-1,i,j) &
+                            + ( J13G(k+1,i,j,I_XYZ)*GSQRT(k+1,i,j,I_XYZ)*E_pot(k+1,i,j) &
+                              - J13G(k-1,i,j,I_XYZ)*GSQRT(k-1,i,j,I_XYZ)*E_pot(k-1,i,j) &
                               ) &
                             * RFDZ(k) * 0.5_RP  &
                             )
@@ -1199,8 +1468,8 @@ contains
                             ( &
                             ( GSQRT(k,i,j+1,I_XYZ)*E_pot(k,i,j+1) - GSQRT(k,i,j-1,I_XYZ)*E_pot(k,i,j-1) ) &
                             * RCDY(j) * 0.5_RP &
-                            + ( J23G(k+1,i,j,I_UYW)*GSQRT(k+1,i,j,I_UYW)*E_pot(k+1,i,j) &
-                              - J23G(k-1,i,j,I_UYW)*GSQRT(k-1,i,j,I_UYW)*E_pot(k-1,i,j) &
+                            + ( J23G(k+1,i,j,I_XYZ)*GSQRT(k+1,i,j,I_XYZ)*E_pot(k+1,i,j) &
+                              - J23G(k-1,i,j,I_XYZ)*GSQRT(k-1,i,j,I_XYZ)*E_pot(k-1,i,j) &
                               ) &
                             * RFDZ(k) * 0.5_RP  &
                             )
@@ -1212,8 +1481,11 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
 
-    call PROF_rapend('LT_E_field', 1)
+    !$acc end data
+
+    call PROF_rapend('LT_E_field', 2)
 
     return
   end subroutine ATMOS_PHY_LT_electric_field
@@ -1250,24 +1522,44 @@ contains
     real(RP) :: Ms(KA,IA,JA)
     real(RP) :: al, be, w
 
-    real(RP), pointer :: r(:,:,:)
-    real(RP), pointer :: rn(:,:,:)
-    real(RP), pointer :: swap(:,:,:)
-    real(RP), target :: v0(KA,IA,JA)
-    real(RP), target :: v1(KA,IA,JA)
+    real(RP), pointer :: r(:,:,:), rn(:,:,:), swap(:,:,:)
+    real(RP), target :: rbuf1(KA,IA,JA)
+    real(RP), target :: rbuf2(KA,IA,JA)
+    real(RP) :: v1(KA,IA,JA)
+
     real(RP) :: r0r
     real(RP) :: norm, error, error2
 
-    real(RP) :: iprod(2)
+    real(RP) :: iprod1, iprod2
     real(RP) :: buf(2)
+
+    real(RP):: diag(KA,IA,JA)
+    real(RP):: z1(KA,IA,JA)
+    real(RP):: z2(KA,IA,JA)
+    real(RP):: Mz1(KA,IA,JA)
+    real(RP):: Mz2(KA,IA,JA)
 
     integer :: k, i, j
     integer :: iis, iie, jjs, jje
     integer :: iter
     integer :: ierror
 
-    r  => v0
-    rn => v1
+    !$acc data &
+    !$acc copyout(PHI_N) &
+    !$acc copyin(PHI,M,B) &
+    !$acc create(r0,p,Mp,s,Ms,rbuf1,rbuf2,v1,diag,z1,z2,Mz1,Mz2)
+
+    r  => rbuf1
+    rn => rbuf2
+
+    if( FLAG_preprocessing == 3 ) then
+       !$acc update host(M)
+       call ILU_decomp(KA, KS, KE, &
+                       IA, IS, IE, &
+                       JA, JS, JE, &
+                       M,  diag)
+       !$acc update device(diag)
+    endif
 
     call mul_matrix( KA, KS, KE, & ! (in)
                      IA, IS, IE, & ! (in)
@@ -1275,7 +1567,9 @@ contains
                      v1, M, PHI  ) ! v1 = M x0
 
     norm = 0.0_RP
-    !$omp parallel do reduction(+:norm)
+    !$omp parallel do reduction(+:norm) private(i, j, k)
+    !$acc kernels
+    !$acc loop collapse(3) reduction(+:norm)
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -1283,9 +1577,11 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
 
     ! r = b - M x0
-    !$omp parallel do
+    !$omp parallel do private(i, j, k)
+    !$acc kernels
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -1293,8 +1589,10 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
 
-    !$omp parallel do
+    !$omp parallel do private(i, j, k)
+    !$acc kernels
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -1303,9 +1601,12 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
 
     r0r  = 0.0_RP
-    !$omp parallel do reduction(+:r0r)
+    !$omp parallel do reduction(+:r0r) private(i, j, k)
+    !$acc kernels
+    !$acc loop collapse(3) reduction(+:r0r)
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -1313,8 +1614,10 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
 
-    !$omp parallel do
+    !$omp parallel do private(i, j, k)
+    !$acc kernels
     do j = JS-1, JE+1
     do i = IS-1, IE+1
     do k = KS, KE
@@ -1322,20 +1625,23 @@ contains
     end do
     end do
     end do
+    !$acc end kernels
 
-
-    iprod(1) = r0r
-    iprod(2) = norm
-    call MPI_AllReduce(iprod, buf, 2, COMM_datatype, MPI_SUM, COMM_world, ierror)
+    buf(1) = r0r
+    buf(2) = norm
+    call MPI_AllReduce(MPI_IN_PLACE, buf(:), 2, COMM_datatype, MPI_SUM, COMM_world, ierror)
     r0r = buf(1)
     norm = buf(2)
-
     error2 = norm
 
     do iter = 1, ITMAX
 
+       call COMM_vars8( p, 1 )
+
        error = 0.0_RP
-       !$omp parallel do reduction(+:error)
+       !$omp parallel do reduction(+:error) private(i, j, k)
+       !$acc kernels
+       !$acc loop collapse(3) reduction(+:error)
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
@@ -1343,8 +1649,11 @@ contains
        enddo
        enddo
        enddo
-       call MPI_AllReduce(error, buf, 1, COMM_datatype, MPI_SUM, COMM_world, ierror)
-       error = buf(1)
+       !$acc end kernels
+
+       call MPI_AllReduce(MPI_IN_PLACE, error, 1, COMM_datatype, MPI_SUM, COMM_world, ierror)
+
+       call COMM_wait ( p, 1 )
 
        if ( sqrt(error/norm) < epsilon ) then
          LOG_INFO("ATMOS_PHY_LT_Efield",'(a,1x,i0,1x,2e15.7)') "Bi-CGSTAB converged:", iter, sqrt(error/norm),norm
@@ -1352,108 +1661,294 @@ contains
        endif
        error2 = error
 
-       call COMM_vars8( p, 1 )
-       call COMM_wait ( p, 1 )
-       call mul_matrix( KA, KS, KE, & ! (in)
-                        IA, IS, IE, & ! (in)
-                        JA, JS, JE, & ! (in)
-                        Mp, M, p    )
+       if( FLAG_preprocessing == 0 ) then  !-- No preprocessing
 
-       iprod(1) = 0.0_RP
-       !$omp parallel do reduction(+:iprod)
-       do j = JS, JE
-       do i = IS, IE
-       do k = KS, KE
-          iprod(1) = iprod(1) + r0(k,i,j) * Mp(k,i,j)
-       enddo
-       enddo
-       enddo
-       call MPI_AllReduce(iprod, buf, 1, COMM_datatype, MPI_SUM, COMM_world, ierror)
-       if ( buf(1) == 0.0_RP ) then
-         LOG_INFO("ATMOS_PHY_LT_Efield",'(a,1x,e15.7,1x,i10)') 'Buf(1) is zero(Bi-CGSTAB) skip:', buf(1), iter
+          call mul_matrix( KA, KS, KE, & ! (in)
+                           IA, IS, IE, & ! (in)
+                           JA, JS, JE, & ! (in)
+                           Mp, M, p    )
+
+          iprod1 = 0.0_RP
+          !$omp parallel do reduction(+:iprod1) private(i, j, k)
+          !$acc kernels
+          !$acc loop collapse(3) reduction(+:iprod1)
+          do j = JS, JE
+          do i = IS, IE
+          do k = KS, KE
+             iprod1 = iprod1 + r0(k,i,j) * Mp(k,i,j)
+          enddo
+          enddo
+          enddo
+          !$acc end kernels
+
+       else   !--- Preprocessing
+
+          if( FLAG_preprocessing == 1 ) then !--- Gauss-Seidel preprocessing
+
+             call gs( KA, KS, KE, & ! (in)
+                      IA, IS, IE, & ! (in)
+                      JA, JS, JE, & ! (in)
+                      z1, M, p    )
+
+          elseif( FLAG_preprocessing == 2 ) then  !--- Synmetric Gauss-Seidel preprocessing (Default)
+
+             call sgs( KA, KS, KE, & ! (in)
+                       IA, IS, IE, & ! (in)
+                       JA, JS, JE, & ! (in)
+                       z1, M, p    )
+
+          elseif( FLAG_preprocessing == 3 ) then  !--- Incomplete Cholesky Factorization preprocessing
+
+             !$acc update host(p,diag) ! M is already updated
+             call solve_ILU( KA, KS, KE, & ! (in)
+                             IA, IS, IE, & ! (in)
+                             JA, JS, JE, & ! (in)
+                             z1, M, p, diag)
+             !$acc update device(z1)
+
+          endif
+
+          call COMM_vars8( z1, 1 )
+
+          call mul_matrix( KA, KS, KE, & ! (in)
+                           IA, IS, IE, & ! (in)
+                           JA, JS, JE, & ! (in)
+                           Mp, M, p    )
+
+          call COMM_wait ( z1, 1 )
+
+          call mul_matrix( KA, KS, KE, & ! (in)
+                           IA, IS, IE, & ! (in)
+                           JA, JS, JE, & ! (in)
+                           Mz1, M, z1    )
+
+          iprod1 = 0.0_RP
+          !$omp parallel do reduction(+:iprod1)  private(i, j, k)
+          !$acc kernels
+          !$acc loop collapse(3) reduction(+:iprod1)
+          do j = JS, JE
+          do i = IS, IE
+          do k = KS, KE
+             iprod1 = iprod1 + r0(k,i,j) * Mz1(k,i,j)
+          enddo
+          enddo
+          enddo
+          !$acc end kernels
+
+       endif
+
+       call MPI_AllReduce(MPI_IN_PLACE, iprod1, 1, COMM_datatype, MPI_SUM, COMM_world, ierror)
+
+       if ( iprod1 == 0.0_RP ) then
+         LOG_INFO("ATMOS_PHY_LT_Efield",'(a,1x,e15.7,1x,i10)') 'Iprod1 is zero(Bi-CGSTAB) skip:', iprod1, iter
          exit
        endif
-       al = r0r / buf(1) ! (r0,r) / (r0,Mp)
+       al = r0r / iprod1 ! (r0,r) / (r0,Mp)
 
-       !$omp parallel do
-       do j = JS, JE
-       do i = IS, IE
-       do k = KS, KE
-          s(k,i,j) = r(k,i,j) - al*Mp(k,i,j)
-       enddo
-       enddo
-       enddo
+       if( FLAG_preprocessing == 0 ) then  !-- No preprocessing
+          !$omp parallel do
+          !$acc kernels
+          do j = JS, JE
+          do i = IS, IE
+          do k = KS, KE
+             s(k,i,j) = r(k,i,j) - al*Mp(k,i,j)
+          enddo
+          enddo
+          enddo
+          !$acc end kernels
+       else  ! Preprocessing
+          !$omp parallel do private(i, j, k)
+          !$acc kernels
+          do j = JS, JE
+          do i = IS, IE
+          do k = KS, KE
+             s(k,i,j) = r(k,i,j) - al*Mz1(k,i,j)
+          enddo
+          enddo
+          enddo
+          !$acc end kernels
+       endif
 
        call COMM_vars8( s, 1 )
        call COMM_wait ( s, 1 )
-       call mul_matrix( KA, KS, KE, & ! (in)
-                        IA, IS, IE, & ! (in)
-                        JA, JS, JE, & ! (in)
-                        Ms, M, s )
-       iprod(1) = 0.0_RP
-       iprod(2) = 0.0_RP
-       !$omp parallel do reduction(+:iprod)
-       do j = JS, JE
-       do i = IS, IE
-       do k = KS, KE
-          iprod(1) = iprod(1) + Ms(k,i,j) *  s(k,i,j)
-          iprod(2) = iprod(2) + Ms(k,i,j) * Ms(k,i,j)
-       enddo
-       enddo
-       enddo
-       call MPI_AllReduce(iprod, buf, 2, COMM_datatype, MPI_SUM, COMM_world, ierror)
+       if( FLAG_preprocessing == 0 ) then  !--- No Preprocessing
+
+          call mul_matrix( KA, KS, KE, & ! (in)
+                           IA, IS, IE, & ! (in)
+                           JA, JS, JE, & ! (in)
+                           Ms, M,  s   )
+
+          iprod1 = 0.0_RP
+          iprod2 = 0.0_RP
+          !$omp parallel do reduction(+:iprod1,iprod2)
+          !$acc kernels
+          !$acc loop collapse(3) reduction(+:iprod1,iprod2)
+          do j = JS, JE
+          do i = IS, IE
+          do k = KS, KE
+             iprod1 = iprod1 + Ms(k,i,j) *  s(k,i,j)
+             iprod2 = iprod2 + Ms(k,i,j) * Ms(k,i,j)
+          enddo
+          enddo
+          enddo
+          !$acc end kernels
+
+       else  !--- Preprocessing
+
+          if( FLAG_preprocessing == 1 ) then   !--- Gauss-Seidel preprocessing
+
+             call gs( KA, KS, KE, & ! (in)
+                      IA, IS, IE, & ! (in)
+                      JA, JS, JE, & ! (in)
+                      z2, M, s    )
+
+          elseif( FLAG_preprocessing == 2 ) then  !--- Synmetric Gauss-Seidel preprocessing (Default)
+
+             call sgs( KA, IS, KE, & ! (in)
+                       IA, IS, IE, & ! (in)
+                       JA, JS, JE, & ! (in)
+                       z2, M, s    )
+
+          elseif( FLAG_preprocessing == 3 ) then  !--- Incomplete Cholesky Factorization preprocessing
+
+             !$acc update host(s,diag) ! M is already updated
+             call solve_ILU( KA, KS, KE, & ! (in)
+                             IA, IS, IE, & ! (in)
+                             JA, JS, JE, & ! (in)
+                             z2, M, s, diag)
+             !$acc update device(z2)
+          endif
+
+          call COMM_vars8( z2, 1 )
+          call COMM_wait ( z2, 1 )
+          call mul_matrix( KA, KS, KE, & ! (in)
+                           IA, IS, IE, & ! (in)
+                           JA, JS, JE, & ! (in)
+                           Mz2, M, z2 )
+
+          iprod1 = 0.0_RP
+          iprod2 = 0.0_RP
+          !$omp parallel do reduction(+:iprod1,iprod2) private(i, j, k)
+          !$acc kernels
+          !$acc loop collapse(3) reduction(+:iprod1,iprod2)
+          do j = JS, JE
+          do i = IS, IE
+          do k = KS, KE
+             iprod1 = iprod1 + Mz2(k,i,j) *  s(k,i,j)
+             iprod2 = iprod2 + Mz2(k,i,j) * Mz2(k,i,j)
+          enddo
+          enddo
+          enddo
+          !$acc end kernels
+
+       endif
+
+       buf(1) = iprod1
+       buf(2) = iprod2
+       call MPI_AllReduce(MPI_IN_PLACE, buf(:), 2, COMM_datatype, MPI_SUM, COMM_world, ierror)
+
        if ( buf(2) == 0.0_RP ) then
          LOG_INFO("ATMOS_PHY_LT_Efield",'(a,1x,e15.7,1x,i10)') 'Buf(2) is zero(Bi-CGSTAB) skip:', buf(2), iter
          exit
        endif
        w = buf(1) / buf(2) ! (Ms,s) / (Ms,Ms)
 
-       !$omp parallel do
-       do j = JS, JE
-       do i = IS, IE
-       do k = KS, KE
-          PHI_N(k,i,j) = PHI_N(k,i,j) + al*p(k,i,j) + w*s(k,i,j)
-       enddo
-       enddo
-       enddo
+       if( FLAG_preprocessing == 0 ) then !--- No preprocessing
 
-       !$omp parallel do
-       do j = JS, JE
-       do i = IS, IE
-       do k = KS, KE
-          rn(k,i,j) = s(k,i,j) - w*Ms(k,i,j)
-       enddo
-       enddo
-       enddo
+          !$omp parallel do private(i, j, k)
+          !$acc kernels
+          do j = JS, JE
+          do i = IS, IE
+          do k = KS, KE
+             PHI_N(k,i,j) = PHI_N(k,i,j) + al*p(k,i,j) + w*s(k,i,j)
+          enddo
+          enddo
+          enddo
+          !$acc end kernels
 
-       iprod(1) = 0.0_RP
-       !$omp parallel do reduction(+:iprod)
+          !$omp parallel do private(i, j, k)
+          !$acc kernels
+          do j = JS, JE
+          do i = IS, IE
+          do k = KS, KE
+             rn(k,i,j) = s(k,i,j) - w*Ms(k,i,j)
+          enddo
+          enddo
+          enddo
+          !$acc end kernels
+
+       else
+
+          !$omp parallel do private(i, j, k)
+          !$acc kernels
+          do j = JS, JE
+          do i = IS, IE
+          do k = KS, KE
+             PHI_N(k,i,j) = PHI_N(k,i,j) + al*z1(k,i,j) + w*z2(k,i,j)
+          enddo
+          enddo
+          enddo
+          !$acc end kernels
+
+          !$omp parallel do private(i, j, k)
+          !$acc kernels
+          do j = JS, JE
+          do i = IS, IE
+          do k = KS, KE
+             rn(k,i,j) = s(k,i,j) - w*Mz2(k,i,j)
+          enddo
+          enddo
+          enddo
+          !$acc end kernels
+
+       endif
+
+       iprod1 = 0.0_RP
+       !$omp parallel do reduction(+:iprod1) private(i, j, k)
+       !$acc kernels
+       !$acc loop collapse(3) reduction(+:iprod1)
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
-          iprod(1) = iprod(1) + r0(k,i,j) * rn(k,i,j)
+          iprod1 = iprod1 + r0(k,i,j) * rn(k,i,j)
        enddo
        enddo
        enddo
+       !$acc end kernels
 
        be = al/w / r0r
 
-       call MPI_AllReduce(iprod, r0r, 1, COMM_datatype, MPI_SUM, COMM_world, ierror)
+       call MPI_AllReduce(iprod1, r0r, 1, COMM_datatype, MPI_SUM, COMM_world, ierror)
 
        be = be * r0r ! al/w * (r0,rn)/(r0,r)
 
-       !$omp parallel do
-       do j = JS, JE
-       do i = IS, IE
-       do k = KS, KE
-          p(k,i,j) = rn(k,i,j) + be * ( p(k,i,j) - w*Mp(k,i,j) )
-       enddo
-       enddo
-       enddo
+       if( FLAG_preprocessing == 0 ) then !--- No preprocessing
+          !$omp parallel do private(i, j, k)
+          !$acc kernels
+          do j = JS, JE
+          do i = IS, IE
+          do k = KS, KE
+             p(k,i,j) = rn(k,i,j) + be * ( p(k,i,j) - w*Mp(k,i,j) )
+          enddo
+          enddo
+          enddo
+          !$acc end kernels
+       else
+          !$omp parallel do private(i, j, k)
+          !$acc kernels
+          do j = JS, JE
+          do i = IS, IE
+          do k = KS, KE
+             p(k,i,j) = rn(k,i,j) + be * ( p(k,i,j) - w*Mz1(k,i,j) )
+          enddo
+          enddo
+          enddo
+          !$acc end kernels
+       endif
 
        swap => rn
-       rn => r
-       r => swap
+       rn   => r
+       r    => swap
 
        if ( r0r == 0.0_RP ) then
          LOG_INFO("ATMOS_PHY_LT_Efield",'(a,1x,i0,1x,3e15.7)') "Inner product of r0 and r_itr is zero(Bi-CGSTAB) :", &
@@ -1475,8 +1970,677 @@ contains
        endif
     endif
 
+    !$acc end data
     return
   end subroutine ATMOS_PHY_LT_solve_bicgstab
+
+  !----- N. Yamashita and T. Iwashita of Hokkaido Univ. created (2021/2/22)-----
+  subroutine ILU_decomp(KA, KS, KE, &
+                        IA, IS, IE, &
+                        JA, JS, JE, &
+                        M,  diag)
+    implicit none
+    integer,  intent(in)  :: KA, KS, KE
+    integer,  intent(in)  :: IA, IS, IE
+    integer,  intent(in)  :: JA, JS, JE
+    real(RP), intent(in)  :: M(KA,15,IA,JA)
+    real(RP), intent(out) :: diag(KA,IA,JA)
+
+    integer :: k, i, j
+
+    !$omp parallel do private(i, j, k)
+    do j=JS,JE
+    do i=IS,IE
+    do k=KS,KE
+       diag(k,i,j)=M(k,1,i,j)
+    enddo
+    enddo
+    enddo
+
+    !$omp parallel do private(i, j, k)
+    do j=JS,JE
+    do i=IS,IE
+    do k=KS,KE
+       if(k /= KE) then
+          diag(k+1,i,j) = diag(k+1,i,j) + M(k,3,i,j)*M(k+1,2,i,j)/diag(k,i,j)
+          if(i /= IE) then
+             diag(k+1,i+1,j) = diag(k+1,i+1,j) + M(k,13,i,j)*M(k+1,8,i+1,j)/diag(k,i,j)
+          endif
+          if(j /= JE) then
+             diag(k+1,i,j+1) = diag(k+1,i,j+1) + M(k,15,i,j)*M(k+1,10,i,j+1)/diag(k,i,j)
+          endif
+       endif
+       if(i /= IE) then
+          diag(k,i+1,j) = diag(k,i+1,j) +M(k,5,i,j)*M(k,4,i+1,j)/diag(k,i,j)
+          if(k /= KS) then
+             diag(k-1,i+1,j) = diag(k-1,i+1,j) + M(k,9,i,j)*M(k-1,12,i+1,j)/diag(k,i,j)
+          endif
+       endif
+       if(j /= JE) then
+          diag(k,i,j+1)=diag(k,i,j+1) + M(k,7,i,j)*M(k,6,i,j+1)/diag(k,i,j)
+          if(k /= KS) then
+             diag(k-1,i,j+1) = diag(k-1,i,j+1) + M(k,11,i,j)*M(k-1,14,i,j+1)/diag(k,i,j)
+          endif
+       endif
+    enddo
+    enddo
+    enddo
+
+    return
+  end subroutine ILU_decomp
+
+  !----- N. Yamashita and T. Iwashita of Hokkaido Univ. created (2021/2/22)-----
+  subroutine solve_ILU( KA,KS,KE, &
+                        IA,IS,IE, &
+                        JA,JS,JE, &
+                        Z, M, V, diag)
+    use scale_prc, only: &
+       PRC_abort, &
+       PRC_IsMaster
+    implicit none
+    integer,  intent(in)  :: KA, KS, KE
+    integer,  intent(in)  :: IA, IS, IE
+    integer,  intent(in)  :: JA, JS, JE
+    real(RP), intent(in)  :: M(KA,15,IA,JA)
+    real(RP), intent(in)  :: diag(KA,IA,JA)
+    real(RP), intent(in)  :: V(KA,IA,JA)
+    real(RP), intent(out) :: Z(KA,IA,JA)
+
+    real(RP):: Y(KA,IA,JA)
+    integer :: k,i,j
+
+    call gs_ILU(KA, KS, KE, &
+                IA, IS, IE, &
+                JA, JS, JE, &
+                Y,  M,  V,  diag)
+
+    !$omp parallel do
+    do j=JS,JE
+    do i=IS,IE
+    do k=KS,KE
+      Y(k,i,j)=diag(k,i,j)*Y(k,i,j)
+    enddo
+    enddo
+    enddo
+
+    call back_sub_ILU(KA, KS, KE, &
+                      IA, IS, IE, &
+                      JA, JS, JE, &
+                      Z,  M,  Y, diag)
+
+    return
+
+  end subroutine solve_ILU
+
+  !----- N. Yamashita and T. Iwashita of Hokkaido Univ. created (2021/2/22)-----
+  subroutine back_sub_ILU( KA, KS, KE, &
+                           IA, IS, IE, &
+                           JA, JS, JE, &
+                           Z,  M,  V,diag)
+    use scale_prc, only: &
+       PRC_abort, &
+       PRC_IsMaster
+   implicit none
+   integer,  intent(in)  :: KA, KS, KE
+   integer,  intent(in)  :: IA, IS, IE
+   integer,  intent(in)  :: JA, JS, JE
+   real(RP), intent(in)  :: V(KA,IA,JA)
+   real(RP), intent(in)  :: M(KA,15,IA,JA)
+   real(RP), intent(in)  :: diag(KA,IA,JA)
+   real(RP), intent(out) :: Z(KA,IA,JA)
+
+   integer :: k, i, j
+
+   Z(:,:,:)=0.0_RP
+
+   do j = JE, JS,-1
+   do i = IE, IS,-1
+
+         Z(KE,i,j) = ( V(KE,i,j) &
+         -( M(KE,2,i,j) * Z(KE-1,i  ,j  ) &
+          + M(KE,4,i,j) * Z(KE  ,i-1,j  ) &
+          + M(KE,5,i,j) * Z(KE  ,i+1,j  ) &
+          + M(KE,6,i,j) * Z(KE  ,i  ,j-1) &
+          + M(KE,7,i,j) * Z(KE  ,i  ,j+1) &
+          + M(KE,8,i,j) * Z(KE-1,i-1,j  ) &
+          + M(KE,9,i,j) * Z(KE-1,i+1,j  ) &
+          + M(KE,10,i,j)* Z(KE-1,i  ,j-1) &
+          + M(KE,11,i,j)* Z(KE-1,i  ,j+1) ) )/diag(KE,i,j)
+
+         do k = KE-1, KS+1,-1
+            Z(k,i,j) = (V(k,i,j) &
+            -( M(k,2,i,j) * Z(k-1,i  ,j  ) &
+             + M(k,3,i,j) * Z(k+1,i  ,j  ) &
+             + M(k,4,i,j) * Z(k  ,i-1,j  ) &
+             + M(k,5,i,j) * Z(k  ,i+1,j  ) &
+             + M(k,6,i,j) * Z(k  ,i  ,j-1) &
+             + M(k,7,i,j) * Z(k  ,i  ,j+1) &
+             + M(k,8,i,j) * Z(k-1,i-1,j  ) &
+             + M(k,9,i,j) * Z(k-1,i+1,j  ) &
+             + M(k,10,i,j)* Z(k-1,i  ,j-1) &
+             + M(k,11,i,j)* Z(k-1,i  ,j+1) &
+             + M(k,12,i,j)* Z(k+1,i-1,j  ) &
+             + M(k,13,i,j)* Z(k+1,i+1,j  ) &
+             + M(k,14,i,j)* Z(k+1,i  ,j-1) &
+             + M(k,15,i,j)* Z(k+1,i  ,j+1) ) )/diag(k,i,j)
+         enddo
+
+         Z(KS,i,j) = (V(KS,i,j) &
+         -( M(KS,3,i,j) * Z(KS+1,i  ,j  ) &
+          + M(KS,4,i,j) * Z(KS  ,i-1,j  ) &
+          + M(KS,5,i,j) * Z(KS  ,i+1,j  ) &
+          + M(KS,6,i,j) * Z(KS  ,i  ,j-1) &
+          + M(KS,7,i,j) * Z(KS  ,i  ,j+1) &
+          + M(KS,12,i,j)* Z(KS+1,i-1,j  ) &
+          + M(KS,13,i,j)* Z(KS+1,i+1,j  ) &
+          + M(KS,14,i,j)* Z(KS+1,i  ,j-1) &
+          + M(KS,15,i,j)* Z(KS+1,i  ,j+1) ) ) /diag(KS,i,j)
+
+   enddo
+   enddo
+
+   return
+  end subroutine back_sub_ILU
+
+  !----- N. Yamashita and T. Iwashita of Hokkaido Univ. created (2021/2/22)-----
+  subroutine gs_ILU( KA, KS, KE, &
+                     IA, IS, IE, &
+                     JA, JS, JE, &
+                     Z,  M,  V , diag) !M*Z=V -> Z=M^{-1} V
+
+   implicit none
+   integer,  intent(in)  :: KA, KS, KE
+   integer,  intent(in)  :: IA, IS, IE
+   integer,  intent(in)  :: JA, JS, JE
+   real(RP), intent(in)  :: V(KA,IA,JA)
+   real(RP), intent(in)  :: M(KA,15,IA,JA)
+   real(RP), intent(in)  :: diag(KA,IA,JA)
+   real(RP), intent(out) :: Z(KA,IA,JA)
+
+   integer :: k, i, j
+
+   Z(:,:,:)=0.0_RP
+
+   do j = JS, JE
+   do i = IS, IE
+
+         Z(KS,i,j) = (V(KS,i,j) &
+         -( M(KS,3,i,j) * Z(KS+1,i  ,j  ) &
+          + M(KS,4,i,j) * Z(KS  ,i-1,j  ) &
+          + M(KS,5,i,j) * Z(KS  ,i+1,j  ) &
+          + M(KS,6,i,j) * Z(KS  ,i  ,j-1) &
+          + M(KS,7,i,j) * Z(KS  ,i  ,j+1) &
+          + M(KS,12,i,j)* Z(KS+1,i-1,j  ) &
+          + M(KS,13,i,j)* Z(KS+1,i+1,j  ) &
+          + M(KS,14,i,j)* Z(KS+1,i  ,j-1) &
+          + M(KS,15,i,j)* Z(KS+1,i  ,j+1) ) ) /diag(KS,i,j)
+
+         do k = KS+1, KE-1
+            Z(k,i,j) = (V(k,i,j) &
+            -( M(k,2,i,j) * Z(k-1,i  ,j  ) &
+             + M(k,3,i,j) * Z(k+1,i  ,j  ) &
+             + M(k,4,i,j) * Z(k  ,i-1,j  ) &
+             + M(k,5,i,j) * Z(k  ,i+1,j  ) &
+             + M(k,6,i,j) * Z(k  ,i  ,j-1) &
+             + M(k,7,i,j) * Z(k  ,i  ,j+1) &
+             + M(k,8,i,j) * Z(k-1,i-1,j  ) &
+             + M(k,9,i,j) * Z(k-1,i+1,j  ) &
+             + M(k,10,i,j)* Z(k-1,i  ,j-1) &
+             + M(k,11,i,j)* Z(k-1,i  ,j+1) &
+             + M(k,12,i,j)* Z(k+1,i-1,j  ) &
+             + M(k,13,i,j)* Z(k+1,i+1,j  ) &
+             + M(k,14,i,j)* Z(k+1,i  ,j-1) &
+             + M(k,15,i,j)* Z(k+1,i  ,j+1) ) )/diag(k,i,j)
+         enddo
+
+         Z(KE,i,j) = ( V(KE,i,j) &
+         -( M(KE,2,i,j) * Z(KE-1,i  ,j  ) &
+          + M(KE,4,i,j) * Z(KE  ,i-1,j  ) &
+          + M(KE,5,i,j) * Z(KE  ,i+1,j  ) &
+          + M(KE,6,i,j) * Z(KE  ,i  ,j-1) &
+          + M(KE,7,i,j) * Z(KE  ,i  ,j+1) &
+          + M(KE,8,i,j) * Z(KE-1,i-1,j  ) &
+          + M(KE,9,i,j) * Z(KE-1,i+1,j  ) &
+          + M(KE,10,i,j)* Z(KE-1,i  ,j-1) &
+          + M(KE,11,i,j)* Z(KE-1,i  ,j+1) ) )/diag(KE,i,j)
+
+   enddo
+   enddo
+
+   return
+  end subroutine gs_ILU
+
+  !----- N. Yamashita and T. Iwashita of Hokkaido Univ. created (2021/2/22)-----
+  subroutine sgs( KA, KS, KE, &
+                  IA, IS, IE, &
+                  JA, JS, JE, &
+                  Z,  M,  V)
+    implicit none
+    integer,  intent(in)  :: KA, KS, KE
+    integer,  intent(in)  :: IA, IS, IE
+    integer,  intent(in)  :: JA, JS, JE
+    real(RP), intent(in)  :: M(KA,15,IA,JA)
+    real(RP), intent(in)  :: V(KA,IA,JA)
+    real(RP), intent(out) :: Z(KA,IA,JA)
+    real(RP):: Y(KA,IA,JA)
+    integer :: k,i,j
+
+    !$acc data copyin(M,V) copyout(Z) create(Y)
+
+    call gs( KA, KS, KE, &
+             IA, IS, IE, &
+             JA, JS, JE, &
+             Y,  M,  V )
+
+    !$omp parallel do private(i, j, k)
+    !$acc kernels
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+            Y(k,i,j)=M(k,1,i,j)*Y(k,i,j)
+    enddo
+    enddo
+    enddo
+    !$acc end kernels
+
+    call back_sub(KA, KS, KE, &
+                  IA, IS, IE, &
+                  JA, JS, JE, &
+                  Z,  M,  Y )
+
+    !$acc end data
+
+    return
+  end subroutine sgs
+
+  !----- N. Yamashita and T. Iwashita of Hokkaido Univ. created (2021/2/22)-----
+  subroutine back_sub ( KA, KS, KE, &
+                        IA, IS, IE, &
+                        JA, JS, JE, &
+                        Z,  M,  V   )
+   implicit none
+   integer,  intent(in)  :: KA, KS, KE
+   integer,  intent(in)  :: IA, IS, IE
+   integer,  intent(in)  :: JA, JS, JE
+   real(RP), intent(in)  :: V(KA,IA,JA)
+   real(RP), intent(in)  :: M(KA,15,IA,JA)
+   real(RP), intent(out) :: Z(KA,IA,JA)
+   integer :: k, i, j
+
+   !$acc data copyin(V,M) copyout(Z)
+
+!$acc kernels
+z(:,:,:)=1d30
+!$acc end kernels
+
+   !$omp parallel
+   !$omp do
+   !$acc parallel vector_length(32)
+   do i = IS, IE
+   do k = KS, KE
+      Z(k,i,JS-1) = 0.0_RP
+      Z(k,i,JE+1) = 0.0_RP
+   end do
+   end do
+   !$acc end parallel
+   !$omp do
+   !$acc parallel vector_length(32)
+   do j = JS, JE
+   do k = KS, KE
+      Z(k,IS-1,j) = 0.0_RP
+      Z(k,IE+1,j) = 0.0_RP
+   end do
+   end do
+   !$acc end parallel
+   !$omp end parallel
+
+
+#if COLORING == 2
+   !$omp parallel do collapse(2)
+!   !$acc parallel vector_length(32)
+   !$acc parallel vector_length(1)
+   !$acc loop collapse(2)
+   do j = JE, JS, -1
+   do i = IE, IS, -1
+      if ( mod((IE-i)+(JE-j),2)==0 ) then
+
+      Z(KE,i,j) = ( V(KE,i,j)             )/M(KE,1,i,j)
+
+      do k = KE-1, KS, -1
+         Z(k,i,j) = (V(k,i,j) &
+         -( M(k,3,i,j) * Z(k+1,i  ,j  ) ) )/M(k,1,i,j)
+      enddo
+
+      end if
+
+#elif COLORING == 1
+   !$omp parallel do
+   !$acc parallel vector_length(1)
+   do j = JE, JS, -2
+   !$acc loop seq
+   do i = IE, IS, -1
+
+      Z(KE,i,j) = ( V(KE,i,j) &
+      -( M(KE,5,i,j) * Z(KE  ,i+1,j  ) ) )/M(KE,1,i,j)
+
+      do k = KE-1, KS, -1
+         Z(k,i,j) = (V(k,i,j) &
+         -( M(k,3,i,j) * Z(k+1,i  ,j  ) &
+          + M(k,5,i,j) * Z(k  ,i+1,j  ) &
+          + M(k,13,i,j)* Z(k+1,i+1,j  ) ) )/M(k,1,i,j)
+      enddo
+#else
+   !$acc parallel
+   !$acc loop seq
+   do j = JE, JS, -1
+   !$acc loop seq
+   do i = IE, IS, -1
+
+      Z(KE,i,j) = ( V(KE,i,j) &
+      -( M(KE,5,i,j) * Z(KE  ,i+1,j  ) &
+       + M(KE,7,i,j) * Z(KE  ,i  ,j+1) ) )/M(KE,1,i,j)
+
+      do k = KE-1, KS, -1
+         Z(k,i,j) = (V(k,i,j) &
+         -( M(k,3,i,j) * Z(k+1,i  ,j  ) &
+          + M(k,5,i,j) * Z(k  ,i+1,j  ) &
+          + M(k,7,i,j) * Z(k  ,i  ,j+1) &
+          + M(k,13,i,j)* Z(k+1,i+1,j  ) &
+          + M(k,15,i,j)* Z(k+1,i  ,j+1) ) )/M(k,1,i,j)
+      enddo
+#endif
+   end do
+   end do
+   !$acc end parallel
+
+#if COLORING > 0
+#if COLORING == 2
+   !$omp parallel do collapse(2)
+!   !$acc parallel vector_length(32)
+   !$acc parallel vector_length(1)
+   !$acc loop collapse(2)
+   do j = JE, JS, -1
+   do i = IE, IS, -1
+      if ( mod((IE-i)+(JE-j),2)==1 ) then
+
+      Z(KE,i,j) = ( V(KE,i,j) &
+      -( M(KE,4,i,j) * Z(KE  ,i-1,j  ) &
+       + M(KE,5,i,j) * Z(KE  ,i+1,j  ) &
+       + M(KE,6,i,j) * Z(KE  ,i  ,j-1) &
+       + M(KE,7,i,j) * Z(KE  ,i  ,j+1) &
+       + M(KE,8,i,j) * Z(KE-1,i-1,j  ) &
+       + M(KE,9,i,j) * Z(KE-1,i+1,j  ) &
+       + M(KE,10,i,j)* Z(KE-1,i  ,j-1) &
+       + M(KE,11,i,j)* Z(KE-1,i  ,j+1) ) )/M(KE,1,i,j)
+
+      do k = KE-1, KS+1,-1
+         Z(k,i,j) = (V(k,i,j) &
+         -( M(k,3,i,j) * Z(k+1,i  ,j  ) &
+          + M(k,4,i,j) * Z(k  ,i-1,j  ) &
+          + M(k,5,i,j) * Z(k  ,i+1,j  ) &
+          + M(k,6,i,j) * Z(k  ,i  ,j-1) &
+          + M(k,7,i,j) * Z(k  ,i  ,j+1) &
+          + M(k,8,i,j) * Z(k-1,i-1,j  ) &
+          + M(k,9,i,j) * Z(k-1,i+1,j  ) &
+          + M(k,10,i,j)* Z(k-1,i  ,j-1) &
+          + M(k,11,i,j)* Z(k-1,i  ,j+1) &
+          + M(k,12,i,j)* Z(k+1,i-1,j  ) &
+          + M(k,13,i,j)* Z(k+1,i+1,j  ) &
+          + M(k,14,i,j)* Z(k+1,i  ,j-1) &
+          + M(k,15,i,j)* Z(k+1,i  ,j+1) ) )/M(k,1,i,j)
+      enddo
+
+      Z(KS,i,j) = (V(KS,i,j) &
+      -( M(KS,3,i,j) * Z(KS+1,i  ,j  ) &
+       + M(KS,4,i,j) * Z(KS  ,i-1,j  ) &
+       + M(KS,5,i,j) * Z(KS  ,i+1,j  ) &
+       + M(KS,6,i,j) * Z(KS  ,i  ,j-1) &
+       + M(KS,7,i,j) * Z(KS  ,i  ,j+1) &
+       + M(KS,12,i,j)* Z(KS+1,i-1,j  ) &
+       + M(KS,13,i,j)* Z(KS+1,i+1,j  ) &
+       + M(KS,14,i,j)* Z(KS+1,i  ,j-1) &
+       + M(KS,15,i,j)* Z(KS+1,i  ,j+1) ) ) /M(KS,1,i,j)
+
+      end if
+#elif COLORING == 1
+   !$omp parallel do
+   !$acc parallel vector_length(1)
+   do j = JE-1, JS, -2
+   !$acc loop seq
+   do i = IE, IS, -1
+      Z(KE,i,j) = ( V(KE,i,j) &
+      -( M(KE,5,i,j) * Z(KE  ,i+1,j  ) &
+       + M(KE,6,i,j) * Z(KE  ,i  ,j-1) &
+       + M(KE,7,i,j) * Z(KE  ,i  ,j+1) &
+       + M(KE,9,i,j) * Z(KE-1,i+1,j  ) &
+       + M(KE,10,i,j)* Z(KE-1,i  ,j-1) &
+       + M(KE,11,i,j)* Z(KE-1,i  ,j+1) ) )/M(KE,1,i,j)
+
+      do k = KE-1, KS+1,-1
+         Z(k,i,j) = (V(k,i,j) &
+         -( M(k,3,i,j) * Z(k+1,i  ,j  ) &
+          + M(k,5,i,j) * Z(k  ,i+1,j  ) &
+          + M(k,6,i,j) * Z(k  ,i  ,j-1) &
+          + M(k,7,i,j) * Z(k  ,i  ,j+1) &
+          + M(k,9,i,j) * Z(k-1,i+1,j  ) &
+          + M(k,10,i,j)* Z(k-1,i  ,j-1) &
+          + M(k,11,i,j)* Z(k-1,i  ,j+1) &
+          + M(k,13,i,j)* Z(k+1,i+1,j  ) &
+          + M(k,14,i,j)* Z(k+1,i  ,j-1) &
+          + M(k,15,i,j)* Z(k+1,i  ,j+1) ) )/M(k,1,i,j)
+      enddo
+
+      Z(KS,i,j) = (V(KS,i,j) &
+      -( M(KS,3,i,j) * Z(KS+1,i  ,j  ) &
+       + M(KS,5,i,j) * Z(KS  ,i+1,j  ) &
+       + M(KS,6,i,j) * Z(KS  ,i  ,j-1) &
+       + M(KS,7,i,j) * Z(KS  ,i  ,j+1) &
+       + M(KS,13,i,j)* Z(KS+1,i+1,j  ) &
+       + M(KS,14,i,j)* Z(KS+1,i  ,j-1) &
+       + M(KS,15,i,j)* Z(KS+1,i  ,j+1) ) ) /M(KS,1,i,j)
+#endif
+   end do
+   end do
+   !$acc end parallel
+#endif
+
+   !$acc end data
+
+   return
+  end subroutine back_sub
+
+  !----- N. Yamashita and T. Iwashita of Hokkaido Univ. created (2021/2/22)-----
+  subroutine gs ( KA, KS, KE, &
+                  IA, IS, IE, &
+                  JA, JS, JE, &
+                  Z,  M,  V   )
+   implicit none
+   integer,  intent(in)  :: KA, KS, KE
+   integer,  intent(in)  :: IA, IS, IE
+   integer,  intent(in)  :: JA, JS, JE
+   real(RP), intent(in)  :: V(KA,IA,JA)
+   real(RP), intent(in)  :: M(KA,15,IA,JA)
+   real(RP), intent(out) :: Z(KA,IA,JA)
+
+   integer :: k, i, j, n
+
+   !$acc data copyin(V,M) copyout(Z)
+
+   !$omp parallel
+   !$omp do
+   !$acc parallel vector_length(32)
+   do i = IS, IE
+   do k = KS, KE
+      Z(k,i,JS-1) = 0.0_RP
+      Z(k,i,JE+1) = 0.0_RP
+   end do
+   end do
+   !$acc end parallel
+   !$omp do
+   !$acc parallel vector_length(32)
+   do j = JS, JE
+   do k = KS, KE
+      Z(k,IS-1,j) = 0.0_RP
+      Z(k,IE+1,j) = 0.0_RP
+   end do
+   end do
+   !$acc end parallel
+   !$omp end parallel
+
+
+#if COLORING == 2
+   !$omp parallel do collapse(2)
+!   !$acc parallel vector_length(32)
+   !$acc parallel vector_length(1)
+   !$acc loop collapse(2)
+   do j = JS, JE
+   do i = IS, IE
+      if ( mod((i-IS)+(j-JS),2)==0 ) then
+
+      Z(KS,i,j) = (V(KS,i,j)  ) /M(KS,1,i,j)
+
+      do k = KS+1, KE
+         Z(k,i,j) = (V(k,i,j) &
+         -( M(k,2,i,j) * Z(k-1,i  ,j  ) ) )/M(k,1,i,j)
+      enddo
+
+      end if
+
+#elif COLORING == 1
+   !$omp parallel do
+   !$acc parallel vector_length(1)
+   do j = JS, JE, 2
+   !$acc loop seq
+   do i = IS, IE
+
+      Z(KS,i,j) = (V(KS,i,j) &
+      -( M(KS,4,i,j) * Z(KS  ,i-1,j  ) ) ) /M(KS,1,i,j)
+
+      do k = KS+1, KE
+         Z(k,i,j) = (V(k,i,j) &
+         -( M(k,2,i,j) * Z(k-1,i  ,j  ) &
+          + M(k,4,i,j) * Z(k  ,i-1,j  ) &
+          + M(k,8,i,j) * Z(k-1,i-1,j  ) ) )/M(k,1,i,j)
+      enddo
+#else
+   !$acc parallel
+   !$acc loop seq
+   do j = JS, JE
+   !$acc loop seq
+   do i = IS, IE
+
+      Z(KS,i,j) = (V(KS,i,j) &
+      -( M(KS,4,i,j) * Z(KS  ,i-1,j  ) &
+       + M(KS,6,i,j) * Z(KS  ,i  ,j-1) ) ) /M(KS,1,i,j)
+
+      do k = KS+1, KE
+         Z(k,i,j) = (V(k,i,j) &
+         -( M(k,2,i,j) * Z(k-1,i  ,j  ) &
+          + M(k,4,i,j) * Z(k  ,i-1,j  ) &
+          + M(k,6,i,j) * Z(k  ,i  ,j-1) &
+          + M(k,8,i,j) * Z(k-1,i-1,j  ) &
+          + M(k,10,i,j)* Z(k-1,i  ,j-1) ) )/M(k,1,i,j)
+      enddo
+#endif
+   end do
+   end do
+   !$acc end parallel
+
+#if COLORING > 0
+#if COLORING == 2
+   !$omp parallel do collapse(2)
+!   !$acc parallel vector_length(32)
+   !$acc parallel vector_length(1)
+   !$acc loop collapse(2)
+   do j = JS, JE
+   do i = IS, IE
+      if ( mod((i-IS)+(j-JS),2)==1 ) then
+
+      Z(KS,i,j) = (V(KS,i,j) &
+      -( M(KS,4,i,j) * Z(KS  ,i-1,j  )  &
+       + M(KS,5,i,j) * Z(KS  ,i+1,j  ) &
+       + M(KS,6,i,j) * Z(KS  ,i  ,j-1) &
+       + M(KS,7,i,j) * Z(KS  ,i  ,j+1) &
+       + M(KS,12,i,j)* Z(KS+1,i-1,j  ) &
+       + M(KS,13,i,j)* Z(KS+1,i+1,j  ) &
+       + M(KS,14,i,j)* Z(KS+1,i  ,j-1) &
+       + M(KS,15,i,j)* Z(KS+1,i  ,j+1) ) ) /M(KS,1,i,j)
+
+      do k = KS+1, KE-1
+         Z(k,i,j) = (V(k,i,j) &
+         -( M(k,2,i,j) * Z(k-1,i  ,j  ) &
+          + M(k,4,i,j) * Z(k  ,i-1,j  ) &
+          + M(k,5,i,j) * Z(k  ,i+1,j  ) &
+          + M(k,6,i,j) * Z(k  ,i  ,j-1) &
+          + M(k,7,i,j) * Z(k  ,i  ,j+1) &
+          + M(k,8,i,j) * Z(k-1,i-1,j  ) &
+          + M(k,9,i,j) * Z(k-1,i+1,j  ) &
+          + M(k,10,i,j)* Z(k-1,i  ,j-1) &
+          + M(k,11,i,j)* Z(k-1,i  ,j+1) &
+          + M(k,12,i,j)* Z(k+1,i-1,j  ) &
+          + M(k,13,i,j)* Z(k+1,i+1,j  ) &
+          + M(k,14,i,j)* Z(k+1,i  ,j-1) &
+          + M(k,15,i,j)* Z(k+1,i  ,j+1) ) )/M(k,1,i,j)
+      enddo
+
+      Z(KE,i,j) = ( V(KE,i,j) &
+      -( M(KE,2,i,j) * Z(KE-1,i  ,j  ) &
+       + M(KE,4,i,j) * Z(KE  ,i-1,j  ) &
+       + M(KE,5,i,j) * Z(KE  ,i+1,j  ) &
+       + M(KE,6,i,j) * Z(KE  ,i  ,j-1) &
+       + M(KE,7,i,j) * Z(KE  ,i  ,j+1) &
+       + M(KE,8,i,j) * Z(KE-1,i-1,j  ) &
+       + M(KE,9,i,j) * Z(KE-1,i+1,j  ) &
+       + M(KE,10,i,j)* Z(KE-1,i  ,j-1) &
+       + M(KE,11,i,j)* Z(KE-1,i  ,j+1) ) )/M(KE,1,i,j)
+
+      end if
+#elif COLORING == 1
+   !$omp parallel do
+   !$acc parallel vector_length(1)
+   do j = JS+1, JE, 2
+   !$acc loop seq
+   do i = IS, IE
+      Z(KS,i,j) = (V(KS,i,j) &
+      -( M(KS,4,i,j) * Z(KS  ,i-1,j  )  &
+       + M(KS,6,i,j) * Z(KS  ,i  ,j-1) &
+       + M(KS,7,i,j) * Z(KS  ,i  ,j+1) &
+       + M(KS,12,i,j)* Z(KS+1,i-1,j  ) &
+       + M(KS,14,i,j)* Z(KS+1,i  ,j-1) &
+       + M(KS,15,i,j)* Z(KS+1,i  ,j+1) ) ) /M(KS,1,i,j)
+
+      do k = KS+1, KE-1
+         Z(k,i,j) = (V(k,i,j) &
+         -( M(k,2,i,j) * Z(k-1,i  ,j  ) &
+          + M(k,4,i,j) * Z(k  ,i-1,j  ) &
+          + M(k,6,i,j) * Z(k  ,i  ,j-1) &
+          + M(k,7,i,j) * Z(k  ,i  ,j+1) &
+          + M(k,8,i,j) * Z(k-1,i-1,j  ) &
+          + M(k,10,i,j)* Z(k-1,i  ,j-1) &
+          + M(k,11,i,j)* Z(k-1,i  ,j+1) &
+          + M(k,12,i,j)* Z(k+1,i-1,j  ) &
+          + M(k,14,i,j)* Z(k+1,i  ,j-1) &
+          + M(k,15,i,j)* Z(k+1,i  ,j+1) ) )/M(k,1,i,j)
+      enddo
+
+      Z(KE,i,j) = ( V(KE,i,j) &
+      -( M(KE,2,i,j) * Z(KE-1,i  ,j  ) &
+       + M(KE,4,i,j) * Z(KE  ,i-1,j  ) &
+       + M(KE,6,i,j) * Z(KE  ,i  ,j-1) &
+       + M(KE,7,i,j) * Z(KE  ,i  ,j+1) &
+       + M(KE,8,i,j) * Z(KE-1,i-1,j  ) &
+       + M(KE,10,i,j)* Z(KE-1,i  ,j-1) &
+       + M(KE,11,i,j)* Z(KE-1,i  ,j+1) ) )/M(KE,1,i,j)
+#endif
+   end do
+   end do
+   !$acc end parallel
+#endif
+
+   !$acc end data
+
+   return
+  end subroutine gs
 
   subroutine mul_matrix( KA,KS,KE, &
                          IA,IS,IE, &
@@ -1492,9 +2656,20 @@ contains
 
     integer :: k, i, j
 
-    !$omp parallel do
+    !$omp parallel do private(i,j,k)
+    !$acc kernels copyin(M,C) copyout(V)
     do j = JS, JE
     do i = IS, IE
+       V(KS,i,j) = M(KS,1,i,j) * C(KS  ,i  ,j  ) &
+                 + M(KS,3,i,j) * C(KS+1,i  ,j  ) &
+                 + M(KS,4,i,j) * C(KS  ,i-1,j  ) &
+                 + M(KS,5,i,j) * C(KS  ,i+1,j  ) &
+                 + M(KS,6,i,j) * C(KS  ,i  ,j-1) &
+                 + M(KS,7,i,j) * C(KS  ,i  ,j+1) &
+                 + M(KS,12,i,j)* C(KS+1,i-1,j  ) &
+                 + M(KS,13,i,j)* C(KS+1,i+1,j  ) &
+                 + M(KS,14,i,j)* C(KS+1,i  ,j-1) &
+                 + M(KS,15,i,j)* C(KS+1,i  ,j+1)
        do k = KS+1, KE-1
           V(k,i,j) = M(k,1,i,j) * C(k  ,i  ,j  ) &
                    + M(k,2,i,j) * C(k-1,i  ,j  ) &
@@ -1512,16 +2687,6 @@ contains
                    + M(k,14,i,j)* C(k+1,i  ,j-1) &
                    + M(k,15,i,j)* C(k+1,i  ,j+1)
        enddo
-       V(KS,i,j) = M(KS,1,i,j) * C(KS  ,i  ,j  ) &
-                 + M(KS,3,i,j) * C(KS+1,i  ,j  ) &
-                 + M(KS,4,i,j) * C(KS  ,i-1,j  ) &
-                 + M(KS,5,i,j) * C(KS  ,i+1,j  ) &
-                 + M(KS,6,i,j) * C(KS  ,i  ,j-1) &
-                 + M(KS,7,i,j) * C(KS  ,i  ,j+1) &
-                 + M(KS,12,i,j)* C(KS+1,i-1,j  ) &
-                 + M(KS,13,i,j)* C(KS+1,i+1,j  ) &
-                 + M(KS,14,i,j)* C(KS+1,i  ,j-1) &
-                 + M(KS,15,i,j)* C(KS+1,i  ,j+1)
        V(KE,i,j) = M(KE,1,i,j) * C(KE  ,i  ,j  ) &
                  + M(KE,2,i,j) * C(KE-1,i  ,j  ) &
                  + M(KE,4,i,j) * C(KE  ,i-1,j  ) &
@@ -1534,9 +2699,11 @@ contains
                  + M(KE,11,i,j)* C(KE-1,i  ,j+1)
     enddo
     enddo
+    !$acc end kernels
 
     return
   end subroutine mul_matrix
+
   !-----------------------------------------------------------------------------
   function f2h( k,i,j,p )
 
@@ -1724,7 +2891,7 @@ contains
           ibuf(2) = grid_initpoint
        endif
 
-       call COMM_bcast( ibuf, 2 )
+       call COMM_bcast( 2, ibuf )
 
        rank_initpoint = ibuf(1)
        grid_initpoint = ibuf(2)
@@ -2115,7 +3282,6 @@ contains
        enddo
        enddo
        enddo
-
        iprod(1) =  Npls
        iprod(2) =  Nmns
        call MPI_AllReduce(iprod, ibuf, 2, MPI_integer, MPI_SUM, COMM_world, ierr)
@@ -2276,7 +3442,8 @@ contains
        NUM_end,    & ! [INOUT]
        LT_path,    & ! [INOUT]
        fls_int_p,  & ! [OUT]
-       d_QCRG      ) ! [OUT]
+       d_QCRG,     & ! [OUT]
+       B_OUT       ) ! [OUT]
     use scale_const, only: &
        EPS    => CONST_EPS, &
        EPSvac => CONST_EPSvac, &
@@ -2335,6 +3502,7 @@ contains
     real(RP), intent(inout) :: LT_path   (KA,IA,JA)     !-- Number of path
     real(RP), intent(out)   :: fls_int_p(KA,IA,JA)      !-- Flash initiation point (0->no flash, 1->flash start at the point)
     real(RP), intent(out)   :: d_QCRG   (KA,IA,JA)      !-- Charge density [nC/m3]
+    real(RP), intent(out)   :: B_OUT    (IA,JA)         !-- B value for output
 
     real(RP), parameter :: q_thre = 0.1_RP ! threshold of discharge zone (Fierro et al. 2013) [nC/m3]
 
@@ -2347,7 +3515,7 @@ contains
     real(RP) :: Edif(KS:KE), Edif_max, abs_qcrg_max
     real(RP) :: sw
 
-    integer, allocatable :: proc_num(:), proc_numg(:)
+    !integer, allocatable :: proc_num(:), proc_numg(:)
     real(RP),allocatable :: E_exce_x(:), E_exce_x_g(:)  !--- x point of column in which |E|>Eint is included [m] (_g means global attribute)
     real(RP),allocatable :: E_exce_y(:), E_exce_y_g(:)  !--- y point of column in which |E|>Eint is included [m] (_g means global attribute)
     real(RP) :: exce_grid(2,KIJMAX)
@@ -2355,30 +3523,45 @@ contains
     integer  :: countindx(PRC_nprocs+1)
     integer  :: num_own                               !--- number of column whose |E| > Eint-dEint for each process
     integer  :: num_total                             !--- total number of column whose |E| > Eint-dEint
-    real(RP) :: rbuf1(2), rbuf2(2)
+    real(RP) :: rbuf1, rbuf2
     integer  :: k, i, j, ipp, iq, ierr
 
     call PROF_rapstart('LT_neut_F2013', 1)
 
+    !$acc data copyin(Efield,E_pot,QCRG,DENS,QHYD,CX,CY) &
+    !$acc      copy(NUM_end,LT_path) &
+    !$acc      copyout(fls_int_p,d_QCRG,B_OUT) &
+    !$acc      create(B,C,Edif,exce_grid)
+
     !$omp parallel do
+    !$acc kernels
     do j = JS, JE
     do i = IS, IE
     do k = KS, IE
-       NUM_end(k,i,j,:) = 0.0_RP
+    do iq = 1, 3
+       NUM_end(k,i,j,iq) = 0.0_RP
     end do
     end do
     end do
+    end do
+    !$acc end kernels
+
     !--- search grid whose Efield is over threshold of flash inititation
     num_own = 0
+    !$acc kernels
+    !$acc loop collapse(2) independent
     do j = JS, JE
     do i = IS, IE
        Edif_max = -1.0_RP
+       !$acc loop reduction(max:Edif_max)
        do k = KS, KE
           Edif(k) = Efield(k,i,j,I_lt_abs) - ( Eint-delEint )
           Edif_max = max( Edif_max, Edif(k) )
        enddo
        if ( Edif_max > 0.0_RP ) then
+          !$acc atomic
           num_own = num_own + 1
+          !$acc end atomic
           exce_grid(1,num_own) = CX(i)
           exce_grid(2,num_own) = CY(j)
           do k = KS, KE
@@ -2391,7 +3574,10 @@ contains
        endif
     enddo
     enddo
+    !$acc end kernels
 
+    !############## calculation by CPU ################
+    !$acc update host(exce_grid)
     !**** proc_num(0~) -> process number of each grid with |E|> E_threthold (local)
 !    allocate(proc_num(own_prc_total))
     allocate(E_exce_x(num_own))
@@ -2402,7 +3588,7 @@ contains
     E_exce_y(1:num_own) = exce_grid(2,1:num_own)
 
     call MPI_AllGather( num_own, 1, MPI_integer, &
-                        count1, 1, MPI_integer, &
+                        count1(:), 1, MPI_integer, &
                         COMM_world, ierr )
 
     countindx(1) = 0
@@ -2424,7 +3610,10 @@ contains
     call MPI_AllGatherv( E_exce_y,   num_own, COMM_datatype, &
                          E_exce_y_g, count1, countindx, COMM_datatype, &
                          COMM_world, ierr )
+    !$acc data copyin(E_exce_x_g,E_exce_y_g)
+    !############## calculation by CPU ################
 
+    !$acc kernels
     C(:,:) = 0
     do ipp = 1, num_total
        do j = JS, JE
@@ -2437,18 +3626,24 @@ contains
        enddo
        enddo
     enddo
+    !$acc end kernels
+
+    !$acc end data
 
     Spls = 0.0_RP
     Smns = 0.0_RP
     !$omp parallel do reduction(+:Spls,Smns) &
     !$omp private(abs_qcrg_max,sw)
+    !$acc kernels
+    !$acc loop collapse(2) reduction(+:Spls,Smns)
     do j = JS, JE
     do i = IS, IE
 
        B(i,j) = 0.0_RP
        if ( C(i,j) == 1 ) then
-          abs_qcrg_max = abs( QCRG(KS,i,j) )
-          do k = KS+1, KE
+          abs_qcrg_max = 0.0_RP
+          !$acc loop reduction(max:abs_qcrg_max)
+          do k = KS, KE
              abs_qcrg_max = max( abs_qcrg_max, abs( QCRG(k,i,j) ) )
           end do
           if ( abs_qcrg_max >= q_thre ) then
@@ -2463,16 +3658,17 @@ contains
 
     enddo
     enddo
+    !$acc end kernels
 
-    rbuf1(1) = Spls
-    call MPI_Allreduce( rbuf1, rbuf2, 1, COMM_datatype, &
+    rbuf1 = Spls
+    call MPI_AllReduce( rbuf1, rbuf2, 1, COMM_datatype, &
                         MPI_SUM, COMM_world, ierr       )
-    Spls_g = rbuf2(1)
+    Spls_g = rbuf2
 
-    rbuf1(1) = Smns
-    call MPI_Allreduce( rbuf1, rbuf2, 1, COMM_datatype, &
+    rbuf1 = Smns
+    call MPI_AllReduce( rbuf1, rbuf2, 1, COMM_datatype, &
                         MPI_SUM, COMM_world, ierr       )
-    Smns_g = rbuf2(1)
+    Smns_g = rbuf2
 
     if( max( Spls_g,Smns_g )*0.3_RP < min( Spls_g,Smns_g ) ) then
       Q_d = 0.3_RP * max( Spls_g,Smns_g )
@@ -2494,6 +3690,7 @@ contains
 
     !---- select initial point of flash by random select
     !$omp parallel do
+    !$acc kernels
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -2509,13 +3706,22 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
 
+    !$acc kernels
+    do j = JS, JE
+    do i = IS, IE
+       B_OUT(i,j) = B(i,j)
+    enddo
+    enddo
+    !$acc end kernels
 
     deallocate(E_exce_x)
     deallocate(E_exce_y)
     deallocate(E_exce_x_g)
     deallocate(E_exce_y_g)
 
+    !$acc end data
 
     call PROF_rapend('LT_neut_F2013', 1)
 
@@ -2552,12 +3758,18 @@ contains
     integer  :: own_prc_total, iprod1, buf
     integer  :: k, i, j, ierr
 
+    !$acc data &
+    !$acc copyin(DENS,Efield) &
+    !$acc create(Eint_hgt)
+
     !--- search grid whose Efield is over threshold of flash inititation
     own_prc_total = 0
     if( flg_eint_hgt == 1.0_RP ) then
        !$omp parallel do &
        !$omp reduction(+:own_prc_total) &
        !$omp private(E_det)
+       !$acc kernels
+       !$acc loop collapse(3) reduction(+:own_prc_total)
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
@@ -2572,10 +3784,13 @@ contains
        enddo
        enddo
        enddo
+       !$acc end kernels
     else
        !$omp parallel do &
        !$omp reduction(+:own_prc_total) &
        !$omp private(E_det)
+       !$acc kernels
+       !$acc loop collapse(3) reduction(+:own_prc_total)
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
@@ -2586,12 +3801,23 @@ contains
        enddo
        enddo
        enddo
+       !$acc end kernels
     endif
 
     !--- Add number of grids, whose |E| are over threshold of flash initiaion, for all process
     iprod1 = own_prc_total
     call MPI_AllReduce(iprod1, buf, 1, MPI_integer, MPI_SUM, COMM_world, ierr)
-    rprod1 = maxval(Efield(KS:KE,IS:IE,JS:JE))
+    rprod1 = 0.0_RP
+    !$acc kernels
+    !$acc loop collapse(3) reduction(max:rprod1)
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       rprod1 = max(rprod1,Efield(k,i,j))
+    enddo
+    enddo
+    enddo
+    !$acc end kernels
     call MPI_AllReduce(rprod1, rbuf, 1, COMM_datatype, MPI_MAX, COMM_world, ierr)
     !--- exit when no grid point with |E| over threshold of flash initiation exist
     Emax = rbuf
@@ -2603,6 +3829,8 @@ contains
         flg_lt_neut = 2
       endif
     endif
+
+    !$acc end data
 
   end subroutine ATMOS_PHY_LT_judge_absE
   !-----------------------------------------------------------------------------
@@ -2633,29 +3861,45 @@ contains
     real(RP), intent(out) :: beta_crg(KA,IA,JA)
 
     integer  :: i, j, k, pp, qq, iq
-    integer  :: grid(2)
+    integer  :: grid1, grid2
     real(RP) :: cwc
-    real(RP) :: diffx(nxlut_lt), diffy(nylut_lt)
+    real(RP) :: diffx, diffy, tmp
+
+    !$acc data copyin(TEMP,DENS,QLIQ) copyout(dqcrg,beta_crg)
 
     !$omp parallel do &
-    !$omp private(cwc,diffx,diffy,grid)
+    !$omp private(cwc,diffx,diffy,tmp,grid1,grid2)
+    !$acc kernels
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
        if( TEMP(k,i,j) <= T00 .and. TEMP(k,i,j) >= tcrglimit ) then
           cwc = 0.0_RP
+          !$acc loop seq
           do iq = 1, NLIQ
              cwc = cwc + QLIQ(k,i,j,iq) * DENS(k,i,j) * 1.0E+3_RP ![g/m3]
           enddo
-          do pp = 1, nxlut_lt
-             diffx(pp) = abs( grid_lut_t(pp)-TEMP(k,i,j) )
+          diffx = abs( grid_lut_t(1)-TEMP(k,i,j) )
+          grid1 = 1
+          !$acc loop seq
+          do pp = 2, nxlut_lt
+             tmp = abs( grid_lut_t(pp)-TEMP(k,i,j) )
+             if ( tmp < diffx ) then
+                diffx = tmp
+                grid1 = pp
+             end if
           enddo
-          grid(1) = minloc( diffx,1 )
-          do qq = 1, nylut_lt
-             diffy(qq) = abs( grid_lut_l(qq)-cwc )
+          diffy = abs( grid_lut_l(1)-cwc )
+          grid2 = 1
+          !$acc loop seq
+          do qq = 2, nylut_lt
+             tmp = abs( grid_lut_l(qq)-cwc )
+             if ( tmp < diffy ) then
+                diffy = tmp
+                grid2 = qq
+             end if
           enddo
-          grid(2) = minloc( diffy,1 )
-          dqcrg(k,i,j) = dq_chrg( grid(1), grid(2) ) &
+          dqcrg(k,i,j) = dq_chrg( grid1, grid2 ) &
                        *( 0.5_RP + sign( 0.5_RP,cwc-1.0E-2_RP ) ) !--- no charge separation when cwc < 0.01 [g/m3]
        else
           dqcrg(k,i,j) = 0.0_RP
@@ -2671,9 +3915,11 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
+
+    !$acc end data
 
     return
-
  end subroutine ATMOS_PHY_LT_sato2019_select_dQCRG_from_LUT
   !-----------------------------------------------------------------------------
 end module scale_atmos_phy_lt_sato2019

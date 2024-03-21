@@ -108,7 +108,7 @@ contains
     dz = ztop / (kmax-kmin+1)
 
     do k = 1, kall
-       z_h(k) =  dz * (k-1)
+       z_h(k) =  dz * (k-kmin)
     end do
   end subroutine mk_layer_even
 

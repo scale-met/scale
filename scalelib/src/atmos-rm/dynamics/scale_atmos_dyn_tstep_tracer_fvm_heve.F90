@@ -123,9 +123,17 @@ contains
     integer  :: i, j, k
     !---------------------------------------------------------------------------
 
+    !$acc data copy(QTRCo) &
+    !$acc      copyout(qflx_hi) &
+    !$acc      copyin(QTRC, QTRC0, RHOQ_t, DENS0, DENS, mflx_hi, num_diff, &
+    !$acc             GSQRT, MAPF, CDZ, RCDZ, RCDX, RCDY) &
+    !$acc      create(qflx_lo, qflx_anti)
+
 #ifdef DEBUG
+    !$acc kernels
     qflx_hi(:,:,:,:) = UNDEF
     qflx_lo(:,:,:,:) = UNDEF
+    !$acc end kernels
 #endif
 
     do JJS = JS, JE, JBLOCK
@@ -277,6 +285,7 @@ contains
              !$omp parallel do default(none) private(j,k) OMP_SCHEDULE_ &
              !$omp shared(JJS,JJE,IS,KS,KE,QTRCo,QTRC0,DENS0,dtl,qflx_hi,RCDZ,RCDY,MAPF) &
              !$omp shared(GSQRT,RHOQ_t,DENS,I_XYZ) 
+             !$acc kernels
              do j = JJS, JJE
              do k = KS, KE
                 QTRCo(k,IS,j) = ( QTRC0(k,IS,j) * DENS0(k,IS,j) &
@@ -286,10 +295,12 @@ contains
                                + RHOQ_t(k,IS,j) ) ) / DENS(k,IS,j)
              enddo
              enddo
+             !$acc end kernels
           else
              !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
              !$omp shared(JJS,JJE,IIS,IIE,KS,KE,QTRCo,QTRC0,DENS0,dtl,qflx_hi,RCDZ,RCDX,RCDY,MAPF) &
              !$omp shared(GSQRT,RHOQ_t,DENS,I_XYZ) 
+             !$acc kernels
              do j = JJS, JJE
              do i = IIS, IIE
              do k = KS, KE
@@ -302,12 +313,14 @@ contains
              enddo
              enddo
              enddo
+             !$acc end kernels
           end if
 
        enddo
        enddo
 
     end if
+    !$acc end data
 
     return
   end subroutine ATMOS_DYN_Tstep_tracer_fvm_heve

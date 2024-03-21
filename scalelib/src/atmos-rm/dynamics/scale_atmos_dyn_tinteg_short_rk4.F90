@@ -43,6 +43,7 @@ module scale_atmos_dyn_tinteg_short_rk4
   !++ Public procedure
   !
   public :: ATMOS_DYN_Tinteg_short_rk4_setup
+  public :: ATMOS_DYN_Tinteg_short_rk4_finalize
   public :: ATMOS_DYN_Tinteg_short_rk4
 
   !-----------------------------------------------------------------------------
@@ -127,18 +128,21 @@ contains
     allocate( MOMX_RK1(KA,IA,JA) )
     allocate( MOMY_RK1(KA,IA,JA) )
     allocate( RHOT_RK1(KA,IA,JA) )
+    !$acc enter data create(DENS_RK1, MOMZ_RK1, MOMX_RK1, MOMY_RK1, RHOT_RK1)
 
     allocate( DENS_RK2(KA,IA,JA) )
     allocate( MOMZ_RK2(KA,IA,JA) )
     allocate( MOMX_RK2(KA,IA,JA) )
     allocate( MOMY_RK2(KA,IA,JA) )
     allocate( RHOT_RK2(KA,IA,JA) )
+    !$acc enter data create(DENS_RK2, MOMZ_RK2, MOMX_RK2, MOMY_RK2, RHOT_RK2)
 
     allocate( DENS_RK3(KA,IA,JA) )
     allocate( MOMZ_RK3(KA,IA,JA) )
     allocate( MOMX_RK3(KA,IA,JA) )
     allocate( MOMY_RK3(KA,IA,JA) )
     allocate( RHOT_RK3(KA,IA,JA) )
+    !$acc enter data create(DENS_RK3, MOMZ_RK3, MOMX_RK3, MOMY_RK3, RHOT_RK3)
 
     allocate( PROG_RK1(KA,IA,JA,max(VA,1)) )
     allocate( PROG_RK2(KA,IA,JA,max(VA,1)) )
@@ -146,7 +150,13 @@ contains
     allocate( I_COMM_PROG_RK1(max(VA,1)) )
     allocate( I_COMM_PROG_RK2(max(VA,1)) )
     allocate( I_COMM_PROG_RK3(max(VA,1)) )
+    !$acc enter data create(PROG_RK1, PROG_RK2, PROG_RK3)
 
+    I_COMM_DENS_RK1 = 1
+    I_COMM_MOMZ_RK1 = 2
+    I_COMM_MOMX_RK1 = 3
+    I_COMM_MOMY_RK1 = 4
+    I_COMM_RHOT_RK1 = 5
     call COMM_vars8_init( 'DENS_RK1', DENS_RK1, I_COMM_DENS_RK1 )
     call COMM_vars8_init( 'MOMZ_RK1', MOMZ_RK1, I_COMM_MOMZ_RK1 )
     call COMM_vars8_init( 'MOMX_RK1', MOMX_RK1, I_COMM_MOMX_RK1 )
@@ -157,6 +167,11 @@ contains
        call COMM_vars8_init( 'PROG_RK1', PROG_RK1(:,:,:,iv), I_COMM_PROG_RK1(iv) )
     enddo
 
+    I_COMM_DENS_RK2 = 1
+    I_COMM_MOMZ_RK2 = 2
+    I_COMM_MOMX_RK2 = 3
+    I_COMM_MOMY_RK2 = 4
+    I_COMM_RHOT_RK2 = 5
     call COMM_vars8_init( 'DENS_RK2', DENS_RK2, I_COMM_DENS_RK2 )
     call COMM_vars8_init( 'MOMZ_RK2', MOMZ_RK2, I_COMM_MOMZ_RK2 )
     call COMM_vars8_init( 'MOMX_RK2', MOMX_RK2, I_COMM_MOMX_RK2 )
@@ -167,6 +182,11 @@ contains
        call COMM_vars8_init( 'PROG_RK2', PROG_RK2(:,:,:,iv), I_COMM_PROG_RK2(iv) )
     enddo
 
+    I_COMM_DENS_RK3 = 1
+    I_COMM_MOMZ_RK3 = 2
+    I_COMM_MOMX_RK3 = 3
+    I_COMM_MOMY_RK3 = 4
+    I_COMM_RHOT_RK3 = 5
     call COMM_vars8_init( 'DENS_RK3', DENS_RK3, I_COMM_DENS_RK3 )
     call COMM_vars8_init( 'MOMZ_RK3', MOMZ_RK3, I_COMM_MOMZ_RK3 )
     call COMM_vars8_init( 'MOMX_RK3', MOMX_RK3, I_COMM_MOMX_RK3 )
@@ -201,6 +221,41 @@ contains
     return
   end subroutine ATMOS_DYN_Tinteg_short_rk4_setup
 
+  !-----------------------------------------------------------------------------
+  !> finalize
+  subroutine ATMOS_DYN_tinteg_short_rk4_finalize
+
+    !$acc exit data delete(DENS_RK1, MOMZ_RK1, MOMX_RK1, MOMY_RK1, RHOT_RK1)
+    deallocate( DENS_RK1 )
+    deallocate( MOMZ_RK1 )
+    deallocate( MOMX_RK1 )
+    deallocate( MOMY_RK1 )
+    deallocate( RHOT_RK1 )
+
+    !$acc exit data delete(DENS_RK2, MOMZ_RK2, MOMX_RK2, MOMY_RK2, RHOT_RK2)
+    deallocate( DENS_RK2 )
+    deallocate( MOMZ_RK2 )
+    deallocate( MOMX_RK2 )
+    deallocate( MOMY_RK2 )
+    deallocate( RHOT_RK2 )
+
+    !$acc exit data delete(DENS_RK3, MOMZ_RK3, MOMX_RK3, MOMY_RK3, RHOT_RK3)
+    deallocate( DENS_RK3 )
+    deallocate( MOMZ_RK3 )
+    deallocate( MOMX_RK3 )
+    deallocate( MOMY_RK3 )
+    deallocate( RHOT_RK3 )
+
+    !$acc exit data delete(PROG_RK1, PROG_RK2, PROG_RK3)
+    deallocate( PROG_RK1 )
+    deallocate( PROG_RK2 )
+    deallocate( PROG_RK3 )
+    deallocate( I_COMM_PROG_RK1 )
+    deallocate( I_COMM_PROG_RK2 )
+    deallocate( I_COMM_PROG_RK3 )
+
+    return
+  end subroutine ATMOS_DYN_tinteg_short_rk4_finalize
   !-----------------------------------------------------------------------------
   !> RK3
   subroutine ATMOS_DYN_tinteg_short_rk4( &
@@ -300,7 +355,17 @@ contains
 
     call PROF_rapstart("DYN_RK4_Prep",3)
 
+    !$acc data copy(DENS, MOMZ, MOMX, MOMY, RHOT, PROG, mflx_hi) &
+    !$acc      copyout(tflx_hi) &
+    !$acc      copyin(DENS_t, MOMZ_t, MOMX_t, MOMY_t, RHOT_t, &
+    !$acc             DPRES0, CVtot, CORIOLI, num_diff, wdamp_coef, DDIV, &
+    !$acc             CDZ, FDZ, FDX, FDY, RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY, &
+    !$acc             PHI, GSQRT, J13G, J23G, MAPF, &
+    !$acc             REF_pres, REF_dens) &
+    !$acc      create(DENS0, MOMZ0, MOMX0, MOMY0, RHOT0, PROG0, mflx_hi_RK, tflx_hi_RK)
+
 #ifdef DEBUG
+    !$acc kernels
     DENS_RK1(:,:,:) = UNDEF
     MOMZ_RK1(:,:,:) = UNDEF
     MOMX_RK1(:,:,:) = UNDEF
@@ -324,53 +389,78 @@ contains
 
     mflx_hi_RK(:,:,:,:,:) = UNDEF
     tflx_hi_RK(:,:,:,:,:) = UNDEF
+    !$acc end kernels
 #endif
 
 #ifdef QUICKDEBUG
+    !$acc kernels
     mflx_hi(   1:KS-1,:,:,:) = UNDEF
     mflx_hi(KE+1:KA  ,:,:,:) = UNDEF
+    !$acc end kernels
 #endif
 
+    !$acc kernels
 !OCL XFILL
-    DENS0 = DENS
+    DENS0(:,:,:) = DENS(:,:,:)
+    !$acc end kernels
+    !$acc kernels
 !OCL XFILL
-    MOMZ0 = MOMZ
+    MOMZ0(:,:,:) = MOMZ(:,:,:)
+    !$acc end kernels
+    !$acc kernels
 !OCL XFILL
-    MOMX0 = MOMX
+    MOMX0(:,:,:) = MOMX(:,:,:)
+    !$acc end kernels
+    !$acc kernels
 !OCL XFILL
-    MOMY0 = MOMY
+    MOMY0(:,:,:) = MOMY(:,:,:)
+    !$acc end kernels
+    !$acc kernels
 !OCL XFILL
-    RHOT0 = RHOT
+    RHOT0(:,:,:) = RHOT(:,:,:)
+    !$acc end kernels
+    if ( VA > 0 ) then
+    !$acc kernels
 !OCL XFILL
-    if ( VA > 0 ) PROG0 = PROG
+       PROG0(:,:,:,:) = PROG(:,:,:,:)
+    !$acc end kernels
+    end if
 
     if ( BND_W .and. (.not. TwoD) ) then
+       !$acc kernels
        do j = JS, JE
        do k = KS, KE
           mflx_hi_RK(k,IS-1,j,2,:) = mflx_hi(k,IS-1,j,2)
        end do
        end do
+       !$acc end kernels
     end if
     if ( BND_E .and. (.not. TwoD) ) then
+       !$acc kernels
        do j = JS, JE
        do k = KS, KE
           mflx_hi_RK(k,IE,j,2,:) = mflx_hi(k,IE,j,2)
        end do
        end do
+       !$acc end kernels
     end if
     if ( BND_S ) then
+       !$acc kernels
        do i = IS, IE
        do k = KS, KE
           mflx_hi_RK(k,i,JS-1,3,:) = mflx_hi(k,i,JS-1,3)
        end do
        end do
+       !$acc end kernels
     end if
     if ( BND_N ) then
+       !$acc kernels
        do i = IS, IE
        do k = KS, KE
           mflx_hi_RK(k,i,JE,3,:) = mflx_hi(k,i,JE,3)
        end do
        end do
+       !$acc end kernels
     end if
 
     call PROF_rapend  ("DYN_RK4_Prep",3)
@@ -564,6 +654,7 @@ contains
 
     !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
     !$omp shared(JS,JE,IS,IE,KS,KE,DENS,DENS_RK1,DENS_RK2,DENS_RK3,DENS0)
+    !$acc kernels
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -575,7 +666,9 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
 
+    !$acc kernels
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE-1
@@ -587,7 +680,9 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
 
+    !$acc kernels
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -599,7 +694,9 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
 
+    !$acc kernels
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -611,10 +708,12 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
 
     !$omp parallel do default(none) &
     !$omp shared(JS,JE,IS,IE,KS,KE,RHOT,RHOT_RK1,RHOT_RK2,RHOT_RK3,RHOT0) &
     !$omp private(i,j,k) OMP_SCHEDULE_ collapse(2)
+    !$acc kernels
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -626,7 +725,9 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
 
+    !$acc kernels
     do iv = 1, VA
     do j = JS, JE
     do i = IS, IE
@@ -640,8 +741,16 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
 
 
+    call ATMOS_DYN_Copy_boundary( DENS, MOMZ, MOMX, MOMY, RHOT,      & ! [INOUT]
+                                  PROG,                              & ! [INOUT]
+                                  DENS0, MOMZ0, MOMX0, MOMY0, RHOT0, & ! [IN]
+                                  PROG0,                             & ! [IN]
+                                  BND_W, BND_E, BND_S, BND_N, TwoD   ) ! [IN]
+
+    !$acc kernels
     do n = 1, 3
     do j = JS, JE
     do i = IS, IE
@@ -654,7 +763,9 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
 
+    !$acc kernels
     do n = 1, 3
     do j = JS, JE
     do i = IS, IE
@@ -667,6 +778,9 @@ contains
     enddo
     enddo
     enddo
+    !$acc end kernels
+
+    !$acc end data
 
     call PROF_rapend  ("DYN_RK4",3)
 

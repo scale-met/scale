@@ -26,6 +26,7 @@ module scale_cpl_phy_sfc_fixed_temp
   !++ Public procedure
   !
   public :: CPL_PHY_SFC_FIXED_TEMP_setup
+  public :: CPL_PHY_SFC_FIXED_TEMP_finalize
   public :: CPL_PHY_SFC_FIXED_TEMP
 
   !-----------------------------------------------------------------------------
@@ -59,6 +60,15 @@ contains
 
     return
   end subroutine CPL_PHY_SFC_FIXED_TEMP_setup
+
+  !-----------------------------------------------------------------------------
+  !> Finalize
+  subroutine CPL_PHY_SFC_FIXED_TEMP_finalize
+
+    initialized = .false.
+
+    return
+  end subroutine CPL_PHY_SFC_FIXED_TEMP_finalize
 
   !-----------------------------------------------------------------------------
   subroutine CPL_PHY_SFC_fixed_temp( &
@@ -167,8 +177,12 @@ contains
 
     LOG_PROGRESS(*) 'coupler / physics / surface / FIXED-TEMP'
 
+    !$acc data copyin(TMPA,PRSA,WA,UA,VA,RHOA,QVA,LH,Z1,PBL,RHOS,PRSS,RFLXD,TMPS,WSTR,QVEF,ALBEDO,Rb,Z0M,Z0H,Z0E,calc_flag) &
+    !$acc      copyout(ZMFLX,XMFLX,YMFLX,SHFLX,LHFLX,QVFLX,GFLX,Ustar,Tstar,Qstar,Wstar,RLmo,U10,V10,T2,Q2) &
+    !$acc      create(QVS,FracU10,FracT2,FracQ2)
+
     ! calculate surface flux
-    !$omp parallel do &
+    !$omp parallel do schedule(dynamic) collapse(2) &
 #ifndef __GFORTRAN__
     !$omp default(none) &
     !$omp shared(IS,IE,JS,JE,EPS,UNDEF,Rdry,CPdry,bulkflux,dt, &
@@ -179,7 +193,9 @@ contains
     !$omp default(shared) &
 #endif
     !$omp private(qdry,Rtot,QVsat,Uabs,Ra,res,emis,LWD,LWU,SWD,SWU,MFLUX)
+    !$acc kernels
     do j = JS, JE
+    !$acc loop private(qvsat,ra,Uabs)
     do i = IS, IE
        if ( calc_flag(i,j) ) then
 
@@ -256,6 +272,7 @@ contains
        endif
     enddo
     enddo
+    !$acc end kernels
 
     call BULKFLUX_diagnose_surface( IA, IS, IE, JA, JS, JE, &
                                     UA(:,:), VA(:,:),                      & ! (in)
@@ -267,6 +284,8 @@ contains
                                     FracU10 = FracU10(:,:),                & ! (in)
                                     FracT2 = FracT2(:,:),                  & ! (in)
                                     FracQ2 = FracQ2(:,:)                   ) ! (in)
+
+    !$acc end data
 
     return
   end subroutine CPL_PHY_SFC_fixed_temp

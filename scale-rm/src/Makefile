@@ -24,6 +24,12 @@ ifneq ($(SCALE_IGNORE_SRCDEP),T)
   DEPENDLIB = $(LIBS)
 endif
 
+ifeq ($(SCALE_IGNORE_OPENACC),T)
+  ENABLE_OPENACC = F
+else
+  ENABLE_OPENACC = $(SCALE_ENABLE_OPENACC)
+endif
+
 VPATH = $(BUILD_DIR): \
         admin:        \
         atmos:        \
@@ -32,6 +38,7 @@ VPATH = $(BUILD_DIR): \
         urban:        \
         lake:         \
         coupler:      \
+        data-assim:   \
         user:         \
         preprocess:
 
@@ -51,6 +58,7 @@ SUB_OBJS =	\
 	mod_urban_admin.o         \
 	mod_lake_admin.o          \
 	mod_cpl_admin.o           \
+	mod_da_admin.o            \
 	\
 	mod_atmos_dyn_vars.o      \
 	mod_atmos_phy_cp_vars.o   \
@@ -67,6 +75,7 @@ SUB_OBJS =	\
 	mod_land_vars.o           \
 	mod_urban_vars.o          \
 	mod_cpl_vars.o            \
+	mod_da_vars.o             \
 	\
 	mod_admin_restart.o       \
 	mod_atmos_dyn_driver.o    \
@@ -85,6 +94,7 @@ SUB_OBJS =	\
 	mod_land_driver.o         \
 	mod_urban_driver.o        \
 	mod_cpl_driver.o          \
+	mod_da_driver.o           \
 	\
 	mod_copytopo.o            \
 	mod_cnv2d.o               \
@@ -93,15 +103,14 @@ SUB_OBJS =	\
 	mod_cnvuser.o             \
 	mod_convert.o             \
 	mod_mktopo.o              \
-	mod_realinput_scale.o     \
-	mod_realinput_wrfarw.o    \
+	mod_realinput_netcdf.o    \
 	mod_realinput_grads.o     \
-	mod_realinput_scale.o     \
 	mod_realinput.o           \
-	mod_mkinit.o
-#	mod_realinput_nicam.o     \
+	mod_mkinit.o              \
+	mod_da_param_estimation.o
 
 MAIN_OBJS =	\
+	mod_launcher.o            \
 	mod_rm_driver.o           \
 	mod_rm_prep.o
 
@@ -118,7 +127,8 @@ build:
 	$(MAKE) makelib
 	@echo;echo "Entering scale-rm...";echo "Current version is " $(VERSION)
 	mkdir -p $(BUILD_DIR)
-	$(MAKE) $(subst $(BINDIR),$(BUILD_DIR),$(BINS))
+	$(MAKE) makeobjs
+	$(MAKE) makebin
 	@echo "Complete making scale-rm."
 
 install:
@@ -134,29 +144,36 @@ info:
 makelib:
 	$(MAKE) -C $(SCALELIBDIR)/src
 
-$(BUILD_DIR)/$(BINNAME)$(POSTFIX)  : $(BUILD_DIR)/$(BINNAME).o  $(patsubst %,$(BUILD_DIR)/%,$(OBJS)) $(BUILD_DIR)/mod_user.o $(LIBS)
-	$(LD) $(LDFLAGS) $(ADDITIONAL_FFLAGS) -o $@ $^ $(SCALE_NETCDF_LIBS) $(SCALE_MATHLIB_LIBS) $(SCALE_PAPI_LIBS) $(CONTRIB_LIBS)
-$(BUILD_DIR)/$(INITNAME)$(POSTFIX) : $(BUILD_DIR)/$(INITNAME).o $(patsubst %,$(BUILD_DIR)/%,$(OBJS)) $(BUILD_DIR)/mod_user.o $(LIBS)
-	$(LD) $(LDFLAGS) $(ADDITIONAL_FFLAGS) -o $@ $^ $(SCALE_NETCDF_LIBS) $(SCALE_MATHLIB_LIBS) $(SCALE_PAPI_LIBS) $(CONTRIB_LIBS)
-$(BUILD_DIR)/$(PPNAME)$(POSTFIX)   : $(BUILD_DIR)/$(PPNAME).o   $(patsubst %,$(BUILD_DIR)/%,$(OBJS)) $(BUILD_DIR)/mod_user.o $(LIBS)
-	$(LD) $(LDFLAGS) $(ADDITIONAL_FFLAGS) -o $@ $^ $(SCALE_NETCDF_LIBS) $(SCALE_MATHLIB_LIBS) $(SCALE_PAPI_LIBS) $(CONTRIB_LIBS)
+makeobjs:
+	@$(MAKE) sub_objs SCALE_ENABLE_OPENACC=$(ENABLE_OPENACC)
+	@$(MAKE) main_objs
+
+makebin: $(BUILD_DIR)/$(BINNAME)$(POSTFIX) $(BUILD_DIR)/$(PPNAME)$(POSTFIX)
+
+sub_objs: $(patsubst %,$(BUILD_DIR)/%,$(SUB_OBJS)) $(BUILD_DIR)/mod_user.o
+
+main_objs: $(patsubst %,$(BUILD_DIR)/%,$(MAIN_OBJS))
+
+$(BUILD_DIR)/$(BINNAME)$(POSTFIX)  : $(BUILD_DIR)/$(BINNAME).o $(LIBS) $(patsubst %,$(BUILD_DIR)/%,$(OBJS)) $(BUILD_DIR)/mod_user.o
+	$(LD) $(LDFLAGS) $(ADDITIONAL_FFLAGS) -o $@ $< $(patsubst %,$(BUILD_DIR)/%,$(OBJS)) $(BUILD_DIR)/mod_user.o -L$(LIBDIR) -lscale$(POSTFIX) $(CONTRIB_LIBS) $(SCALE_NETCDF_LIBS) $(SCALE_MATHLIB_LIBS) $(SCALE_PAPI_LIBS)
+$(BUILD_DIR)/$(PPNAME)$(POSTFIX) : $(BUILD_DIR)/$(PPNAME).o $(LIBS) $(patsubst %,$(BUILD_DIR)/%,$(OBJS)) $(BUILD_DIR)/mod_user.o
+	$(LD) $(LDFLAGS) $(ADDITIONAL_FFLAGS) -o $@ $< $(patsubst %,$(BUILD_DIR)/%,$(OBJS)) $(BUILD_DIR)/mod_user.o -L$(LIBDIR) -lscale$(POSTFIX) $(CONTRIB_LIBS) $(SCALE_NETCDF_LIBS) $(SCALE_MATHLIB_LIBS) $(SCALE_PAPI_LIBS)
 
 $(BINDIR)/$(BINNAME)$(POSTFIX)  : $(BUILD_DIR)/$(BINNAME)$(POSTFIX)
-	install $< $@
-
-$(BINDIR)/$(INITNAME)$(POSTFIX) : $(BUILD_DIR)/$(INITNAME)$(POSTFIX)
 	install $< $@
 
 $(BINDIR)/$(PPNAME)$(POSTFIX)   : $(BUILD_DIR)/$(PPNAME)$(POSTFIX)
 	install $< $@
 
+$(BINDIR)/$(INITNAME)$(POSTFIX) : $(BINDIR)/$(PPNAME)$(POSTFIX)
+	(cd $(BINDIR); ln -sf `basename $<` $@)
+
 
 
 ifneq ($(SCALE_IGNORE_SRCDEP),T)
-  $(BUILD_DIR)/$(BINNAME).o  : $(LIBS) $(patsubst %,$(BUILD_DIR)/%,$(OBJS)) $(BUILD_DIR)/mod_user.o
-  $(BUILD_DIR)/$(INITNAME).o : $(LIBS) $(patsubst %,$(BUILD_DIR)/%,$(OBJS)) $(BUILD_DIR)/mod_user.o
-  $(BUILD_DIR)/$(PPNAME).o   : $(LIBS) $(patsubst %,$(BUILD_DIR)/%,$(OBJS)) $(BUILD_DIR)/mod_user.o
-  $(BUILD_DIR)/mod_user.o    : $(LIBS) $(patsubst %,$(BUILD_DIR)/%,$(SUB_OBJS))
+  $(BUILD_DIR)/$(BINNAME).o : $(LIBS) $(patsubst %,$(BUILD_DIR)/%,$(OBJS)) $(BUILD_DIR)/mod_user.o
+  $(BUILD_DIR)/$(PPNAME).o  : $(LIBS) $(patsubst %,$(BUILD_DIR)/%,$(OBJS)) $(BUILD_DIR)/mod_user.o
+  $(BUILD_DIR)/mod_user.o   : $(LIBS) $(patsubst %,$(BUILD_DIR)/%,$(SUB_OBJS))
 endif
 
 

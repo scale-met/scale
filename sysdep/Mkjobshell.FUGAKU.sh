@@ -1,21 +1,19 @@
 #! /bin/bash -x
 
 # Arguments
-BINDIR=${1}
-PPNAME=${2}
-INITNAME=${3}
-BINNAME=${4}
-N2GNAME=${5}
-PPCONF=${6}
-INITCONF=${7}
-RUNCONF=${8}
-N2GCONF=${9}
-PROCS=${10}
-eval DATPARAM=(`echo ${11} | tr -s '[' '"' | tr -s ']' '"'`)
-eval DATDISTS=(`echo ${12} | tr -s '[' '"' | tr -s ']' '"'`)
-
-# System specific
-MPIEXEC="mpiexec -np"
+MPIEXEC=${1}
+BINDIR=${2}
+PPNAME=${3}
+INITNAME=${4}
+BINNAME=${5}
+N2GNAME=${6}
+PPCONF=${7}
+INITCONF=${8}
+RUNCONF=${9}
+N2GCONF=${10}
+PROCS=${11}
+eval DATPARAM=(`echo ${12} | tr -s '[' '"' | tr -s ']' '"'`)
+eval DATDISTS=(`echo ${13} | tr -s '[' '"' | tr -s ']' '"'`)
 
 PROCLIST=(`echo ${PROCS} | tr -s ',' ' '`)
 TPROC=${PROCLIST[0]}
@@ -91,8 +89,11 @@ cat << EOF1 > ./run.sh
 # ------ For FUGAKU
 #
 ################################################################################
+#PJM -g xxxxxxx
+#PJM -L freq=2200
+#PJM -L eco_state=2
 #PJM -L rscgrp="small"
-#PJM -L node=$(((TPROC+3)/4))
+#PJM -L node=$(((TPROC+3)/4)):torus
 #PJM -L elapse=01:00:00
 #PJM --mpi "max-proc-per-node=4"
 #PJM -j
@@ -108,12 +109,17 @@ export PLE_MPI_STD_EMPTYFILE=off
 export OMP_WAIT_POLICY=active
 export FLIB_BARRIER=HARD
 
-. /vol0004/apps/oss/spack/share/spack/setup-env.sh
-spack load --first netcdf-c%fj
-spack load --first netcdf-fortran%fj
-spack load --first parallel-netcdf%fj
+llio_transfer /home/apps/oss/scale/llio.list
+. /home/apps/oss/scale/setup_ldlpath.sh
 
-export LD_LIBRARY_PATH=/lib64:/usr/lib64:/opt/FJSVxtclanga/tcsds-latest/lib64:/opt/FJSVxtclanga/tcsds-latest/lib:\$LD_LIBRARY_PATH
+
+#. /vol0004/apps/oss/spack/share/spack/setup-env.sh
+#spack load --first netcdf-c%fj
+#spack load --first netcdf-fortran%fj
+#spack load --first parallel-netcdf%fj
+
+#export LD_LIBRARY_PATH=\`/home/system/tool/sort_libp\`
+#/home/system/tool/sort_libp -s
 
 EOF1
 
@@ -179,8 +185,7 @@ cat << EOF2 >> ./run.sh
 
 llio_transfer ${FILES_LLIO}
 
-DIRS_LLIO=\`echo \$LD_LIBRARY_PATH | sed -e 's/:/\n/g' | grep '^/vol0004/apps/oss/spack' | sort -u\`
-echo \${DIRS_LLIO} | xargs /home/system/tool/dir_transfer
+# /home/system/tool/dir_transfer data_dir
 
 #run
 
@@ -189,10 +194,6 @@ ${RUN_INIT}
 ${RUN_MAIN}
 ${RUN_N2G}
 
-# clean up
-
-llio_transfer --purge ${FILES_LLIO}
-echo \${DIRS_LLIO} | xargs /home/system/tool/dir_transfer -p
 
 ################################################################################
 EOF2

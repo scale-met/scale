@@ -98,7 +98,9 @@ contains
     real(RP) :: ice_depth
     integer  :: i, j
     !---------------------------------------------------------------------------
+    !$acc data copyin(ICE_MASS,ICE_FRAC,mask) copyout(TC_dz)
 
+    !$acc kernels
     !$omp parallel do private(ice_depth)
     do j = OJS, OJE
     do i = OIS, OIE
@@ -111,7 +113,9 @@ contains
        end if
     enddo
     enddo
+    !$acc end kernels
 
+    !$acc end data
     return
   end subroutine OCEAN_PHY_TC_seaice
 

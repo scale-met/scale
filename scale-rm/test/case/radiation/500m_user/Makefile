@@ -7,6 +7,8 @@
 PWD         = $(shell pwd)
 TOPDIR      = $(abspath ../../../../..)
 TESTDIR     = ../../..
+DATADIR     = ${TOPDIR}/data
+DATADIR_RM  = ${TESTDIR}/data
 
 
 # user-defined source files
@@ -19,10 +21,10 @@ RUNCONF     = run.conf
 TPROC       = 1
 
 # required data (parameters,distributed files)
-DATPARAM    = " [${TESTDIR}/data/rad/PARAG.29         PARAG.29        ] \
-                [${TESTDIR}/data/rad/PARAPC.29        PARAPC.29       ] \
-                [${TESTDIR}/data/rad/VARDATA.RM29     VARDATA.RM29    ] \
-                [${TESTDIR}/data/rad/rad_o3_profs.txt rad_o3_profs.txt] "
+DATPARAM    = " [${DATADIR}/rad/PARAG.29         PARAG.29        ] \
+                [${DATADIR}/rad/PARAPC.29        PARAPC.29       ] \
+                [${DATADIR}/rad/VARDATA.RM29     VARDATA.RM29    ] \
+                [${DATADIR}/rad/rad_o3_profs.txt rad_o3_profs.txt] "
 DATDISTS    =
 
 

@@ -28,6 +28,7 @@ module scale_atmos_grid_cartesC
   public :: ATMOS_GRID_CARTESC_setup
   public :: ATMOS_GRID_CARTESC_allocate
   public :: ATMOS_GRID_CARTESC_generate
+  public :: ATMOS_GRID_CARTESC_finalize
 
   !-----------------------------------------------------------------------------
   !
@@ -209,6 +210,65 @@ contains
     return
   end subroutine ATMOS_GRID_CARTESC_setup
 
+  subroutine ATMOS_GRID_CARTESC_finalize
+    implicit none
+    !---------------------------------------------------------------------------
+
+    ! local domain
+    !$acc exit data delete(ATMOS_GRID_CARTESC_CZ, ATMOS_GRID_CARTESC_CX, ATMOS_GRID_CARTESC_CY, ATMOS_GRID_CARTESC_FZ, ATMOS_GRID_CARTESC_FX, ATMOS_GRID_CARTESC_FY)
+    deallocate( ATMOS_GRID_CARTESC_CZ )
+    deallocate( ATMOS_GRID_CARTESC_CX )
+    deallocate( ATMOS_GRID_CARTESC_CY )
+    deallocate( ATMOS_GRID_CARTESC_FZ )
+    deallocate( ATMOS_GRID_CARTESC_FX )
+    deallocate( ATMOS_GRID_CARTESC_FY )
+
+    !$acc exit data delete(ATMOS_GRID_CARTESC_CDZ, ATMOS_GRID_CARTESC_CDZ, ATMOS_GRID_CARTESC_CDY, ATMOS_GRID_CARTESC_FDZ, ATMOS_GRID_CARTESC_FDX, ATMOS_GRID_CARTESC_FDY)
+    deallocate( ATMOS_GRID_CARTESC_CDZ )
+    deallocate( ATMOS_GRID_CARTESC_CDX )
+    deallocate( ATMOS_GRID_CARTESC_CDY )
+    deallocate( ATMOS_GRID_CARTESC_FDZ )
+    deallocate( ATMOS_GRID_CARTESC_FDX )
+    deallocate( ATMOS_GRID_CARTESC_FDY )
+
+    !$acc exit data delete(ATMOS_GRID_CARTESC_RCDZ, ATMOS_GRID_CARTESC_RCDX, ATMOS_GRID_CARTESC_RCDY, ATMOS_GRID_CARTESC_RFDZ, ATMOS_GRID_CARTESC_RFDX, ATMOS_GRID_CARTESC_RFDY)
+    deallocate( ATMOS_GRID_CARTESC_RCDZ )
+    deallocate( ATMOS_GRID_CARTESC_RCDX )
+    deallocate( ATMOS_GRID_CARTESC_RCDY )
+    deallocate( ATMOS_GRID_CARTESC_RFDZ )
+    deallocate( ATMOS_GRID_CARTESC_RFDX )
+    deallocate( ATMOS_GRID_CARTESC_RFDY )
+
+    !$acc exit data delete(ATMOS_GRID_CARTESC_CBFZ, ATMOS_GRID_CARTESC_CBFX, ATMOS_GRID_CARTESC_CBFY, ATMOS_GRID_CARTESC_FBFZ, ATMOS_GRID_CARTESC_FBFX, ATMOS_GRID_CARTESC_FBFY)
+    deallocate( ATMOS_GRID_CARTESC_CBFZ )
+    deallocate( ATMOS_GRID_CARTESC_CBFX )
+    deallocate( ATMOS_GRID_CARTESC_CBFY )
+    deallocate( ATMOS_GRID_CARTESC_FBFZ )
+    deallocate( ATMOS_GRID_CARTESC_FBFX )
+    deallocate( ATMOS_GRID_CARTESC_FBFY )
+
+    ! global domain
+    !$acc exit data delete(ATMOS_GRID_CARTESC_CXG, ATMOS_GRID_CARTESC_CYG, ATMOS_GRID_CARTESC_FXG, ATMOS_GRID_CARTESC_FYG)
+    deallocate( ATMOS_GRID_CARTESC_CXG )
+    deallocate( ATMOS_GRID_CARTESC_CYG )
+    deallocate( ATMOS_GRID_CARTESC_FXG )
+    deallocate( ATMOS_GRID_CARTESC_FYG )
+
+    !$acc exit data delete(ATMOS_GRID_CARTESC_CDXG, ATMOS_GRID_CARTESC_CDYG, ATMOS_GRID_CARTESC_FDXG, ATMOS_GRID_CARTESC_FDYG)
+    deallocate( ATMOS_GRID_CARTESC_CDXG )
+    deallocate( ATMOS_GRID_CARTESC_CDYG )
+    deallocate( ATMOS_GRID_CARTESC_FDXG )
+    deallocate( ATMOS_GRID_CARTESC_FDYG )
+
+    !$acc exit data delete(ATMOS_GRID_CARTESC_CBFXG, ATMOS_GRID_CARTESC_CBFYG, ATMOS_GRID_CARTESC_FBFXG, ATMOS_GRID_CARTESC_FBFYG)
+    deallocate( ATMOS_GRID_CARTESC_CBFXG )
+    deallocate( ATMOS_GRID_CARTESC_CBFYG )
+    deallocate( ATMOS_GRID_CARTESC_FBFXG )
+    deallocate( ATMOS_GRID_CARTESC_FBFYG )
+
+    return
+  end subroutine ATMOS_GRID_CARTESC_finalize
+
   !-----------------------------------------------------------------------------
   ! private
   !-----------------------------------------------------------------------------
@@ -224,6 +284,7 @@ contains
     allocate( ATMOS_GRID_CARTESC_FZ  (0:KA) )
     allocate( ATMOS_GRID_CARTESC_FX  (0:IA) )
     allocate( ATMOS_GRID_CARTESC_FY  (0:JA) )
+    !$acc enter data create(ATMOS_GRID_CARTESC_CZ, ATMOS_GRID_CARTESC_CX, ATMOS_GRID_CARTESC_CY, ATMOS_GRID_CARTESC_FZ, ATMOS_GRID_CARTESC_FX, ATMOS_GRID_CARTESC_FY)
 
     allocate( ATMOS_GRID_CARTESC_CDZ (KA)   )
     allocate( ATMOS_GRID_CARTESC_CDX (IA)   )
@@ -231,6 +292,7 @@ contains
     allocate( ATMOS_GRID_CARTESC_FDZ (KA-1) )
     allocate( ATMOS_GRID_CARTESC_FDX (IA-1) )
     allocate( ATMOS_GRID_CARTESC_FDY (JA-1) )
+    !$acc enter data create(ATMOS_GRID_CARTESC_CDZ, ATMOS_GRID_CARTESC_CDX, ATMOS_GRID_CARTESC_CDY, ATMOS_GRID_CARTESC_FDZ, ATMOS_GRID_CARTESC_FDX, ATMOS_GRID_CARTESC_FDY)
 
     allocate( ATMOS_GRID_CARTESC_RCDZ(KA)   )
     allocate( ATMOS_GRID_CARTESC_RCDX(IA)   )
@@ -238,6 +300,7 @@ contains
     allocate( ATMOS_GRID_CARTESC_RFDZ(KA-1) )
     allocate( ATMOS_GRID_CARTESC_RFDX(IA-1) )
     allocate( ATMOS_GRID_CARTESC_RFDY(JA-1) )
+    !$acc enter data create(ATMOS_GRID_CARTESC_RCDZ, ATMOS_GRID_CARTESC_RCDX, ATMOS_GRID_CARTESC_RCDY, ATMOS_GRID_CARTESC_RFDZ, ATMOS_GRID_CARTESC_RFDX, ATMOS_GRID_CARTESC_RFDY)
 
     allocate( ATMOS_GRID_CARTESC_CBFZ(  KA) )
     allocate( ATMOS_GRID_CARTESC_CBFX(  IA) )
@@ -245,22 +308,26 @@ contains
     allocate( ATMOS_GRID_CARTESC_FBFZ(0:KA) )
     allocate( ATMOS_GRID_CARTESC_FBFX(0:IA) )
     allocate( ATMOS_GRID_CARTESC_FBFY(0:JA) )
+    !$acc enter data create(ATMOS_GRID_CARTESC_CBFZ, ATMOS_GRID_CARTESC_CBFX, ATMOS_GRID_CARTESC_CBFY, ATMOS_GRID_CARTESC_FBFZ, ATMOS_GRID_CARTESC_FBFX, ATMOS_GRID_CARTESC_FBFY)
 
     ! global domain
     allocate( ATMOS_GRID_CARTESC_CXG  (  IAG) )
     allocate( ATMOS_GRID_CARTESC_CYG  (  JAG) )
     allocate( ATMOS_GRID_CARTESC_FXG  (0:IAG) )
     allocate( ATMOS_GRID_CARTESC_FYG  (0:JAG) )
+    !$acc enter data create(ATMOS_GRID_CARTESC_CXG, ATMOS_GRID_CARTESC_CYG, ATMOS_GRID_CARTESC_FXG, ATMOS_GRID_CARTESC_FYG)
 
     allocate( ATMOS_GRID_CARTESC_CDXG (IAG)   )
     allocate( ATMOS_GRID_CARTESC_CDYG (JAG)   )
     allocate( ATMOS_GRID_CARTESC_FDXG (IAG-1) )
     allocate( ATMOS_GRID_CARTESC_FDYG (JAG-1) )
+    !$acc enter data create(ATMOS_GRID_CARTESC_CDXG, ATMOS_GRID_CARTESC_CDYG, ATMOS_GRID_CARTESC_FDXG, ATMOS_GRID_CARTESC_FDYG)
 
     allocate( ATMOS_GRID_CARTESC_CBFXG(  IAG) )
     allocate( ATMOS_GRID_CARTESC_CBFYG(  JAG) )
     allocate( ATMOS_GRID_CARTESC_FBFXG(0:IAG) )
     allocate( ATMOS_GRID_CARTESC_FBFYG(0:JAG) )
+    !$acc enter data create(ATMOS_GRID_CARTESC_CBFXG, ATMOS_GRID_CARTESC_CBFYG, ATMOS_GRID_CARTESC_FBFXG, ATMOS_GRID_CARTESC_FBFYG)
 
     return
   end subroutine ATMOS_GRID_CARTESC_allocate
@@ -291,20 +358,24 @@ contains
     call FILE_read( fid, 'CZ', ATMOS_GRID_CARTESC_CZ(:) )
     call FILE_read( fid, 'CX', ATMOS_GRID_CARTESC_CX(:) )
     call FILE_read( fid, 'CY', ATMOS_GRID_CARTESC_CY(:) )
+    !$acc update device(ATMOS_GRID_CARTESC_CZ, ATMOS_GRID_CARTESC_CX, ATMOS_GRID_CARTESC_CY) async
 
     call FILE_read( fid, 'FZ', ATMOS_GRID_CARTESC_FZ(:) )
     call FILE_read( fid, 'FX', ATMOS_GRID_CARTESC_FX(:) )
     call FILE_read( fid, 'FY', ATMOS_GRID_CARTESC_FY(:) )
+    !$acc update device(ATMOS_GRID_CARTESC_FZ, ATMOS_GRID_CARTESC_FX, ATMOS_GRID_CARTESC_FY) async
 
     call FILE_read( fid, 'CDZ', ATMOS_GRID_CARTESC_CDZ(:) )
     call FILE_read( fid, 'CDX', ATMOS_GRID_CARTESC_CDX(:) )
     call FILE_read( fid, 'CDY', ATMOS_GRID_CARTESC_CDY(:) )
+    !$acc update device(ATMOS_GRID_CARTESC_CDZ, ATMOS_GRID_CARTESC_CDX, ATMOS_GRID_CARTESC_CDY) async
 
     call FILE_read( fid, 'FDZ', ATMOS_GRID_CARTESC_FDZ(:) )
     call FILE_read( fid, 'FDX',                    FDX(:) )
     call FILE_read( fid, 'FDY',                    FDY(:) )
     ATMOS_GRID_CARTESC_FDX(:) = FDX(1:IA-1)
     ATMOS_GRID_CARTESC_FDY(:) = FDY(1:JA-1)
+    !$acc update device(ATMOS_GRID_CARTESC_FDZ, ATMOS_GRID_CARTESC_FDX, ATMOS_GRID_CARTESC_FDY) async
 
     ATMOS_GRID_CARTESC_RCDZ(:) = 1.0_RP / ATMOS_GRID_CARTESC_CDZ(:)
     ATMOS_GRID_CARTESC_RCDX(:) = 1.0_RP / ATMOS_GRID_CARTESC_CDX(:)
@@ -312,6 +383,7 @@ contains
     ATMOS_GRID_CARTESC_RFDZ(:) = 1.0_RP / ATMOS_GRID_CARTESC_FDZ(:)
     ATMOS_GRID_CARTESC_RFDX(:) = 1.0_RP / ATMOS_GRID_CARTESC_FDX(:)
     ATMOS_GRID_CARTESC_RFDY(:) = 1.0_RP / ATMOS_GRID_CARTESC_FDY(:)
+    !$acc update device(ATMOS_GRID_CARTESC_RCDZ, ATMOS_GRID_CARTESC_RCDX, ATMOS_GRID_CARTESC_RCDY, ATMOS_GRID_CARTESC_RFDZ, ATMOS_GRID_CARTESC_RFDX, ATMOS_GRID_CARTESC_RFDY) async
 
     call FILE_read( fid, 'CBFZ', ATMOS_GRID_CARTESC_CBFZ(:) )
     call FILE_read( fid, 'CBFX', ATMOS_GRID_CARTESC_CBFX(:) )
@@ -319,11 +391,13 @@ contains
     call FILE_read( fid, 'FBFZ', ATMOS_GRID_CARTESC_FBFZ(:) )
     call FILE_read( fid, 'FBFX', ATMOS_GRID_CARTESC_FBFX(:) )
     call FILE_read( fid, 'FBFY', ATMOS_GRID_CARTESC_FBFY(:) )
+    !$acc update device(ATMOS_GRID_CARTESC_CBFZ, ATMOS_GRID_CARTESC_CBFX, ATMOS_GRID_CARTESC_CBFY, ATMOS_GRID_CARTESC_FBFZ, ATMOS_GRID_CARTESC_FBFX, ATMOS_GRID_CARTESC_FBFY) async
 
     call FILE_read( fid, 'CXG', ATMOS_GRID_CARTESC_CXG(:) )
     call FILE_read( fid, 'CYG', ATMOS_GRID_CARTESC_CYG(:) )
     call FILE_read( fid, 'FXG', ATMOS_GRID_CARTESC_FXG(:) )
     call FILE_read( fid, 'FYG', ATMOS_GRID_CARTESC_FYG(:) )
+    !$acc update device(ATMOS_GRID_CARTESC_CXG, ATMOS_GRID_CARTESC_CYG, ATMOS_GRID_CARTESC_FXG, ATMOS_GRID_CARTESC_FYG) async
 
     call FILE_read( fid, 'CDXG', ATMOS_GRID_CARTESC_CDXG(:) )
     call FILE_read( fid, 'CDYG', ATMOS_GRID_CARTESC_CDYG(:) )
@@ -331,10 +405,12 @@ contains
     call FILE_read( fid, 'FDYG',                    FDYG(:) )
     ATMOS_GRID_CARTESC_FDXG(:) = FDXG(1:IA-1)
     ATMOS_GRID_CARTESC_FDYG(:) = FDYG(1:JA-1)
-
+    !$acc update device(ATMOS_GRID_CARTESC_CDXG, ATMOS_GRID_CARTESC_CDYG, ATMOS_GRID_CARTESC_FDXG, ATMOS_GRID_CARTESC_FDYG) async
 
     ATMOS_GRID_CARTESC_DOMAIN_CENTER_X = 0.5_RP * ( ATMOS_GRID_CARTESC_FXG(IHALO) + ATMOS_GRID_CARTESC_FXG(IAG-IHALO) )
     ATMOS_GRID_CARTESC_DOMAIN_CENTER_Y = 0.5_RP * ( ATMOS_GRID_CARTESC_FYG(JHALO) + ATMOS_GRID_CARTESC_FYG(JAG-JHALO) )
+
+    !$acc wait
 
     return
   end subroutine ATMOS_GRID_CARTESC_read
@@ -465,6 +541,7 @@ contains
        ATMOS_GRID_CARTESC_FXG(i) = ATMOS_GRID_CARTESC_FXG(i-1) + buffx(ibuff)
        ATMOS_GRID_CARTESC_CXG(i) = 0.5_RP * ( ATMOS_GRID_CARTESC_FXG(i)+ATMOS_GRID_CARTESC_FXG(i-1) )
     enddo
+    !$acc update device(ATMOS_GRID_CARTESC_FXG, ATMOS_GRID_CARTESC_CXG) async
 
     do i = 1, IAG
        ATMOS_GRID_CARTESC_CDXG(i) = ATMOS_GRID_CARTESC_FXG(i) - ATMOS_GRID_CARTESC_FXG(i-1)
@@ -472,6 +549,7 @@ contains
     do i = 1, IAG-1
        ATMOS_GRID_CARTESC_FDXG(i) = ATMOS_GRID_CARTESC_CXG(i+1)-ATMOS_GRID_CARTESC_CXG(i)
     end do
+    !$acc update device(ATMOS_GRID_CARTESC_CDXG, ATMOS_GRID_CARTESC_FDXG) async
 
     ! calc buffer factor (global domain)
     ATMOS_GRID_CARTESC_CBFXG(:) = 0.0_RP
@@ -502,6 +580,7 @@ contains
 
     ATMOS_GRID_CARTESC_CBFXG(:) = max( min( ATMOS_GRID_CARTESC_CBFXG(:), 1.0_RP ), 0.0_RP )
     ATMOS_GRID_CARTESC_FBFXG(:) = max( min( ATMOS_GRID_CARTESC_FBFXG(:), 1.0_RP ), 0.0_RP )
+    !$acc update device(ATMOS_GRID_CARTESC_CBFXG, ATMOS_GRID_CARTESC_FBFXG) async
 
     ! Y-direction
     ! calculate buffer grid size
@@ -583,6 +662,7 @@ contains
        ATMOS_GRID_CARTESC_FYG(j) = ATMOS_GRID_CARTESC_FYG(j-1) + buffy(jbuff)
        ATMOS_GRID_CARTESC_CYG(j) = 0.5_RP * ( ATMOS_GRID_CARTESC_FYG(j)+ATMOS_GRID_CARTESC_FYG(j-1) )
     enddo
+    !$acc update device(ATMOS_GRID_CARTESC_FYG, ATMOS_GRID_CARTESC_CYG) async
 
     do j = 1, JAG
        ATMOS_GRID_CARTESC_CDYG(j) = ATMOS_GRID_CARTESC_FYG(j) - ATMOS_GRID_CARTESC_FYG(j-1)
@@ -590,6 +670,7 @@ contains
     do j = 1, JAG-1
        ATMOS_GRID_CARTESC_FDYG(j) = ATMOS_GRID_CARTESC_CYG(j+1)-ATMOS_GRID_CARTESC_CYG(j)
     end do
+    !$acc update device(ATMOS_GRID_CARTESC_CDYG, ATMOS_GRID_CARTESC_FDYG) async
 
     ! calc buffer factor (global domain)
     ATMOS_GRID_CARTESC_CBFYG(:) = 0.0_RP
@@ -619,6 +700,7 @@ contains
     enddo
     ATMOS_GRID_CARTESC_CBFYG(:) = max( min( ATMOS_GRID_CARTESC_CBFYG(:), 1.0_RP ), 0.0_RP )
     ATMOS_GRID_CARTESC_FBFYG(:) = max( min( ATMOS_GRID_CARTESC_FBFYG(:), 1.0_RP ), 0.0_RP )
+    !$acc update device(ATMOS_GRID_CARTESC_CBFYG, ATMOS_GRID_CARTESC_FBFYG) async
 
     deallocate( buffx )
     deallocate( buffy )
@@ -784,6 +866,7 @@ contains
        enddo
 
     endif
+    !$acc update device(ATMOS_GRID_CARTESC_FZ, ATMOS_GRID_CARTESC_CZ) async
 
     ! calc buffer factor (global domain)
     ATMOS_GRID_CARTESC_CBFZ(:) = 0.0_RP
@@ -801,6 +884,7 @@ contains
     enddo
     ATMOS_GRID_CARTESC_CBFZ(:) = max( min( ATMOS_GRID_CARTESC_CBFZ(:), 1.0_RP ), 0.0_RP )
     ATMOS_GRID_CARTESC_FBFZ(:) = max( min( ATMOS_GRID_CARTESC_FBFZ(:), 1.0_RP ), 0.0_RP )
+    !$acc update device(ATMOS_GRID_CARTESC_CBFZ, ATMOS_GRID_CARTESC_FBFZ) async
 
     deallocate( buffz )
 
@@ -814,6 +898,7 @@ contains
        ATMOS_GRID_CARTESC_FDZ (k) = ATMOS_GRID_CARTESC_CZ(k+1)-ATMOS_GRID_CARTESC_CZ(k)
        ATMOS_GRID_CARTESC_RFDZ(k) = 1.0_RP / ATMOS_GRID_CARTESC_FDZ(k)
     enddo
+    !$acc update device(ATMOS_GRID_CARTESC_CDZ, ATMOS_GRID_CARTESC_FDZ, ATMOS_GRID_CARTESC_RCDZ, ATMOS_GRID_CARTESC_RFDZ) async
 
     ! X-direction
     ! horizontal coordinate (local domain)
@@ -840,6 +925,7 @@ contains
        ATMOS_GRID_CARTESC_FDX (i) = ATMOS_GRID_CARTESC_CX(i+1)-ATMOS_GRID_CARTESC_CX(i)
        ATMOS_GRID_CARTESC_RFDX(i) = 1.0_RP / ATMOS_GRID_CARTESC_FDX(i)
     enddo
+    !$acc update device(ATMOS_GRID_CARTESC_CX, ATMOS_GRID_CARTESC_FX, ATMOS_GRID_CARTESC_CDX, ATMOS_GRID_CARTESC_FDX, ATMOS_GRID_CARTESC_RCDX, ATMOS_GRID_CARTESC_RFDX, ATMOS_GRID_CARTESC_CBFX, ATMOS_GRID_CARTESC_FBFX) async
 
     ! Y-direction
     ! horizontal coordinate (local domain)
@@ -866,6 +952,7 @@ contains
        ATMOS_GRID_CARTESC_FDY (j) = ATMOS_GRID_CARTESC_CY(j+1)-ATMOS_GRID_CARTESC_CY(j)
        ATMOS_GRID_CARTESC_RFDY(j) = 1.0_RP / ATMOS_GRID_CARTESC_FDY(j)
     enddo
+    !$acc update device(ATMOS_GRID_CARTESC_CY, ATMOS_GRID_CARTESC_FY, ATMOS_GRID_CARTESC_CDY, ATMOS_GRID_CARTESC_FDY, ATMOS_GRID_CARTESC_RCDY, ATMOS_GRID_CARTESC_RFDY, ATMOS_GRID_CARTESC_CBFY, ATMOS_GRID_CARTESC_FBFY) async
 
     ATMOS_GRID_CARTESC_DOMAIN_CENTER_X = 0.5_RP * ( ATMOS_GRID_CARTESC_FXG(IHALO) + ATMOS_GRID_CARTESC_FXG(IAG-IHALO) )
     ATMOS_GRID_CARTESC_DOMAIN_CENTER_Y = 0.5_RP * ( ATMOS_GRID_CARTESC_FYG(JHALO) + ATMOS_GRID_CARTESC_FYG(JAG-JHALO) )
@@ -909,6 +996,8 @@ contains
                                                   ATMOS_GRID_CARTESC_FYG(JAG-JHALO-jbuff)*1.E-3_RP, ' -buffer- ', &
                                                   ATMOS_GRID_CARTESC_FYG(JAG-JHALO)      *1.E-3_RP, ' -HALO- ',   &
                                                   ATMOS_GRID_CARTESC_FYG(JAG)            *1.E-3_RP
+
+    !$acc wait
 
     return
   end subroutine ATMOS_GRID_CARTESC_generate

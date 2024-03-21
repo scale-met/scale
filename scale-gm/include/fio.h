@@ -135,19 +135,20 @@ static int32_t fio_new_datainfo( int32_t fid );           /*<internal>*/
 
 /** put package information (full) ************************************/
 extern int32_t fio_put_pkginfo( int32_t fid,
-                                headerinfo_t hinfo );
+                                headerinfo_t *hinfo );
 
 /** get package information (full) ************************************/
-extern headerinfo_t fio_get_pkginfo( int32_t fid );
+extern int32_t fio_get_pkginfo( headerinfo_t *hinfo, int32_t fid );
 
 /** put data information (full) ***************************************/
 extern int32_t fio_put_datainfo( int32_t fid,
                                  int32_t did,
-                                 datainfo_t ditem );
+                                 datainfo_t *ditem );
 
 /** get data information (full) ***************************************/
-extern datainfo_t fio_get_datainfo( int32_t fid,
-                                    int32_t did  );
+extern int32_t fio_get_datainfo( datainfo_t *ditem,
+				 int32_t fid,
+				 int32_t did  );
 
 /** seek data id by varname and step **********************************/
 extern int32_t fio_seek_datainfo( int32_t fid,
@@ -192,6 +193,15 @@ extern int32_t fio_read_data( int32_t fid,
                               int32_t did,
                               void *data   );
 
+/** read data array (1 layer) ***************************************/
+extern int32_t fio_read_data_1layer( int32_t fid,
+                                     int32_t did,
+                                     int32_t k,
+                                     int32_t kmax,
+                                     int32_t l,
+                                     int32_t lmax,
+                                     void *data   );
+
 /** read data array from tmpdata **************************************/
 extern int32_t fio_read_data_tmpdata( int32_t fid,
                                       int32_t did,
@@ -214,12 +224,12 @@ extern int32_t fio_valid_pkginfo_validrgn( int32_t fid,
 
 /** put & write data information and write data ***********************/
 extern int32_t fio_put_write_datainfo_data( int32_t fid,
-                                            datainfo_t ditem,
+                                            datainfo_t *ditem,
                                             void *data        );
 
 /** put & write data information **************************************/
 extern int32_t fio_put_write_datainfo( int32_t fid,
-                                       datainfo_t ditem );
+                                       datainfo_t *ditem );
 
 /** read pkginfo and datainfo *****************************************/
 extern int32_t fio_read_allinfo( int32_t fid );

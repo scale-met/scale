@@ -29,6 +29,8 @@ program mkllmap
      ATMOS_GRID_icoA_INDEX_setup
   use scale_comm_icoA, only: &
      COMM_setup
+  use mod_gm_topography, only: &
+     TOPOGRAPHY_setup
   use mod_fio, only: &
      FIO_setup
   use mod_grd, only: &
@@ -106,6 +108,9 @@ program mkllmap
 
   !--- < comm module setup > ---
   call COMM_setup
+
+  !--- < topography module setup > ---
+  call TOPOGRAPHY_setup
 
   !--- < grid module setup > ---
   call GRD_setup

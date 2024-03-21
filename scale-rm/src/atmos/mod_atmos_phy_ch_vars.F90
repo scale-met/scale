@@ -28,6 +28,7 @@ module mod_atmos_phy_ch_vars
   !++ Public procedure
   !
   public :: ATMOS_PHY_CH_vars_setup
+  public :: ATMOS_PHY_CH_vars_finalize
   public :: ATMOS_PHY_CH_vars_fillhalo
   public :: ATMOS_PHY_CH_vars_restart_read
   public :: ATMOS_PHY_CH_vars_restart_write
@@ -113,6 +114,7 @@ contains
 
     allocate( ATMOS_PHY_CH_RHOQ_t(KA,IA,JA,QS_CH:QE_CH) )
     ATMOS_PHY_CH_RHOQ_t(:,:,:,:) = UNDEF
+    !$acc enter data create(ATMOS_PHY_CH_RHOQ_t)
 
 !!$    allocate( ATMOS_PHY_CH_O3(KA,IA,JA) )
 !!$    ATMOS_PHY_CH_O3(:,:,:) = UNDEF
@@ -156,6 +158,20 @@ contains
 
     return
   end subroutine ATMOS_PHY_CH_vars_setup
+
+  !-----------------------------------------------------------------------------
+  !> Finalize
+  subroutine ATMOS_PHY_CH_vars_finalize
+    implicit none
+
+    LOG_NEWLINE
+    LOG_INFO("ATMOS_PHY_CH_vars_finalize",*) 'Finalize'
+    
+    !$acc exit data delete(ATMOS_PHY_CH_RHOQ_t)
+    deallocate( ATMOS_PHY_CH_RHOQ_t )
+
+    return
+  end subroutine ATMOS_PHY_CH_vars_finalize
 
   !-----------------------------------------------------------------------------
   !> HALO Communication
@@ -238,14 +254,17 @@ contains
 !!$
 !!$       if ( FILE_get_aggregate( restart_fid) ) then
 !!$          call FILE_CARTESC_flush( restart_fid ) ! X/Y halos have been read from file
+!!$          !$acc update device(ATMOS_PHY_CH_O3)
 !!$
 !!$          ! fill K halos
+!!$          !$acc kernels
 !!$          do j  = 1, JA
 !!$          do i  = 1, IA
 !!$             ATMOS_PHY_CH_O3(   1:KS-1,i,j) = ATMOS_PHY_CH_O3(KS,i,j)
 !!$             ATMOS_PHY_CH_O3(KE+1:KA,  i,j) = ATMOS_PHY_CH_O3(KE,i,j)
 !!$          enddo
 !!$          enddo
+!!$          !$acc end kernels
 !!$       else
 !!$          call ATMOS_PHY_CH_vars_fillhalo
 !!$       end if

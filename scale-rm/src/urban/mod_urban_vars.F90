@@ -29,6 +29,7 @@ module mod_urban_vars
   !++ Public procedure
   !
   public :: URBAN_vars_setup
+  public :: URBAN_vars_finalize
   public :: URBAN_vars_restart_read
   public :: URBAN_vars_restart_write
   public :: URBAN_vars_history
@@ -95,8 +96,9 @@ module mod_urban_vars
   real(RP), public, allocatable :: URBAN_SFLX_MV   (:,:)   ! urban grid average of v-momentum flux [kg/m2/s]
   real(RP), public, allocatable :: URBAN_SFLX_SH   (:,:)   ! urban grid average of sensible heat flux [W/m2]
   real(RP), public, allocatable :: URBAN_SFLX_LH   (:,:)   ! urban grid average of latent heat flux [W/m2]
-  real(RP), public, allocatable :: URBAN_SFLX_SHEX(:,:)    ! urban grid average of extera sensible heat flux [W/m2]
-  real(RP), public, allocatable :: URBAN_SFLX_QVEX(:,:)    ! urban grid average of extera latent heat flux [kg/kg/m2/s]
+  real(RP), public, allocatable :: URBAN_SFLX_SHEX(:,:)    ! grid average of extera (anthropogenic) sensible heat flux [W/m2]
+  real(RP), public, allocatable :: URBAN_SFLX_LHEX(:,:)    ! grid average of extera (anthropogenic) latent heat flux [W/m2]
+  real(RP), public, allocatable :: URBAN_SFLX_QVEX(:,:)    ! grid average of extera (anthropogenic) water vapour flux [kg/kg/m2/s]
   real(RP), public, allocatable :: URBAN_SFLX_QTRC (:,:,:) ! urban grid average of water vapor flux [kg/m2/s]
   real(RP), public, allocatable :: URBAN_SFLX_GH   (:,:)   ! urban grid average of ground heat flux [W/m2]
 
@@ -105,8 +107,8 @@ module mod_urban_vars
   real(RP), public, allocatable :: URBAN_Z0H  (:,:) ! urban grid average of rougness length (heat) [m]
   real(RP), public, allocatable :: URBAN_Z0E  (:,:) ! urban grid average of rougness length (vapor) [m]
   real(RP), public, allocatable :: URBAN_ZD   (:,:) ! urban grid average of displacement height [m]
-  real(RP), public, allocatable :: URBAN_AH   (:,:) ! urban grid average of anthropogenic sensible heat [W/m2]
-  real(RP), public, allocatable :: URBAN_AHL  (:,:) ! urban grid average of anthropogenic latent heat [W/m2]
+  real(RP), public, allocatable :: URBAN_AH   (:,:) ! grid average of anthropogenic sensible heat [W/m2]
+  real(RP), public, allocatable :: URBAN_AHL  (:,:) ! grid average of anthropogenic latent heat [W/m2]
 
   ! diagnostic variables
   real(RP), public, allocatable :: URBAN_Ustar(:,:) ! urban grid average of friction velocity         [m/s]
@@ -355,11 +357,13 @@ contains
     URBAN_RAINB(:,:)   = UNDEF
     URBAN_RAING(:,:)   = UNDEF
     URBAN_ROFF (:,:)   = UNDEF
+    !$acc enter data create(URBAN_TRL,URBAN_TBL,URBAN_TGL,URBAN_TR,URBAN_TB,URBAN_TG,URBAN_TC,URBAN_QC,URBAN_UC,URBAN_RAINR,URBAN_RAINB,URBAN_RAING,URBAN_ROFF)
 
     allocate( URBAN_SFC_TEMP  (UIA,UJA)                     )
     allocate( URBAN_SFC_albedo(UIA,UJA,N_RAD_DIR,N_RAD_RGN) )
     URBAN_SFC_TEMP  (:,:)     = UNDEF
     URBAN_SFC_albedo(:,:,:,:) = UNDEF
+    !$acc enter data create(URBAN_SFC_TEMP,URBAN_SFC_albedo)
 
     allocate( URBAN_TR_t   (UIA,UJA)         )
     allocate( URBAN_TB_t   (UIA,UJA)         )
@@ -385,6 +389,7 @@ contains
     URBAN_RAINR_t(:,:)   = UNDEF
     URBAN_RAINB_t(:,:)   = UNDEF
     URBAN_RAING_t(:,:)   = UNDEF
+    !$acc enter data create(URBAN_TR_t,URBAN_TB_t,URBAN_TG_t,URBAN_TC_t,URBAN_QC_t,URBAN_UC_t,URBAN_TRL_t,URBAN_TBL_t,URBAN_TGL_t,URBAN_RAINR_t,URBAN_RAINB_t,URBAN_RAING_t)
 
     allocate( URBAN_SFLX_MW   (UIA,UJA)                     )
     allocate( URBAN_SFLX_MU   (UIA,UJA)                     )
@@ -392,18 +397,21 @@ contains
     allocate( URBAN_SFLX_SH   (UIA,UJA)                     )
     allocate( URBAN_SFLX_LH   (UIA,UJA)                     )
     allocate( URBAN_SFLX_SHEX (UIA,UJA)                     )
+    allocate( URBAN_SFLX_LHEX (UIA,UJA)                     )
     allocate( URBAN_SFLX_QVEX (UIA,UJA)                     )
     allocate( URBAN_SFLX_GH   (UIA,UJA)                     )
-    allocate( URBAN_SFLX_QTRC (UIA,UJA,QA)                  )
+    allocate( URBAN_SFLX_QTRC (UIA,UJA,max(QA,1))           )
     URBAN_SFLX_MW   (:,:)     = UNDEF
     URBAN_SFLX_MU   (:,:)     = UNDEF
     URBAN_SFLX_MV   (:,:)     = UNDEF
     URBAN_SFLX_SH   (:,:)     = UNDEF
     URBAN_SFLX_LH   (:,:)     = UNDEF
     URBAN_SFLX_SHEX (:,:)     = UNDEF
+    URBAN_SFLX_LHEX (:,:)     = UNDEF
     URBAN_SFLX_QVEX (:,:)     = UNDEF
     URBAN_SFLX_GH   (:,:)     = UNDEF
     URBAN_SFLX_QTRC (:,:,:)   = UNDEF
+    !$acc enter data create(URBAN_SFLX_MW,URBAN_SFLX_MU,URBAN_SFLX_MV,URBAN_SFLX_SH,URBAN_SFLX_LH,URBAN_SFLX_SHEX,URBAN_SFLX_LHEX,URBAN_SFLX_QVEX,URBAN_SFLX_GH,URBAN_SFLX_QTRC)
 
     allocate( URBAN_Z0M  (UIA,UJA) )
     allocate( URBAN_Z0H  (UIA,UJA) )
@@ -435,6 +443,7 @@ contains
     URBAN_V10  (:,:) = UNDEF
     URBAN_T2   (:,:) = UNDEF
     URBAN_Q2   (:,:) = UNDEF
+    !$acc enter data create(URBAN_Z0M,URBAN_Z0H,URBAN_Z0E,URBAN_ZD,URBAN_AH,URBAN_AHL,URBAN_Ustar,URBAN_Tstar,URBAN_Qstar,URBAN_Wstar,URBAN_RLmo,URBAN_U10,URBAN_V10,URBAN_T2,URBAN_Q2)
 
     allocate( ATMOS_TEMP     (UIA,UJA)   )
     allocate( ATMOS_PRES     (UIA,UJA)   )
@@ -466,6 +475,7 @@ contains
     ATMOS_cosSZA   (:,:)   = UNDEF
     ATMOS_SFLX_water(:,:)  = UNDEF
     ATMOS_SFLX_ENGI(:,:)   = UNDEF
+    !$acc enter data create(ATMOS_TEMP,ATMOS_PRES,ATMOS_W,ATMOS_U,ATMOS_V,ATMOS_DENS,ATMOS_QV,ATMOS_PBL,ATMOS_SFC_DENS,ATMOS_SFC_PRES,ATMOS_SFLX_LW,ATMOS_SFLX_SW,ATMOS_cosSZA,ATMOS_SFLX_water,ATMOS_SFLX_ENGI)
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -549,6 +559,97 @@ contains
   end subroutine URBAN_vars_setup
 
   !-----------------------------------------------------------------------------
+  !> Finalize
+  subroutine URBAN_vars_finalize
+    implicit none
+    !---------------------------------------------------------------------------
+
+    LOG_NEWLINE
+    LOG_INFO("URBAN_vars_finalize",*) 'Finalize'
+
+    !$acc exit data delete(URBAN_TRL,URBAN_TBL,URBAN_TGL,URBAN_TR,URBAN_TB,URBAN_TG,URBAN_TC,URBAN_QC,URBAN_UC,URBAN_RAINR,URBAN_RAINB,URBAN_RAING,URBAN_ROFF)
+    deallocate( URBAN_TRL   )
+    deallocate( URBAN_TBL   )
+    deallocate( URBAN_TGL   )
+    deallocate( URBAN_TR    )
+    deallocate( URBAN_TB    )
+    deallocate( URBAN_TG    )
+    deallocate( URBAN_TC    )
+    deallocate( URBAN_QC    )
+    deallocate( URBAN_UC    )
+    deallocate( URBAN_RAINR )
+    deallocate( URBAN_RAINB )
+    deallocate( URBAN_RAING )
+    deallocate( URBAN_ROFF  )
+
+    !$acc exit data delete(URBAN_SFC_TEMP,URBAN_SFC_albedo)
+    deallocate( URBAN_SFC_TEMP   )
+    deallocate( URBAN_SFC_albedo )
+
+    !$acc exit data delete(URBAN_TR_t,URBAN_TB_t,URBAN_TG_t,URBAN_TC_t,URBAN_QC_t,URBAN_UC_t,URBAN_TRL_t,URBAN_TBL_t,URBAN_TGL_t,URBAN_RAINR_t,URBAN_RAINB_t,URBAN_RAING_t)
+    deallocate( URBAN_TR_t    )
+    deallocate( URBAN_TB_t    )
+    deallocate( URBAN_TG_t    )
+    deallocate( URBAN_TC_t    )
+    deallocate( URBAN_QC_t    )
+    deallocate( URBAN_UC_t    )
+    deallocate( URBAN_TRL_t   )
+    deallocate( URBAN_TBL_t   )
+    deallocate( URBAN_TGL_t   )
+    deallocate( URBAN_RAINR_t )
+    deallocate( URBAN_RAINB_t )
+    deallocate( URBAN_RAING_t )
+
+    !$acc exit data delete(URBAN_SFLX_MW,URBAN_SFLX_MU,URBAN_SFLX_MV,URBAN_SFLX_SH,URBAN_SFLX_LH,URBAN_SFLX_SHEX,URBAN_SFLX_LHEX,URBAN_SFLX_QVEX,URBAN_SFLX_GH,URBAN_SFLX_QTRC)
+    deallocate( URBAN_SFLX_MW   )
+    deallocate( URBAN_SFLX_MU   )
+    deallocate( URBAN_SFLX_MV   )
+    deallocate( URBAN_SFLX_SH   )
+    deallocate( URBAN_SFLX_LH   )
+    deallocate( URBAN_SFLX_SHEX )
+    deallocate( URBAN_SFLX_LHEX )
+    deallocate( URBAN_SFLX_QVEX )
+    deallocate( URBAN_SFLX_GH   )
+    deallocate( URBAN_SFLX_QTRC )
+
+    !$acc exit data delete(URBAN_Z0M,URBAN_Z0H,URBAN_Z0E,URBAN_ZD,URBAN_AH,URBAN_AHL,URBAN_Ustar,URBAN_Tstar,URBAN_Qstar,URBAN_Wstar,URBAN_RLmo,URBAN_U10,URBAN_V10,URBAN_T2,URBAN_Q2)
+    deallocate( URBAN_Z0M   )
+    deallocate( URBAN_Z0H   )
+    deallocate( URBAN_Z0E   )
+    deallocate( URBAN_ZD    )
+    deallocate( URBAN_AH    )
+    deallocate( URBAN_AHL   )
+    deallocate( URBAN_Ustar )
+    deallocate( URBAN_Tstar )
+    deallocate( URBAN_Qstar )
+    deallocate( URBAN_Wstar )
+    deallocate( URBAN_RLmo  )
+    deallocate( URBAN_U10   )
+    deallocate( URBAN_V10   )
+    deallocate( URBAN_T2    )
+    deallocate( URBAN_Q2    )
+
+    !$acc exit data delete(ATMOS_TEMP,ATMOS_PRES,ATMOS_W,ATMOS_U,ATMOS_V,ATMOS_DENS,ATMOS_QV,ATMOS_PBL,ATMOS_SFC_DENS,ATMOS_SFC_PRES,ATMOS_SFLX_LW,ATMOS_SFLX_SW,ATMOS_cosSZA,ATMOS_SFLX_water,ATMOS_SFLX_ENGI)
+    deallocate( ATMOS_TEMP       )
+    deallocate( ATMOS_PRES       )
+    deallocate( ATMOS_W          )
+    deallocate( ATMOS_U          )
+    deallocate( ATMOS_V          )
+    deallocate( ATMOS_DENS       )
+    deallocate( ATMOS_QV         )
+    deallocate( ATMOS_PBL        )
+    deallocate( ATMOS_SFC_DENS   )
+    deallocate( ATMOS_SFC_PRES   )
+    deallocate( ATMOS_SFLX_LW    )
+    deallocate( ATMOS_SFLX_SW    )
+    deallocate( ATMOS_cosSZA     )
+    deallocate( ATMOS_SFLX_water )
+    deallocate( ATMOS_SFLX_ENGI  )
+
+    return
+  end subroutine URBAN_vars_finalize
+
+  !-----------------------------------------------------------------------------
   !> Open urban restart file for read
   subroutine URBAN_vars_restart_open
     use scale_time, only: &
@@ -563,6 +664,8 @@ contains
     character(len=19)     :: timelabel
     character(len=H_LONG) :: basename
     !---------------------------------------------------------------------------
+
+    call PROF_rapstart('URB_Restart', 1)
 
     LOG_NEWLINE
     LOG_INFO("URBAN_vars_restart_open",*) 'Open restart file (URBAN) '
@@ -588,6 +691,8 @@ contains
        LOG_INFO("URBAN_vars_restart_open",*) 'restart file for urban is not specified.'
     endif
 
+    call PROF_rapend('URB_Restart', 1)
+
     return
   end subroutine URBAN_vars_restart_open
 
@@ -603,6 +708,8 @@ contains
        FILE_CARTESC_flush
     implicit none
     !---------------------------------------------------------------------------
+
+    call PROF_rapstart('URB_Restart', 1)
 
     if ( restart_fid /= -1 ) then
        LOG_NEWLINE
@@ -652,11 +759,18 @@ contains
 
        if( FILE_get_AGGREGATE(restart_fid) ) call FILE_CARTESC_flush( restart_fid ) ! commit all pending read requests
 
+       !$acc update device(URBAN_TRL,URBAN_TGL)
+       !$acc update device(URBAN_TR,URBAN_TB,URBAN_TG,URBAN_TC,URBAN_QC,URBAN_UC)
+       !$acc update device(URBAN_RAINR,URBAN_RAINB,URBAN_RAING)
+       !$acc update device(URBAN_SFC_TEMP,URBAN_SFC_albedo)
+
        call URBAN_vars_check( force = .true. )
     else
        LOG_ERROR("URBAN_vars_restart_read",*) 'invalid restart file ID for urban.'
        call PRC_abort
     endif
+
+    call PROF_rapend('URB_Restart', 1)
 
     return
   end subroutine URBAN_vars_restart_read
@@ -777,6 +891,8 @@ contains
     integer  :: k, i, j
     !---------------------------------------------------------------------------
 
+    !$acc data create(WORK3D,WORK2D)
+
     call MONITOR_put( MONIT_id(IM_TRL),  URBAN_TRL(:,:,:) )
     call MONITOR_put( MONIT_id(IM_TBL),  URBAN_TBL(:,:,:) )
     call MONITOR_put( MONIT_id(IM_TGL),  URBAN_TGL(:,:,:) )
@@ -788,11 +904,13 @@ contains
     call MONITOR_put( MONIT_id(IM_UC),  URBAN_UC(:,:) )
     if ( MONIT_id(IM_QC) > 0 ) then
        !$omp parallel do
+       !$acc kernels
        do j = UJS, UJE
        do i = UIS, UIE
           WORK2D(i,j) = URBAN_QC(i,j) * ATMOS_DENS(i,j)
        end do
        end do
+       !$acc end kernels
        call MONITOR_put( MONIT_id(IM_QC), WORK2D(:,:) )
     end if
 
@@ -930,6 +1048,7 @@ contains
 !!$       call MONITOR_put( MONIT_id(IM_ENGFLX), WORK2D(:,:) )
 !!$    end if
 
+    !$acc end data
 
     return
   end subroutine URBAN_vars_monitor
@@ -1138,6 +1257,8 @@ contains
     character(len=H_LONG) :: basename
     !---------------------------------------------------------------------------
 
+    call PROF_rapstart('URB_Restart', 1)
+
     if ( URBAN_do .and. URBAN_RESTART_OUT_BASENAME /= '' ) then
 
        LOG_NEWLINE
@@ -1159,6 +1280,8 @@ contains
 
     endif
 
+    call PROF_rapend('URB_Restart', 1)
+
     return
   end subroutine URBAN_vars_restart_create
 
@@ -1169,9 +1292,13 @@ contains
        FILE_CARTESC_enddef
     implicit none
 
+    call PROF_rapstart('URB_Restart', 1)
+
     if ( restart_fid /= -1 ) then
        call FILE_CARTESC_enddef( restart_fid ) ! [IN]
     endif
+
+    call PROF_rapend('URB_Restart', 1)
 
     return
   end subroutine URBAN_vars_restart_enddef
@@ -1184,6 +1311,8 @@ contains
     implicit none
     !---------------------------------------------------------------------------
 
+    call PROF_rapstart('URB_Restart', 1)
+
     if ( restart_fid /= -1 ) then
        LOG_NEWLINE
        LOG_INFO("URBAN_vars_restart_close",*) 'Close restart file (URBAN) '
@@ -1192,6 +1321,8 @@ contains
 
        restart_fid = -1
     endif
+
+    call PROF_rapend('URB_Restart', 1)
 
     return
   end subroutine URBAN_vars_restart_close
@@ -1205,6 +1336,8 @@ contains
 
     integer :: i
     !---------------------------------------------------------------------------
+
+    call PROF_rapstart('URB_Restart', 1)
 
     if ( restart_fid /= -1 ) then
 
@@ -1223,6 +1356,8 @@ contains
 
     endif
 
+    call PROF_rapend('URB_Restart', 1)
+
     return
   end subroutine URBAN_vars_restart_def_var
 
@@ -1233,6 +1368,8 @@ contains
        FILE_CARTESC_write_var
     implicit none
     !---------------------------------------------------------------------------
+
+    call PROF_rapstart('URB_Restart', 1)
 
     if ( restart_fid /= -1 ) then
 
@@ -1290,6 +1427,8 @@ contains
                                     VAR_NAME(I_SFC_ALB_VIS_dif), 'XY',  fill_halo=.true. ) ! [IN]
 
     endif
+
+    call PROF_rapend('URB_Restart', 1)
 
     return
   end subroutine URBAN_vars_restart_write

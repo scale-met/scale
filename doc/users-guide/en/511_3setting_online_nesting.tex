@@ -37,7 +37,7 @@ In the configuration files \verb|run.***.conf| for the parent and child domains,
 \verb| ONLINE_IAM_DAUGHTER      = .false.,| & \\
 \verb| ONLINE_BOUNDARY_USE_QHYD = .false.,| & \\
 \verb| ONLINE_USE_VELZ          = .false.,| & \\
-\verb| ONLINE_AGGRESSIVE_COMM   = .true., | & \\
+\verb| ONLINE_AGGRESSIVE_COMM   = .false., | & \\
 \verb|/| \\
 }
 ~\\
@@ -49,7 +49,7 @@ In the configuration files \verb|run.***.conf| for the parent and child domains,
 \verb| ONLINE_IAM_DAUGHTER      = .true., | & \\
 \verb| ONLINE_BOUNDARY_USE_QHYD = .false.,| & \\
 \verb| ONLINE_USE_VELZ          = .false.,| & \\
-\verb| ONLINE_AGGRESSIVE_COMM   = .true., | & \\
+\verb| ONLINE_AGGRESSIVE_COMM   = .false., | & \\
 \verb|/| \\
 }
 
@@ -82,6 +82,15 @@ However, in the \scalerm nesting experiment, water condensation calculated in th
 By receving hydrometeors' condition at the lateral boundary,
 the delay in the generation of clouds and rain near the inflow boundary of the nested domain is expected to be suppressed.
 \nmitem{ONLINE_USE_VELZ} specifies whether vertical velocity is used for the boundary condition in the child domain.
+%
+\nmitem{ONLINE_AGGRESSIVE_COMM} is a setting related to MPI communication when passing data from the parent domain to the child domain.
+The parent domain passes boundary conditions to the child domain at each time step (\nmitem{TIME_DT}) of the parent domain.
+If \nmitem{ONLINE_AGGRESSIVE_COMM} is \verb|.true.|, regardless of whether the child domain has received the data or not,
+the parent domain passes the data at the parent domain's timing and moves to the next time step of calculation;
+whereas if \verb|.false.|, the parent domain waits until the child domain has received the data of the previous step,
+and then passes the data of the current time step.
+In the case of \verb|.true.|, if the calculation time vastly differs between the parent and child domains,
+the memory usage will be extensive and the computation may stop due to hardware limitations.
 
 \subsubsection{Configuration of Launcher}
 \label{subsubsec:launch}
@@ -92,6 +101,8 @@ other than \verb|run.***.conf|.
 \verb| NUM_DOMAIN  = 2,|    & number of domains\\
 \verb| PRC_DOMAINS = 4, 16,| & MPI processes used for each domain (as many domains as necessary)\\
 \verb| CONF_FILES  = run.d01.conf, run.d02.conf,| & The configuration files for each domain (as many domains as necessary)\\
+\verb| LOG_SPLIT   = .false.,| & log-output for mpi splitting?\\
+\verb| COLOR_REORDER = .true.,| & coloring reorder for mpi splitting?\\
 \verb|/|& \\
 }
 \nmitem{CONF_FILES} must correspond to \nmitem{PRC_DOMAINS} in order.
@@ -102,6 +113,12 @@ and the 16-MPI parallel for the child domain;
 each number of processes in the launch file 
 must correspond to the total number of MPI processes ( \verb|PRC_NUM_X|$\times$\verb|PRC_NUM_Y| )
 specified in each configuration file \verb|run.***.conf|.
+
+Log of MPI communicator splitting will be output, when \nmitem{LOG_SPLIT} is \verb|.true.|.
+The default value of \nmitem{LOG_SPLIT} is \verb|.false.|.
+
+Option of \nmitem{COLOR_REORDER} is the switch for job rearrangement in MPI communicator groups following the process size of the job. The job which has the largest process size is arranged at the front row;
+this would be reasonable to gain the efficient inter-node communication.
 
 At execution, the total number of MPI processes is given, which different from that in the case of single-domain execution. For example, 20 processes are specified in the above case.
 \begin{verbatim}

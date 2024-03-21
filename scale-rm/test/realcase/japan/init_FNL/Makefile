@@ -7,6 +7,8 @@
 PWD         = $(shell pwd)
 TOPDIR      = $(abspath ../../../../..)
 TESTDIR     = ../../..
+DATADIR     = ${TOPDIR}/data
+DATADIR_RM  = ${TESTDIR}/data
 
 ifndef PREPDIR
    PREPDIR = ../pp
@@ -22,8 +24,8 @@ INITCONF    = init.conf
 TPROC       = 16
 
 # required data (parameters,distributed files)
-DATPARAM    = " [${TESTDIR}/data/land/param.bucket.conf param.bucket.conf ] \
-                [${TESTDIR}/tutorial/real/data/namelist.grads_boundary.FNL.2005053112-2016051106 namelist.grads_boundary.FNL.2005053112-2016051106] "
+DATPARAM    = " [${DATADIR}/land/param.bucket.conf param.bucket.conf ] \
+                [${TESTDIR}/tutorial/real/data/namelist.grads_boundary.FNL.2005053112-2015011400 namelist.grads_boundary.FNL.2005053112-2015011400] "
 DATDISTS    = " [${TPROC} $(PREPDIR)/topo    topo   ] \
                 [${TPROC} $(PREPDIR)/landuse landuse] "
 

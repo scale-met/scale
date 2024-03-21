@@ -25,6 +25,7 @@ module scale_atmos_sfc_ch_rn222
   !++ Public procedure
   !
   public :: ATMOS_SFC_CH_rn222_setup
+  public :: ATMOS_SFC_CH_rn222_finalize
   public :: ATMOS_SFC_CH_rn222_OCEAN_flux
   public :: ATMOS_SFC_CH_rn222_LAND_flux
 
@@ -154,6 +155,7 @@ contains
           y = 1
           do m = 1, nmonth
              write(fname,'(A,A,I2.2,A)') trim(ATMOS_SFC_CH_Rn222_SCHERY1998_dirpath), "/fdh3a.", m
+             call IO_get_fname(fname, fname)
              LOG_INFO_CONT(*) 'Read from the ASCII file: ', trim(fname)
 
              fid = IO_get_available_fid()
@@ -207,6 +209,7 @@ contains
           do m = 1, nmonth
              yy = y+ATMOS_SFC_CH_Rn222_HIRAO2010_ystart-1
              write(fname,'(A,A,I4.4,I2.2)') trim(ATMOS_SFC_CH_Rn222_HIRAO2010_dirpath), "/flux-hra-revi", yy, m
+             call IO_get_fname(fname, fname)
              LOG_INFO_CONT(*) 'Read from the ASCII file: ', trim(fname)
 
              fid = IO_get_available_fid()
@@ -238,9 +241,9 @@ contains
     select case( ATMOS_SFC_CH_RN222_emission_type )
     case( 'SCHERY1998', 'HIRAO2010' )
 
-       call COMM_bcast( emission_lon  (:,:),     nlon, nlat )
-       call COMM_bcast( emission_lat  (:,:),     nlon, nlat )
-       call COMM_bcast( emission_value(:,:,:,:), nlon, nlat, nmonth, nyear )
+       call COMM_bcast( nlon, nlat, emission_lon  (:,:) )
+       call COMM_bcast( nlon, nlat, emission_lat  (:,:) )
+       call COMM_bcast( nlon, nlat, nmonth, nyear, emission_value(:,:,:,:) )
 
        allocate( idx_i(IA,JA,ATMOS_SFC_CH_Rn222_nintrp) )
        allocate( idx_j(IA,JA,ATMOS_SFC_CH_Rn222_nintrp) )
@@ -260,6 +263,21 @@ contains
 
     return
   end subroutine ATMOS_SFC_CH_rn222_setup
+
+  !-----------------------------------------------------------------------------
+  !> finalize
+  subroutine ATMOS_SFC_CH_rn222_finalize
+
+    if ( allocated( emission_lon ) ) deallocate( emission_lon )
+    if ( allocated( emission_lat ) ) deallocate( emission_lat )
+    if ( allocated( emission_value ) ) deallocate( emission_value )
+
+    if ( allocated( idx_i ) ) deallocate( idx_i )
+    if ( allocated( idx_j ) ) deallocate( idx_j )
+    if ( allocated( hfact ) ) deallocate( hfact )
+
+    return
+  end subroutine ATMOS_SFC_CH_rn222_finalize
 
   !-----------------------------------------------------------------------------
   !> Emission from the ocean surface

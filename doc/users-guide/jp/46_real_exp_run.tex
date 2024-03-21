@@ -30,8 +30,6 @@
 \verb|&PARAM_ATMOS_BOUNDARY| \\
 \verb| ATMOS_BOUNDARY_TYPE           = "REAL",                |\\
 \verb| ATMOS_BOUNDARY_IN_BASENAME    = "../init/boundary_d01",|\\
-\verb| ATMOS_BOUNDARY_START_DATE     = 2007, 7, 14, 18, 0, 0, |\\
-\verb| ATMOS_BOUNDARY_UPDATE_DT      = 21600.0,               |\\
 \verb| ATMOS_BOUNDARY_USE_DENS       = .true.,     |\\
 \verb| ATMOS_BOUNDARY_USE_QHYD       = .false.,    |\\
 \verb| ATMOS_BOUNDARY_ALPHAFACT_DENS = 1.0,        |\\
@@ -70,7 +68,7 @@
 \verb|   FILE_HISTORY_DEFAULT_BASENAME  = "history_d01",| & : 出力するファイル名\\
 \verb|   FILE_HISTORY_DEFAULT_TINTERVAL = 3600.D0,      | & : 出力時間間隔\\
 \verb|   FILE_HISTORY_DEFAULT_TUNIT     = "SEC",        | & : 出力時間間隔の単位\\
-\verb|   FILE_HISTORY_DEFAULT_TAVERAGE  = .false.,      | & \\
+\verb|   FILE_HISTORY_DEFAULT_TSTATS_OP = "none",       | & \\
 \verb|   FILE_HISTORY_DEFAULT_DATATYPE  = "REAL4",      | & \\
 \verb|   FILE_HISTORY_DEFAULT_ZCOORD    = "model",      | & : 鉛直内挿は適用しない\\
 \verb|   FILE_HISTORY_OUTPUT_STEP0      = .true.,       | & : 初期時刻(t=0)の値を出力するかどうか\\
@@ -141,8 +139,7 @@
 計算は進みながら、途中経過のログは\verb|"LOG_d01.pe000000"|に出力される。
 ジョブが正常に終了すると、\verb|"LOG_d01.pe000000"|の最後に
 \msgbox{
- +++++ finalize MPI...\\
- +++++ MPI is peacefully finalized\\
+ +++++ Closing LOG file\\
 }
 と出力され、下記のファイルが作成される。
 \begin{verbatim}

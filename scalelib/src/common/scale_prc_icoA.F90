@@ -398,22 +398,24 @@ contains
        num_of_mng, &
        mng_rgnid
 
+    character(len=H_LONG) :: fname
     integer  :: fid, ierr
     integer  :: r, p, l
     !---------------------------------------------------------------------------
 
-    LOG_INFO("PRC_ICOA_RGN_input",*) 'input region management information file: ', trim(in_fname)
+    call IO_get_fname(fname, in_fname)
+    LOG_INFO("PRC_ICOA_RGN_input",*) 'input region management information file: ', trim(fname)
 
     fid = IO_get_available_fid()
-    open( unit   = fid,            &
-          file   = trim(in_fname), &
-          form   = 'formatted',    &
-          status = 'old',          &
-          iostat = ierr            )
+    open( unit   = fid,         &
+          file   = fname,       &
+          form   = 'formatted', &
+          status = 'old',       &
+          iostat = ierr         )
 
        ! ERROR if filename are not defined
        if ( ierr /= 0 ) then
-          LOG_ERROR("PRC_ICOA_RGN_input",*) 'File is not found!', trim(in_fname)
+          LOG_ERROR("PRC_ICOA_RGN_input",*) 'File is not found!', trim(fname)
           call PRC_abort
        endif
 
@@ -483,7 +485,7 @@ contains
     integer,          intent(in) :: rall               !< number of regular region (global total)
     integer,          intent(in) :: lall               !< number of regular region (local)
     integer,          intent(in) :: edge_tab(2,4,rall) !< region link information (for 4 edges)
-    integer,          intent(in) :: lp2r(lall,pall)    !< l,prc => region
+    integer,          intent(in) :: lp2r(lall,0:pall-1)!< l,prc => region
 
     integer :: num_of_rgn !< number of region
 
@@ -517,17 +519,19 @@ contains
        num_of_mng, &
        mng_rgnid
 
+    character(len=H_LONG) :: fname
     integer  :: fid
     integer  :: r, p, l
     !---------------------------------------------------------------------------
 
     if ( PRC_IsMaster ) then
-       LOG_INFO("PRC_ICOA_RGN_output",*) 'output region management information file: ', trim(out_fname)
+       call IO_get_fname(fname, out_fname)
+       LOG_INFO("PRC_ICOA_RGN_output",*) 'output region management information file: ', trim(fname)
 
        fid = IO_get_available_fid()
-       open( unit   = fid,             &
-             file   = trim(out_fname), &
-             form   = 'formatted'      )
+       open( unit   = fid,        &
+             file   = fname,      &
+             form   = 'formatted' )
 
           num_of_rgn = rall
           write(fid,nml=rgn_info)

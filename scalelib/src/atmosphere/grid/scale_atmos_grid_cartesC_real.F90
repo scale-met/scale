@@ -27,6 +27,7 @@ module scale_atmos_grid_cartesC_real
   public :: ATMOS_GRID_CARTESC_REAL_setup
   public :: ATMOS_GRID_CARTESC_REAL_calc_Z
   public :: ATMOS_GRID_CARTESC_REAL_calc_areavol
+  public :: ATMOS_GRID_CARTESC_REAL_finalize
 
   !-----------------------------------------------------------------------------
   !
@@ -156,6 +157,7 @@ contains
     allocate( ATMOS_GRID_CARTESC_REAL_LATUV(0:IA,0:JA) )
     allocate( ATMOS_GRID_CARTESC_REAL_DLON (  IA,  JA) )
     allocate( ATMOS_GRID_CARTESC_REAL_DLAT (  IA,  JA) )
+    !$acc enter data create(ATMOS_GRID_CARTESC_REAL_LON, ATMOS_GRID_CARTESC_REAL_LAT, ATMOS_GRID_CARTESC_REAL_LONUY, ATMOS_GRID_CARTESC_REAL_LONXV, ATMOS_GRID_CARTESC_REAL_LONUV, ATMOS_GRID_CARTESC_REAL_LATUY, ATMOS_GRID_CARTESC_REAL_LATXV, ATMOS_GRID_CARTESC_REAL_LATUV, ATMOS_GRID_CARTESC_REAL_DLON, ATMOS_GRID_CARTESC_REAL_DLAT)
 
     allocate( ATMOS_GRID_CARTESC_REAL_CZ  (  KA,IA,JA) )
     allocate( ATMOS_GRID_CARTESC_REAL_CZUY(  KA,IA,JA) )
@@ -168,6 +170,7 @@ contains
     allocate( ATMOS_GRID_CARTESC_REAL_F2H (KA,2,IA,JA) )
     allocate( ATMOS_GRID_CARTESC_REAL_Z1 (     IA,JA) )
     allocate( ATMOS_GRID_CARTESC_REAL_PHI(  KA,IA,JA) )
+    !$acc enter data create(ATMOS_GRID_CARTESC_REAL_CZ, ATMOS_GRID_CARTESC_REAL_CZUY, ATMOS_GRID_CARTESC_REAL_CZXV, ATMOS_GRID_CARTESC_REAL_CZUV, ATMOS_GRID_CARTESC_REAL_FZ, ATMOS_GRID_CARTESC_REAL_FZUY, ATMOS_GRID_CARTESC_REAL_FZXV, ATMOS_GRID_CARTESC_REAL_FZUV, ATMOS_GRID_CARTESC_REAL_F2H, ATMOS_GRID_CARTESC_REAL_Z1, ATMOS_GRID_CARTESC_REAL_PHI)
 
     allocate( ATMOS_GRID_CARTESC_REAL_AREA     (     IA,JA) )
     allocate( ATMOS_GRID_CARTESC_REAL_AREAZUY_X(KA  ,IA,JA) )
@@ -180,14 +183,17 @@ contains
     allocate( ATMOS_GRID_CARTESC_REAL_AREAXV   (     IA,JA) )
     allocate( ATMOS_GRID_CARTESC_REAL_AREAZUV_X(KA,  IA,JA) )
     allocate( ATMOS_GRID_CARTESC_REAL_AREAZXY_Y(KA,  IA,JA) )
+    !$acc enter data create(ATMOS_GRID_CARTESC_REAL_AREA, ATMOS_GRID_CARTESC_REAL_AREAZUY_X, ATMOS_GRID_CARTESC_REAL_AREAZXV_Y, ATMOS_GRID_CARTESC_REAL_AREAWUY_X, ATMOS_GRID_CARTESC_REAL_AREAWXV_Y, ATMOS_GRID_CARTESC_REAL_AREAUY, ATMOS_GRID_CARTESC_REAL_AREAZXY_X, ATMOS_GRID_CARTESC_REAL_AREAZUV_Y, ATMOS_GRID_CARTESC_REAL_AREAXV, ATMOS_GRID_CARTESC_REAL_AREAZUV_X, ATMOS_GRID_CARTESC_REAL_AREAZXY_Y)
 
     allocate( ATMOS_GRID_CARTESC_REAL_TOTAREAZUY_X(IA) )
     allocate( ATMOS_GRID_CARTESC_REAL_TOTAREAZXV_Y(JA) )
+    !$acc enter data create(ATMOS_GRID_CARTESC_REAL_TOTAREAZUY_X, ATMOS_GRID_CARTESC_REAL_TOTAREAZXV_Y)
 
     allocate( ATMOS_GRID_CARTESC_REAL_VOL   (  KA,IA,JA) )
     allocate( ATMOS_GRID_CARTESC_REAL_VOLWXY(0:KA,IA,JA) )
     allocate( ATMOS_GRID_CARTESC_REAL_VOLZUY(  KA,IA,JA) )
     allocate( ATMOS_GRID_CARTESC_REAL_VOLZXV(  KA,IA,JA) )
+    !$acc enter data create(ATMOS_GRID_CARTESC_REAL_VOL, ATMOS_GRID_CARTESC_REAL_VOLWXY, ATMOS_GRID_CARTESC_REAL_VOLZUY, ATMOS_GRID_CARTESC_REAL_VOLZXV)
 
     allocate( ATMOS_GRID_CARTESC_REAL_DOMAIN_CATALOGUE(PRC_nprocs,2,2) )
 
@@ -247,6 +253,8 @@ contains
     real(RP) :: mine (2,2)            !< send    buffer of lon-lat [deg]
     real(RP) :: whole(2,2,PRC_nprocs) !< recieve buffer of lon-lat [deg]
 
+    character(len=H_LONG) :: fname
+
     integer  :: i, j
     integer  :: fid, ierr
     !---------------------------------------------------------------------------
@@ -264,6 +272,7 @@ contains
        call MAPPROJECTION_xy2lonlat( ATMOS_GRID_CARTESC_CX(i), ATMOS_GRID_CARTESC_CY(j), ATMOS_GRID_CARTESC_REAL_LON  (i,j), ATMOS_GRID_CARTESC_REAL_LAT  (i,j) )
     enddo
     enddo
+    !$acc update device(ATMOS_GRID_CARTESC_REAL_LON, ATMOS_GRID_CARTESC_REAL_LAT) async
 
     !$omp parallel do collapse(2)
     do j = 1, JA
@@ -271,6 +280,7 @@ contains
        call MAPPROJECTION_xy2lonlat( ATMOS_GRID_CARTESC_FX(i), ATMOS_GRID_CARTESC_CY(j), ATMOS_GRID_CARTESC_REAL_LONUY(i,j), ATMOS_GRID_CARTESC_REAL_LATUY(i,j) )
     enddo
     enddo
+    !$acc update device(ATMOS_GRID_CARTESC_REAL_LONUY, ATMOS_GRID_CARTESC_REAL_LATUY) async
 
     !$omp parallel do collapse(2)
     do j = 0, JA
@@ -278,6 +288,7 @@ contains
        call MAPPROJECTION_xy2lonlat( ATMOS_GRID_CARTESC_CX(i), ATMOS_GRID_CARTESC_FY(j), ATMOS_GRID_CARTESC_REAL_LONXV(i,j), ATMOS_GRID_CARTESC_REAL_LATXV(i,j) )
     enddo
     enddo
+    !$acc update device(ATMOS_GRID_CARTESC_REAL_LONXV, ATMOS_GRID_CARTESC_REAL_LATXV) async
 
     !$omp parallel do collapse(2)
     do j = 0, JA
@@ -285,6 +296,7 @@ contains
        call MAPPROJECTION_xy2lonlat( ATMOS_GRID_CARTESC_FX(i), ATMOS_GRID_CARTESC_FY(j), ATMOS_GRID_CARTESC_REAL_LONUV(i,j), ATMOS_GRID_CARTESC_REAL_LATUV(i,j) )
     enddo
     enddo
+    !$acc update device(ATMOS_GRID_CARTESC_REAL_LONUV, ATMOS_GRID_CARTESC_REAL_LATUV) async
 
     !$omp workshare
 !OCL ZFILL
@@ -309,6 +321,7 @@ contains
        endif
     enddo
     enddo
+    !$acc update device(ATMOS_GRID_CARTESC_REAL_DLON, ATMOS_GRID_CARTESC_REAL_DLAT) async
 
     LOG_NEWLINE
     LOG_INFO("ATMOS_GRID_CARTESC_REAL_calc_latlon",*) 'Position on the earth (Local)'
@@ -321,22 +334,23 @@ contains
                                'SW(',ATMOS_GRID_CARTESC_REAL_LON(IS,JS)/D2R,',',ATMOS_GRID_CARTESC_REAL_LAT(IS,JS)/D2R,')', &
                             ' - SE(',ATMOS_GRID_CARTESC_REAL_LON(IE,JS)/D2R,',',ATMOS_GRID_CARTESC_REAL_LAT(IE,JS)/D2R,')'
 
-    mine(I_MIN,I_LON) = minval(ATMOS_GRID_CARTESC_REAL_LONUV(:,:)) / D2R
-    mine(I_MAX,I_LON) = maxval(ATMOS_GRID_CARTESC_REAL_LONUV(:,:)) / D2R
-    mine(I_MIN,I_LAT) = minval(ATMOS_GRID_CARTESC_REAL_LATUV(:,:)) / D2R
-    mine(I_MAX,I_LAT) = maxval(ATMOS_GRID_CARTESC_REAL_LATUV(:,:)) / D2R
+    mine(I_MIN,I_LON) = minval(ATMOS_GRID_CARTESC_REAL_LONUV(IS-1:IE,JS-1:JE)) / D2R
+    mine(I_MAX,I_LON) = maxval(ATMOS_GRID_CARTESC_REAL_LONUV(IS-1:IE,JS-1:JE)) / D2R
+    mine(I_MIN,I_LAT) = minval(ATMOS_GRID_CARTESC_REAL_LATUV(IS-1:IE,JS-1:JE)) / D2R
+    mine(I_MAX,I_LAT) = maxval(ATMOS_GRID_CARTESC_REAL_LATUV(IS-1:IE,JS-1:JE)) / D2R
 
-    call COMM_gather( whole(:,:,:), mine(:,:), 2, 2 ) ! everytime do for online nesting
+    call COMM_gather( 2, 2, mine(:,:), whole(:,:,:)  ) ! everytime do for online nesting
 
     if ( PRC_IsMaster ) then
        if ( catalogue_output ) then
 
           fid = IO_get_available_fid()
-          open( fid,                            &
-                file   = trim(catalogue_fname), &
-                form   = 'formatted',           &
-                status = 'replace',             &
-                iostat = ierr                   )
+          call IO_get_fname(fname, catalogue_fname)
+          open( fid,                  &
+                file   = fname,       &
+                form   = 'formatted', &
+                status = 'replace',   &
+                iostat = ierr         )
 
           if ( ierr /= 0 ) then
              LOG_ERROR("ATMOS_GRID_CARTESC_REAL_calc_latlon",*) 'cannot create latlon-catalogue file!'
@@ -361,7 +375,9 @@ contains
        enddo
     endif
 
-    call COMM_bcast( ATMOS_GRID_CARTESC_REAL_DOMAIN_CATALOGUE(:,:,:), PRC_nprocs, 2, 2 )
+    call COMM_bcast( PRC_nprocs, 2, 2, ATMOS_GRID_CARTESC_REAL_DOMAIN_CATALOGUE(:,:,:) )
+
+    !$acc wait
 
     return
   end subroutine ATMOS_GRID_CARTESC_REAL_calc_latlon
@@ -404,6 +420,7 @@ contains
        enddo
     enddo
     enddo
+    !$acc update device(ATMOS_GRID_CARTESC_REAL_CZ) async
 
     !$omp parallel do private(zs) collapse(2)
     do j = 1, JA
@@ -421,6 +438,7 @@ contains
           ATMOS_GRID_CARTESC_REAL_CZUY(k,IA,j) = ( Htop - Zs ) / Htop * ATMOS_GRID_CARTESC_CZ(k) + Zs
        enddo
     enddo
+    !$acc update device(ATMOS_GRID_CARTESC_REAL_CZUY) async
 
     !$omp parallel do private(zs) collapse(2)
     do j = 1, JA-1
@@ -437,6 +455,7 @@ contains
           ATMOS_GRID_CARTESC_REAL_CZXV(k,i,JA) = ( Htop - Zs ) / Htop * ATMOS_GRID_CARTESC_CZ(k) + Zs
        enddo
     enddo
+    !$acc update device(ATMOS_GRID_CARTESC_REAL_CZXV) async
 
     !$omp parallel do private(zs) collapse(2)
     do j = 1, JA-1
@@ -464,7 +483,7 @@ contains
     do k = 1, KA
        ATMOS_GRID_CARTESC_REAL_CZUV(k,IA,JA) = ( Htop - Zs ) / Htop * ATMOS_GRID_CARTESC_CZ(k) + Zs
     enddo
-
+    !$acc update device(ATMOS_GRID_CARTESC_REAL_CZUV) async
 
     !$omp parallel do private(zs) collapse(2)
     do j = 1, JA
@@ -475,6 +494,7 @@ contains
        end do
     end do
     end do
+    !$acc update device(ATMOS_GRID_CARTESC_REAL_FZ) async
 
     !$omp parallel do private(zs) collapse(2)
     do j = 1, JA
@@ -492,6 +512,7 @@ contains
           ATMOS_GRID_CARTESC_REAL_FZUY(k,IA,j) = ( Htop - Zs ) / Htop * ATMOS_GRID_CARTESC_FZ(k) + Zs
        end do
     end do
+    !$acc update device(ATMOS_GRID_CARTESC_REAL_FZUY) async
 
     !$omp parallel do private(zs) collapse(2)
     do j = 1, JA-1
@@ -509,6 +530,7 @@ contains
           ATMOS_GRID_CARTESC_REAL_FZXV(k,i,JA) = ( Htop - Zs ) / Htop * ATMOS_GRID_CARTESC_FZ(k) + Zs
        enddo
     enddo
+    !$acc update device(ATMOS_GRID_CARTESC_REAL_FZXV) async
 
     !$omp parallel do private(zs) collapse(2)
     do j = 1, JA-1
@@ -537,6 +559,7 @@ contains
     do k = 0, KA
        ATMOS_GRID_CARTESC_REAL_FZUV(k,IA,JA) = ( Htop - Zs ) / Htop * ATMOS_GRID_CARTESC_FZ(k) + Zs
     enddo
+    !$acc update device(ATMOS_GRID_CARTESC_REAL_FZUV) async
 
     !$omp parallel do private(dz1,dz2) collapse(2)
     do j = 1, JA
@@ -553,15 +576,17 @@ contains
        ATMOS_GRID_CARTESC_REAL_F2H(KE:KA ,2,i,j) = 0.5_RP
     end do
     end do
-
+    !$acc update device(ATMOS_GRID_CARTESC_REAL_F2H) async
 
     !$omp workshare
 !OCL ZFILL
     ATMOS_GRID_CARTESC_REAL_Z1(:,:) = ATMOS_GRID_CARTESC_REAL_CZ(KS,:,:) - Zsfc(:,:)
+    !$acc update device(ATMOS_GRID_CARTESC_REAL_Z1) async
 
 !OCL ZFILL
     ATMOS_GRID_CARTESC_REAL_PHI(:,:,:) = GRAV * ATMOS_GRID_CARTESC_REAL_CZ(:,:,:)
     !$omp end workshare
+    !$acc update device(ATMOS_GRID_CARTESC_REAL_Z1, ATMOS_GRID_CARTESC_REAL_PHI) async
 
     ATMOS_GRID_CARTESC_REAL_ASPECT_MAX = -1.E+30_RP
     ATMOS_GRID_CARTESC_REAL_ASPECT_MIN =  1.E+30_RP
@@ -591,6 +616,8 @@ contains
                                              ATMOS_GRID_CARTESC_REAL_LAT, ATMOS_GRID_CARTESC_REAL_LATUY, ATMOS_GRID_CARTESC_REAL_LATXV, ATMOS_GRID_CARTESC_REAL_LATUV,     & ! [IN]
                                              Zsfc, LANDUSE_frac_land                                                                                                      ) ! [IN]
 
+    !$acc wait
+
     return
   end subroutine ATMOS_GRID_CARTESC_REAL_calc_Z
 
@@ -600,6 +627,8 @@ contains
        MAPF )
     use scale_prc_cartesC, only: &
        PRC_TwoD
+    use scale_const, &
+       UNDEF => CONST_UNDEF
     use scale_atmos_grid_cartesC, only: &
        ATMOS_GRID_CARTESC_CDX, &
        ATMOS_GRID_CARTESC_FDX, &
@@ -677,6 +706,24 @@ contains
        end do
     end if
 
+#ifdef QUICKDEBUG
+    ATMOS_GRID_CARTESC_REAL_AREA  (1:IS-1,:)  = UNDEF
+    ATMOS_GRID_CARTESC_REAL_AREA  (IE+1:IA,:) = UNDEF
+    ATMOS_GRID_CARTESC_REAL_AREA  (:,1:JS-1)  = UNDEF
+    ATMOS_GRID_CARTESC_REAL_AREA  (:,JE+1:JA) = UNDEF
+    ATMOS_GRID_CARTESC_REAL_AREAXV(1:IS-1,:)  = UNDEF
+    ATMOS_GRID_CARTESC_REAL_AREAXV(IE+1:IA,:) = UNDEF
+    ATMOS_GRID_CARTESC_REAL_AREAXV(:,1:JS-1)  = UNDEF
+    ATMOS_GRID_CARTESC_REAL_AREAXV(:,JE+1:JA) = UNDEF
+    ATMOS_GRID_CARTESC_REAL_AREAUY(1:IS-1,:)  = UNDEF
+    ATMOS_GRID_CARTESC_REAL_AREAUY(IE+1:IA,:) = UNDEF
+    ATMOS_GRID_CARTESC_REAL_AREAUY(:,1:JS-1)  = UNDEF
+    ATMOS_GRID_CARTESC_REAL_AREAUY(:,JE+1:JA) = UNDEF
+                            AREAUV(1:IS-1,:)  = UNDEF
+                            AREAUV(IE+1:IA,:) = UNDEF
+                            AREAUV(:,1:JS-1)  = UNDEF
+                            AREAUV(:,JE+1:JA) = UNDEF
+#endif
     call COMM_vars8( ATMOS_GRID_CARTESC_REAL_AREA  (:,:), 1 )
     call COMM_vars8( ATMOS_GRID_CARTESC_REAL_AREAXV(:,:), 2 )
     call COMM_vars8( ATMOS_GRID_CARTESC_REAL_AREAUY(:,:), 3 )
@@ -707,29 +754,30 @@ contains
        end do
     end do
     end do
+    !$acc update device(ATMOS_GRID_CARTESC_REAL_AREAZXV_Y, ATMOS_GRID_CARTESC_REAL_AREAWXV_Y, ATMOS_GRID_CARTESC_REAL_AREAZXY_X, ATMOS_GRID_CARTESC_REAL_AREAZXY_Y) async
 
-    if ( .not. PRC_TwoD ) then
-       !$omp parallel do collapse(2)
-       do j = 1, JA
-       do i = 1, IA
-          do k = KS, KE
-             ATMOS_GRID_CARTESC_REAL_AREAZUY_X(k,i,j) = ATMOS_GRID_CARTESC_CDY(j) / MAPF(i,j,2,I_UY) * ( ATMOS_GRID_CARTESC_REAL_FZUY(k,i,j) - ATMOS_GRID_CARTESC_REAL_FZUY(k-1,i,j) )
-          end do
-          do k = KS-1, KE
-             ATMOS_GRID_CARTESC_REAL_AREAWUY_X(k,i,j) = ATMOS_GRID_CARTESC_CDY(j) / MAPF(i,j,2,I_UY) * ( ATMOS_GRID_CARTESC_REAL_CZUY(k+1,i,j) - ATMOS_GRID_CARTESC_REAL_CZUY(k,i,j) )
-          end do
-          do k = KS, KE
-             ATMOS_GRID_CARTESC_REAL_AREAZUV_Y(k,i,j) = ATMOS_GRID_CARTESC_CDX(i) / MAPF(i,j,1,I_UV) * ( ATMOS_GRID_CARTESC_REAL_FZUV(k,i,j) - ATMOS_GRID_CARTESC_REAL_FZUV(k-1,i,j) )
-             ATMOS_GRID_CARTESC_REAL_AREAZUV_X(k,i,j) = ATMOS_GRID_CARTESC_CDY(j) / MAPF(i,j,2,I_UV) * ( ATMOS_GRID_CARTESC_REAL_FZUV(k,i,j) - ATMOS_GRID_CARTESC_REAL_FZUV(k-1,i,j) )
-          end do
+    !$omp parallel do collapse(2)
+    do j = 1, JA
+    do i = 1, IA
+       do k = KS, KE
+          ATMOS_GRID_CARTESC_REAL_AREAZUY_X(k,i,j) = ATMOS_GRID_CARTESC_CDY(j) / MAPF(i,j,2,I_UY) * ( ATMOS_GRID_CARTESC_REAL_FZUY(k,i,j) - ATMOS_GRID_CARTESC_REAL_FZUY(k-1,i,j) )
        end do
+       do k = KS-1, KE
+          ATMOS_GRID_CARTESC_REAL_AREAWUY_X(k,i,j) = ATMOS_GRID_CARTESC_CDY(j) / MAPF(i,j,2,I_UY) * ( ATMOS_GRID_CARTESC_REAL_CZUY(k+1,i,j) - ATMOS_GRID_CARTESC_REAL_CZUY(k,i,j) )
        end do
-    end if
+       do k = KS, KE
+          ATMOS_GRID_CARTESC_REAL_AREAZUV_Y(k,i,j) = ATMOS_GRID_CARTESC_CDX(i) / MAPF(i,j,1,I_UV) * ( ATMOS_GRID_CARTESC_REAL_FZUV(k,i,j) - ATMOS_GRID_CARTESC_REAL_FZUV(k-1,i,j) )
+          ATMOS_GRID_CARTESC_REAL_AREAZUV_X(k,i,j) = ATMOS_GRID_CARTESC_CDY(j) / MAPF(i,j,2,I_UV) * ( ATMOS_GRID_CARTESC_REAL_FZUV(k,i,j) - ATMOS_GRID_CARTESC_REAL_FZUV(k-1,i,j) )
+       end do
+    end do
+    end do
+    !$acc update device(ATMOS_GRID_CARTESC_REAL_AREAZUY_X, ATMOS_GRID_CARTESC_REAL_AREAWUY_X, ATMOS_GRID_CARTESC_REAL_AREAZUV_Y, ATMOS_GRID_CARTESC_REAL_AREAZUV_X) async
 
     call COMM_wait( ATMOS_GRID_CARTESC_REAL_AREA  (:,:), 1 )
     call COMM_wait( ATMOS_GRID_CARTESC_REAL_AREAXV(:,:), 2 )
     call COMM_wait( ATMOS_GRID_CARTESC_REAL_AREAUY(:,:), 3 )
     call COMM_wait(                         AREAUV(:,:), 4 )
+    !$acc update device(ATMOS_GRID_CARTESC_REAL_AREA, ATMOS_GRID_CARTESC_REAL_AREAXV, ATMOS_GRID_CARTESC_REAL_AREAUY) async
 
 
     !$omp parallel do collapse(2)
@@ -748,6 +796,7 @@ contains
     end do
     end do
     end do
+    !$acc update device(ATMOS_GRID_CARTESC_REAL_TOTAREAZXV_Y, ATMOS_GRID_CARTESC_REAL_TOTAREAZUY_X) async
 
 
     !$omp parallel do collapse(2)
@@ -781,6 +830,7 @@ contains
        end do
        end do
     end if
+    !$acc update device(ATMOS_GRID_CARTESC_REAL_VOL, ATMOS_GRID_CARTESC_REAL_VOLZXV, ATMOS_GRID_CARTESC_REAL_VOLWXY, ATMOS_GRID_CARTESC_REAL_VOLZUY) async
 
     !$omp parallel do &
     !$omp reduction(+:ATMOS_GRID_CARTESC_REAL_TOTVOL,ATMOS_GRID_CARTESC_REAL_TOTVOLZXV,ATMOS_GRID_CARTESC_REAL_TOTVOLWXY,ATMOS_GRID_CARTESC_REAL_TOTVOLZUY)
@@ -802,7 +852,72 @@ contains
                                          ATMOS_GRID_CARTESC_REAL_AREAXV, ATMOS_GRID_CARTESC_REAL_AREAZUV_X, ATMOS_GRID_CARTESC_REAL_AREAZXY_Y,                         & ! [IN]
                                          ATMOS_GRID_CARTESC_REAL_VOL, ATMOS_GRID_CARTESC_REAL_VOLWXY, ATMOS_GRID_CARTESC_REAL_VOLZUY, ATMOS_GRID_CARTESC_REAL_VOLZXV   ) ! [IN]
 
+    !$acc wait
+
     return
   end subroutine ATMOS_GRID_CARTESC_REAL_calc_areavol
+
+  !-----------------------------------------------------------------------------
+  !> Finalize
+  subroutine ATMOS_GRID_CARTESC_REAL_finalize
+    use scale_interp_vert, only: &
+       INTERP_VERT_finalize
+    implicit none
+    !---------------------------------------------------------------------------
+
+    !$acc exit data delete(ATMOS_GRID_CARTESC_REAL_LON, ATMOS_GRID_CARTESC_REAL_LAT, ATMOS_GRID_CARTESC_REAL_LONUY, ATMOS_GRID_CARTESC_REAL_LONXV, ATMOS_GRID_CARTESC_REAL_LONUV, ATMOS_GRID_CARTESC_REAL_LATUY, ATMOS_GRID_CARTESC_REAL_LATXV, ATMOS_GRID_CARTESC_REAL_LATUV, ATMOS_GRID_CARTESC_REAL_DLON, ATMOS_GRID_CARTESC_REAL_DLAT)
+    deallocate( ATMOS_GRID_CARTESC_REAL_LON   )
+    deallocate( ATMOS_GRID_CARTESC_REAL_LAT   )
+    deallocate( ATMOS_GRID_CARTESC_REAL_LONUY )
+    deallocate( ATMOS_GRID_CARTESC_REAL_LONXV )
+    deallocate( ATMOS_GRID_CARTESC_REAL_LONUV )
+    deallocate( ATMOS_GRID_CARTESC_REAL_LATUY )
+    deallocate( ATMOS_GRID_CARTESC_REAL_LATXV )
+    deallocate( ATMOS_GRID_CARTESC_REAL_LATUV )
+    deallocate( ATMOS_GRID_CARTESC_REAL_DLON )
+    deallocate( ATMOS_GRID_CARTESC_REAL_DLAT )
+
+    !$acc exit data delete(ATMOS_GRID_CARTESC_REAL_CZ, ATMOS_GRID_CARTESC_REAL_CZUY, ATMOS_GRID_CARTESC_REAL_CZXV, ATMOS_GRID_CARTESC_REAL_CZUV, ATMOS_GRID_CARTESC_REAL_FZ, ATMOS_GRID_CARTESC_REAL_FZUY, ATMOS_GRID_CARTESC_REAL_FZXV, ATMOS_GRID_CARTESC_REAL_FZUV, ATMOS_GRID_CARTESC_REAL_F2H, ATMOS_GRID_CARTESC_REAL_Z1, ATMOS_GRID_CARTESC_REAL_PHI)
+    deallocate( ATMOS_GRID_CARTESC_REAL_CZ   )
+    deallocate( ATMOS_GRID_CARTESC_REAL_CZUY )
+    deallocate( ATMOS_GRID_CARTESC_REAL_CZXV )
+    deallocate( ATMOS_GRID_CARTESC_REAL_CZUV )
+    deallocate( ATMOS_GRID_CARTESC_REAL_FZ   )
+    deallocate( ATMOS_GRID_CARTESC_REAL_FZUY )
+    deallocate( ATMOS_GRID_CARTESC_REAL_FZXV )
+    deallocate( ATMOS_GRID_CARTESC_REAL_FZUV )
+    deallocate( ATMOS_GRID_CARTESC_REAL_F2H  )
+    deallocate( ATMOS_GRID_CARTESC_REAL_Z1  )
+    deallocate( ATMOS_GRID_CARTESC_REAL_PHI )
+
+    !acc exit data delete(ATMOS_GRID_CARTESC_REAL_AREA, ATMOS_GRID_CARTESC_REAL_AREAZUY_X, ATMOS_GRID_CARTESC_REAL_AREAZXV_Y, ATMOS_GRID_CARTESC_REAL_AREAWUY_X, ATMOS_GRID_CARTESC_REAL_AREAWXV_Y, ATMOS_GRID_CARTESC_REAL_AREAUY, ATMOS_GRID_CARTESC_REAL_AREAZXY_X, ATMOS_GRID_CARTESC_REAL_AREAZUV_Y, ATMOS_GRID_CARTESC_REAL_AREAXV, ATMOS_GRID_CARTESC_REAL_AREAZUV_X, ATMOS_GRID_CARTESC_REAL_ZXY_Y)
+    deallocate( ATMOS_GRID_CARTESC_REAL_AREA      )
+    deallocate( ATMOS_GRID_CARTESC_REAL_AREAZUY_X )
+    deallocate( ATMOS_GRID_CARTESC_REAL_AREAZXV_Y )
+    deallocate( ATMOS_GRID_CARTESC_REAL_AREAWUY_X )
+    deallocate( ATMOS_GRID_CARTESC_REAL_AREAWXV_Y )
+    deallocate( ATMOS_GRID_CARTESC_REAL_AREAUY    )
+    deallocate( ATMOS_GRID_CARTESC_REAL_AREAZXY_X )
+    deallocate( ATMOS_GRID_CARTESC_REAL_AREAZUV_Y )
+    deallocate( ATMOS_GRID_CARTESC_REAL_AREAXV    )
+    deallocate( ATMOS_GRID_CARTESC_REAL_AREAZUV_X )
+    deallocate( ATMOS_GRID_CARTESC_REAL_AREAZXY_Y )
+
+    !$acc exit data delete(ATMOS_GRID_CARTESC_REAL_TOTAREAZUY_X, ATMOS_GRID_CARTESC_REAL_TOTAREAZXV_Y)
+    deallocate( ATMOS_GRID_CARTESC_REAL_TOTAREAZUY_X )
+    deallocate( ATMOS_GRID_CARTESC_REAL_TOTAREAZXV_Y )
+
+    !$acc exit data delete(ATMOS_GRID_CARTESC_REAL_VOL, ATMOS_GRID_CARTESC_REAL_VOLWXY, ATMOS_GRID_CARTESC_REAL_VOLZUY, ATMOS_GRID_CARTESC_REAL_VOLZXV)
+    deallocate( ATMOS_GRID_CARTESC_REAL_VOL    )
+    deallocate( ATMOS_GRID_CARTESC_REAL_VOLWXY )
+    deallocate( ATMOS_GRID_CARTESC_REAL_VOLZUY )
+    deallocate( ATMOS_GRID_CARTESC_REAL_VOLZXV )
+
+    deallocate( ATMOS_GRID_CARTESC_REAL_DOMAIN_CATALOGUE )
+
+    call INTERP_VERT_finalize
+
+    return
+  end subroutine ATMOS_GRID_CARTESC_REAL_finalize
 
 end module scale_atmos_grid_cartesC_real

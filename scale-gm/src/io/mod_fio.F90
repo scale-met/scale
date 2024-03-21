@@ -17,9 +17,11 @@ module mod_fio
   use scale_io
   use scale_prof
   use scale_atmos_grid_icoA_index
+  use iso_c_binding
   !-----------------------------------------------------------------------------
   implicit none
   private
+
   !-----------------------------------------------------------------------------
   !
   !++ Public procedures
@@ -41,40 +43,20 @@ module mod_fio
      module procedure FIO_output_DP
   end interface FIO_output
 
+  public :: cstr
+  public :: cstr2
+  public :: fstr
+  interface fstr
+     module procedure fstr1
+     module procedure fstr2
+  end interface fstr
+
   !-----------------------------------------------------------------------------
   !
   !++ Public parameters & variables
   !
-  !> struct for package infomation
-  type, public :: headerinfo
-     character(len=IO_HLONG)  :: fname         !< file name
-     character(len=IO_HMID)   :: description   !< file description
-     character(len=IO_HLONG)  :: note          !< longer note of file
-     integer                  :: num_of_data   !< number of data
-     integer                  :: fmode         !< file mode(0,1,2)
-     integer                  :: endiantype    !< endian type(0,1,2)
-     integer                  :: grid_topology !< grid topology(0,1,2)
-     integer                  :: glevel        !< glevel
-     integer                  :: rlevel        !< rlevel
-     integer                  :: num_of_rgn    !< number of region
-     integer, pointer         :: rgnid(:)      !< array of region id
-  endtype headerinfo
 
-  !> struct for data infomation
-  type, public :: datainfo
-     character(len=IO_HSHORT) :: varname      !< variable name
-     character(len=IO_HMID)   :: description  !< variable description
-     character(len=IO_HSHORT) :: unit         !< unit of variable
-     character(len=IO_HSHORT) :: layername    !< layer name
-     character(len=IO_HLONG)  :: note         !< longer note of variable
-     integer(DP)              :: datasize     !< data size
-     integer                  :: datatype     !< data type(0,1,2,3)
-     integer                  :: num_of_layer !< number of layer
-     integer                  :: step
-     integer(DP)              :: time_start
-     integer(DP)              :: time_end
-  endtype datainfo
-
+  include 'fio_c.inc'
   !-----------------------------------------------------------------------------
   !
   !++ Private procedures
@@ -88,7 +70,6 @@ module mod_fio
   integer,               private            :: FIO_fid_list  (FIO_nmaxfile)
   integer,               private            :: FIO_fid_count = 1
 
-  type(headerinfo), private :: hinfo
   type(datainfo),   private :: dinfo
 
   integer, private, parameter :: max_num_of_data = 2500 !--- max time step num
@@ -106,6 +87,7 @@ contains
     implicit none
 
     integer, allocatable :: prc_tab(:)
+    integer :: ierr
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
@@ -114,18 +96,16 @@ contains
     allocate( prc_tab(PRC_RGN_local) )
     prc_tab(1:PRC_RGN_local) = PRC_RGN_l2r(1:PRC_RGN_local)-1
 
-    call fio_syscheck()
-    call fio_put_commoninfo( IO_SPLIT_FILE,  & ! [IN]
-                             IO_BIG_ENDIAN,  & ! [IN]
-                             IO_ICOSAHEDRON, & ! [IN]
-                             ADM_glevel,     & ! [IN]
-                             PRC_RGN_level,  & ! [IN]
-                             PRC_RGN_local,  & ! [IN]
-                             prc_tab         ) ! [IN]
+    ierr = fio_syscheck()
+    ierr = fio_put_commoninfo( IO_SPLIT_FILE,  & ! [IN]
+                               IO_BIG_ENDIAN,  & ! [IN]
+                               IO_ICOSAHEDRON, & ! [IN]
+                               ADM_glevel,     & ! [IN]
+                               PRC_RGN_level,  & ! [IN]
+                               PRC_RGN_local,  & ! [IN]
+                               prc_tab         ) ! [IN]
 
     deallocate(prc_tab)
-
-    allocate( hinfo%rgnid(PRC_RGN_local) )
 
     return
   end subroutine FIO_setup
@@ -152,6 +132,7 @@ contains
     data rwname / 'READ','WRITE','APPEND' /
 
     character(len=H_LONG) :: fname
+    integer               :: ierr
     integer               :: n
     !---------------------------------------------------------------------------
 
@@ -163,25 +144,26 @@ contains
 
     if ( fid < 0 ) then ! file registration
        !--- register new file and open
-       call fio_mk_fname(fname,trim(basename),'pe',PRC_myrank,6)
-       call fio_register_file(fid,fname)
+       call fio_mk_fname(fname,cstr(basename),cstr('pe'),PRC_myrank,6)
+       call fstr(fname)
+       fid = fio_register_file(fname)
 
        if ( rwtype == IO_FREAD ) then
 
 !          call fio_dump_finfo(n,FIO_BIG_ENDIAN,FIO_DUMP_HEADER) ! dump to stdout(check)
-          call fio_fopen(fid,rwtype)
-          call fio_read_allinfo(fid)
+          ierr = fio_fopen(fid,rwtype)
+          ierr = fio_read_allinfo(fid)
 
        elseif( rwtype == IO_FWRITE ) then
 
-          call fio_fopen(fid,rwtype)
-          call fio_put_write_pkginfo(fid,pkg_desc,pkg_note)
+          ierr = fio_fopen(fid,rwtype)
+          ierr = fio_put_write_pkginfo(fid,cstr(pkg_desc),cstr(pkg_note))
 
        elseif( rwtype == IO_FAPPEND ) then
 
-          call fio_fopen(fid,rwtype)
-          call fio_read_pkginfo(fid)
-          call fio_write_pkginfo(fid)
+          ierr = fio_fopen(fid,rwtype)
+          ierr = fio_read_pkginfo(fid)
+          ierr = fio_write_pkginfo(fid)
 
        endif
 
@@ -222,10 +204,13 @@ contains
 
     logical, intent(in), optional :: allow_missingq !< if data is missing, set value to zero, else execution stops.
 
-    real(SP) :: var4(ADM_gall,k_start:k_end,ADM_lall)
-    real(DP) :: var8(ADM_gall,k_start:k_end,ADM_lall)
+    real(SP), target :: var4(ADM_gall,k_start:k_end,ADM_lall)
+    real(DP), target :: var8(ADM_gall,k_start:k_end,ADM_lall)
+
+    character(len=IO_HSHORT) :: lname
 
     integer :: did, fid
+    integer :: ierr
     !---------------------------------------------------------------------------
 
     call PROF_rapstart('FILE_CARTESC_in',2)
@@ -234,8 +219,9 @@ contains
     call FIO_getfid( fid, basename, IO_FREAD, '', '' )
 
     !--- seek data ID and get information
-    call fio_seek_datainfo(did,fid,varname,step)
-    call fio_get_datainfo(fid,did,dinfo)
+    did = fio_seek_datainfo(fid,cstr(varname),step)
+    ierr = fio_get_datainfo(dinfo,fid,did)
+    call fstr( lname, dinfo%layername )
 
     !--- verify
     if ( did == -1 ) then
@@ -257,9 +243,9 @@ contains
        endif
     endif
 
-    if ( dinfo%layername /= layername ) then
+    if ( lname /= layername ) then
        write(*,*) 'xxx [INPUT]/[FIO] layername mismatch! ', &
-                            '[',trim(dinfo%layername),':',trim(layername),']'
+                            '[',trim(lname),':',trim(layername),']'
        call PRC_abort
     elseif( dinfo%num_of_layer /= k_end-k_start+1 ) then
        write(*,*) 'xxx [INPUT]/[FIO] num_of_layer mismatch! ', &
@@ -270,12 +256,12 @@ contains
     !--- read data
     if ( dinfo%datatype == IO_REAL4 ) then
 
-       call fio_read_data(fid,did,var4(:,:,:))
+       ierr = fio_read_data(fid,did,c_loc(var4))
        var(:,k_start:k_end,:) = real( var4(:,1:dinfo%num_of_layer,:), kind=SP )
 
     elseif( dinfo%datatype == IO_REAL8 ) then
 
-       call fio_read_data(fid,did,var8(:,:,:))
+       ierr = fio_read_data(fid,did,c_loc(var8))
        var(:,k_start:k_end,:) = real( var8(:,1:dinfo%num_of_layer,:), kind=SP )
 
     endif
@@ -310,10 +296,13 @@ contains
 
     logical, intent(in), optional :: allow_missingq !< if data is missing, set value to zero, else execution stops.
 
-    real(SP) :: var4(ADM_gall,k_start:k_end,ADM_lall)
-    real(DP) :: var8(ADM_gall,k_start:k_end,ADM_lall)
+    real(SP), target :: var4(ADM_gall,k_start:k_end,ADM_lall)
+    real(DP), target :: var8(ADM_gall,k_start:k_end,ADM_lall)
+
+    character(len=IO_HSHORT) :: lname
 
     integer :: did, fid
+    integer :: ierr
     !---------------------------------------------------------------------------
 
     call PROF_rapstart('FILE_CARTESC_in',2)
@@ -322,8 +311,9 @@ contains
     call FIO_getfid( fid, basename, IO_FREAD, '', '' )
 
     !--- seek data ID and get information
-    call fio_seek_datainfo(did,fid,varname,step)
-    call fio_get_datainfo(fid,did,dinfo)
+    did = fio_seek_datainfo(fid,cstr(varname),step)
+    ierr = fio_get_datainfo(dinfo,fid,did)
+    call fstr(lname, dinfo%layername)
 
     !--- verify
     if ( did == -1 ) then
@@ -345,9 +335,9 @@ contains
        endif
     endif
 
-    if ( dinfo%layername /= layername ) then
+    if ( lname /= layername ) then
        write(*,*) 'xxx [INPUT]/[FIO] layername mismatch! ', &
-                            '[',trim(dinfo%layername),':',trim(layername),']'
+                            '[',trim(lname),':',trim(layername),']'
        call PRC_abort
     elseif( dinfo%num_of_layer /= k_end-k_start+1 ) then
        write(*,*) 'xxx [INPUT]/[FIO] num_of_layer mismatch! ', &
@@ -358,12 +348,12 @@ contains
     !--- read data
     if ( dinfo%datatype == IO_REAL4 ) then
 
-       call fio_read_data(fid,did,var4(:,:,:))
+       ierr = fio_read_data(fid,did,c_loc(var4))
        var(:,k_start:k_end,:) = real( var4(:,1:dinfo%num_of_layer,:), kind=DP )
 
     elseif( dinfo%datatype == IO_REAL8 ) then
 
-       call fio_read_data(fid,did,var8(:,:,:))
+       ierr = fio_read_data(fid,did,c_loc(var8))
        var(:,k_start:k_end,:) = real( var8(:,1:dinfo%num_of_layer,:), kind=DP )
 
     endif
@@ -413,8 +403,10 @@ contains
     integer  :: midday, offset_year
     real(DP) :: midsec, midms
 
+    character(len=IO_HSHORT) :: lname
     logical  :: startflag
     integer  :: did, fid
+    integer  :: ierr
     integer  :: i
     !---------------------------------------------------------------------------
 
@@ -427,8 +419,9 @@ contains
 
     do i = 1, max_num_of_data
        !--- seek data ID and get information
-       call fio_seek_datainfo(did,fid,varname,i)
-       call fio_get_datainfo (fid,did,dinfo)
+       did = fio_seek_datainfo(fid,cstr(varname),i)
+       ierr = fio_get_datainfo(dinfo,fid,did)
+       call fstr(lname, dinfo%layername)
 
        if ( did == -1 ) then
           num_of_step = i - 1
@@ -436,9 +429,9 @@ contains
        endif
 
        !--- verify
-       if ( dinfo%layername /= layername ) then
+       if ( lname /= layername ) then
           write(*,*) 'xxx [INPUT]/[FIO] layername mismatch! ', &
-                               '[',trim(dinfo%layername),':',trim(layername),']'
+                               '[',trim(lname),':',trim(layername),']'
           call PRC_abort
        elseif( dinfo%num_of_layer /= k_end-k_start+1 ) then
           write(*,*) 'xxx [INPUT]/[FIO] num_of_layer mismatch!', &
@@ -526,8 +519,8 @@ contains
 
     logical,intent(in), optional :: append
 
-    real(SP) :: var4(ADM_gall,k_start:k_end,ADM_lall)
-    real(DP) :: var8(ADM_gall,k_start:k_end,ADM_lall)
+    real(SP), target :: var4(ADM_gall,k_start:k_end,ADM_lall)
+    real(DP), target :: var8(ADM_gall,k_start:k_end,ADM_lall)
 
     integer :: did, fid
     !---------------------------------------------------------------------------
@@ -538,11 +531,11 @@ contains
     call FIO_getfid( fid, basename, IO_FWRITE, pkg_desc, pkg_note )
 
     !--- append data to the file
-    dinfo%varname      = trim(varname)
-    dinfo%description  = trim(data_desc)
-    dinfo%unit         = trim(unit)
-    dinfo%layername    = trim(layername)
-    dinfo%note         = trim(data_note)
+    call cstr2(dinfo%varname,     varname)
+    call cstr2(dinfo%description, data_desc)
+    call cstr2(dinfo%unit,        unit)
+    call cstr2(dinfo%layername,   layername)
+    call cstr2(dinfo%note,        data_note)
     dinfo%datasize     = int( ADM_gall * ADM_lall * (k_end-k_start+1) * preclist(dtype), kind=DP )
     dinfo%datatype     = dtype
     dinfo%num_of_layer = k_end-k_start+1
@@ -557,13 +550,13 @@ contains
           var4(:,:,:) = UNDEF4
        endwhere
 
-       call fio_put_write_datainfo_data(did,fid,dinfo,var4(:,:,:))
+       did = fio_put_write_datainfo_data(fid,dinfo,c_loc(var4))
 
     elseif( dtype == IO_REAL8 ) then
 
        var8(:,k_start:k_end,:) = real( var(:,k_start:k_end,:), kind=DP )
 
-       call fio_put_write_datainfo_data(did,fid,dinfo,var8(:,:,:))
+       did = fio_put_write_datainfo_data(fid,dinfo,c_loc(var8))
 
     else
        write(*,*) 'xxx [OUTPUT]/[FIO] Unsupported datatype!', dtype
@@ -616,8 +609,8 @@ contains
 
     logical,intent(in), optional :: append
 
-    real(SP) :: var4(ADM_gall,k_start:k_end,ADM_lall)
-    real(DP) :: var8(ADM_gall,k_start:k_end,ADM_lall)
+    real(SP), target :: var4(ADM_gall,k_start:k_end,ADM_lall)
+    real(DP), target :: var8(ADM_gall,k_start:k_end,ADM_lall)
 
     integer :: did, fid
     !---------------------------------------------------------------------------
@@ -628,11 +621,11 @@ contains
     call FIO_getfid( fid, basename, IO_FWRITE, pkg_desc, pkg_note )
 
     !--- append data to the file
-    dinfo%varname      = trim(varname)
-    dinfo%description  = trim(data_desc)
-    dinfo%unit         = trim(unit)
-    dinfo%layername    = trim(layername)
-    dinfo%note         = trim(data_note)
+    call cstr2(dinfo%varname,     varname)
+    call cstr2(dinfo%description, data_desc)
+    call cstr2(dinfo%unit,        unit)
+    call cstr2(dinfo%layername,   layername)
+    call cstr2(dinfo%note,        data_note)
     dinfo%datasize     = int( ADM_gall * ADM_lall * (k_end-k_start+1) * preclist(dtype), kind=DP )
     dinfo%datatype     = dtype
     dinfo%num_of_layer = k_end-k_start+1
@@ -647,13 +640,13 @@ contains
           var4(:,:,:) = UNDEF4
        endwhere
 
-       call fio_put_write_datainfo_data(did,fid,dinfo,var4(:,:,:))
+       did = fio_put_write_datainfo_data(fid,dinfo,c_loc(var4))
 
     elseif( dtype == IO_REAL8 ) then
 
        var8(:,k_start:k_end,:) = real( var(:,k_start:k_end,:), kind=DP )
 
-       call fio_put_write_datainfo_data(did,fid,dinfo,var8(:,:,:))
+       did = fio_put_write_datainfo_data(fid,dinfo,c_loc(var8))
 
     else
        write(*,*) 'xxx [OUTPUT]/[FIO] Unsupported datatype!', dtype
@@ -677,6 +670,7 @@ contains
     character(len=H_LONG) :: fname
 
     integer :: fid
+    integer :: ierr
     integer :: n
     !---------------------------------------------------------------------------
 
@@ -685,8 +679,9 @@ contains
        if ( basename == FIO_fname_list(n) ) then
           fid = FIO_fid_list(n)
 
-          call fio_fclose(fid)
-          call fio_mk_fname(fname,trim(FIO_fname_list(n)),'pe',PRC_myrank,6)
+          ierr = fio_fclose(fid)
+          call fio_mk_fname(fname,cstr(FIO_fname_list(n)),cstr('pe'),PRC_myrank,6)
+          call fstr(fname)
 
           if( IO_L ) write(IO_FID_LOG,'(1x,A,I3,A,A)') &
           '*** [FIO] File close (ADVANCED) fid= ', fid, ', name: ', trim(fname)
@@ -708,13 +703,15 @@ contains
 
     character(len=H_LONG) :: fname
     integer               :: n, fid
+    integer               :: ierr
     !---------------------------------------------------------------------------
 
     do n = 1, FIO_fid_count
        fid = FIO_fid_list(n)
 
-       call fio_fclose(fid)
-       call fio_mk_fname(fname,trim(FIO_fname_list(n)),'pe',PRC_myrank,6)
+       ierr = fio_fclose(fid)
+       call fio_mk_fname(fname,cstr(FIO_fname_list(n)),cstr('pe'),PRC_myrank,6)
+       call fstr(fname)
 
        if( IO_L ) write(IO_FID_LOG,'(1x,A,I3,A,A)') &
        '*** [FIO] File close (ADVANCED) fid= ', fid, ', name: ', trim(fname)
@@ -722,5 +719,59 @@ contains
 
     return
   end subroutine FIO_finalize
+
+  function cstr(str)
+    character(*), intent(in) :: str
+    character(:,c_char), allocatable, target :: cstr
+    cstr = trim(str) // c_null_char
+  end function cstr
+
+  subroutine cstr2(cstr, fstr)
+    character(c_char), intent(out) :: cstr(:)
+    character(len=*),  intent(in)  :: fstr
+    integer :: i, j
+    integer :: l
+    l = min( len(fstr), size(cstr)-1 )
+    cstr(l+1) = c_null_char
+    do i = l, 1, -1
+       if ( fstr(i:i) == " " ) then
+          cstr(i) = c_null_char
+       else
+          exit
+       end if
+    end do
+    do j = i, 1, -1
+       cstr(j) = fstr(j:j)
+    end do
+    return
+  end subroutine cstr2
+
+  subroutine fstr1(str)
+    character(len=*), intent(inout) :: str
+    integer :: i, j
+    do i = 1, len(str)
+       if ( str(i:i) == c_null_char ) exit
+    end do
+    do j = i, len(str)
+       str(j:j) = " "
+    end do
+    return
+  end subroutine fstr1
+
+  subroutine fstr2(fstr, cstr)
+    character(len=*),  intent(out) :: fstr
+    character(c_char), intent(in)  :: cstr(:)
+    integer :: i, j
+    integer :: l
+    l = min( len(fstr), size(cstr) )
+    do i = 1, l
+       if ( cstr(i) == c_null_char ) exit
+       fstr(i:i) = cstr(i)
+    end do
+    do j = i, len(fstr)
+       fstr(j:j) = " "
+    end do
+    return
+  end subroutine fstr2
 
 end module mod_fio

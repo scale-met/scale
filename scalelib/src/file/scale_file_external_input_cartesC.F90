@@ -29,6 +29,7 @@ module scale_file_external_input_cartesC
   !++ Public procedures
   !
   public :: FILE_EXTERNAL_INPUT_CARTESC_setup
+  public :: FILE_EXTERNAL_INPUT_CARTESC_finalize
 
   !-----------------------------------------------------------------------------
   !
@@ -50,7 +51,6 @@ module scale_file_external_input_cartesC
 contains
   !-----------------------------------------------------------------------------
   !> Setup
-  !-----------------------------------------------------------------------------
   subroutine FILE_EXTERNAL_INPUT_CARTESC_setup
     use scale_file_external_input, only: &
        FILE_EXTERNAL_INPUT_setup, &
@@ -73,6 +73,17 @@ contains
 
     return
   end subroutine FILE_EXTERNAL_INPUT_CARTESC_setup
+
+  !-----------------------------------------------------------------------------
+  !> Finalize
+  subroutine FILE_EXTERNAL_INPUT_CARTESC_finalize
+    use scale_file_external_input, only: &
+       FILE_EXTERNAL_INPUT_finalize
+
+    call FILE_EXTERNAL_INPUT_finalize
+
+    return
+  end subroutine FILE_EXTERNAL_INPUT_CARTESC_finalize
 
   !-----------------------------------------------------------------------------
   !> get_dims

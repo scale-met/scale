@@ -97,7 +97,7 @@ contains
 
     if ( START_TSTEP > 1 ) then
        do i=1, START_TSTEP-1
-          call cal_increment( yy, mm, dd, hh, mn, sc )
+          call cal_increment( yy, mm, dd, hh, mn, sc, 1 )
        enddo
     endif
 
@@ -156,16 +156,22 @@ contains
       dd,        & ! [inout]
       hh,        & ! [inout]
       mn,        & ! [inout]
-      sc         ) ! [inout]
+      sc,        & ! [inout]
+      is        )
     implicit none
 
     integer, intent(inout) :: yy, mm, dd
     integer, intent(inout) :: hh, mn, sc
+    integer, intent(in), optional :: is
 
     real(DP) :: inc
     !---------------------------------------------------------------------------
 
-    inc = FILE_HISTORY_DEFAULT_TINTERVAL * dble(INC_TSTEP)
+    if ( present(is) ) then
+       inc = FILE_HISTORY_DEFAULT_TINTERVAL * dble(is)
+    else
+       inc = FILE_HISTORY_DEFAULT_TINTERVAL * dble(INC_TSTEP)
+    end if
 
     select case ( FILE_HISTORY_DEFAULT_TUNIT )
     case ( "SEC", "sec" )

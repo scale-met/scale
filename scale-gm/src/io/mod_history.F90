@@ -723,6 +723,8 @@ contains
        CALENDAR_date2char
     use scale_comm_icoA, only : &
        COMM_var
+    use scale_time, only: &
+       TIME_NOWSTEP
     use mod_fio, only: &
        FIO_output
     use mod_time, only: &
@@ -756,7 +758,9 @@ contains
     integer :: g, k, l, n
     !---------------------------------------------------------------------------
 
-    if ( first ) then
+    if ( TIME_NOWSTEP == 1 ) then
+       call history_outlist
+    elseif ( first ) then
        call history_outlist
        first = .false.
     endif
@@ -911,6 +915,8 @@ contains
   subroutine history_outlist
     use scale_prc, only : &
        PRC_abort
+    use scale_time, only: &
+       TIME_NOWSTEP
     implicit none
 
     character(len=H_SHORT) :: item
@@ -923,7 +929,11 @@ contains
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** [HIST] Output item list '
+    if ( TIME_NOWSTEP == 1 ) then
+       if( IO_L ) write(IO_FID_LOG,*) '*** [HIST] Output item list for items whose initial states are available'
+    else
+       if( IO_L ) write(IO_FID_LOG,*) '*** [HIST] Output item list for all items'
+    endif
     if( IO_L ) write(IO_FID_LOG,*) '*** Total number of requested history item :', HIST_req_nmax
     if( IO_L ) write(IO_FID_LOG,*) '============================================================================'
     if( IO_L ) write(IO_FID_LOG,*) 'NAME            :Save name       :UNIT            :Avg.type        :interval'
@@ -951,11 +961,15 @@ contains
                                                                       ":", opt_lagintrpl_save(n)
 
        if ( .NOT. flag_save(n) ) then ! not stored yet or never
-          if( IO_L ) write(IO_FID_LOG,*) '+++ this variable is requested but not stored yet. check!'
-          if ( check_flag ) then
-             write(*,*) '+++ this variable is requested but not stored yet. check!', trim(item_save(n))
-             write(*,*) 'xxx history check_flag is on. stop!'
-             call PRC_abort
+          if ( TIME_NOWSTEP == 1 ) then
+             if( IO_L ) write(IO_FID_LOG,*) '+++ this variable is requested but initial state is not available; skipped: ', trim(item_save(n))
+          else
+             if( IO_L ) write(IO_FID_LOG,*) '+++ this variable is requested but not stored yet. check!'
+             if ( check_flag ) then
+                write(*,*) '+++ this variable is requested but not stored yet. check!', trim(item_save(n))
+                write(*,*) 'xxx history check_flag is on. stop!'
+                call PRC_abort
+             endif
           endif
        endif
     enddo

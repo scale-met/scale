@@ -29,6 +29,7 @@ module mod_atmos_phy_rd_vars
   !++ Public procedure
   !
   public :: ATMOS_PHY_RD_vars_setup
+  public :: ATMOS_PHY_RD_vars_finalize
   public :: ATMOS_PHY_RD_vars_fillhalo
   public :: ATMOS_PHY_RD_vars_restart_read
   public :: ATMOS_PHY_RD_vars_restart_write
@@ -144,6 +145,7 @@ contains
 
     allocate( ATMOS_PHY_RD_RHOH(KA,IA,JA) )
     ATMOS_PHY_RD_RHOH(:,:,:) = UNDEF
+    !$acc enter data create(ATMOS_PHY_RD_RHOH)
 
     allocate( ATMOS_PHY_RD_SFLX_LW_up  (IA,JA) )
     allocate( ATMOS_PHY_RD_SFLX_LW_dn  (IA,JA) )
@@ -153,6 +155,7 @@ contains
     ATMOS_PHY_RD_SFLX_LW_dn  (:,:) = UNDEF
     ATMOS_PHY_RD_SFLX_SW_up  (:,:) = UNDEF
     ATMOS_PHY_RD_SFLX_SW_dn  (:,:) = UNDEF
+    !$acc enter data create(ATMOS_PHY_RD_SFLX_LW_up,ATMOS_PHY_RD_SFLX_LW_dn,ATMOS_PHY_RD_SFLX_SW_up,ATMOS_PHY_RD_SFLX_SW_dn)
 
     allocate( ATMOS_PHY_RD_TOMFLX_LW_up(IA,JA) )
     allocate( ATMOS_PHY_RD_TOMFLX_LW_dn(IA,JA) )
@@ -162,14 +165,17 @@ contains
     ATMOS_PHY_RD_TOMFLX_LW_dn(:,:) = UNDEF
     ATMOS_PHY_RD_TOMFLX_SW_up(:,:) = UNDEF
     ATMOS_PHY_RD_TOMFLX_SW_dn(:,:) = UNDEF
+    !$acc enter data create(ATMOS_PHY_RD_TOMFLX_LW_up,ATMOS_PHY_RD_TOMFLX_LW_dn,ATMOS_PHY_RD_TOMFLX_SW_up,ATMOS_PHY_RD_TOMFLX_SW_dn)
 
     allocate( ATMOS_PHY_RD_SFLX_down(IA,JA,N_RAD_DIR,N_RAD_RGN) )
     ATMOS_PHY_RD_SFLX_down(:,:,:,:) = UNDEF
+    !$acc enter data create(ATMOS_PHY_RD_SFLX_down)
 
     allocate( ATMOS_PHY_RD_solins(IA,JA) )
     allocate( ATMOS_PHY_RD_cosSZA(IA,JA) )
     ATMOS_PHY_RD_solins(:,:) = UNDEF
     ATMOS_PHY_RD_cosSZA(:,:) = UNDEF
+    !$acc enter data create(ATMOS_PHY_RD_solins,ATMOS_PHY_RD_cosSZA)
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -210,6 +216,40 @@ contains
 
     return
   end subroutine ATMOS_PHY_RD_vars_setup
+
+  !-----------------------------------------------------------------------------
+  !> Finalize
+  subroutine ATMOS_PHY_RD_vars_finalize
+    implicit none
+    !---------------------------------------------------------------------------
+
+    LOG_NEWLINE
+    LOG_INFO("ATMOS_PHY_RD_vars_finalize",*) 'Finalize'
+
+    !$acc exit data delete(ATMOS_PHY_RD_RHOH)
+    deallocate( ATMOS_PHY_RD_RHOH )
+
+    !$acc exit data delete(ATMOS_PHY_RD_SFLX_LW_up,ATMOS_PHY_RD_SFLX_LW_dn,ATMOS_PHY_RD_SFLX_SW_up,ATMOS_PHY_RD_SFLX_SW_dn)
+    deallocate( ATMOS_PHY_RD_SFLX_LW_up )
+    deallocate( ATMOS_PHY_RD_SFLX_LW_dn )
+    deallocate( ATMOS_PHY_RD_SFLX_SW_up )
+    deallocate( ATMOS_PHY_RD_SFLX_SW_dn )
+
+    !$acc exit data delete(ATMOS_PHY_RD_TOMFLX_LW_up,ATMOS_PHY_RD_TOMFLX_LW_dn,ATMOS_PHY_RD_TOMFLX_SW_up,ATMOS_PHY_RD_TOMFLX_SW_dn)
+    deallocate( ATMOS_PHY_RD_TOMFLX_LW_up )
+    deallocate( ATMOS_PHY_RD_TOMFLX_LW_dn )
+    deallocate( ATMOS_PHY_RD_TOMFLX_SW_up )
+    deallocate( ATMOS_PHY_RD_TOMFLX_SW_dn )
+
+    !$acc exit data delete(ATMOS_PHY_RD_SFLX_down)
+    deallocate( ATMOS_PHY_RD_SFLX_down )
+
+    !$acc exit data delete(ATMOS_PHY_RD_solins,ATMOS_PHY_RD_cosSZA)
+    deallocate( ATMOS_PHY_RD_solins )
+    deallocate( ATMOS_PHY_RD_cosSZA )
+
+    return
+  end subroutine ATMOS_PHY_RD_vars_finalize
 
   !-----------------------------------------------------------------------------
   !> HALO Communication
@@ -320,6 +360,7 @@ contains
 
        if ( FILE_get_AGGREGATE(restart_fid) ) then
           call FILE_CARTESC_flush( restart_fid ) ! X/Y halos have been read from file
+          !$acc update device(ATMOS_PHY_RD_SFLX_LW_up,ATMOS_PHY_RD_SFLX_LW_dn,ATMOS_PHY_RD_SFLX_SW_up,ATMOS_PHY_RD_SFLX_SW_dn)
        else
           call ATMOS_PHY_RD_vars_fillhalo
        end if

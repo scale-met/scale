@@ -99,6 +99,7 @@ contains
     allocate( OCEAN_GRID_ICOA_CZ (OKS  :OKE) )
     allocate( OCEAN_GRID_ICOA_FZ (OKS-1:OKE) )
     allocate( OCEAN_GRID_ICOA_CDZ(OKS  :OKE) )
+    !$acc enter data create(OCEAN_GRID_ICOA_CZ,OCEAN_GRID_ICOA_FZ,OCEAN_GRID_ICOA_CDZ)
 
     LOG_NEWLINE
     LOG_INFO("OCEAN_GRID_ICOA_setup",*) 'Ocean grid information '
@@ -131,6 +132,7 @@ contains
        LOG_INFO_CONT('(1x,A)')                  '|=================================|'
     endif
 
+    !$acc update device(OCEAN_GRID_ICOA_CZ,OCEAN_GRID_ICOA_FZ,OCEAN_GRID_ICOA_CDZ)
     return
   end subroutine OCEAN_GRID_ICOA_setup
 

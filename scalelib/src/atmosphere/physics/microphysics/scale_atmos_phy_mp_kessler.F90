@@ -353,6 +353,7 @@ contains
        DENS0, RHOQ0,          &
        REFSTATE_dens_profile, &
        vterm                  )
+    !$acc routine vector
     implicit none
 
     integer,  intent(in)  :: KA, KS, KE

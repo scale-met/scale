@@ -42,8 +42,10 @@ def parse(deps, pros, srcdir, dir=".")
         pros[mod] = pro
       when /^\s*use (\w+)/
         mod = $1
-#        next if (/(mpi|MPI|netcdf|gadg|rng|mt|NAME)/ =~ mod)
-        next if (/(iso_c_binding|mpi|MPI|netcdf|gadg|rng|mt|NAME)/ =~ mod)
+        next if (/(iso_c_binding|mpi|MPI|omp_lib|netcdf|openacc|cusparse|gadg|rng|mt|NAME)/ =~ mod)
+        # JMA pp library
+        next if /pbl_(const|coupler|grid|parm|diag|mym_const|mym_option|mym_parm|mym_main)/ =~ mod
+        next if /conv_(grid|kf_const|kf_parm|kf_main|kf_lut)/ =~ mod
 
         dep[:depends].push(mod) unless dep[:depends].include?(mod)
       end
@@ -68,11 +70,4 @@ File.open( File.join(srcdir, "depend"), "w" ) do |file|
     file.print "\n"
   end
   file.print "\n"
-  mods = Array.new
-
-  pros.keys.sort.map{|mod|
-     mod = mod.downcase
-     mods.push "$(BUILD_DIR)/#{mod}.mod"
-  }
-  file.print "MODS =\t\\\n\t", mods.join("\t\\\n\t"), "\n"
 end

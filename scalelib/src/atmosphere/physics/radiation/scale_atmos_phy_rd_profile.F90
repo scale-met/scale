@@ -29,6 +29,7 @@ module scale_atmos_phy_rd_profile
   !
   public :: ATMOS_PHY_RD_PROFILE_setup
   public :: ATMOS_PHY_RD_PROFILE_setup_zgrid
+  public :: ATMOS_PHY_RD_PROFILE_finalize
   public :: ATMOS_PHY_RD_PROFILE_read
 
   !-----------------------------------------------------------------------------
@@ -195,6 +196,22 @@ contains
   end subroutine ATMOS_PHY_RD_PROFILE_setup
 
   !-----------------------------------------------------------------------------
+  !> finalize
+  subroutine ATMOS_PHY_RD_PROFILE_finalize
+
+    if ( allocated( CIRA_nd   ) ) deallocate( CIRA_nd   )
+    if ( allocated( CIRA_plog ) ) deallocate( CIRA_plog )
+    if ( allocated( CIRA_lat  ) ) deallocate( CIRA_lat  )
+    if ( allocated( CIRA_temp ) ) deallocate( CIRA_temp )
+    if ( allocated( CIRA_z    ) ) deallocate( CIRA_z    )
+
+    if ( allocated( interp_temp ) ) deallocate( interp_temp )
+    if ( allocated( interp_z    ) ) deallocate( interp_z    )
+
+    return
+  end subroutine ATMOS_PHY_RD_PROFILE_finalize
+
+  !-----------------------------------------------------------------------------
   !> Setup CIRA86 climatological data (temperature, pressure)
   subroutine PROFILE_setup_CIRA86
     use scale_prc, only: &
@@ -222,18 +239,11 @@ contains
     real(RP), allocatable :: tmp1d(:)
     real(RP), allocatable :: tmp3d(:,:,:)
 
-    logical  :: exist
     integer  :: n, m, t
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
     LOG_INFO("PROFILE_setup_CIRA86",*) 'Read CIRA86 climatology, filename : ', trim(PROFILE_CIRA86_fname)
-
-    inquire( file=trim(PROFILE_CIRA86_fname), exist=exist )
-    if ( .NOT. exist ) then !--- missing
-       LOG_ERROR("PROFILE_setup_CIRA86",*) 'File not found. check!'
-       call PRC_abort
-    endif
 
     ! open CIRA86 datafile (netCDF)
     call FILE_open( PROFILE_CIRA86_fname, & ! (in)
@@ -415,12 +425,12 @@ contains
     MIPAS_lat(5) =  90.0_RP * CONST_D2R
 
     do rgn = I_tropic, I_polarwin
-       fname = trim(PROFILE_MIPAS2001_dir)//'/'//MIPAS_fname(rgn)
+       call IO_get_fname(fname, trim(PROFILE_MIPAS2001_dir)//'/'//MIPAS_fname(rgn))
        LOG_INFO("PROFILE_setup_MIPAS2001",*) 'filename : ', trim(fname)
 
        fid = IO_get_available_fid()
        open( unit   = fid,         &
-             file   = trim(fname), &
+             file   = fname,       &
              form   = 'formatted', &
              status = 'old',       &
              iostat = ierr         )
@@ -567,6 +577,8 @@ contains
     integer :: k
     !---------------------------------------------------------------------------
 
+    !$acc data copyout(rhodz,pres,presh,temp,temph,gas,cfc,aerosol_conc,aerosol_radi,cldfrac)
+
     if ( ATMOS_PHY_RD_PROFILE_use_climatology ) then
 
        if ( SOLARINS_fixedlatlon ) then
@@ -670,6 +682,10 @@ contains
 
     endif
 
+    !$acc update device(rhodz,pres,presh,temp,temph,gas,cfc,aerosol_conc,aerosol_radi,cldfrac)
+
+    !$acc end data
+
     return
   end subroutine ATMOS_PHY_RD_PROFILE_read
 
@@ -728,9 +744,6 @@ contains
                                  z       (:),   & ! [IN]
                                  gas     (:,:), & ! [OUT]
                                  cfc     (:,:)  ) ! [OUT]
-
-    ! no vapor
-    gas(:,1) = 0.0_RP
 
     return
   end subroutine PROFILE_read_climatology
@@ -1219,7 +1232,7 @@ contains
     real(RP) :: plog (kmax)
     real(RP) :: plogh(kmax+1)
 
-    character(len=H_LONG) :: dummy
+    character(len=H_LONG) :: dummy, fname
 
     integer  :: fid, ierr
     integer  :: k
@@ -1230,14 +1243,15 @@ contains
     gas(:,:) = 0.0_RP
     cfc(:,:) = 0.0_RP
 
-    LOG_INFO("PROFILE_read_user",*) 'FILENAME:', trim(PROFILE_USER_fname)
+    call IO_get_fname(fname, PROFILE_USER_fname)
+    LOG_INFO("PROFILE_read_user",*) 'FILENAME:', trim(fname)
 
     fid = IO_get_available_fid()
-    open( unit   = fid,                      &
-          file   = trim(PROFILE_USER_fname), &
-          form   = 'formatted',              &
-          status = 'old',                    &
-          iostat = ierr                      )
+    open( unit   = fid,         &
+          file   = fname,       &
+          form   = 'formatted', &
+          status = 'old',       &
+          iostat = ierr         )
 
        if ( ierr /= 0 ) then !--- missing
           LOG_ERROR("PROFILE_read_user",*) 'File not found. check!'

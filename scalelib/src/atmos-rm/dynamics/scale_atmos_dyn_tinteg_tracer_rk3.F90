@@ -37,6 +37,7 @@ module scale_atmos_dyn_tinteg_tracer_rk3
   !++ Public procedure
   !
   public :: ATMOS_DYN_Tinteg_tracer_rk3_setup
+  public :: ATMOS_DYN_Tinteg_tracer_rk3_finalize
   public :: ATMOS_DYN_Tinteg_tracer_rk3
 
   !-----------------------------------------------------------------------------
@@ -53,8 +54,8 @@ module scale_atmos_dyn_tinteg_tracer_rk3
   !
   real(RP), allocatable :: QTRC_RK1(:,:,:)
   real(RP), allocatable :: QTRC_RK2(:,:,:)
-  integer :: I_COMM_RK1 = 1
-  integer :: I_COMM_RK2 = 1
+  integer :: I_COMM_RK1
+  integer :: I_COMM_RK2
   !-----------------------------------------------------------------------------
 contains
 
@@ -84,12 +85,27 @@ contains
     allocate( QTRC_RK2(KA,IA,JA) )
     QTRC_RK1(:,:,:) = UNDEF
     QTRC_RK2(:,:,:) = UNDEF
+    !$acc enter data create(QTRC_RK1, QTRC_RK2)
 
+    I_COMM_RK1 = 1
     call COMM_vars8_init( 'QTRC_RK1', QTRC_RK1, I_COMM_RK1 )
+
+    I_COMM_RK2 = 1
     call COMM_vars8_init( 'QTRC_RK2', QTRC_RK2, I_COMM_RK2 )
 
     return
   end subroutine ATMOS_DYN_Tinteg_tracer_rk3_setup
+
+  !-----------------------------------------------------------------------------
+  !> finalize
+  subroutine ATMOS_DYN_Tinteg_tracer_rk3_finalize
+
+    !$acc exit data delete(QTRC_RK1, QTRC_RK2)
+    deallocate( QTRC_RK1 )
+    deallocate( QTRC_RK2 )
+
+    return
+  end subroutine ATMOS_DYN_Tinteg_tracer_rk3_finalize
 
   !-----------------------------------------------------------------------------
   !> RK3
@@ -141,10 +157,15 @@ contains
     real(RP) :: dtrk
     integer :: k, i, j
 
+    !$acc data copy(QTRC), copyout(qflx) &
+    !$acc      copyin(QTRC0, RHOQ_t, DENS0, DENS, mflx_hi, num_diff, &
+    !$acc             GSQRT, MAPF, CDZ, RCDZ, RCDX, RCDY) &
+    !$acc      create(DENS_RK)
     !------------------------------------------------------------------------
     ! Start RK
     !------------------------------------------------------------------------
 
+    !$acc kernels
     do j = JS-1, JE+1
     do i = max(IS-1,1), min(IE+1,IA)
     do k = KS, KE
@@ -153,6 +174,7 @@ contains
     end do
     end do
     end do
+    !$acc end kernels
 
     dtrk = DTL / 3.0_RP
     call ATMOS_DYN_tstep_tracer( &
@@ -175,6 +197,7 @@ contains
     call COMM_wait ( QTRC_RK1(:,:,:), I_COMM_RK1, .false. )
 
 
+    !$acc kernels
     do j = JS-1, JE+1
     do i = max(IS-1,1), min(IE+1,IA)
     do k = KS, KE
@@ -183,6 +206,7 @@ contains
     end do
     end do
     end do
+    !$acc end kernels
 
     dtrk = DTL / 2.0_RP
     call ATMOS_DYN_tstep_tracer( &
@@ -217,6 +241,8 @@ contains
          TwoD, & ! (in)
          dtrk, & ! (in)
          FLAG_FCT_TRACER, FLAG_FCT_ALONG_STREAM ) ! (in)
+
+    !$acc end data
 
     return
   end subroutine ATMOS_DYN_tinteg_tracer_rk3

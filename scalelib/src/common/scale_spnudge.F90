@@ -16,6 +16,7 @@ module scale_spnudge
   !++ Public procedure
   !
   public :: SPNUDGE_setup
+  public :: SPNUDGE_finalize
 
   !-----------------------------------------------------------------------------
   !
@@ -254,11 +255,28 @@ contains
 
      end if
 
+     !$acc enter data copyin(SPNUDGE_u_alpha, SPNUDGE_v_alpha, SPNUDGE_pt_alpha, SPNUDGE_qv_alpha)
+
      call DFT_setup( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
                      max( SPNUDGE_uv_lm, SPNUDGE_pt_lm, SPNUDGE_qv_lm ), &
                      max( SPNUDGE_uv_mm, SPNUDGE_pt_mm, SPNUDGE_qv_mm ) )
 
      return
    end subroutine SPNUDGE_setup
+
+   subroutine SPNUDGE_finalize
+     use scale_dft, only: &
+        DFT_finalize
+
+     call DFT_finalize
+
+    !$acc exit data delete(SPNUDGE_u_alpha, SPNUDGE_v_alpha, SPNUDGE_pt_alpha, SPNUDGE_qv_alpha)
+     deallocate( SPNUDGE_u_alpha )
+     deallocate( SPNUDGE_v_alpha )
+     deallocate( SPNUDGE_pt_alpha )
+     deallocate( SPNUDGE_qv_alpha )
+
+     return
+   end subroutine SPNUDGE_finalize
 
 end module scale_spnudge
