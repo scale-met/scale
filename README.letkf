@@ -3,8 +3,8 @@ SCALE-LETKF
 
 SCALE-LETKF is a LETKF data assimilation package for the SCALE-RM model.
 
-* See more detailed documentation at:
-  https://github.com/gylien/scale-letkf/wiki
+* See the following ULR for more details
+  https://github.com/SCALE-LETKF-RIKEN/scale-letkf
 
 
 Get the submodule
@@ -21,19 +21,19 @@ Build
 
 - link or copy the configuration file
  % cd letkf/scale
- % ln -s arch/configure.user.K configure.user
+ % ln -s arch/configure.user.Linux64-gnu-ompi configure.user # example
 
 - make all letkf programs
  % make
 
 - link or copy the configuration files for the test case
  % cd letkf/scale/run
- % ln -s config/testcase_45km_4p_l36/config.main.K config.main
- % ln -s config/testcase_45km_4p_l36/config.cycle .
- % ln -s config/testcase_45km_4p_l36/config.nml.* .
+ % ln -s config/18km_Japan/config.main.Linux_torque config.main
+ % ln -s config/18km_Japan/config.cycle .
+ % ln -s config/18km_Japan/config.nml.* .
 
 - edit 'config.main', make sure all data files are in the correct locations
  % vi config.main
 
 - run the test case
- % ./cycle_K.sh
+ % ./cycle_run.sh

@@ -1,12 +1,45 @@
 = Release History
 
+== 2024-03-21 (5.5.0)
+* Changes
+  * Unified NetCDF file input module for the real input
+  * Default use of domain center as the standard latitude for Mercator and equidistant cylindrical projections
+  * Eliminated need to give the latlon catalog file
+  * Eliminated need to give time information for boundary data
+  * Eliminated need to give parent domain process information for offline nesting
+  * Updated the namelist file and conversion script for the latest FNL data
+  * Changed format of timer information in LOG file
+  * Support newer version of GNU compiler
+  * Addition and removal of several sysdef files
+* New features
+  * Added several options to the Tomita08 scheme
+  * Added several options to the SN14 scheme
+  * Added several options to the MYNN scheme
+  * 2D parameters are available in the Kusaka01 scheme
+  * User-defined calendar can be used
+  * Added ability to output time min/max data to history file
+  * Allowed relative paths to be set for bulk job
+  * Tutorial simulations now support GPU computers
+  * Supported one-sided MPI communication
+* Improvements:
+  * Improved iterations in the land and urban models
+  * Improved numerical stability for the MYNN level 3 scheme
+  * Improved handling of thermodynamical quantities in the KF scheme
+  * Improved momentum flux calculation in the Kusaka01 scheme
+  * Reduce memory usage in the real input
+  * Optimization for the Fugaku supercomputer
+  * Optimization of the SUZUKI10 scheme
+* Bug fixes:
+  * Fixed some bugs in SNO
+  * Fixed many other bugs
+
 == 2022-03-18 (5.4.5)
-* Buf fixes:
+* Bug fixes:
   * Fix precipitation calculation for energy conservation
   * Fix the grid nudging for REAL-type boundary
   * Fix a stalling problem at single file output
   * Fix for the newer versions of GNU compiler
-* Changes
+* Changes:
   * update sysdep files for FUGAKU
 
 == 2021-07-30 (5.4.4)
@@ -27,7 +60,7 @@
   * Fix bugs for single precision calculation
   * Fix wrong openmp directives
   * Fix wrong number density of the hydrometeors in the real input
-  * Change the calculation of the optical parameters in the mstrnX to avoid extraporation
+  * Change the calculation of the optical parameters in the mstrnX to avoid extrapolation
 
 == 2020-10-22 (5.4.1)
 * Bug fixes:
@@ -40,14 +73,14 @@
   * Change some options for the FUGAKU supercomputer
 
 == 2020-09-25 (5.4.0)
-* Changes
+* Changes:
   * Change the configuration parameters of the KUSAKA model
   * Change the configuration parameters of the KF scheme
   * Change the configuration parameters for the Coriolis parameter
   * Change the configuration parameters for topography
   * Change the configuration parameters for GrADS input
   * Change the configuration parameter for the depth of the slab ocean
-* New features
+* New features:
   * Add the SATO2019 lightning scheme (experimental)
   * Add a grid and spectral nudging
   * Add a seven-step RK scheme
@@ -76,7 +109,7 @@
   * Fix wrong a coefficient of the universal function in the bulkflux scheme
   * Fix some bugs in the MYNN scheme
   * Fix MPI error in SNO
-  * Fix negative fixer to conserve moist inernal energy
+  * Fix negative fixer to conserve moist internal energy
   * Fix for positive definite in the KF scheme
   * Fix potential floating overflow in the TOMITA08 scheme
   * Fix bug in storing history variables in the TOMITA08 scheme
