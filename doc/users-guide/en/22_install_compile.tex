@@ -12,12 +12,11 @@ The environment used in the explanation below is as follows:
 \subsubsection{Obtaining the source code} %\label{subsec:get_source_code}
 %-----------------------------------------------------------------------------------
 The source code for the latest release can be downloaded
-from \url{https://scale.riken.jp/ja/download/index.html}.\\
+from \url{https://scale.riken.jp/download/index.html}.\\
 The directory \texttt{scale-{\version}/} can be seen when the tarball file of the source code is extracted.
 \begin{alltt}
  $ tar -zxvf scale-{\version}.tar.gz
- $ ls ./
-    scale-{\version}/
+ $ ls ./scale-{\version}/
 \end{alltt}
 
 \subsubsection{Setting Makedef file and environment variables} \label{subsec:environment}
@@ -43,10 +42,9 @@ If the environment is always the same, it is convenient to explicitly describe t
 \begin{tabularx}{150mm}{|l|l|X|l|} \hline
  \rowcolor[gray]{0.9} OS/Computer & Compiler & MPI & Makedef file \\ \hline
                  & gcc/gfortran & openMPI  & Makedef.Linux64-gnu-ompi \\ \cline{2-4}
- Linux OS x86-64 & icc/ifort    & intelMPI & Makedef.Linux64-intel-impi \\ \cline{2-4}
-                 & icc/ifort    & SGI-MPT  & Makedef.Linux64-intel-mpt \\ \hline
+ Linux OS x86-64 & icc/ifort    & intelMPI & Makedef.Linux64-intel-impi \\ \hline
  Mac OS          & gcc/gfortran & openMPI  & Makedef.MacOSX-gnu-ompi \\ \hline
- Fujitsu PRIME-HPC FX100 & fccpx/frtpx & mpiccpx/mpifrtpx & Makedef.FX100 \\ \hline
+ Fujitsu FX700/FX1000 & fccpx/frtpx & mpiccpx/mpifrtpx & Makedef.FX700 \\ \hline
 \end{tabularx}
 \label{tab:makedef}
 \end{center}
@@ -148,14 +146,12 @@ If you want to change the compilation options in detail, edit \verb|Makedef.***|
 \begin{tabularx}{150mm}{|l|X|} \hline
  \rowcolor[gray]{0.9} Environment variable & Description \\ \hline
  SCALE\_SYS               & Selection of system (required) \\ \hline
- SCALE\_DISABLE\_MPI      & Do not use MPI (only for utils) \\ \hline
  SCALE\_DEBUG             & Use compile option for debug \\ \hline
  SCALE\_QUICKDEBUG        & Use compile option for quick debug (detect floating point error while maintaining speed-up option) \\ \hline
  SCALE\_USE\_SINGLEFP     & Use single precision floating-point number (for all sources) \\ \hline
- SCALE\_USE\_FIXEDINDEX   & Fix grid index size at the compile time \\ \hline
  SCALE\_ENABLE\_OPENMP    & Enable to use OpenMP \\ \hline
  SCALE\_ENABLE\_OPENACC   & Enable to use OpenACC \\ \hline
- SCALE\_USE\_AGRESSIVEOPT & Conduct strong optimization (only for FX, this can be a side effect) \\ \hline
+ SCALE\_USE\_AGRESSIVEOPT & Conduct strong optimization (only for FX and intel, this can be a side effect) \\ \hline
  SCALE\_DISABLE\_INTELVEC & Suppress option for vectorization (only with Intel compiler) \\ \hline
  SCALE\_NETCDF\_INCLUDE   & Include path of NetCDF library \\ \hline
  SCALE\_NETCDF\_LIBS      & Directory path of NetCDF library and specifying libraries \\ \hline

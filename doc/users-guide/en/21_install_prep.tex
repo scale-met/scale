@@ -27,7 +27,9 @@ the following are the specifications for conducting the tutorial as in Chapters 
   \item {\bf Compiler} : C, Fortran
   \end{itemize}
 
-Since the source code of \scalelib is  written in FORTRAN 2003 standard syntax, the compiler must support it. For example, GNU gfortran version 4.3 or previous versions cannot be used for \scalelib compilation because they do not follow the FORTRAN 2003 standard. Refer to Table \ref{tab:compatible_compiler} for compilers already confirmed as supported.
+Since the source code of \scalelib is  written in FORTRAN 2008 standard syntax, the compiler must support it.
+For example, GNU gfortran version 4.8 or later versions is necessary.
+Refer to Table \ref{tab:compatible_compiler} for compilers already confirmed as supported.
 
 
 \begin{table}[tb]
@@ -35,9 +37,9 @@ Since the source code of \scalelib is  written in FORTRAN 2003 standard syntax, 
 \caption{Compiler already checked}
 \begin{tabularx}{150mm}{|l|X|} \hline
  \rowcolor[gray]{0.9} Name of compiler &  \\ \hline
-  GNU (gcc/gfortran)    & Version 4.3 or earlier are not supported. The series with version 4.4.x sometimes issues a warning. \\ \hline
+  GNU (gcc/gfortran)    & Version 4.8 or later is supported. \\ \hline
   Intel (icc/ifort)     & Version 15.0.0 or later is supported. \\ \hline
-  PGI (gcc/pgfortran)   & Version 17.1 is confirmed.       \\ \hline
+  NVIDIA HPC SDK (nvcc/nvfortran) &  \\ \hline
 \end{tabularx}
 \label{tab:compatible_compiler}
 \end{center}
@@ -68,7 +70,6 @@ The MPI library should support the MPI 1.0/2.0 protocol.  Refer to Table \ref{ta
  \rowcolor[gray]{0.9} Name of MPI library &  \\ \hline
   openMPI               & Version 1.7.2 or later is supported. \\ \hline
   Intel MPI             & Version 5.0 or later is supported.\\ \hline
-  SGI MPT               & Version 2.09 or later is supported. \\ \hline
 \end{tabularx}
 \label{tab:compatible_mpi}
 \end{center}
