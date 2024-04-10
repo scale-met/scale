@@ -306,3 +306,6 @@ include $(TOPDIR)/utils/make/Make_environments
 ifneq ($(SCALE_IGNORE_SRCDEP),T)
 -include depend
 endif
+
+
+%.o: %.mod

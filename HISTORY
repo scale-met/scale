@@ -1,5 +1,14 @@
 = Release History
 
+== 2024-04-10 (5.5.1)
+* Bug fixes:
+  * Fixed the mkinit for the baroclinic wave test case
+  * Fixed a compile error for some version of GNU compiler
+* Changes
+  * Change default setting for MPI for FUJITSU compiler
+* Updates:
+  * Updated the user guide
+
 == 2024-03-21 (5.5.0)
 * Changes
   * Unified NetCDF file input module for the real input

@@ -2738,7 +2738,7 @@ contains
 
     error = .false.
 
-    !$omp parallel do private(y,yphase,geopot_hvari,del_eta,itr,ln_eta,temp_vfunc) reduction(.or.:error)
+    !$omp parallel do private(y,yphase,geopot_hvari,del_eta,itr,ln_eta,temp_vfunc,converged) reduction(.or.:error)
     !$acc kernels
     !$acc loop independent collapse(2) &
     !$acc private(work1,work2,work3) reduction(.or.:error)
@@ -2810,6 +2810,15 @@ contains
 #endif
                                   DENS(:,i,j), temp(:,i,j), pres(:,i,j), temp_sfc(i,j),   & ! [OUT]
                                   converged                                               ) ! [OUT]
+       if ( .not. converged ) then
+          LOG_ERROR("MKINIT_barocwave",*) "failed to obtain a state in hydrostatic balance", i, j
+#ifdef _OPENACC
+          error = .true.
+#else
+          call PRC_abort
+#endif
+       end if
+
     enddo
     enddo
     !$acc end kernels
@@ -2831,13 +2840,15 @@ contains
 !!$       PRES(k,IS:IE,j) = eta(k,IS,j)*REF_PRES
 !!$       DENS(k,IS:IE,j) = PRES(k,IS,j)/(Rdry*temp(k,IS,j))
        !$acc loop independent
-       do i = IS, IE
-          DENS(k,i,j) = DENS(k,IS,j)
-          PRES(k,i,j) = PRES(k,IS,j)
+       do i = ISB, IEB
+          if ( i .ne. IS ) then
+             DENS(k,i,j) = DENS(k,IS,j)
+             PRES(k,i,j) = PRES(k,IS,j)
+          end if
           RHOT(k,i,j) = DENS(k,IS,j)*pott(k,IS,j) !temp(k,IS,j)*eta(k,IS,j)**(-Rdry/CPdry)
        end do
        !$acc loop independent
-       do i = IS-1, IE
+       do i = ISB, IEB
           MOMX(k,i,j) = DENS(k,IS,j)*(-U0*sin(0.5_RP*yphase)**2*ln_eta*exp(-(ln_eta/b)**2))
        end do
     enddo
@@ -2855,7 +2866,7 @@ contains
     !$acc kernels
     !$acc loop collapse(3) independent
     do j = JSB, JEB
-    do i = max(ISB-1,1), IEB
+    do i = ISB, IEB
     do k = KS, KE
        MOMX(k,i,j) = MOMX(k,i,j) &
            +  DENS(k,i,j)* Up*exp( - ((FX(i) - Xc)**2 + (CY(j) - Yc)**2)/Lp**2 )

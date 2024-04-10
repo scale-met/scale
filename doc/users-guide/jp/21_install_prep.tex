@@ -27,8 +27,7 @@
 
   \scalelib のソースコードは Fortran 2003 規格に基づく機能を一部利用しているため、
   それに対応するコンパイラが必要である。
-  例えば、GNU GFortran のバージョン 4.3 以前では Fortran 2003 規格の対応が不十分であるので、
-  \scalelib のコンパイルには利用できない。
+  例えば、GNU GFortran はバージョン 4.8 以降が必要である。
   対応確認済みのコンパイラは、表\ref{tab:compatible_compiler}を参照されたい。
 
 %\begin{table}[htb]
@@ -52,9 +51,9 @@
 \caption{対応確認済みのコンパイラ}
 \begin{tabularx}{150mm}{|l|X|X|} \hline
  \rowcolor[gray]{0.9} コンパイラ名 & \\ \hline
- GNU (gcc/gfortran)    & 4.3以前は非対応。4.4.xではコンパイル時にWarningが出ることがある。 \\ \hline
+ GNU (gcc/gfortran)    & 4.8 以降が必要。 \\ \hline
  Intel (icc/ifort)     & 15.0.0 以降に対応。 \\ \hline
- PGI (gcc/pgfortran)   & 17.1 は確認済み              \\ \hline
+ NVIDIA HPC SDK (nvcc/nvfortran)   &           \\ \hline
 \end{tabularx}
 \label{tab:compatible_compiler}
 \end{center}
@@ -82,7 +81,6 @@ MPI 1.0/2.0 プロトコルに対応した MPI ライブラリを必要とする
  \rowcolor[gray]{0.9} MPIライブラリ名 & \\ \hline
  openMPI   & 1.7.2 以降に対応。 \\ \hline
  Intel MPI & 5.0 以降に対応。 \\ \hline
- SGI MPT   & 2.09 以降に対応。 \\ \hline
 \end{tabularx}
 \label{tab:compatible_mpi}
 \end{center}

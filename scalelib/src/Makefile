@@ -441,4 +441,6 @@ include $(TOPDIR)/utils/make/Make_environments
 ifneq ($(SCALE_IGNORE_SRCDEP),T)
 -include depend
 endif
-# DO NOT DELETE
+
+
+%.o: %.mod

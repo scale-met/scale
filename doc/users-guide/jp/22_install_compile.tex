@@ -19,8 +19,7 @@
 ソースコードのtarballファイルを展開すると、\texttt{scale-{\version}/} というディレクトリができる。
 \begin{alltt}
  $ tar -zxvf scale-{\version}.tar.gz
- $ ls ./
-    scale-{\version}/
+ $ ls ./scale-{\version}/
 \end{alltt}
 
 \subsubsection{Makedefファイルと環境変数の設定} \label{subsec:environment}
@@ -38,10 +37,9 @@
 \begin{tabularx}{150mm}{|l|l|X|l|} \hline
  \rowcolor[gray]{0.9} OS/計算機 & コンパイラ & MPI & Makedefファイル \\ \hline
                  & gcc/gfortran & openMPI & Makedef.Linux64-gnu-ompi \\ \cline{2-4}
- Linux OS x86-64 & icc/ifort & intelMPI & Makedef.Linux64-intel-impi \\ \cline{2-4}
-                 & icc/ifort    & SGI-MPT & Makedef.Linux64-intel-mpt \\ \hline
+ Linux OS x86-64 & icc/ifort & intelMPI & Makedef.Linux64-intel-impi \\ \hline
  macOS           & gcc/gfortran & openMPI & Makedef.MacOSX-gnu-ompi \\ \hline
- Fujitsu PRIME-HPC FX100 & fccpx/frtpx & mpiccpx/mpifrtpx & Makedef.FX100 \\ \hline
+ Fujitsu FX700/FX100 & fccpx/frtpx & mpiccpx/mpifrtpx & Makedef.FX700 \\ \hline
 \end{tabularx}
 \label{tab:makedef}
 \end{center}
@@ -134,15 +132,12 @@
 \begin{tabularx}{150mm}{|l|X|} \hline
  \rowcolor[gray]{0.9} 環境変数 & 説明  \\ \hline
  SCALE\_SYS               & システム選択（必須）  \\ \hline
- SCALE\_DISABLE\_MPI      & MPIを使わない（utilsのみ）  \\ \hline
  SCALE\_DEBUG             & デバッグ用コンパイルオプションでコンパイル  \\ \hline
  SCALE\_QUICKDEBUG        & クイックデバッグ用コンパイルオプション利用（高速化そのまま＋浮動小数点エラー検出）  \\ \hline
- %SCALE\_USE\_MASSCHECK    & 質量保存チェック用の計算を追加（RM力学過程のみ）  \\ \hline
  SCALE\_USE\_SINGLEFP     & 単精度浮動小数点を使用（全ソース）  \\ \hline
- SCALE\_USE\_FIXEDINDEX   & 格子サイズをコンパイル時に固定して最適化促進  \\ \hline
  SCALE\_ENABLE\_OPENMP    & OpenMP機能を有効にする  \\ \hline
  SCALE\_ENABLE\_OPENACC   & OpenACC機能を有効にする  \\ \hline
- SCALE\_USE\_AGRESSIVEOPT & 副作用が出る可能のある強い最適化まで行う（FXのみ）  \\ \hline
+ SCALE\_USE\_AGRESSIVEOPT & 副作用が出る可能のある強い最適化まで行う（FX or intelのみ）  \\ \hline
  SCALE\_DISABLE\_INTELVEC & ベクトル化オプションの抑制（インテルコンパイラのみ）  \\ \hline
  SCALE\_NETCDF\_INCLUDE   & NetCDFライブラリのincludeディレクトリパス  \\ \hline
  SCALE\_NETCDF\_LIBS      & NetCDFライブラリのディレクトリパスとライブラリ指定  \\ \hline
