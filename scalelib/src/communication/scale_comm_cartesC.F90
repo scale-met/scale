@@ -23,8 +23,6 @@ module scale_comm_cartesC
   use openacc
 #endif
 
-  use scale_prc, only: &
-     PRC_abort
   use scale_prc_cartesC, only: &
      PRC_next, &
      PRC_W,    &
@@ -180,6 +178,7 @@ contains
   !> Setup
   subroutine COMM_setup
     use scale_prc, only: &
+       PRC_abort, &
        PRC_LOCAL_COMM_WORLD
     use scale_prc_cartesC, only: &
        PRC_TwoD
@@ -414,6 +413,8 @@ contains
   subroutine COMM_regist( &
        KA, IA, JA, IHALO, JHALO, &
        gid )
+    use scale_prc, only: &
+       PRC_abort
     implicit none
 
     integer, intent(in)  :: KA, IA, JA, IHALO, JHALO
@@ -703,6 +704,8 @@ contains
        var,     &
        vid,     &
        gid      )
+    use scale_prc, only: &
+       PRC_abort
     implicit none
 
     character(len=*), intent(in)    :: varname    !< variable name
@@ -770,6 +773,8 @@ contains
        var,     &
        vid,     &
        gid      )
+    use scale_prc, only: &
+       PRC_abort
     implicit none
 
     character(len=*), intent(in)    :: varname    !< variable name
@@ -833,6 +838,8 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine COMM_vars_3D(var, vid, gid)
+    use scale_prc, only: &
+       PRC_abort
     implicit none
 
     real(RP), intent(inout) :: var(:,:,:) !< atmospheric 3D variable to communication
@@ -870,6 +877,8 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine COMM_vars8_3D(var, vid, gid)
+    use scale_prc, only: &
+       PRC_abort
     implicit none
 
     real(RP), intent(inout) :: var(:,:,:)
@@ -907,6 +916,8 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine COMM_wait_3D(var, vid, FILL_BND, gid)
+    use scale_prc, only: &
+       PRC_abort
     implicit none
 
     real(RP), intent(inout) :: var(:,:,:)
@@ -956,6 +967,8 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine COMM_vars_2D(var, vid, gid)
+    use scale_prc, only: &
+       PRC_abort
     implicit none
 
     real(RP), intent(inout) :: var(:,:)
@@ -987,6 +1000,8 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine COMM_vars8_2D(var, vid, gid)
+    use scale_prc, only: &
+       PRC_abort
     implicit none
 
     real(RP), intent(inout) :: var(:,:)
@@ -1018,6 +1033,8 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine COMM_wait_2D(var, vid, FILL_BND, gid)
+    use scale_prc, only: &
+       PRC_abort
     implicit none
 
     real(RP), intent(inout) :: var(:,:)
@@ -1526,6 +1543,7 @@ contains
   !> Broadcast data for whole process value in 4D field
   subroutine COMM_bcast_4D_SP( KA, IA, JA, NT, var )
     use scale_prc, only: &
+       PRC_abort, &
        PRC_masterrank
     implicit none
 
@@ -1561,6 +1579,7 @@ contains
   end subroutine COMM_bcast_4D_SP
   subroutine COMM_bcast_4D_DP( KA, IA, JA, NT, var )
     use scale_prc, only: &
+       PRC_abort, &
        PRC_masterrank
     implicit none
 
@@ -2595,8 +2614,6 @@ contains
   end subroutine vars_3D_mpi
 
   subroutine vars_3D_mpi_onesided(var, gid, vid)
-    use scale_prc, only: &
-       PRC_abort
     use scale_prc_cartesC, only: &
        PRC_TwoD
     implicit none
@@ -3259,8 +3276,6 @@ contains
   end subroutine vars8_3D_mpi
 
   subroutine vars8_3D_mpi_onesided(var, gid, vid)
-    use scale_prc, only: &
-       PRC_abort
     use scale_prc_cartesC, only: &
        PRC_TwoD
     implicit none
@@ -3708,8 +3723,6 @@ contains
   end subroutine vars_2D_mpi
 
   subroutine vars_2D_mpi_onesided(var, gid, vid)
-    use scale_prc, only: &
-       PRC_abort
     use scale_prc_cartesC, only: &
        PRC_TwoD
     implicit none
@@ -4427,8 +4440,6 @@ contains
   end subroutine vars8_2D_mpi
 
   subroutine vars8_2D_mpi_onesided(var, gid, vid)
-    use scale_prc, only: &
-       PRC_abort
     use scale_prc_cartesC, only: &
        PRC_TwoD
     implicit none
