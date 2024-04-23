@@ -13,7 +13,11 @@ module scale_comm_cartesC
   !
   !++ used modules
   !
+#ifdef NO_MPI08
+  use mpi
+#else
   use mpi_f08
+#endif
   use iso_c_binding
   use scale_precision
   use scale_io
@@ -121,9 +125,13 @@ module scale_comm_cartesC
   logical,  private              :: COMM_USE_MPI_ONESIDED = .false. !< MPI one-sided communication
 #endif
 
-  type(MPI_Datatype), public :: COMM_datatype_t
-  type(MPI_Comm),     public :: COMM_world_t
-
+#ifdef NO_MPI08
+  integer,            private :: COMM_datatype_t
+  integer,            private :: COMM_world_t
+#else
+  type(MPI_Datatype), private :: COMM_datatype_t
+  type(MPI_Comm),     private :: COMM_world_t
+#endif
 
 #ifdef _OPENACC
   type ptr_t
@@ -144,13 +152,20 @@ module scale_comm_cartesC
      real(RP),    pointer :: sendpack_P2WE(:,:,:) !< packing packet (send,    to   W and E)
      type(c_ptr), allocatable :: recvbuf_WE(:)    !< receive buffer for MPI_Put (from W and E)
      type(c_ptr), allocatable :: recvbuf_NS(:)    !< receive buffer for MPI_Put (from N and S)
-     integer,           allocatable :: req_cnt (:)    !< request ID of each MPI send/recv
+     integer,     allocatable :: req_cnt (:)      !< request ID of each MPI send/recv
+     integer,     allocatable :: preq_cnt (:)     !< request ID of each MPI PC
+     integer,     allocatable :: packid(:)        !< ID of pack
+#if NO_MPI08
+     integer,           allocatable :: req_list(:,:)  !< request ID set of each variables
+     integer,           allocatable :: preq_list(:,:) !< request ID set of each variables for MPI PC
+     integer,           allocatable :: win_packWE(:)  !< window ID for MPI onesided
+     integer,           allocatable :: win_packNS(:)  !< window ID for MPI onesided
+#else
      type(MPI_Request), allocatable :: req_list(:,:)  !< request ID set of each variables
-     integer,           allocatable :: preq_cnt (:)   !< request ID of each MPI PC
      type(MPI_Request), allocatable :: preq_list(:,:) !< request ID set of each variables for MPI PC
-     integer,       allocatable :: packid(:)          !< ID of pack
-     type(MPI_Win), allocatable :: win_packWE(:)      !< window ID for MPI onesided
-     type(MPI_Win), allocatable :: win_packNS(:)      !< window ID for MPI onesided
+     type(MPI_Win),     allocatable :: win_packWE(:)  !< window ID for MPI onesided
+     type(MPI_Win),     allocatable :: win_packNS(:)  !< window ID for MPI onesided
+#endif
 #ifdef DEBUG
      logical,       allocatable :: use_packbuf(:)     !< using flag for packing buffer
 #endif
@@ -164,8 +179,13 @@ module scale_comm_cartesC
   integer, private             :: COMM_gid
   type(ginfo_t), private       :: ginfo(COMM_gid_max)
 
+#if NO_MPI08
+  integer,         private     :: group_packWE !< MPI_Group for pack
+  integer,         private     :: group_packNS !< MPI_Group for vars
+#else
   type(MPI_Group), private     :: group_packWE !< MPI_Group for pack
   type(MPI_Group), private     :: group_packNS !< MPI_Group for vars
+#endif
   logical, private             :: group_packWE_created = .false.
   logical, private             :: group_packNS_created = .false.
 
@@ -191,7 +211,11 @@ contains
        COMM_USE_MPI_ONESIDED
 
     integer         :: ranks(8)
+#ifdef NO_MPI08
+    integer         :: group
+#else
     type(MPI_Group) :: group
+#endif
 
     integer :: n, m
     integer :: ierr
@@ -226,6 +250,8 @@ contains
        COMM_IsAllPeriodic = .false.
     endif
 
+    COMM_world = PRC_LOCAL_COMM_WORLD
+
     if ( RP == kind(0.D0) ) then
        COMM_datatype_t = MPI_DOUBLE_PRECISION
     elseif( RP == kind(0.0) ) then
@@ -234,10 +260,14 @@ contains
        LOG_ERROR("COMM_setup",*) 'precision is not supportd'
        call PRC_abort
     endif
-    COMM_datatype = COMM_datatype_t%MPI_VAL
 
-    COMM_world = PRC_LOCAL_COMM_WORLD
+#ifdef NO_MPI08
+    COMM_world_t = COMM_world
+    COMM_datatype = COMM_datatype_t
+#else
     COMM_world_t%MPI_VAL = COMM_world
+    COMM_datatype = COMM_datatype_t%MPI_VAL
+#endif
 
     COMM_gid = 0
 
@@ -423,7 +453,12 @@ contains
     integer :: IMAX, JMAX
     integer :: nreq_NS, nreq_WE, nreq_4C
 
+#ifdef NO_MPI08
+    integer        :: win_info
+#else
     type(MPI_Info) :: win_info
+#endif
+
     integer(kind=MPI_ADDRESS_KIND) :: size
 
     integer :: ierr

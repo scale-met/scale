@@ -25,6 +25,7 @@ envlog:
 	@echo " + NetCDF library path                               [SCALE_NETCDF_LIBS]      :" $(SCALE_NETCDF_LIBS)
 	@echo " + Enable to use parallel NetCDF?                    [SCALE_ENABLE_PNETCDF]   :" $(SCALE_ENABLE_PNETCDF)
 	@echo " + Keep compatibility with NetCDF3?                  [SCALE_COMPAT_NETCDF3]   :" $(SCALE_COMPAT_NETCDF3)
+	@echo " + Not use MPI Fortran08 binding interface?          [SCALE_COMPAT_MPI]       :" $(SCALE_COMPAT_MPI)
 	@echo " + Enable to use MATH library?                       [SCALE_ENABLE_MATHLIB]   :" $(SCALE_ENABLE_MATHLIB)
 	@echo " + MATH library path                                 [SCALE_MATHLIB_LIBS]     :" $(SCALE_MATHLIB_LIBS)
 	@echo " + Enable to use PAPI library?                       [SCALE_ENABLE_PAPI]      :" $(SCALE_ENABLE_PAPI)
