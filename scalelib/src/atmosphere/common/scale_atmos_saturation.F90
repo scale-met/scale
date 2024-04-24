@@ -2550,7 +2550,7 @@ contains
   !-----------------------------------------------------------------------------
   !> calculate equivalent potential temperature
   !>  Bolton, D., 1980: The computation of equivalent potential temperature. Monthly Weather Rev., 108, 1046-1053.
-  !> PT_E = PT exp( L QV / (CPdry T) f )
+  !> PT_E = PT exp( L QV / (CPdry T_L) f )
   !> f ~ 1.0784 ( 1 + 0.810 QV )
   !> Here T_L is temperature at the lifting condensation level and
   !> T_L ~ 55 + 2840 / ( CPdry/Rdry log(T) - log(P_v) - 4.805 )
@@ -2579,7 +2579,7 @@ contains
     TL = 55.0_RP + 2840.0_RP / ( CPdry / Rdry * log(TEMP) - log(Pv) - 4.805_RP )
     call ATMOS_HYDROMETEOR_LHV( TEMP, LHV ) ! [IN], [OUT]
 
-    POTE = POTT * exp( LHV * QV / ( CPdry * TEMP ) &
+    POTE = POTT * exp( LHV * QV / ( CPdry * TL ) &
                      * 1.0784_RP * ( 1.0_RP + 0.810_RP * QV ) )
 
     return
