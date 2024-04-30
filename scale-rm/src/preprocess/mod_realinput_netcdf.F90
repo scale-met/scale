@@ -227,7 +227,7 @@ contains
 
     character(len=FILE_HLONG) :: basename
     character(len=FILE_HLONG) :: fname
-    character(len=16) :: map
+    character(len=32) :: map
 
     integer :: nmfid
     integer :: i, n, iq
@@ -276,7 +276,7 @@ contains
 
        mapping_name = ""
        false_easting = UNDEF
-       false_easting = UNDEF
+       false_northing = UNDEF
        longitude_of_central_meridian = UNDEF
        longitude_of_projection_origin = UNDEF
        latitude_of_projection_origin = UNDEF

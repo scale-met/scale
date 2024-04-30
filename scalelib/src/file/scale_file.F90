@@ -447,11 +447,11 @@ contains
 
     error = file_get_varname_c( varname, &
                                 FILE_files(fid)%fid, cvid, len(varname) ) ! (in)
-    call fstr(varname)
     if ( error /= FILE_SUCCESS_CODE ) then
        LOG_ERROR("FILE_get_var_name",*) 'failed to get varname. cvid = ', cvid
        call PRC_abort
     end if
+    call fstr(varname)
 
     call PROF_rapend  ('FILE_Read', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
 
@@ -2501,7 +2501,6 @@ contains
                                        FILE_files(fid)%fid,    & ! (in)
                                        cstr(vname), cstr(key), & ! (in)
                                        suppress, len(val)      ) ! (in)
-    call fstr(val)
     if ( error /= FILE_SUCCESS_CODE ) then
        if ( present(existed) ) then
           existed = .false.
@@ -2512,6 +2511,7 @@ contains
     else
        if ( present(existed) ) existed = .true.
     end if
+    call fstr(val)
 
     call PROF_rapend  ('FILE_Read', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
 

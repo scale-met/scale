@@ -1640,17 +1640,18 @@ contains
           uvmet        = .true.
        end select
 
+       if ( sfc_diagnoses ) then
+          k0 = 2
+       else
+          k0 = 3
+       end if
+
        if ( rh2qv ) then
           if ( .not. temp2pt ) then
              LOG_ERROR("ParentAtmosInput",*) 'When RH is read, TEMP is necessary'
              call PRC_abort()
           end if
 
-          if ( sfc_diagnoses ) then
-             k0 = 2
-          else
-             k0 = 3
-          end if
           !$omp parallel do collapse(2) &
           !$omp private(p_sat,qm)
           do j = 1, JA_org
@@ -1709,7 +1710,7 @@ contains
           !$omp private(qtot)
           do j = 1, JA_org
           do i = 1, IA_org
-          do k = 1, KA_org
+          do k = k0, KA_org
              qtot = 0.0_RP
              if ( qv_org(k,i,j) > UNDEF ) then
                 qtot = qtot + qv_org(k,i,j)
@@ -1739,22 +1740,26 @@ contains
 
        if ( .not. same_mptype_ ) then
           if ( qnum_flag ) then
-             call ATMOS_PHY_MP_driver_qhyd2qtrc( KA_org, 2, KA_org, IA_org, 1, IA_org, JA_org, 1, JA_org, &
+             call ATMOS_PHY_MP_driver_qhyd2qtrc( KA_org, k0, KA_org, IA_org, 1, IA_org, JA_org, 1, JA_org, &
                                                  QV_org(:,:,:), QHYD_org(:,:,:,:), & ! [IN]
                                                  QTRC_org(:,:,:,QS_MP:QE_MP),      & ! [OUT]
                                                  QNUM=QNUM_org(:,:,:,:)            ) ! [IN]
           else
-             call ATMOS_PHY_MP_driver_qhyd2qtrc( KA_org, 2, KA_org, IA_org, 1, IA_org, JA_org, 1, JA_org, &
+             call ATMOS_PHY_MP_driver_qhyd2qtrc( KA_org, k0, KA_org, IA_org, 1, IA_org, JA_org, 1, JA_org, &
                                                  QV_org(:,:,:), QHYD_org(:,:,:,:), & ! [IN]
                                                  QTRC_org(:,:,:,QS_MP:QE_MP)       ) ! [OUT]
           end if
-          !$omp parallel do
+          !$omp parallel do collapse(3)
+          do iq = QS_MP, QE_MP
           do j = 1, JA_org
           do i = 1, IA_org
-             QTRC_org(1,i,j,QS_MP:QE_MP) = UNDEF
-             do k = 2, KA_org
-                if ( QV_org(k,i,j) == UNDEF ) QTRC_org(k,i,j,QS_MP:QE_MP) = UNDEF
+             do k = 1, k0-1
+                QTRC_org(k,i,j,iq) = UNDEF
              end do
+             do k = k0, KA_org
+                if ( QV_org(k,i,j) == UNDEF ) QTRC_org(k,i,j,iq) = UNDEF
+             end do
+          end do
           end do
           end do
        end if
