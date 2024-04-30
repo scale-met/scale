@@ -143,7 +143,7 @@ contains
       lat_all,      &
       basename_org, &
       basename_num, &
-      same_mptype,  &
+      same_mp_type, &
       pt_dry,       &
       serial,       &
       do_read       )
@@ -179,7 +179,7 @@ contains
 
     character(len=*), intent(in) :: basename_org
     character(len=*), intent(in) :: basename_num
-    logical,          intent(in) :: same_mptype
+    logical,          intent(in) :: same_mp_type
 
     logical, intent(inout) :: pt_dry
     logical, intent(inout) :: serial
@@ -319,7 +319,7 @@ contains
           call vars_atmos%put("QV", vinfo("QV"))
           call vars_atmos%put("RH", vinfo("RH"))
 
-          if ( same_mptype ) then
+          if ( same_mp_type ) then
              do iq = QS_MP, QE_MP
                 call vars_atmos%put(TRACER_NAME(iq), vinfo(TRACER_NAME(iq)))
              end do
@@ -414,8 +414,8 @@ contains
              call vars_atmos%put("PT", vinfo("T_1", offset=300.0_RP))
           endif
 
-          if ( same_mptype ) then
-             LOG_ERROR("ParentAtmosSetupNetCDF",*) 'same_mptype must be .false. for WRF file'
+          if ( same_mp_type ) then
+             LOG_ERROR("ParentAtmosSetupNetCDF",*) 'same_mp_type must be .false. for WRF file'
              call PRC_abort
           end if
           call vars_atmos%put("QV", vinfo("QVAPOR"))
@@ -719,7 +719,7 @@ contains
        uvmet,               &
        temp2pt, rh2qv,      &
        qnum_flag,           &
-       same_mptype ,        &
+       same_mp_type,        &
        sfc_diagnoses,       &
        update_coord,        &
        dims,                &
@@ -760,7 +760,7 @@ contains
     logical,  intent(out) :: rh2qv
     logical,  intent(out) :: qnum_flag
 
-    logical, intent(in)  :: same_mptype
+    logical, intent(in)  :: same_mp_type
     logical, intent(in)  :: sfc_diagnoses
     logical, intent(in)  :: update_coord
     integer, intent(in)  :: dims(6)
@@ -829,7 +829,7 @@ contains
     end do
 
     ! water contents
-    if ( same_mptype ) then
+    if ( same_mp_type ) then
 
        do iq = QS_MP, QE_MP
           call read3d( KA_org, KS_org+2, KE_org, IA_org, IS_org, IE_org, JA_org, JS_org, JE_org, &
@@ -900,7 +900,7 @@ contains
           end if
        end do
 
-    end if
+    end if ! same_mp_type
 
     ! pressure
     call read3d( KA_org, KS_org+2, KE_org, IA_org, IS_org, IE_org, JA_org, JS_org, JE_org, &
@@ -942,11 +942,7 @@ contains
          dens_org(:,:,:), vars_atmos%get("DENS"), &
          it, nfiles_atm, fid_atm, fids_atm, SCALE_tile_atm, SCALE_DOMID_atm, &
          exist = exist )
-    if ( exist ) then
-       nodens = .false.
-    else
-       nodens = .true.
-    end if
+    nodens = ( .not. exist )
 
     ! pt
     call read3d( KA_org, KS_org+2, KE_org, IA_org, IS_org, IE_org, JA_org, JS_org, JE_org, &
@@ -962,29 +958,32 @@ contains
             exist = exist )
        if ( exist ) then
           if ( nodens ) then
-             LOG_ERROR("ParentAtmosInputNetCDF",*) "DENS is necessary to calculate PT from RHOT"
-             call PRC_abort
+             if ( first_atm ) &
+             LOG_WARN("ParentAtmosInputNetCDF",*) "RHOT is not used because DENS does not exist"
+             exist = .false.
+          else
+             !$omp parallel do collapse(2)
+             do j = 1, JA_org
+             do i = 1, IA_org
+             do k = 1, KA_org-2
+                pt_org(k+2,i,j) = pt_org(k+2,i,j) / dens_org(k+2,i,j)
+             end do
+             end do
+             end do
+             temp2pt = .false.
           end if
-          !$omp parallel do collapse(2)
-          do j = 1, JA_org
-          do i = 1, IA_org
-          do k = 1, KA_org-2
-             pt_org(k+2,i,j) = pt_org(k+2,i,j) / dens_org(k+2,i,j)
-          end do
-          end do
-          end do
-          temp2pt = .false.
-       else
-          call read3d( KA_org, KS_org+2, KE_org, IA_org, IS_org, IE_org, JA_org, JS_org, JE_org, &
-               temp_org(:,:,:), vars_atmos%get("T"), &
-               it, nfiles_atm, fid_atm, fids_atm, SCALE_tile_atm, SCALE_DOMID_atm, &
-               exist = exist )
-          if ( .not. exist ) then
-             LOG_ERROR("ParentAtmosInputNetCDF",*) '"PT", "RHOT", or "T" is necessary'
-             call PRC_abort
-          end if
-          temp2pt = .true.
        end if
+    end if
+    if ( .not. exist ) then
+       call read3d( KA_org, KS_org+2, KE_org, IA_org, IS_org, IE_org, JA_org, JS_org, JE_org, &
+            temp_org(:,:,:), vars_atmos%get("T"), &
+            it, nfiles_atm, fid_atm, fids_atm, SCALE_tile_atm, SCALE_DOMID_atm, &
+            exist = exist )
+       temp2pt = .true.
+    end if
+    if ( .not. exist ) then
+       LOG_ERROR("ParentAtmosInputNetCDF",*) 'Either "PT", "RHOT", or "T" is necessary'
+       call PRC_abort
     end if
 
     ! W
@@ -993,33 +992,36 @@ contains
          it, nfiles_atm, fid_atm, fids_atm, SCALE_tile_atm, SCALE_DOMID_atm, &
          exist = exist )
     if ( .not. exist ) then
-       if ( nodens ) then
-          LOG_ERROR("ParentAtmosInputNetCDF",*) "DENS is necessary to use MOMZ"
-          call PRC_abort
-       end if
        call read3d( KA_org, KS_org+2, KE_org, IA_org, IS_org, IE_org, JA_org, JS_org, JE_org, &
             w_org(:,:,:), vars_atmos%get("MOMZ"), &
             it, nfiles_atm, fid_atm, fids_atm, SCALE_tile_atm, SCALE_DOMID_atm, &
             exist = exist )
        if ( exist ) then
-          !$omp parallel do collapse(2)
-          do j = 1, JA_org
-          do i = 1, IA_org
-          do k = 1, KA_org-2
-             w_org(k+2,i,j) =  w_org(k+2,i,j) / dens_org(k+2,i,j)
-          end do
-          end do
-          end do
-       else
-          !$omp parallel do collapse(2)
-          do j = 1, JA_org
-          do i = 1, IA_org
-          do k = 1, KA_org-2
-             w_org(k+2,i,j) =  0.0_RP
-          end do
-          end do
-          end do
-       endif
+          if ( nodens ) then
+             if ( first_atm ) &
+             LOG_WARN("ParentAtmosInputNetCDF",*) "MOMZ is not used because DENS does not exist"
+             exist = .false.
+          else
+             !$omp parallel do collapse(2)
+             do j = 1, JA_org
+             do i = 1, IA_org
+             do k = 1, KA_org-2
+                w_org(k+2,i,j) =  w_org(k+2,i,j) / dens_org(k+2,i,j)
+             end do
+             end do
+             end do
+          end if
+       end if
+    end if
+    if ( .not. exist ) then
+       !$omp parallel do collapse(2)
+       do j = 1, JA_org
+       do i = 1, IA_org
+       do k = 1, KA_org-2
+          w_org(k+2,i,j) =  0.0_RP
+       end do
+       end do
+       end do
     end if
 
     ! U
@@ -1034,29 +1036,36 @@ contains
             u_org(:,:,:), vars_atmos%get("U"), &
             it, nfiles_atm, fid_atm, fids_atm, SCALE_tile_atm, SCALE_DOMID_atm, &
             exist = exist )
-       if ( .not. exist ) then
-          if ( nodens ) then
-             LOG_ERROR("ParentAtmosInputNetCDF",*) "DENS is necessary to use MOMX"
-             call PRC_abort
-          end if
-          call read3d( KA_org, KS_org+2, KE_org, IA_org, IS_org, IE_org, JA_org, JS_org, JE_org, &
-               u_org(:,:,:), vars_atmos%get("MOMX"), &
-               it, nfiles_atm, fid_atm, fids_atm, SCALE_tile_atm, SCALE_DOMID_atm, &
-               exist = exist )
-          if ( .not. exist ) then
-             LOG_ERROR("ParentAtmosInputNetCDF",*) '"Ument", "U", or "MOMX" is necessary'
-             call PRC_abort
-          end if
-          !$omp parallel do collapse(2)
-          do j = 1, JA_org
-          do i = 1, IA_org
-          do k = 1, KA_org-2
-             u_org(k+2,i,j) = u_org(k+2,i,j) / dens_org(k+2,i,j)
-          end do
-          end do
-          end do
+       if ( exist ) then
+          uvmet = .false.
        end if
-       uvmet = .false.
+    end if
+    if ( .not. exist ) then
+       call read3d( KA_org, KS_org+2, KE_org, IA_org, IS_org, IE_org, JA_org, JS_org, JE_org, &
+            u_org(:,:,:), vars_atmos%get("MOMX"), &
+            it, nfiles_atm, fid_atm, fids_atm, SCALE_tile_atm, SCALE_DOMID_atm, &
+            exist = exist )
+       if ( exist ) then
+          if ( nodens ) then
+             if ( first_atm ) &
+             LOG_WARN("ParentAtmosInputNetCDF",*) "MOMX is not used because DENS does not exist"
+             exist = .false.
+          else
+             !$omp parallel do collapse(2)
+             do j = 1, JA_org
+             do i = 1, IA_org
+             do k = 1, KA_org-2
+                u_org(k+2,i,j) = u_org(k+2,i,j) / dens_org(k+2,i,j)
+             end do
+             end do
+             end do
+          end if
+          uvmet = .false.
+       end if
+    end if
+    if ( .not. exist ) then
+       LOG_ERROR("ParentAtmosInputNetCDF",*) 'Either "Ument", "U", or "MOMX" is necessary'
+       call PRC_abort
     end if
 
     ! V
@@ -1075,26 +1084,30 @@ contains
             it, nfiles_atm, fid_atm, fids_atm, SCALE_tile_atm, SCALE_DOMID_atm, &
             exist = exist )
        if ( .not. exist ) then
-          if ( nodens ) then
-             LOG_ERROR("ParentAtmosInputNetCDF",*) "DENS is necessary to use MOMY"
-             call PRC_abort
-          end if
           call read3d( KA_org, KS_org+2, KE_org, IA_org, IS_org, IE_org, JA_org, JS_org, JE_org, &
                v_org(:,:,:), vars_atmos%get("MOMY"), &
                it, nfiles_atm, fid_atm, fids_atm, SCALE_tile_atm, SCALE_DOMID_atm, &
                exist = exist )
-          if ( .not. exist ) then
-             LOG_ERROR("ParentAtmosInputNetCDF",*) '"V" or "MOMY" is required when "U" or "MOMX" exists'
-             call PRC_abort
+          if ( exist ) then
+             if ( nodens ) then
+                if ( first_atm ) &
+                LOG_WARN("ParentAtmosInputNetCDF",*) "MOMY is not used because DENS does not exist"
+                exist = .false.
+             else
+                !$omp parallel do collapse(2)
+                do j = 1, JA_org
+                do i = 1, IA_org
+                do k = 1, KA_org-2
+                   v_org(k+2,i,j) = v_org(k+2,i,j) / dens_org(k+2,i,j)
+                end do
+                end do
+                end do
+             end if
           end if
-          !$omp parallel do collapse(2)
-          do j = 1, JA_org
-          do i = 1, IA_org
-          do k = 1, KA_org-2
-             v_org(k+2,i,j) = v_org(k+2,i,j) / dens_org(k+2,i,j)
-          end do
-          end do
-          end do
+       end if
+       if ( .not. exist ) then
+          LOG_ERROR("ParentAtmosInputNetCDF",*) 'Either "V" or "MOMY" is required when "U" or "MOMX" exists'
+          call PRC_abort
        end if
     end if
 
@@ -1152,7 +1165,7 @@ contains
           end do
           end do
        end if
-       
+
        ! SFC_PRES
        call read2d( IA_org, IS_org, IE_org, JA_org, JS_org, JE_org, &
             work2d(:,:), vars_atmos%get("SFC_PRES"), &
@@ -1296,7 +1309,7 @@ contains
                it, nfiles_atm, fid_atm, fids_atm, SCALE_tile_atm, SCALE_DOMID_atm, &
                exist = exist )
           if ( exist ) then
-             if ( same_mptype ) then
+             if ( same_mp_type ) then
                 !$omp parallel do
                 do j = 1, JA_org
                 do i = 1, IA_org
@@ -1323,7 +1336,7 @@ contains
 
 
     else
-       
+
        !$omp parallel do
        do j = 1, JA_org
        do i = 1, IA_org
@@ -1582,7 +1595,7 @@ contains
           LOG_ERROR("ParentLANDSetupNetCDF",*) 'NM_FILE is necessary'
           call PRC_abort
        end if
-       
+
     end if
 
     if ( SCALE_tile_lnd ) then
@@ -1790,7 +1803,16 @@ contains
 
     call read2d( IA_org, IS_org, IE_org, JA_org, JS_org, JE_org, &
          albg_org(:,:,I_R_direct,I_R_VIS), vars_land%get("LAND_SFC_ALB_VIS_dir"), &
-         it, nfiles_lnd, fid_lnd, fids_lnd, SCALE_tile_lnd, SCALE_DOMID_lnd )
+         it, nfiles_lnd, fid_lnd, fids_lnd, SCALE_tile_lnd, SCALE_DOMID_lnd, &
+         exist = exist )
+    if ( .not. exist ) then
+       !$omp parallel do
+       do j = 1, JA_org
+       do i = 1, IA_org
+          albg_org(i,j,I_R_direct,I_R_VIS) = UNDEF
+       end do
+       end do
+    end if
     call read2d( IA_org, IS_org, IE_org, JA_org, JS_org, JE_org, &
          albg_org(:,:,I_R_diffuse,I_R_VIS), vars_land%get("LAND_SFC_ALB_VIS_dif"), &
          it, nfiles_lnd, fid_lnd, fids_lnd, SCALE_tile_lnd, SCALE_DOMID_lnd, &
@@ -1811,7 +1833,7 @@ contains
        !$omp parallel do
        do j = 1, JA_org
        do i = 1, IA_org
-          albg_org(i,j,I_R_direct,I_R_NIR) = albg_org(i,j,I_R_direct,I_R_VIS)
+          albg_org(i,j,I_R_direct,I_R_NIR) = UNDEF
        end do
        end do
     end if
@@ -1823,7 +1845,7 @@ contains
        !$omp parallel do
        do j = 1, JA_org
        do i = 1, IA_org
-          albg_org(i,j,I_R_diffuse,I_R_NIR) = albg_org(i,j,I_R_diffuse,I_R_VIS)
+          albg_org(i,j,I_R_diffuse,I_R_NIR) = albg_org(i,j,I_R_direct,I_R_NIR)
        end do
        end do
     end if
@@ -1836,16 +1858,21 @@ contains
             albg_org(:,:,I_R_diffuse,I_R_IR), vars_land%get("LAND_SFC_EMIS_IR_dif"), &
             it, nfiles_lnd, fid_lnd, fids_lnd, SCALE_tile_lnd, SCALE_DOMID_lnd, &
             exist = exist )
-       if ( .not. exist ) then
-          LOG_ERROR("ParentLandInputNetCDF",*) '"LAND_SFC_ALB_IR_dif" or "LAND_SFC_EMIS_IR_dif" is necessary'
-          call PRC_abort
+       if ( exist ) then
+          !$omp parallel do
+          do j = 1, JA_org
+          do i = 1, IA_org
+             albg_org(i,j,I_R_diffuse,I_R_IR) = 1.0_RP - albg_org(i,j,I_R_diffuse,I_R_IR)
+          end do
+          end do
+       else
+          !$omp parallel do
+          do j = 1, JA_org
+          do i = 1, IA_org
+             albg_org(i,j,I_R_diffuse,I_R_IR) = UNDEF
+          end do
+          end do
        end if
-       !$omp parallel do
-       do j = 1, JA_org
-       do i = 1, IA_org
-          albg_org(i,j,I_R_diffuse,I_R_IR) = 1.0_RP - albg_org(i,j,I_R_diffuse,I_R_IR)
-       end do
-       end do
     end if
     call read2d( IA_org, IS_org, IE_org, JA_org, JS_org, JE_org, &
          albg_org(:,:,I_R_direct,I_R_IR), vars_land%get("LAND_SFC_ALB_IR_dir"), &
@@ -1866,7 +1893,7 @@ contains
   end subroutine ParentLandInputNetCDF
 
   !-----------------------------------------------------------------------------
-  !> Ocean Setup  
+  !> Ocean Setup
   subroutine ParentOceanSetupNetCDF( &
        odims,   &
        timelen, &
@@ -2262,7 +2289,16 @@ contains
 
     call read2d( IA_org, IS_org, IE_org, JA_org, JS_org, JE_org, &
          albw_org(:,:,I_R_direct,I_R_VIS), vars_ocean%get("OCEAN_SFC_ALB_VIS_dir"), &
-         it, nfiles_ocn, fid_ocn, fids_ocn, SCALE_tile_ocn, SCALE_DOMID_ocn )
+         it, nfiles_ocn, fid_ocn, fids_ocn, SCALE_tile_ocn, SCALE_DOMID_ocn, &
+         exist = exist )
+    if ( .not. exist ) then
+       !$omp parallel do
+       do j = 1, JA_org
+       do i = 1, IA_org
+          albw_org(i,j,I_R_direct,I_R_VIS) = UNDEF
+       end do
+       end do
+    end if
     call read2d( IA_org, IS_org, IE_org, JA_org, JS_org, JE_org, &
          albw_org(:,:,I_R_diffuse,I_R_VIS), vars_ocean%get("OCEAN_SFC_ALB_VIS_dif"), &
          it, nfiles_ocn, fid_ocn, fids_ocn, SCALE_tile_ocn, SCALE_DOMID_ocn, &
@@ -2283,7 +2319,7 @@ contains
        !$omp parallel do
        do j = 1, JA_org
        do i = 1, IA_org
-          albw_org(i,j,I_R_direct,I_R_NIR) = albw_org(i,j,I_R_direct,I_R_VIS)
+          albw_org(i,j,I_R_direct,I_R_NIR) = UNDEF
        end do
        end do
     end if
@@ -2295,7 +2331,7 @@ contains
        !$omp parallel do
        do j = 1, JA_org
        do i = 1, IA_org
-          albw_org(i,j,I_R_diffuse,I_R_NIR) = albw_org(i,j,I_R_diffuse,I_R_VIS)
+          albw_org(i,j,I_R_diffuse,I_R_NIR) = albw_org(i,j,I_R_direct,I_R_NIR)
        end do
        end do
     end if
@@ -2308,16 +2344,21 @@ contains
             albw_org(:,:,I_R_diffuse,I_R_IR), vars_ocean%get("OCEAN_SFC_EMIS_IR_dif"), &
             it, nfiles_ocn, fid_ocn, fids_ocn, SCALE_tile_ocn, SCALE_DOMID_ocn, &
             exist = exist )
-       if ( .not. exist ) then
-          LOG_ERROR("ParentOceanInputNetCDF",*) '"OCEAN_SFC_ALB_IR_dif" or "OCEAN_SFC_EMIS_IR_dif" is necessary'
-          call PRC_abort
+       if ( exist ) then
+          !$omp parallel do
+          do j = 1, JA_org
+          do i = 1, IA_org
+             albw_org(i,j,I_R_diffuse,I_R_IR) = 1.0_RP - albw_org(i,j,I_R_diffuse,I_R_IR)
+          end do
+          end do
+       else
+          !$omp parallel do
+          do j = 1, JA_org
+          do i = 1, IA_org
+             albw_org(i,j,I_R_diffuse,I_R_IR) = UNDEF
+          end do
+          end do
        end if
-       !$omp parallel do
-       do j = 1, JA_org
-       do i = 1, IA_org
-          albw_org(i,j,I_R_diffuse,I_R_IR) = 1.0_RP - albw_org(i,j,I_R_diffuse,I_R_IR)
-       end do
-       end do
     end if
     call read2d( IA_org, IS_org, IE_org, JA_org, JS_org, JE_org, &
          albw_org(:,:,I_R_direct,I_R_IR), vars_ocean%get("OCEAN_SFC_ALB_IR_dir"), &
@@ -2355,14 +2396,14 @@ contains
     integer :: i
 
     fname = basename_org
-    inquire(file=fname, exist=exist) 
+    inquire(file=fname, exist=exist)
     if ( .not. exist ) then
        fname = trim(basename_org)//".nc"
-       inquire(file=fname, exist=exist) 
+       inquire(file=fname, exist=exist)
     end if
     if ( .not. exist ) then
        fname = trim(basename_org)//".pe000000.nc"
-       inquire(file=fname, exist=exist) 
+       inquire(file=fname, exist=exist)
     end if
     if ( .not. exist ) then
        LOG_ERROR(subname,*) "file is not found: ", trim(basename_org)
@@ -2784,7 +2825,7 @@ contains
        if ( present(exist) ) then
           exist = .false.
        else
-          LOG_ERROR("read3d",*) 'data is not found '
+          LOG_ERROR("read2d",*) 'data is not found '
           call PRC_abort
        end if
        return
@@ -2967,7 +3008,7 @@ contains
        if ( present(exist) ) then
           exist = .false.
        else
-          LOG_ERROR("read3d",*) 'data is not found '
+          LOG_ERROR("read1d",*) 'data is not found '
           call PRC_abort
        end if
        return

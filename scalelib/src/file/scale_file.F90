@@ -447,11 +447,12 @@ contains
 
     error = file_get_varname_c( varname, &
                                 FILE_files(fid)%fid, cvid, len(varname) ) ! (in)
-    if ( error /= FILE_SUCCESS_CODE ) then
+    if ( error == FILE_SUCCESS_CODE ) then
+       call fstr(varname)
+    else
        LOG_ERROR("FILE_get_var_name",*) 'failed to get varname. cvid = ', cvid
        call PRC_abort
     end if
-    call fstr(varname)
 
     call PROF_rapend  ('FILE_Read', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
 
@@ -2501,17 +2502,17 @@ contains
                                        FILE_files(fid)%fid,    & ! (in)
                                        cstr(vname), cstr(key), & ! (in)
                                        suppress, len(val)      ) ! (in)
-    if ( error /= FILE_SUCCESS_CODE ) then
+    if ( error == FILE_SUCCESS_CODE ) then
+       if ( present(existed) ) existed = .true.
+       call fstr(val)
+    else
        if ( present(existed) ) then
           existed = .false.
        else
           LOG_ERROR("FILE_get_attribute_text_fid",*) 'failed to get text attribute for '//trim(vname)//': '//trim(key)
           call PRC_abort
        end if
-    else
-       if ( present(existed) ) existed = .true.
     end if
-    call fstr(val)
 
     call PROF_rapend  ('FILE_Read', 2, disable_barrier = .not. FILE_files(fid)%allnodes )
 

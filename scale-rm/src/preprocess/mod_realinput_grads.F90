@@ -411,7 +411,7 @@ contains
           rh2qv = .false.
        end if
     end if
-    
+
     ! QC, QR, QI, QS, QG, QH
     do iq = 1, N_HYD
        call read3d( start(:), count(:), work(:,:,:), HYD_NAME(iq), file_id_atm, basename_num, exist=exist, step=nt )
@@ -445,7 +445,7 @@ contains
        enddo
 #endif
     end do
-    
+
     ! QTRC
     do iq = 1, QA
        if ( iq >= QS_MP .and. iq <= QE_MP ) cycle

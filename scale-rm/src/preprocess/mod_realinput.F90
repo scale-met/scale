@@ -1720,13 +1720,13 @@ contains
                    qtot = qtot + qhyd_org(k,i,j,iq)
                 end if
              end do
-             if( qv_org(k,i,j) > UNDEF ) then
+             if( qv_org(k,i,j) > UNDEF .and. qtot > 0.0_RP ) then
                 qv_org(k,i,j) = qv_org(k,i,j) / ( 1.0_RP + qtot )
              else
-                qv_org(k,i,j) = 0.0_RP
+                qv_org(k,i,j) = UNDEF
              end if
              do iq = 1, N_HYD
-                if ( qhyd_org(k,i,j,iq) > UNDEF ) then
+                if ( qhyd_org(k,i,j,iq) > UNDEF .and. qtot > 0.0_RP ) then
                    qhyd_org(k,i,j,iq) = qhyd_org(k,i,j,iq) / ( 1.0_RP + qtot )
                 else
                    qhyd_org(k,i,j,iq) = 0.0_RP
