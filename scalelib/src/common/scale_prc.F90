@@ -40,6 +40,7 @@ module scale_prc
   public :: PRC_MPIbarrier
   public :: PRC_MPItime
   public :: PRC_MPItimestat
+  public :: PRC_timereorder
 
   public :: PRC_set_file_closer
 
@@ -914,6 +915,52 @@ contains
 
     return
   end subroutine PRC_MPItimestat
+
+  !-----------------------------------------------------------------------------
+  !> reorder rap time
+  subroutine PRC_timereorder( &
+       rapnlimit, &
+       rapnmax, &
+       rapttot, &
+       rapname )
+    implicit none
+    integer,                intent(in)    :: rapnlimit
+    integer,                intent(inout) :: rapnmax
+    real(DP),               intent(inout) :: rapttot(rapnlimit)
+    character(len=H_SHORT), intent(in)    :: rapname(rapnlimit)
+
+    integer                :: rapnmax0
+    character(len=H_SHORT) :: rapname0
+    real(DP)               :: rapttot0(rapnlimit)
+
+    integer :: ierr
+    integer :: i, j
+
+    if ( PRC_IsMaster ) rapnmax0 = rapnmax
+    call MPI_Bcast( rapnmax0, 1, MPI_INTEGER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
+
+    do i = 1, rapnmax0
+       if ( PRC_IsMaster ) rapname0 = rapname(i)
+       call MPI_Bcast( rapname0, H_SHORT, MPI_CHARACTER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
+       if ( .not. PRC_IsMaster ) then
+          do j = 1, rapnmax
+             if ( rapname(j) == rapname0 ) then
+                rapttot0(i) = rapttot(j)
+                exit
+             end if
+          end do
+          if ( j > rapnmax ) then
+             rapttot0(i) = 0.0_DP
+          end if
+       end if
+    end do
+    if ( .not. PRC_IsMaster ) then
+       rapnmax = rapnmax0
+       do i = 1, rapnmax
+          rapttot(i) = rapttot0(i)
+       end do
+    end if
+  end subroutine PRC_timereorder
 
   !-----------------------------------------------------------------------------
   !> MPI Error Handler
