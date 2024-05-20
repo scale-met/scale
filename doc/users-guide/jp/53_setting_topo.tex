@@ -50,7 +50,7 @@
 }
 
 
-外部標高データとして、\scalerm は U.S. Geological Survey が提供する GTOPO30 および 国土地理院が提供する GEM50M をサポートしている。
+外部標高データとして、\scalerm は U.S. Geological Survey が提供する GTOPO30 および 国土地理院が提供する GEM50M\footnote{DEM50Mは日本域のみ利用可能です。DEM50M を利用する場合、データ提供元からデータ（\url{https://net.jmc.or.jp/mapdata/map/jmc_mesh50.html}）の購入が必要です。また、SCALE入力フォーマットに変換するためのプログラムについては、開発者までご連絡ください。} をサポートしている。
 また、ユーザ定義データもサポートしている (詳細は \ref{subsec:topo_userfile}節参照のこと)。
 
 利用する外部データの種類は \nmitem{CNVTOPO_(UseGTOPO30|UseDEM50M|UseUSERFILE)} もしくは \\ \nmitem{CNVTOPO_name} で設定する。
