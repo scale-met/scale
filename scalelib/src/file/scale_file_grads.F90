@@ -776,18 +776,21 @@ contains
     integer                :: count_(3)
     character(len=H_SHORT) :: postfix_
 
+    integer(8) :: pos
+
     integer :: nxy, nz, ka
-    integer :: pos, isize, ierr
+    integer :: isize, ierr
     integer :: i, j, k, ii, jj, kk
 
     abstract interface
        subroutine rd( fid, pos, nx, cz, k, sx, cx, cy, yrev, var, ierr )
          use scale_precision
-         integer, intent(in) :: fid, pos
-         integer, intent(in) :: nx, cz, k, sx, cx, cy
-         logical, intent(in) :: yrev
-         real(RP), intent(out) :: var(:)
-         integer,  intent(out) :: ierr
+         integer,    intent(in) :: fid
+         integer(8), intent(in) :: pos
+         integer,    intent(in) :: nx, cz, k, sx, cx, cy
+         logical,    intent(in) :: yrev
+         real(RP),   intent(out) :: var(:)
+         integer,    intent(out) :: ierr
        end subroutine rd
     end interface
     procedure(rd), pointer :: read_data
@@ -1037,9 +1040,10 @@ contains
   end subroutine FILE_GrADS_read_data
 
   subroutine read_data_int1( fid, pos, ka, nx, k, sx, cx, cy, yrev, var, ierr )
-    integer, intent(in) :: fid, pos
-    integer, intent(in) :: ka, nx, k, sx, cx, cy
-    logical, intent(in) :: yrev
+    integer,    intent(in) :: fid
+    integer(8), intent(in) :: pos
+    integer,    intent(in) :: ka, nx, k, sx, cx, cy
+    logical,    intent(in) :: yrev
 
     real(RP), intent(out) :: var(:)
     integer,  intent(out) :: ierr
@@ -1070,9 +1074,10 @@ contains
   end subroutine read_data_int1
 
   subroutine read_data_int2( fid, pos, ka, nx, k, sx, cx, cy, yrev, var, ierr )
-    integer, intent(in) :: fid, pos
-    integer, intent(in) :: ka, nx, k, sx, cx, cy
-    logical, intent(in) :: yrev
+    integer,    intent(in) :: fid
+    integer(8), intent(in) :: pos
+    integer,    intent(in) :: ka, nx, k, sx, cx, cy
+    logical,    intent(in) :: yrev
 
     real(RP), intent(out) :: var(:)
     integer,  intent(out) :: ierr
@@ -1103,9 +1108,10 @@ contains
   end subroutine read_data_int2
 
   subroutine read_data_int4( fid, pos, ka, nx, k, sx, cx, cy, yrev, var, ierr )
-    integer, intent(in) :: fid, pos
-    integer, intent(in) :: ka, nx, k, sx, cx, cy
-    logical, intent(in) :: yrev
+    integer,    intent(in) :: fid
+    integer(8), intent(in) :: pos
+    integer,    intent(in) :: ka, nx, k, sx, cx, cy
+    logical,    intent(in) :: yrev
 
     real(RP), intent(out) :: var(:)
     integer,  intent(out) :: ierr
@@ -1136,9 +1142,10 @@ contains
   end subroutine read_data_int4
 
   subroutine read_data_real4( fid, pos, ka, nx, k, sx, cx, cy, yrev, var, ierr )
-    integer, intent(in) :: fid, pos
-    integer, intent(in) :: ka, nx, k, sx, cx, cy
-    logical, intent(in) :: yrev
+    integer,    intent(in) :: fid
+    integer(8), intent(in) :: pos
+    integer,    intent(in) :: ka, nx, k, sx, cx, cy
+    logical,    intent(in) :: yrev
 
     real(RP), intent(out) :: var(:)
     integer,  intent(out) :: ierr
@@ -1169,9 +1176,10 @@ contains
   end subroutine read_data_real4
 
   subroutine read_data_int8( fid, pos, ka, nx, k, sx, cx, cy, yrev, var, ierr )
-    integer, intent(in) :: fid, pos
-    integer, intent(in) :: ka, nx, k, sx, cx, cy
-    logical, intent(in) :: yrev
+    integer,    intent(in) :: fid
+    integer(8), intent(in) :: pos
+    integer,    intent(in) :: ka, nx, k, sx, cx, cy
+    logical,    intent(in) :: yrev
 
     real(RP), intent(out) :: var(:)
     integer,  intent(out) :: ierr
@@ -1202,9 +1210,10 @@ contains
   end subroutine read_data_int8
 
   subroutine read_data_real8( fid, pos, ka, nx, k, sx, cx, cy, yrev, var, ierr )
-    integer, intent(in) :: fid, pos
-    integer, intent(in) :: ka, nx, k, sx, cx, cy
-    logical, intent(in) :: yrev
+    integer,    intent(in) :: fid
+    integer(8), intent(in) :: pos
+    integer,    intent(in) :: ka, nx, k, sx, cx, cy
+    logical,    intent(in) :: yrev
 
     real(RP), intent(out) :: var(:)
     integer,  intent(out) :: ierr
