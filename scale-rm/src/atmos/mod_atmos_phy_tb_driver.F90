@@ -358,7 +358,7 @@ contains
                                  QFLX_RHOT, QFLX_RHOQ,                    & ! [OUT]
                                  RHOQ_t_TB,                               & ! [OUT]
                                  Nu, Ri, Pr,                              & ! [OUT]
-                                 MOMZ, MOMX, MOMY, RHOT, DENS, QTRC, N2,  & ! [IN]
+                                 MOMZ, MOMX, MOMY, POTT, DENS, QTRC, N2,  & ! [IN]
                                  SFLX_MW, SFLX_MU, SFLX_MV,               & ! [IN]
                                  SFLX_SH, SFLX_Q,                         & ! [IN]
                                  FZ, FDZ, RCDZ, RFDZ, CDX, FDX, CDY, FDY, & ! [IN]

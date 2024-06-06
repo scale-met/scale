@@ -20,7 +20,7 @@ module scale_atmos_phy_tb_dns
   use scale_atmos_grid_cartesC_index
   use scale_tracer
 
-#ifdef DEBUG
+#ifdef DEBUG || defined QUICKDEBUG
   use scale_debug, only: &
      CHECK
   use scale_const, only: &
@@ -138,7 +138,7 @@ contains
        qflx_sgs_MOMZ, qflx_sgs_MOMX, qflx_sgs_MOMY, &
        qflx_sgs_rhot, qflx_sgs_rhoq,                &
        RHOQ_t, nu, Ri, Pr,                          &
-       MOMZ, MOMX, MOMY, RHOT, DENS, QTRC, N2,      &
+       MOMZ, MOMX, MOMY, POTT, DENS, QTRC, N2,      &
        SFLX_MW, SFLX_MU, SFLX_MV, SFLX_SH, SFLX_Q,  &
        FZ, FDZ, RCDZ, RFDZ, CDX, FDX, CDY, FDY,     &
        GSQRT, J13G, J23G, J33G, MAPF, dt            )
@@ -167,7 +167,7 @@ contains
     real(RP), intent(in)  :: MOMZ(KA,IA,JA)
     real(RP), intent(in)  :: MOMX(KA,IA,JA)
     real(RP), intent(in)  :: MOMY(KA,IA,JA)
-    real(RP), intent(in)  :: RHOT(KA,IA,JA)
+    real(RP), intent(in)  :: POTT(KA,IA,JA)
     real(RP), intent(in)  :: DENS(KA,IA,JA)
     real(RP), intent(in)  :: QTRC(KA,IA,JA,QA)
     real(RP), intent(in)  :: N2(KA,IA,JA)
@@ -213,8 +213,6 @@ contains
     real(RP) :: b   (KA,IA,JA)
     real(RP) :: c   (KA,IA,JA)
 
-    real(RP) :: POTT(KA,IA,JA)
-
     integer :: IIS, IIE
     integer :: JJS, JJE
 
@@ -223,6 +221,7 @@ contains
 
 
     !$acc data copyout(qflx_sgs_MOMZ, qflx_sgs_MOMX, qflx_sgs_MOMY, qflx_sgs_rhot, qflx_sgs_rhoq, &
+    !$acc              RHOQ_t,     &
     !$acc              nu, Ri, Pr) &
     !$acc      copyin(MOMZ, MOMX, MOMY, POTT, DENS, QTRC, &
     !$acc             FZ, FDZ, RCDZ, RFDZ, CDX, FDX, CDY, FDY, GSQRT, J13G, J23G, MAPF)  &
@@ -244,34 +243,17 @@ contains
     Pr  (:,:,:) = UNDEF
     Ri  (:,:,:) = UNDEF
     Kh  (:,:,:) = UNDEF
-    POTT(:,:,:) = UNDEF
     !$acc end kernels
 #endif
 
-    !$omp parallel private(i,j,k)
-    !$omp workshare
+    !$omp parallel workshare
     !$acc kernels
     nu (:,:,:) = 0.0_RP
     Ri (:,:,:) = 0.0_RP
     Pr (:,:,:) = 1.0_RP
+    Kh (:,:,:) = ATMOS_PHY_TB_DNS_MU
     !$acc end kernels
-    !$omp end workshare nowait
-
-    ! potential temperature
-
-    !$omp do collapse(2)
-    !$acc kernels
-    do j = JS-1, JE+1
-    do i = IS-1, IE+1
-    do k = KS, KE
-       POTT(k,i,j) = RHOT(k,i,j) / DENS(k,i,j)
-       Kh  (k,i,j) = ATMOS_PHY_TB_DNS_MU
-    enddo
-    enddo
-    enddo
-    !$acc end kernels
-    !$omp end do
-    !$omp end parallel
+    !$omp end parallel workshare 
 
     !##### Start Upadate #####
 
