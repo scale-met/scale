@@ -237,7 +237,7 @@ contains
     allocate( ATMOS_PHY_SF_RHOU_t    (IA,JA)    )
     allocate( ATMOS_PHY_SF_RHOV_t    (IA,JA)    )
     allocate( ATMOS_PHY_SF_RHOH      (IA,JA)    )
-    allocate( ATMOS_PHY_SF_RHOQ_t    (IA,JA,QA) )
+    allocate( ATMOS_PHY_SF_RHOQ_t    (IA,JA,max(QA,1)) )
     ATMOS_PHY_SF_DENS_t    (:,:)     = UNDEF
     ATMOS_PHY_SF_MOMZ_t    (:,:)     = UNDEF
     ATMOS_PHY_SF_RHOU_t    (:,:)     = UNDEF
