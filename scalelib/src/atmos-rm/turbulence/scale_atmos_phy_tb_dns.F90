@@ -20,7 +20,7 @@ module scale_atmos_phy_tb_dns
   use scale_atmos_grid_cartesC_index
   use scale_tracer
 
-#ifdef DEBUG || defined QUICKDEBUG
+#if defined DEBUG || defined QUICKDEBUG
   use scale_debug, only: &
      CHECK
   use scale_const, only: &
