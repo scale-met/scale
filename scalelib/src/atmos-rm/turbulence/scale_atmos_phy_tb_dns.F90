@@ -283,8 +283,8 @@ contains
          do j = JJS, JJE
          do k = KS+1, KE-1
            qflx_sgs_MOMZ(k,i,j,ZDIR) = DENS(k,i,j) * ( &
-             - 2.0_RP *  ATMOS_PHY_TB_DNS_NU * S33_C(k,i,j) &
-             * ( S33_C(k,i,j) - ( S11_C(k,i,j) + S22_C(k,i,j) + S33_C(k,i,j) ) * OneOverThree ) )
+             - 2.0_RP *  ATMOS_PHY_TB_DNS_NU &
+             * ( S33_C(k,i,j) - ( S22_C(k,i,j) + S33_C(k,i,j) ) * OneOverThree ) )
          enddo
          enddo
          !$acc end kernels
@@ -295,7 +295,7 @@ contains
          do i = IIS, IIE
          do k = KS+1, KE-1
            qflx_sgs_MOMZ(k,i,j,ZDIR) = DENS(k,i,j) * ( &
-             - 2.0_RP *  ATMOS_PHY_TB_DNS_NU * S33_C(k,i,j) &
+             - 2.0_RP *  ATMOS_PHY_TB_DNS_NU &
              * ( S33_C(k,i,j) - ( S11_C(k,i,j) + S22_C(k,i,j) + S33_C(k,i,j) ) * OneOverThree ) )
          enddo
          enddo
@@ -321,7 +321,7 @@ contains
        do j = JJS,   JJE
        do i = IIS-1, IIE
        do k = KS, KE-1
-         qflx_sgs_MOMZ(k,i,j,XDIR) = - 0.5_RP & ! 2.0 / 4
+         qflx_sgs_MOMZ(k,i,j,XDIR) = - 0.5_RP & ! 2/4
             * ( DENS(k,i,j)+DENS(k+1,i,j)+DENS(k,i+1,j)+DENS(k+1,i+1,j) ) &
             * ATMOS_PHY_TB_DNS_NU                                         &
             * S31_Y(k,i,j)
@@ -338,7 +338,7 @@ contains
        do j = JJS-1, JJE
        do i = IIS,   IIE
        do k = KS, KE-1
-         qflx_sgs_MOMZ(k,i,j,YDIR) = - 0.5_RP & ! 2.0 / 4
+         qflx_sgs_MOMZ(k,i,j,YDIR) = - 0.5_RP & ! 2/4
             * ( DENS(k,i,j)+DENS(k+1,i,j)+DENS(k,i,j+1)+DENS(k+1,i,j+1) ) &
             * ATMOS_PHY_TB_DNS_NU                                         &
             * S23_X(k,i,j)
