@@ -263,8 +263,9 @@ contains
          S12_Z, S23_X, S31_Y,           & ! (out)
          S2                 ,           & ! (out)
          DENS, MOMZ, MOMX, MOMY,        & ! (in)
-         GSQRT, J13G, J23G, J33G, MAPF, & ! (in)
-         twoD                           ) ! (in)
+         GSQRT, J13G, J23G, J33G, MAPF  ) ! (in)
+!         GSQRT, J13G, J23G, J33G, MAPF, & ! (in)
+!         twoD                           ) ! (in)
         
     do JJS = JS, JE, JBLOCK
     JJE = JJS+JBLOCK-1
@@ -508,8 +509,9 @@ contains
             GSQRT, J13G, J23G, J33G, MAPF, & ! [in]
             .false., .false.,              & ! horizontal, implicit
             a, b, c, dt,                   & ! [in, dummy]
-            IIS, IIE, JJS, JJE,            &
-            twoD )
+            IIS, IIE, JJS, JJE             )
+!            IIS, IIE, JJS, JJE,            &
+!            twoD )
     enddo
     enddo
 
@@ -529,8 +531,9 @@ contains
          GSQRT, J13G, J23G, J33G, MAPF,    & ! [in]
          .false., .false.,                 & ! horizontal, implicit
          a, b, c, dt,                      & ! [in, dummy]
-         IIS, IIE, JJS, JJE,               &
-         twoD )
+         IIS, IIE, JJS, JJE                )
+!         IIS, IIE, JJS, JJE,               &
+!         twoD )
       
       enddo
       enddo
