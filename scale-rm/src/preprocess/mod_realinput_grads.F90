@@ -1186,22 +1186,25 @@ contains
     call read2d( start(:), count(:), omask_org(:,:), "lsmask_sst", file_id_ocn, basename_num, exist=exist, step=nt )
     if ( .not. exist ) then
        call FILE_GrADS_varid( file_id_ocn, "lsmask", & ! (in)
-                              vid                     ) ! (out)
-       call FILE_GrADS_get_shape( file_id_ocn, vid, & ! (in)
-                                  shape(:)          ) ! (out)
-       if ( odims(1) .ne. shape(1) .or. odims(2) .ne. shape(2) ) then
-          LOG_WARN("ParentOceanInputGrADS",*) 'dimension of lsmask is different. not use'
-          !$omp parallel do
-          do j = 1, JA_org
-          do i = 1, IA_org
-             omask_org(i,j) = UNDEF
-          end do
-          end do
-       else
-          call read2d( start(:), count(:), omask_org(:,:), "lsmask", file_id_ocn, basename_num, exist=exist, step=nt )
+                              vid                    ) ! (out)
+       if ( vid > 0 ) then
+          call FILE_GrADS_get_shape( file_id_ocn, vid, & ! (in)
+                                     shape(:)          ) ! (out)
+          if ( odims(1) .ne. shape(1) .or. odims(2) .ne. shape(2) ) then
+             LOG_WARN("ParentOceanInputGrADS",*) 'dimension of lsmask is different. not use'
+          else
+             call read2d( start(:), count(:), omask_org(:,:), "lsmask", file_id_ocn, basename_num, exist=exist, step=nt )
+          end if
        end if
     end if
-
+    if ( .not. exist ) then
+       !$omp parallel do
+       do j = 1, JA_org
+       do i = 1, IA_org
+          omask_org(i,j) = UNDEF
+       end do
+       end do
+    end if
 
     ! OCEAN_SFC_TEMP, SST, SFC_TEMP, SKINT
     call read2d( start(:), count(:), sst_org(:,:), "OCEAN_SFC_TEMP", file_id_ocn, basename_num, exist=exist, step=nt )
