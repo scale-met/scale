@@ -20,7 +20,7 @@ module scale_atmos_phy_tb_dns
   use scale_atmos_grid_cartesC_index
   use scale_tracer
 
-#ifdef DEBUG
+#if defined DEBUG || defined QUICKDEBUG
   use scale_debug, only: &
      CHECK
   use scale_const, only: &
@@ -50,9 +50,14 @@ module scale_atmos_phy_tb_dns
   !
   !++ Private parameters & variables
   !
+  real(RP), private, parameter   :: OneOverThree  = 1.0_RP / 3.0_RP
+
   real(RP), private :: ATMOS_PHY_TB_DNS_NU = 1.512E-5_RP ! [m2/s] kinematic viscosity coefficient for air at 20degC
 ! real(RP), private :: mu = 1.8E-5_RP   ! [m2/s] molecular diffusive coefficient for air at 20degC
   real(RP), private :: ATMOS_PHY_TB_DNS_MU = 1.512E-5_RP ! same as NU (needed based on hyposes. see Mellado 2010)
+
+  logical,  private              :: twoD
+  integer,  private              :: ISn, IEp
 
   !-----------------------------------------------------------------------------
 contains
@@ -116,6 +121,15 @@ contains
     endif
     LOG_NML(PARAM_ATMOS_PHY_TB_DNS)
 
+    twoD = ( IA == 1 )
+    if ( twoD ) then
+       ISn = 1
+       IEp = 1
+    else
+       ISn = IS - 1
+       IEp = IE + 1
+    end if
+
     return
   end subroutine ATMOS_PHY_TB_dns_setup
 
@@ -124,20 +138,17 @@ contains
        qflx_sgs_MOMZ, qflx_sgs_MOMX, qflx_sgs_MOMY, &
        qflx_sgs_rhot, qflx_sgs_rhoq,                &
        RHOQ_t, nu, Ri, Pr,                          &
-       MOMZ, MOMX, MOMY, RHOT, DENS, QTRC, N2,      &
+       MOMZ, MOMX, MOMY, POTT, DENS, QTRC, N2,      &
        SFLX_MW, SFLX_MU, SFLX_MV, SFLX_SH, SFLX_Q,  &
+       FZ, FDZ, RCDZ, RFDZ, CDX, FDX, CDY, FDY,     &
        GSQRT, J13G, J23G, J33G, MAPF, dt            )
     use scale_atmos_grid_cartesC_index
     use scale_tracer
     use scale_const, only: &
        GRAV => CONST_GRAV
-    use scale_atmos_grid_cartesC, only: &
-       RCDZ => ATMOS_GRID_CARTESC_RCDZ, &
-       RCDX => ATMOS_GRID_CARTESC_RCDX, &
-       RCDY => ATMOS_GRID_CARTESC_RCDY, &
-       RFDZ => ATMOS_GRID_CARTESC_RFDZ, &
-       RFDX => ATMOS_GRID_CARTESC_RFDX, &
-       RFDY => ATMOS_GRID_CARTESC_RFDY
+    use scale_atmos_phy_tb_common, only: &
+       calc_strain_tensor => ATMOS_PHY_TB_calc_strain_tensor, &
+       calc_flux_phi      => ATMOS_PHY_TB_calc_flux_phi       
     implicit none
 
     ! SGS flux
@@ -156,7 +167,7 @@ contains
     real(RP), intent(in)  :: MOMZ(KA,IA,JA)
     real(RP), intent(in)  :: MOMX(KA,IA,JA)
     real(RP), intent(in)  :: MOMY(KA,IA,JA)
-    real(RP), intent(in)  :: RHOT(KA,IA,JA)
+    real(RP), intent(in)  :: POTT(KA,IA,JA)
     real(RP), intent(in)  :: DENS(KA,IA,JA)
     real(RP), intent(in)  :: QTRC(KA,IA,JA,QA)
     real(RP), intent(in)  :: N2(KA,IA,JA)
@@ -167,6 +178,15 @@ contains
     real(RP), intent(in)  :: SFLX_SH(IA,JA)
     real(RP), intent(in)  :: SFLX_Q (IA,JA,QA)
 
+    real(RP), intent(in)  :: FZ           (0:KA,IA,JA)
+    real(RP), intent(in)  :: FDZ          (KA-1)
+    real(RP), intent(in)  :: RCDZ         (KA)
+    real(RP), intent(in)  :: RFDZ         (KA-1)
+    real(RP), intent(in)  :: CDX          (IA)
+    real(RP), intent(in)  :: FDX          (IA-1)
+    real(RP), intent(in)  :: CDY          (JA)
+    real(RP), intent(in)  :: FDY          (JA-1)
+
     real(RP), intent(in)  :: GSQRT   (KA,IA,JA,7) !< vertical metrics {G}^1/2
     real(RP), intent(in)  :: J13G    (KA,IA,JA,7) !< (1,3) element of Jacobian matrix
     real(RP), intent(in)  :: J23G    (KA,IA,JA,7) !< (1,3) element of Jacobian matrix
@@ -174,7 +194,24 @@ contains
     real(RP), intent(in)  :: MAPF    (IA,JA,2,4)  !< map factor
     real(DP), intent(in)  :: dt
 
-    real(RP) :: POTT(KA,IA,JA)
+    ! deformation rate tensor
+    real(RP) :: S33_C(KA,IA,JA) ! (cell center)
+    real(RP) :: S11_C(KA,IA,JA)
+    real(RP) :: S22_C(KA,IA,JA)
+    real(RP) :: S31_C(KA,IA,JA)
+    real(RP) :: S12_C(KA,IA,JA)
+    real(RP) :: S23_C(KA,IA,JA)
+    real(RP) :: S12_Z(KA,IA,JA) ! (z edge or x-y plane)
+    real(RP) :: S23_X(KA,IA,JA) ! (x edge or y-z plane)
+    real(RP) :: S31_Y(KA,IA,JA) ! (y edge or z-x plane)
+    real(RP) :: S2   (KA,IA,JA) ! |S|^2
+
+    real(RP) :: Kh(KA,IA,JA) ! eddy diffusion
+
+    ! implicit scheme (dummy)
+    real(RP) :: a   (KA,IA,JA)
+    real(RP) :: b   (KA,IA,JA)
+    real(RP) :: c   (KA,IA,JA)
 
     integer :: IIS, IIE
     integer :: JJS, JJE
@@ -182,235 +219,328 @@ contains
     integer :: k, i, j, iq
     !---------------------------------------------------------------------------
 
+
+    !$acc data copyout(qflx_sgs_MOMZ, qflx_sgs_MOMX, qflx_sgs_MOMY, qflx_sgs_rhot, qflx_sgs_rhoq, &
+    !$acc              RHOQ_t,     &
+    !$acc              nu, Ri, Pr) &
+    !$acc      copyin(MOMZ, MOMX, MOMY, POTT, DENS, QTRC, &
+    !$acc             FZ, FDZ, RCDZ, RFDZ, CDX, FDX, CDY, FDY, GSQRT, J13G, J23G, MAPF)  &
+    !$acc      create(S33_C, S11_C, S22_C, S31_C, S12_C, S23_C, S12_Z, S23_X, S31_Y, S2, &
+    !$acc             Kh, a, b, c)
+
     LOG_PROGRESS(*) 'atmosphere / physics / turbulence / DNS'
 
 #ifdef DEBUG
+    !$acc kernels
     qflx_sgs_MOMZ(:,:,:,:)   = UNDEF
     qflx_sgs_MOMX(:,:,:,:)   = UNDEF
     qflx_sgs_MOMY(:,:,:,:)   = UNDEF
     qflx_sgs_rhot(:,:,:,:)   = UNDEF
     qflx_sgs_rhoq(:,:,:,:,:) = UNDEF
 
-    POTT(:,:,:) = UNDEF
+    nu  (:,:,:) = UNDEF
+    Ri  (:,:,:) = UNDEF
+    Pr  (:,:,:) = UNDEF
+    Ri  (:,:,:) = UNDEF
+    Kh  (:,:,:) = UNDEF
+    !$acc end kernels
 #endif
 
+    !$omp parallel workshare
+    !$acc kernels
     nu (:,:,:) = 0.0_RP
     Ri (:,:,:) = 0.0_RP
     Pr (:,:,:) = 1.0_RP
-
-    ! potential temperature
-    do j = JS-1, JE+1
-    do i = IS-1, IE+1
-    do k = KS, KE
-       POTT(k,i,j) = RHOT(k,i,j) / DENS(k,i,j)
-    enddo
-    enddo
-    enddo
+    Kh (:,:,:) = ATMOS_PHY_TB_DNS_MU
+    !$acc end kernels
+    !$omp end parallel workshare 
 
     !##### Start Upadate #####
+
+    call calc_strain_tensor( &
+         S33_C, S11_C, S22_C,           & ! (out)
+         S31_C, S12_C, S23_C,           & ! (out)
+         S12_Z, S23_X, S31_Y,           & ! (out)
+         S2                 ,           & ! (out)
+         DENS, MOMZ, MOMX, MOMY,        & ! (in)
+         GSQRT, J13G, J23G, J33G, MAPF  ) ! (in)
+!         GSQRT, J13G, J23G, J33G, MAPF, & ! (in)
+!         twoD                           ) ! (in)
+        
     do JJS = JS, JE, JBLOCK
     JJE = JJS+JBLOCK-1
     do IIS = IS, IE, IBLOCK
     IIE = IIS+IBLOCK-1
 
        !##### momentum equation (z) #####
-       ! (cell center)
-       do j = JJS, JJE
-       do i = IIS, IIE
-       do k = KS+1, KE-1
-          qflx_sgs_MOMZ(k,i,j,ZDIR) = -ATMOS_PHY_TB_DNS_NU * ( MOMZ(k,i,j)-MOMZ(k-1,i,j) ) * RCDZ(k)
-       enddo
-       enddo
-       enddo
 
+       !$omp parallel private(i,j,k)
+       ! (cell center)
+
+       if ( twoD ) then
+         i = IIS
+         !$omp do
+         !$acc kernels
+         do j = JJS, JJE
+         do k = KS+1, KE-1
+           qflx_sgs_MOMZ(k,i,j,ZDIR) = DENS(k,i,j) * ( &
+             - 2.0_RP *  ATMOS_PHY_TB_DNS_NU &
+             * ( S33_C(k,i,j) - ( S22_C(k,i,j) + S33_C(k,i,j) ) * OneOverThree ) )
+         enddo
+         enddo
+         !$acc end kernels
+       else
+         !$omp do collapse(2)
+         !$acc kernels         
+         do j = JJS, JJE
+         do i = IIS, IIE
+         do k = KS+1, KE-1
+           qflx_sgs_MOMZ(k,i,j,ZDIR) = DENS(k,i,j) * ( &
+             - 2.0_RP *  ATMOS_PHY_TB_DNS_NU &
+             * ( S33_C(k,i,j) - ( S11_C(k,i,j) + S22_C(k,i,j) + S33_C(k,i,j) ) * OneOverThree ) )
+         enddo
+         enddo
+         enddo
+         !$acc end kernels
+       end if 
+
+       !$omp do
+       !$acc kernels
        do j = JJS, JJE
        do i = IIS, IIE
           qflx_sgs_MOMZ(KS,i,j,ZDIR) = 0.0_RP ! bottom boundary
           qflx_sgs_MOMZ(KE,i,j,ZDIR) = 0.0_RP ! top boundary
        enddo
        enddo
+       !$acc end kernels
+       !$omp end do nowait
 
        ! (y edge)
+       if ( .not. twoD ) then
+       !$omp do collapse(2)
+       !$acc kernels  
        do j = JJS,   JJE
        do i = IIS-1, IIE
        do k = KS, KE-1
-          qflx_sgs_MOMZ(k,i,j,XDIR) = -ATMOS_PHY_TB_DNS_NU * ( MOMZ(k,i+1,j)-MOMZ(k,i,j) ) * RFDX(i) * MAPF(i,j,1,I_XY)
+         qflx_sgs_MOMZ(k,i,j,XDIR) = - 0.5_RP & ! 2/4
+            * ( DENS(k,i,j)+DENS(k+1,i,j)+DENS(k,i+1,j)+DENS(k+1,i+1,j) ) &
+            * ATMOS_PHY_TB_DNS_NU                                         &
+            * S31_Y(k,i,j)
        enddo
        enddo
        enddo
+       !$acc end kernels
+       !$omp end do nowait
+       end if
 
        ! (x edge)
+       !$omp do collapse(2)
+       !$acc kernels
        do j = JJS-1, JJE
        do i = IIS,   IIE
        do k = KS, KE-1
-          qflx_sgs_MOMZ(k,i,j,YDIR) = -ATMOS_PHY_TB_DNS_NU * ( MOMZ(k,i,j+1)-MOMZ(k,i,j) ) * RFDY(j) * MAPF(i,j,2,I_XY)
+         qflx_sgs_MOMZ(k,i,j,YDIR) = - 0.5_RP & ! 2/4
+            * ( DENS(k,i,j)+DENS(k+1,i,j)+DENS(k,i,j+1)+DENS(k+1,i,j+1) ) &
+            * ATMOS_PHY_TB_DNS_NU                                         &
+            * S23_X(k,i,j)
        enddo
        enddo
        enddo
+       !$acc end kernels
+       !$omp end do nowait
+
+       !$omp end parallel
 
        !##### momentum equation (x) #####
+
+       if ( .not. twoD ) then
+
+       !$omp parallel private(i,j,k)
+  
        ! (y edge)
+
+       !$omp do collapse(2)
+       !$acc kernels
        do j = JJS, JJE
        do i = IIS, IIE
        do k = KS, KE-1
-          qflx_sgs_MOMX(k,i,j,ZDIR) = -ATMOS_PHY_TB_DNS_NU * ( MOMX(k+1,i,j)-MOMX(k,i,j) ) * RFDZ(k)
+         qflx_sgs_MOMX(k,i,j,ZDIR) = - 0.5_RP & ! 2/4
+              * ( DENS(k,i,j)+DENS(k+1,i,j)+DENS(k,i+1,j)+DENS(k+1,i+1,j) ) &
+              * ATMOS_PHY_TB_DNS_NU                                         &
+              * S31_Y(k,i,j)
        enddo
        enddo
        enddo
+       !$acc end kernels
+       !$omp end do nowait
 
+       !$omp do
+       !$acc kernels
        do j = JJS, JJE
        do i = IIS, IIE
           qflx_sgs_MOMX(KS-1,i,j,ZDIR) = 0.0_RP ! bottom boundary
           qflx_sgs_MOMX(KE  ,i,j,ZDIR) = 0.0_RP ! top boundary
        enddo
        enddo
+       !$acc end kernels
+       !$omp end do nowait
 
        ! (cell center)
+       !$omp do collapse(2)
+       !$acc kernels
        do j = JJS, JJE
        do i = IIS, IIE+1
        do k = KS, KE
-          qflx_sgs_MOMX(k,i,j,XDIR) = -ATMOS_PHY_TB_DNS_NU * ( MOMX(k,i,j)-MOMX(k,i-1,j) ) * RCDX(i) * MAPF(i,j,1,I_UY)
+          qflx_sgs_MOMX(k,i,j,XDIR) = DENS(k,i,j) * ( &
+               - 2.0_RP * ATMOS_PHY_TB_DNS_NU  &
+               * ( S11_C(k,i,j) - ( S11_C(k,i,j) + S22_C(k,i,j) + S33_C(k,i,j) ) * OneOverThree ) )
        enddo
        enddo
        enddo
+       !$acc end kernels
+       !$omp end do nowait
 
        ! (z edge)
+       !$omp do collapse(2)
+       !$acc kernels
        do j = JJS-1, JJE
        do i = IIS,   IIE
        do k = KS, KE
-          qflx_sgs_MOMX(k,i,j,YDIR) = -ATMOS_PHY_TB_DNS_NU * ( MOMX(k,i,j+1)-MOMX(k,i,j) ) * RFDY(j) * MAPF(i,j,2,I_UY)
+          qflx_sgs_MOMX(k,i,j,YDIR) = - 0.5_RP & ! 2/4
+               * ( DENS(k,i,j)+DENS(k,i+1,j)+DENS(k,i,j+1)+DENS(k,i+1,j+1) ) &
+               * ATMOS_PHY_TB_DNS_NU                                         &
+               * S12_Z(k,i,j)
        enddo
        enddo
        enddo
+       !$acc end kernels
+       !$omp end do nowait
+
+       !$omp end parallel
+
+       end if ! twoD
 
        !##### momentum equation (y) #####
 
+       !$omp parallel private(i,j,k)
+
        ! (x edge)
+       !$omp do collapse(2)
+       !$acc kernels       
        do j = JJS, JJE
        do i = IIS, IIE
        do k = KS, KE-1
-          qflx_sgs_MOMY(k,i,j,ZDIR) = -ATMOS_PHY_TB_DNS_NU * ( MOMY(k+1,i,j)-MOMY(k,i,j) ) * RFDZ(k)
+          qflx_sgs_MOMY(k,i,j,ZDIR) = - 0.5_RP & ! 2/4
+          * ( DENS(k,i,j)+DENS(k+1,i,j)+DENS(k,i,j+1)+DENS(k+1,i,j+1) ) &
+          * ATMOS_PHY_TB_DNS_NU                                         &
+          * S23_X(k,i,j)
        enddo
        enddo
        enddo
+       !$acc end kernels
+       !$omp end do nowait
 
+       !$omp do
+       !$acc kernels             
        do j = JJS, JJE
        do i = IIS, IIE
           qflx_sgs_MOMY(KS-1,i,j,ZDIR) = 0.0_RP ! bottom boundary
           qflx_sgs_MOMY(KE  ,i,j,ZDIR) = 0.0_RP ! top boundary
        enddo
        enddo
+       !$acc end kernels
+       !$omp end do nowait
 
        ! (z edge)
+       if ( .not. twoD ) then
+      !$omp do collapse(2)
+      !$acc kernels  
        do j = JJS,   JJE
        do i = IIS-1, IIE
        do k = KS, KE
-          qflx_sgs_MOMY(k,i,j,XDIR) = -ATMOS_PHY_TB_DNS_NU * ( MOMY(k,i+1,j)-MOMY(k,i,j) ) * RFDX(i) * MAPF(i,j,1,I_XV)
+          qflx_sgs_MOMY(k,i,j,XDIR) = - 0.5_RP & ! 2/4
+               * ( DENS(k,i,j)+DENS(k,i+1,j)+DENS(k,i,j+1)+DENS(k,i+1,j+1) ) &
+               * ATMOS_PHY_TB_DNS_NU                                         &
+               * S12_Z(k,i,j)
        enddo
        enddo
        enddo
+       !$acc end kernels
+       !$omp end do nowait
+       end if
 
        ! (z-x plane)
-       do j = JJS, JJE+1
-       do i = IIS, IIE
-       do k = KS, KE
-          qflx_sgs_MOMY(k,i,j,YDIR) = -ATMOS_PHY_TB_DNS_NU * ( MOMY(k,i,j)-MOMY(k,i,j-1) ) * RCDY(j) * MAPF(i,j,2,I_XV)
-       enddo
-       enddo
-       enddo
+       if ( twoD ) then
+         i = IIS
+         !$omp do
+         !$acc kernels
+         do j = JJS, JJE+1
+         do k = KS, KE
+             qflx_sgs_MOMY(k,i,j,YDIR) = DENS(k,i,j) * ( &
+                  - 2.0_RP * ATMOS_PHY_TB_DNS_NU &
+                  * ( S22_C(k,i,j) - ( S22_C(k,i,j) + S33_C(k,i,j) ) * OneOverThree ) )
+          enddo
+          enddo
+          !$acc end kernels
+          !$omp end do nowait
+       else
+          !$omp do collapse(2)
+          !$acc kernels
+          do j = JJS, JJE+1
+          do i = IIS, IIE
+          do k = KS, KE
+             qflx_sgs_MOMY(k,i,j,YDIR) = DENS(k,i,j) * ( &
+                  - 2.0_RP * ATMOS_PHY_TB_DNS_NU &
+                  * ( S22_C(k,i,j) - ( S11_C(k,i,j) + S22_C(k,i,j) + S33_C(k,i,j) ) * OneOverThree ) )
+          enddo
+          enddo
+          enddo
+          !$acc end kernels
+          !$omp end do nowait
+       end if
+
+       !$omp end parallel
 
        !##### Thermodynamic Equation #####
 
-       ! at x, y ,w
-       do j = JJS, JJE
-       do i = IIS, IIE
-       do k = KS, KE-1
-          qflx_sgs_rhot(k,i,j,ZDIR) = -0.5_RP * ( DENS(k+1,i,j)+DENS(k,i,j) ) &
-                                    * ATMOS_PHY_TB_DNS_MU * ( POTT(k+1,i,j)-POTT(k,i,j) ) * RFDZ(k)
-       enddo
-       enddo
-       enddo
-
-       do j = JJS, JJE
-       do i = IIS, IIE
-          qflx_sgs_rhot(KS-1,i,j,ZDIR) = 0.0_RP
-          qflx_sgs_rhot(KE  ,i,j,ZDIR) = 0.0_RP
-       enddo
-       enddo
-
-       ! at u, y, z
-       do j = JJS,   JJE
-       do i = IIS-1, IIE
-       do k = KS, KE
-          qflx_sgs_rhot(k,i,j,XDIR) = -0.5_RP * ( DENS(k,i+1,j)+DENS(k,i,j) ) &
-                                    * ATMOS_PHY_TB_DNS_MU * ( POTT(k,i+1,j)-POTT(k,i,j) ) * RFDX(i) * MAPF(i,j,1,I_XY)
-       enddo
-       enddo
-       enddo
-
-       ! at x, v, z
-       do j = JJS-1, JJE
-       do i = IIS,   IIE
-       do k = KS, KE
-          qflx_sgs_rhot(k,i,j,YDIR) = -0.5_RP * ( DENS(k,i,j+1)+DENS(k,i,j) ) &
-                                    * ATMOS_PHY_TB_DNS_MU * ( POTT(k,i,j+1)-POTT(k,i,j) ) * RFDY(j) * MAPF(i,j,2,I_XY)
-       enddo
-       enddo
-       enddo
-
+       call calc_flux_phi( &
+            qflx_sgs_rhot,                 & ! [inout]
+            DENS, POTT, Kh, 1.0_RP,        & ! [in]
+            GSQRT, J13G, J23G, J33G, MAPF, & ! [in]
+            .false., .false.,              & ! horizontal, implicit
+            a, b, c, dt,                   & ! [in, dummy]
+            IIS, IIE, JJS, JJE             )
+!            IIS, IIE, JJS, JJE,            &
+!            twoD )
     enddo
     enddo
 
     !##### Tracers #####
     do iq = 1, QA
 
-    if ( .not. TRACER_ADVC(iq) ) cycle
+      if ( .not. TRACER_ADVC(iq) ) cycle
 
-    do JJS = JS, JE, JBLOCK
-    JJE = JJS+JBLOCK-1
-    do IIS = IS, IE, IBLOCK
-    IIE = IIS+IBLOCK-1
+      do JJS = JS, JE, JBLOCK
+      JJE = JJS+JBLOCK-1
+      do IIS = IS, IE, IBLOCK
+      IIE = IIS+IBLOCK-1
 
-       ! at x, y ,w
-       do j = JJS, JJE
-       do i = IIS, IIE
-       do k = KS, KE-1
-          qflx_sgs_rhoq(k,i,j,ZDIR,iq) = -0.5_RP * ( DENS(k+1,i,j)+DENS(k,i,j) ) &
-                                       * ATMOS_PHY_TB_DNS_MU * ( QTRC(k+1,i,j,iq)-QTRC(k,i,j,iq) ) * RFDZ(k)
-       enddo
-       enddo
-       enddo
-       do j = JJS, JJE
-       do i = IIS, IIE
-          qflx_sgs_rhoq(KS-1,i,j,ZDIR,iq) = 0.0_RP
-          qflx_sgs_rhoq(KE  ,i,j,ZDIR,iq) = 0.0_RP
-       enddo
-       enddo
-
-       ! at u, y, z
-       do j = JJS,   JJE
-       do i = IIS-1, IIE
-       do k = KS,   KE
-          qflx_sgs_rhoq(k,i,j,XDIR,iq) = -0.5_RP * ( DENS(k,i+1,j)+DENS(k,i,j) ) &
-                                       * ATMOS_PHY_TB_DNS_MU * ( QTRC(k,i+1,j,iq)-QTRC(k,i,j,iq) ) * RFDX(i) * MAPF(i,j,1,I_XY)
-       enddo
-       enddo
-       enddo
-
-       ! at x, v, z
-       do j = JJS-1, JJE
-       do i = IIS,   IIE
-       do k = KS,   KE
-          qflx_sgs_rhoq(k,i,j,YDIR,iq) = -0.5_RP * ( DENS(k,i,j+1)+DENS(k,i,j) ) &
-                                       * ATMOS_PHY_TB_DNS_MU * ( QTRC(k,i,j+1,iq)-QTRC(k,i,j,iq) ) * RFDY(j) * MAPF(i,j,2,I_XY)
-       enddo
-       enddo
-       enddo
-
-    enddo
-    enddo
+      call calc_flux_phi( &
+         qflx_sgs_rhoq(:,:,:,:,iq),        & ! [inout]
+         DENS, QTRC(:,:,:,iq), Kh, 1.0_RP, & ! [in]
+         GSQRT, J13G, J23G, J33G, MAPF,    & ! [in]
+         .false., .false.,                 & ! horizontal, implicit
+         a, b, c, dt,                      & ! [in, dummy]
+         IIS, IIE, JJS, JJE                )
+!         IIS, IIE, JJS, JJE,               &
+!         twoD )
+      
+      enddo
+      enddo
 
     enddo ! scalar quantities loop
+
+    !$acc end data
 
     return
   end subroutine ATMOS_PHY_TB_dns

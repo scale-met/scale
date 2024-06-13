@@ -93,3 +93,7 @@ AR      = xiar
 ARFLAGS = r
 RANLIB  = ranlib
 JOBSUB  = sh
+
+
+#### other parameters
+SCALE_COMPAT_MPI ?= T

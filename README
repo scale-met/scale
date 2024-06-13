@@ -51,6 +51,7 @@ Switch options will be activated only when the value is "T"
 * SCALE_USE_AGRESSIVEOPT: Use agressive options of optimization for some compilers
 * SCALE_ENABLE_PNETCDF  : Enable to use parallel NetCDF
 * SCALE_COMPAT_NETCDF3  : Keep compatibility with NetCDF3
+* SCALE_COMPAT_MPI      : Not to use MPI Fortra08 binding interface (for legacy MPI compilers)
 * SCALE_ENABLE_MATHLIB  : Enable to use MATH library
 * SCALE_ENABLE_PAPI     : Enable to use PAPI library
 * SCALE_DISABLE_LOCALBIN: Supress to make executables in local directory

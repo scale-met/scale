@@ -717,6 +717,8 @@ contains
        CALENDAR_daysec2date,   &
        CALENDAR_adjust_daysec, &
        CALENDAR_CFunits2sec
+    use scale_const, only: &
+       CONST_EPS
     implicit none
 
     character(len=*),  intent(in)  :: time_units
@@ -749,8 +751,21 @@ contains
                                                   mlist(start_date(2)), &
                                                   start_date(1)
 
-    write(dhour,'(I3)') max(int(dt/3600.0_DP),1) ! HR
-    dhour = trim(dhour)//'HR'
+    if(      int(dt/3600.0_DP/24.0_DP) >= 1 .and. mod(dt,86400.0_DP) < CONST_EPS ) then
+       write(dhour,'(I3)') int(dt/3600.0_DP/24.0_DP) ! day
+       dhour = trim(dhour)//'dy'
+    else if( int(dt/3600.0_DP) >= 1         .and. mod(dt,3600.0_DP) < CONST_EPS ) then
+       write(dhour,'(I3)') int(dt/3600.0_DP) ! hour
+       dhour = trim(dhour)//'hr'
+    else if( int(dt/60.0_DP) >= 1           .and. mod(dt, 60.0_DP) < CONST_EPS ) then
+       write(dhour,'(I3)') int(dt/60.0_DP)   ! minute
+       dhour = trim(dhour)//'mn'
+    else
+       LOG_WARN("SNO_grads_calc_timechar",*) 'Output interval is not supported by GrADS.'
+       !write(dhour,'(I3)') max(int(dt/60.0_DP),1) ! less than 1 minute
+       write(dhour,'(I8)') int(dt) ! less than 1 minute
+       dhour = trim(dhour)//'sec'
+    endif
 
     return
   end subroutine SNO_grads_calc_timechar

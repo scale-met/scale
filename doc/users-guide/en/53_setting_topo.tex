@@ -50,7 +50,7 @@ The configurations for the conversion, including information of external input d
 }
 
 
-As external topography data, \scalerm supports GTOPO30 provided by the U.S. Geological Survey and DEM50M provided by the Geospatial Information Authority of Japan.
+As external topography data, \scalerm supports GTOPO30 provided by the U.S. Geological Survey and DEM50M\footnote{DEM50M is available only in the Japan area. If you want to use it, you must buy the original data from \url{https://net.jmc.or.jp/mapdata/map/jmc_mesh50.html}. Regarding a program converting to SCALE input format, please contact the SCALE developer.} provided by the Geospatial Information Authority of Japan.
 The user-defined binary data is also supported (refer to Section \ref{subsec:topo_userfile} for the details).
 
 The types of the external data used are specified by \nmitem{CNVTOPO_(UseGTOPO30|UseDEM50M|UseUSERFILE)} and/or \nmitem{CNVTOPO_name}.

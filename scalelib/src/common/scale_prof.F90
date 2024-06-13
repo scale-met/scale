@@ -314,6 +314,7 @@ contains
   subroutine PROF_rapreport
     use scale_prc, only: &
        PRC_MPItimestat, &
+       PRC_timereorder, &
        PRC_IsMaster
     implicit none
 
@@ -371,6 +372,9 @@ contains
        enddo
 
     else
+
+       ! re-order
+       call PRC_timereorder( PROF_rapnlimit, PROF_rapnmax, PROF_rapttot, PROF_rapname )
 
        call PRC_MPItimestat( avgvar      (1:PROF_rapnmax), &
                              maxvar      (1:PROF_rapnmax), &

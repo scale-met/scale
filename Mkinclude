@@ -87,6 +87,10 @@ ifeq ($(SCALE_COMPAT_NETCDF3),T)
    CFLAGS += -DNETCDF3
 endif
 
+ifeq ($(SCALE_COMPAT_MPI),T)
+   FFLAGS += -DNO_MPI08
+endif
+
 # Math library setting
 # library location are inquired in order of: environment variable->Makedef.XXX
 ifeq ($(SCALE_ENABLE_MATHLIB),T)

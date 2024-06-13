@@ -1,5 +1,17 @@
 = Release History
 
+== 2024-06-13 (5.5.2)
+* Bug fixes:
+  * Corrected an error in the calculation of the viscosity term in the DNS scheme
+  * Corrected an error in the calculation of the equivalent potential temperature
+  * Corrected time units in GrADS control file output by SNO
+  * Fixed an error when the lsmask data is not given in the GrADS real input
+  * Fixed an issue that time information output by the profiler was sometimes incorrect
+  * Fixed refernces to undefined value
+  * Resolved a problem with overflow errors in integers when the input GrADS file size is large
+* Changes
+  * Added a new compile option for legacy MPI compilers: SCALE_COMPAT_MPI
+
 == 2024-04-10 (5.5.1)
 * Bug fixes:
   * Fixed the mkinit for the baroclinic wave test case
