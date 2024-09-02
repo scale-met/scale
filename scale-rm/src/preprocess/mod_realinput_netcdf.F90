@@ -363,9 +363,9 @@ contains
                 call FILE_get_attribute( fid_atm, map, "longitude_of_projection_origin", longitude_of_projection_origin, existed=exist )
                 call FILE_get_attribute( fid_atm, map, "latitude_of_projection_origin", latitude_of_projection_origin, existed=exist )
                 call FILE_get_attribute( fid_atm, map, "straight_vertical_longitude_from_pole", straight_vertical_longitude_from_pole, existed=exist )
-                call FILE_get_attribute( fid_atm, map, "standard_parallel", standard_parallel(:), existed=exist )
-                if ( .not. exist ) &
                 call FILE_get_attribute( fid_atm, map, "standard_parallel", standard_parallel(1:1), existed=exist )
+                if ( .not. exist ) &
+                call FILE_get_attribute( fid_atm, map, "standard_parallel", standard_parallel(:), existed=exist )
                 call FILE_get_attribute( fid_atm, map, "rotation", rotation, existed=exist )
              end if
           end if
@@ -2583,6 +2583,7 @@ contains
              i1 = max(cxe - IE_org - ist, 0)
              j0 = max(JS_org - cys, 0)
              j1 = max(cye - JE_org - jst, 0)
+             if ( pxs+i0 > pxe-i1 .or. pys+j0 > pye-j1 ) cycle
              if ( transpose ) then
                 allocate( buf3d(pxs+i0:pxe-i1,pys+j0:pye-j1,KS_org:KE_org+kst) )
                 call FILE_read( fids(n), var%name, buf3d(:,:,:), &
@@ -2890,6 +2891,7 @@ contains
              i1 = max(cxe - IE_org - ist, 0)
              j0 = max(JS_org - cys, 0)
              j1 = max(cye - JE_org - jst, 0)
+             if ( pxs+i0 > pxe-i1 .or. pys+j0 > pye-j1 ) cycle
              allocate( buf2d(pxs+i0:pxe-i1,pys+j0:pye-j1) )
              call FILE_read( fids(n), var%name, buf2d(:,:), &
                   step=it_, start=(/pxs+i0,pys+j0/), count=(/pxe-pxs+1-i1-i0,pye-pys+1-j1-j0/) )

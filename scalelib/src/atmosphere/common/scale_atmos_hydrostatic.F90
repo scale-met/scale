@@ -777,8 +777,8 @@ contains
 
     real(RP), intent(inout) :: dens(KA) !< density               [kg/m3]
 
-    real(RP), intent(out)   :: temp(KA) !< temperature           [K]
-    real(RP), intent(out)   :: pres(KA) !< pressure              [Pa]
+    real(RP), intent(inout) :: temp(KA) !< temperature           [K]
+    real(RP), intent(inout) :: pres(KA) !< pressure              [Pa]
     logical,  intent(out)   :: converged
 
 #ifdef _OPENACC
@@ -894,8 +894,8 @@ contains
 
     real(RP), intent(inout) :: dens(KA) !< density               [kg/m3]
 
-    real(RP), intent(out)   :: temp(KA) !< temperature           [K]
-    real(RP), intent(out)   :: pres(KA) !< pressure              [Pa]
+    real(RP), intent(inout) :: temp(KA) !< temperature           [K]
+    real(RP), intent(inout) :: pres(KA) !< pressure              [Pa]
     logical,  intent(out)   :: converged
 
 #ifdef _OPENACC
@@ -1121,8 +1121,8 @@ contains
 
     real(RP), intent(inout) :: dens(KA,IA,JA) !< density               [kg/m3]
 
-    real(RP), intent(out)   :: temp(KA,IA,JA) !< temperature           [K]
-    real(RP), intent(out)   :: pres(KA,IA,JA) !< pressure              [Pa]
+    real(RP), intent(inout) :: temp(KA,IA,JA) !< temperature           [K]
+    real(RP), intent(inout) :: pres(KA,IA,JA) !< pressure              [Pa]
 
     integer, intent(in), optional, target :: kref(IA,JA)
 
@@ -1206,8 +1206,8 @@ contains
     integer,  intent(in)    :: IA, IS, IE
     integer,  intent(in)    :: JA, JS, JE
     real(RP), intent(inout) :: dens(KA,IA,JA) !< density               [kg/m3]
-    real(RP), intent(out)   :: temp(KA,IA,JA) !< temperature           [K]
-    real(RP), intent(out)   :: pres(KA,IA,JA) !< pressure              [Pa]
+    real(RP), intent(inout) :: temp(KA,IA,JA) !< temperature           [K]
+    real(RP), intent(inout) :: pres(KA,IA,JA) !< pressure              [Pa]
     real(RP), intent(in)    :: pott(KA,IA,JA) !< potential temperature [K]
     real(RP), intent(in)    :: qv  (KA,IA,JA) !< water vapor           [kg/kg]
     real(RP), intent(in)    :: qc  (KA,IA,JA) !< liquid water          [kg/kg]
