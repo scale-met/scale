@@ -156,11 +156,11 @@ contains
              case ( FILE_TEXT )
                 call FILE_get_attribute( fid, varname(v), dinfo(v)%att_name(i), dinfo(v)%atts(i)%text )
              case ( FILE_INTEGER4 )
-                call FILE_get_attribute( fid, varname(v), dinfo(v)%att_name(i), dinfo(v)%atts(i)%int(:) )
+                call FILE_get_attribute( fid, varname(v), dinfo(v)%att_name(i), dinfo(v)%atts(i)%int(:dinfo(v)%att_len(i)) )
              case ( FILE_REAL4 )
-                call FILE_get_attribute( fid, varname(v), dinfo(v)%att_name(i), dinfo(v)%atts(i)%float(:) )
+                call FILE_get_attribute( fid, varname(v), dinfo(v)%att_name(i), dinfo(v)%atts(i)%float(:dinfo(v)%att_len(i)) )
              case ( FILE_REAL8 )
-                call FILE_get_attribute( fid, varname(v), dinfo(v)%att_name(i), dinfo(v)%atts(i)%double(:) )
+                call FILE_get_attribute( fid, varname(v), dinfo(v)%att_name(i), dinfo(v)%atts(i)%double(:dinfo(v)%att_len(i)) )
              case default
                 LOG_ERROR("SNO_vars_getinfo",*) 'attribute type is not supported'
                 call PRC_abort
