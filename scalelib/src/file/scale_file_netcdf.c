@@ -931,7 +931,7 @@ int file_get_attribute_int_c(       int  *value,    // (out)
       CHECK_PNC_ERROR( ncmpi_inq_varid(ncid, vname, &varid) )
 
     CHECK_PNC_ERROR( ncmpi_inq_attlen(ncid, varid, key, &l) )
-    if ( len < l ) return ERROR_CODE;
+    if ( len != l ) return ERROR_CODE;
     CHECK_PNC_ERROR( ncmpi_get_att_int(ncid, varid, key, value) )
   }
   else {
@@ -942,7 +942,7 @@ int file_get_attribute_int_c(       int  *value,    // (out)
       CHECK_ERROR( nc_inq_varid(ncid, vname, &varid) )
 
     CHECK_ERROR( nc_inq_attlen(ncid, varid, key, &l) )
-    if ( len < l ) return ERROR_CODE;
+    if ( len != l ) return ERROR_CODE;
     CHECK_ERROR( nc_get_att_int(ncid, varid, key, value) )
   }
 
@@ -974,7 +974,7 @@ int file_get_attribute_float_c(       float *value,    // (out)
       CHECK_PNC_ERROR( ncmpi_inq_varid(ncid, vname, &varid) )
 
     CHECK_PNC_ERROR( ncmpi_inq_attlen(ncid, varid, key, &l) )
-    if ( len < l ) return ERROR_CODE;
+    if ( len != l ) return ERROR_CODE;
     CHECK_PNC_ERROR( ncmpi_get_att_float(ncid, varid, key, value) )
   }
   else {
@@ -985,7 +985,7 @@ int file_get_attribute_float_c(       float *value,    // (out)
       CHECK_ERROR( nc_inq_varid(ncid, vname, &varid) )
 
     CHECK_ERROR( nc_inq_attlen(ncid, varid, key, &l) )
-    if ( len < l ) return ERROR_CODE;
+    if ( len != l ) return ERROR_CODE;
     CHECK_ERROR( nc_get_att_float(ncid, varid, key, value) )
   }
 
@@ -1017,7 +1017,7 @@ int file_get_attribute_double_c(       double *value,    // (out)
       CHECK_PNC_ERROR( ncmpi_inq_varid(ncid, vname, &varid) )
 
     CHECK_PNC_ERROR( ncmpi_inq_attlen(ncid, varid, key, &l) )
-    if ( len < l ) return ERROR_CODE;
+    if ( len != l ) return ERROR_CODE;
     CHECK_PNC_ERROR( ncmpi_get_att_double(ncid, varid, key, value) )
   }
   else {
@@ -1028,7 +1028,7 @@ int file_get_attribute_double_c(       double *value,    // (out)
       CHECK_ERROR( nc_inq_varid(ncid, vname, &varid) )
 
     CHECK_ERROR( nc_inq_attlen(ncid, varid, key, &l) )
-    if ( len < l ) return ERROR_CODE;
+    if ( len != l ) return ERROR_CODE;
     CHECK_ERROR( nc_get_att_double(ncid, varid, key, value) )
   }
 

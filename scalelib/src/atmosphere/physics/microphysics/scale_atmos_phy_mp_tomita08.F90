@@ -91,8 +91,8 @@ module scale_atmos_phy_mp_tomita08
   integer,  private, parameter   :: I_hyd_QS =  4
   integer,  private, parameter   :: I_hyd_QG =  5
 
-  logical,  private              :: do_couple_aerosol   ! apply CCN effect?
-  logical,  private              :: do_explicit_icegen  ! apply explicit ice generation?
+  logical,  private              :: do_couple_aerosol  = .false. ! apply CCN effect?
+  logical,  private              :: do_explicit_icegen = .false. ! apply explicit ice generation?
 
   logical,  private              :: fixed_re  = .false. ! use ice's effective radius for snow and graupel, and set rain transparent?
   logical,  private              :: const_rec = .true.  ! use constant  effective radius for cloud water?
