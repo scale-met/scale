@@ -11,12 +11,12 @@ FC  = mpiifort
 SFC = ifort
 MODDIROPT = -module
 
-FFLAGS_FAST  = -fpp -m64 -O3 -xHost -ip             \
+FFLAGS_FAST  = -fpp -m64 -O3 -xAVX -ip              \
                -assume byterecl -convert big_endian \
                -fp-model source                     \
-               -mcmodel=medium -heap-arrays
+               -ftz -fno-alias -align all
 
-FFLAGS_AGGRESSIVE = -ipo -no-prec-div -no-heap-arrays
+FFLAGS_AGGRESSIVE = -ipo
 
 FFLAGS_QUICKDEBUG = -traceback -fpe0 -CB -CU
 
@@ -24,9 +24,9 @@ FFLAGS_DYN   = $(FFLAGS)
 
 FFLAGS_DEBUG = -fpp -m64 -O0                        \
                -assume byterecl -convert big_endian \
-               -fpe0 -fp-model source               \
-               -check all -warn all -g -traceback   \
-               -mcmodel=medium -heap-arrays         \
+               -fp-model source                     \
+               -ftz -fno-alias -align all           \
+               -fpe0 -check all -warn all -g -traceback \
                -assume nobuffered_io
 
 

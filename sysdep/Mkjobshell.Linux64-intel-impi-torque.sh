@@ -96,6 +96,7 @@ cat << EOF1 > ./run.sh
 #PBS -e ERR.log
 export FORT_FMT_RECL=500
 export GFORTRAN_UNBUFFERED_ALL=Y
+ulimit -s unlimited
 
 source /etc/profile.d/modules.sh
 module unload mpt/2.12

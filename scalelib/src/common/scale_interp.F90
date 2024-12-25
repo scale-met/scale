@@ -847,7 +847,8 @@ contains
        end do
        j1(psizey) = JA_ref
 
-       !$omp parallel do OMP_SCHEDULE_ collapse(2)
+       !$omp parallel do OMP_SCHEDULE_ collapse(2) &
+       !$omp private(idx_it,idx_jt,hfactt)
        !$acc kernels copyin(lon_1d, lat_1d, i0, i1, j0, j1, lon, lat) copyout(idx_i, idx_j, hfact)
        !$acc loop independent
        do j = 1, JA
@@ -901,7 +902,7 @@ contains
                              dlon, dlat                  ) ! [OUT]
 
        !$omp parallel do OMP_SCHEDULE_ collapse(2) &
-       !$omp private(idx_ref)
+       !$omp private(idx_ref,hfactt)
        !$acc kernels
        !$acc loop independent
        do j = 1, JA

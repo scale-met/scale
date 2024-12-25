@@ -1,5 +1,11 @@
 = Release History
 
+== 2024-12-25 (5.5.4)
+* Bug fixes:
+  * Fixed omissions in the OpenMP private directive clause
+* Changs
+  * Changed compile options for Intel compiler
+
 == 2024-09-11 (5.5.3)
 * Bug fixes:
   * Fixed undefined references for the options in the Tomita08 scheme
