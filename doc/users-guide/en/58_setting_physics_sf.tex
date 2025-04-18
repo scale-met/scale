@@ -75,8 +75,19 @@ Latent heat flux is constant and its value is specified by \nmitem{ATMOS_PHY_SF_
 \subsubsection{Bulk scheme}
 %-------------------------------------------------------------------------------
 If \nmitem{ATMOS_PHY_SF_TYPE} is \verb|BULK|, the surface flux is calculated by the bulk model using the prescribed surface state, such as surface temperature, roughness length, and albedo.
-The values of the surface state are read from the initial data file.
-The surface temperature, roughness length and albedos for short- and long-wave radiation can be set respectively with \nmitem{ATMOS_PHY_SF_DEFAULT_SFC_TEMP}, \\ \nmitem{ATMOS_PHY_SF_DEFAULT_SFC_Z0}, \nmitem{ATMOS_PHY_SF_DEFAULT_SFC_ALBEDO_SW}, \\ and \nmitem{ATMOS_PHY_SF_DEFAULT_SFC_ALBEDO_LW} in \namelist{PARAM_ATMOS_PHY_SF_VARS} at generating the initial data with the \verb|scale-rm_init|.
+These parameters can be set in \namelist{PARAM_ATMOS_PHY_SF_VARS} of \verb|run.conf|.
+%
+\editboxtwo{
+\verb|&PARAM_ATMOS_PHY_SF_VARS                      | & \\
+\verb| ATMOS_PHY_SF_DEFAULT_SFC_TEMP      = 300.0,  | & ; Surface temperature \\
+\verb| ATMOS_PHY_SF_DEFAULT_SFC_albedo_LW = 0.04,   | & ; Albedo for long-wave radiation \\
+\verb| ATMOS_PHY_SF_DEFAULT_SFC_albedo_SW = 0.10,   | & ; Albedo for short-wave radiation \\
+\verb| ATMOS_PHY_SF_DEFAULT_SFC_Z0M       = 1E-4,   | & ; Roughness length for momentum  \\
+\verb| ATMOS_PHY_SF_DEFAULT_SFC_Z0H       = 1E-5,   | & ; Roughness length for heat  \\
+\verb| ATMOS_PHY_SF_DEFAULT_SFC_Z0E       = 1E-5,   | & ; Roughness length for vapor  \\
+\verb|/                                             | & \\
+}
+
 
 For calculation of latent heat flux, evaporation efficiency can be given in a range of 0 to 1.
 This flexibility enables the ideal experiment not only for ocean surfaces but also for land.
