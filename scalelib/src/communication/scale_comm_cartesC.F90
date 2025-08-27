@@ -694,6 +694,10 @@ contains
              deallocate( ginfo(gid)%preq_list )
              deallocate( ginfo(gid)%packid )
              ginfo(gid)%vars_num = 0
+#ifdef _OPENACC
+             deallocate( ginfo(gid)%device_ptr )
+             deallocate( ginfo(gid)%device_alloc )
+#endif
 
           end if
 

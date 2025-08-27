@@ -772,6 +772,7 @@ contains
   subroutine ATMOS_PHY_MP_sn14_finalize
 
     deallocate(nc_uplim_d)
+    deallocate(w3d)
 
     return
   end subroutine ATMOS_PHY_MP_sn14_finalize
@@ -2569,8 +2570,8 @@ contains
 !        flg_igcol = 0.0_RP
 !      endif
     else
-       d0_crg_l = 1.0_RP  
-       v0_crg_l = 1.0_RP 
+       d0_crg_l = 1.0_RP
+       v0_crg_l = 1.0_RP
     endif
 
     do ip = 1, w_nmax
@@ -2729,7 +2730,7 @@ contains
             dq_xa, vt_xa,                       & ! (in)
             PQ(:,:)                             ) ! (out)
 
-       
+
        if( opt_nucleation_ice_hom ) then
 
           ! homogeneous ice nucleation
@@ -3835,14 +3836,14 @@ contains
        call dep_vapor_ice_wrk(         & ! in
             KA, KS, KE,                & ! in
             PLIdep_total(:),           & ! out for ice nucleation
-            rho(:), tem(:), pre(:),    & ! in 
+            rho(:), tem(:), pre(:),    & ! in
             qdry(:), esi(:), qsi(:),   & ! in
             rhoq(:,:),                 & ! in
             vt_xa, dq_xa,              & ! in
             dt                         ) ! in
 
        do k = KS, KE
-          dTdt_dep(k) = (LHS0+(CV_VAPOR-CV_ICE)*tem(k))*PLIdep_total(k)/(rho(k)*cva(k)) 
+          dTdt_dep(k) = (LHS0+(CV_VAPOR-CV_ICE)*tem(k))*PLIdep_total(k)/(rho(k)*cva(k))
        enddo
     else
        dTdt_dep(:) = 0.0_RP
@@ -3975,10 +3976,10 @@ contains
     real(RP), intent(in) :: w(KA)          ! adiabatic ascending
     real(RP), intent(in) :: dTdt_rad(KA)  ! effect of radiative heating
     real(RP), intent(in) :: dTdt_dep(KA)  ! effect of radiative heating
-    real(RP), intent(in) :: PLIdep(KA)     
+    real(RP), intent(in) :: PLIdep(KA)
 !    real(RP), intent(out) :: PQ(KA,PQ_MAX)     ! competition effect by vapor consumption
-    real(RP), intent(out):: PLIhom(KA)    
-    real(RP), intent(out):: PNIhom(KA)    
+    real(RP), intent(out):: PLIhom(KA)
+    real(RP), intent(out):: PNIhom(KA)
     real(RP), intent(in) :: dt
     real(RP), parameter :: rhoi=916.0_RP           ! ice density [kg/m3]
     real(RP), parameter :: rrhoi=1.0_RP/rhoi       !
@@ -5584,7 +5585,7 @@ contains
 !             kernel_gg = 0.125_RP*pi*(dag_glx(k,ngx)+dag_gly(k,ngy))*(dag_glx(k,ngx)+dag_gly(k,ngy))*sqrt((vtg_glx(k,ngx)-vtg_gly(k,ngy))*(vtg_glx(k,ngx)-vtg_gly(k,ngy)))  * E_stick(k) * E_gg
              kernel_gg = 0.125_RP * pi * (dag_glx(k,ngx)+dag_gly(k,ngy))**2 * abs(vtg_glx(k,ngx)-vtg_gly(k,ngy)) * E_stick(k) * E_gg
              Pac(k,I_NGacNG2NG) = Pac(k,I_NGacNG2NG) - kernel_gg*dNg_glx(k,ngx)*dNg_gly(k,ngy)
-            
+
           end do
        end do
     end do
@@ -5662,7 +5663,7 @@ contains
 
        ! 1.c-g (X=Cloud, Y=Graupel)
        do k = KS, KE
-          sw1 = 0.5_RP - sign( 0.5_RP, rhoq(k,I_NC)-SMALL ) 
+          sw1 = 0.5_RP - sign( 0.5_RP, rhoq(k,I_NC)-SMALL )
           Pcrg2(k,I_NGacNC2NG) = Pac(k,I_NGacNC2NG)*(1.0_RP-sw1) / (rhoq(k,I_NC)+sw1) * rhoq_crg(k,I_QC)
        end do
 
@@ -5723,7 +5724,7 @@ contains
 
        ! 10.s-g
        do k = KS, KE
-          sw1 = 0.5_RP - sign( 0.5_RP, rhoq(k,I_NS)-SMALL ) 
+          sw1 = 0.5_RP - sign( 0.5_RP, rhoq(k,I_NS)-SMALL )
           Pcrg2(k,I_NGacNS2NG) = Pac(k,I_NGacNS2NG)*(1.0_RP-sw1) / (rhoq(k,I_NS)+sw1) * rhoq_crg(k,I_QS)
        end do
 
@@ -5759,31 +5760,31 @@ contains
 
        ! rain-graupel
        do k = KS, KE
-          sw1 = 0.5_RP - sign( 0.5_RP, rhoq(k,I_NG)-SMALL ) 
+          sw1 = 0.5_RP - sign( 0.5_RP, rhoq(k,I_NG)-SMALL )
           Pcrg1(k,I_NGarm) = PQ(k,I_NGarm)*(1.0_RP-sw1) / (rhoq(k,I_NG)+sw1) * rhoq_crg(k,I_QG)
        end do
 
        ! cloud-snow
        do k = KS, KE
-          sw1 = 0.5_RP - sign( 0.5_RP, rhoq(k,I_NS)-SMALL ) 
+          sw1 = 0.5_RP - sign( 0.5_RP, rhoq(k,I_NS)-SMALL )
           Pcrg1(k,I_NSacm) = PQ(k,I_NSacm)*(1.0_RP-sw1) / (rhoq(k,I_NS)+sw1) * rhoq_crg(k,I_QS)
        end do
 
        ! rain-snow
        do k = KS, KE
-          sw1 = 0.5_RP - sign( 0.5_RP, rhoq(k,I_NS)-SMALL ) 
+          sw1 = 0.5_RP - sign( 0.5_RP, rhoq(k,I_NS)-SMALL )
           Pcrg1(k,I_NSarm) = PQ(k,I_NSarm)*(1.0_RP-sw1) / (rhoq(k,I_NS)+sw1) * rhoq_crg(k,I_QS)
        end do
 
        ! cloud-ice
        do k = KS, KE
-          sw1 = 0.5_RP - sign( 0.5_RP, rhoq(k,I_NI)-SMALL ) 
+          sw1 = 0.5_RP - sign( 0.5_RP, rhoq(k,I_NI)-SMALL )
           Pcrg1(k,I_NIacm) = PQ(k,I_NIacm)*(1.0_RP-sw1) / (rhoq(k,I_NI)+sw1) * rhoq_crg(k,I_QI)
        end do
 
        ! rain-ice
        do k = KS, KE
-          sw1 = 0.5_RP - sign( 0.5_RP, rhoq(k,I_NI)-SMALL ) 
+          sw1 = 0.5_RP - sign( 0.5_RP, rhoq(k,I_NI)-SMALL )
           Pcrg1(k,I_NIarm) = PQ(k,I_NIarm)*(1.0_RP-sw1) / (rhoq(k,I_NI)+sw1) * rhoq_crg(k,I_QI)
        end do
 
@@ -6185,7 +6186,7 @@ contains
     ! Following ones are vt(mean(x)) and D(mean(x)).
     real(RP), intent(in)  :: vt_xave(KA,HYDRO_MAX,1:2) ! terminal velocity of mean cloud
     real(RP), intent(in)  :: dq_xave(KA,HYDRO_MAX) !
-    real(RP), intent(in)  :: dt 
+    real(RP), intent(in)  :: dt
     !
 !    real(RP), intent(in)  :: dtime
 !    real(RP) :: dtime

@@ -277,7 +277,7 @@ contains
     LOG_NEWLINE
     LOG_INFO("ATMOS_PHY_MP_vars_finalize",*) 'Finalize'
 
-    !$acc exit data delete(ATMOS_PHY_MP_DENS_t,ATMOS_PHY_MP_MOMZ_t,ATMOS_PHY_MP_RHOU_t,ATMOS_PHY_MP_RHOV_t,ATMOS_PHY_MP_RHOT_t,ATMOS_PHY_MP_RHOH,ATMOS_PHY_MP_EVAPORATE)
+    !$acc exit data delete(ATMOS_PHY_MP_DENS_t, ATMOS_PHY_MP_MOMZ_t, ATMOS_PHY_MP_RHOU_t, ATMOS_PHY_MP_RHOV_t, ATMOS_PHY_MP_RHOT_t, ATMOS_PHY_MP_RHOQ_t, ATMOS_PHY_MP_RHOH, ATMOS_PHY_MP_EVAPORATE)
     deallocate( ATMOS_PHY_MP_DENS_t     )
     deallocate( ATMOS_PHY_MP_MOMZ_t     )
     deallocate( ATMOS_PHY_MP_RHOU_t     )

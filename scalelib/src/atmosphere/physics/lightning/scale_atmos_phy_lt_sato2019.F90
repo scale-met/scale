@@ -497,6 +497,8 @@ contains
     deallocate( B_F2013_TOT )
     deallocate( G_F2013 )
 
+    deallocate( A )
+
     return
   end subroutine ATMOS_PHY_LT_sato2019_finalize
 
