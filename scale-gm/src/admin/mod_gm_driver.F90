@@ -292,12 +292,11 @@ contains
     !---< external data module setup >---
     call extdata_setup
 
+    !---< nhm_runconf module setup >---
+    call runconf_setup
 
     !---< forcing module setup >---
     call forcing_setup
-
-    !---< nhm_runconf module setup >---
-    call runconf_setup
 
     !---< landuse module setup >---
     call LANDUSE_setup( .false., .false., .false. )
