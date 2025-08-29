@@ -40,7 +40,7 @@
 && \rm{{\YDIR}の領域の長さ} = \verb|JMAXG| \times \verb|DY| \nonumber
 \end{eqnarray}
 である。ここで、第\ref{subsec:gridinterv}節で記述したように、
-\nmitem{DX, DY}は\namelist{PRAM_ATMOS_GRID_CARTESC}内で指定する。
+\nmitem{DX, DY}は\namelist{PARAM_ATMOS_GRID_CARTESC}内で指定する。
 
 
 水平ー鉛直の2次元実験を行うためには、\nmitem{IMAXG} および \nmitem{PRC_NUM_X} を 1 に設定する。
@@ -239,7 +239,7 @@ MPIプロセス数を変更する場合は、
 予報変数を更新する。この緩和を以下ではナッジングと呼ぶ。
 
 \subsubsection{緩和領域}
-緩和領域の幅は、設定ファイルの\namelist{PARAM_ATMOS_GRID_CARTSC}の中で設定する。
+緩和領域の幅は、設定ファイルの\namelist{PARAM_ATMOS_GRID_CARTESC}の中で設定する。
 この設定は全ての手順で共通していなければならないことを再度注意する。
 緩和領域の幅を設定する方法は、以下の2種類がある。
 \begin{enumerate}
@@ -419,7 +419,7 @@ MPIプロセス数を変更する場合は、
   \verb| ATMOS_BOUNDARY_LINEAR_H = .false.,    | & ; x, y 方向に関するナッジングの時定数分布の種類. \verb|.true.|であれば線形分布、そうでなければ指数関数分布. \\
   \verb| ATMOS_BOUNDARY_EXP_H = 2.0D0,         | & ; 指数関数分布の場合における指数の係数. \\
   \verb| ATMOS_BOUNDARY_DENS_ADJUST = .true.,  | & ; 質量フラックス調整に対するスイッチ. \\
-  \verb| ATMOS_BOUNDARY_DENS_ADJUST_TAU | \textbackslash \\
+  \verb| ATMOS_BOUNDARY_DENS_ADJUST_tau        | \textbackslash \\
   ~~\verb|     = -1.0D0,                       | & ; 質量フラックス調整が有効な場合の密度ナッジングの時定数 (秒). \\
 }
 
@@ -474,7 +474,7 @@ $\tau$のデフォルトの値は、\nmitem{TIME_DT}の10倍である。
 計算が行われる場合、
 境界での親データの扱いは、上記の``\verb|REAL|''と同様の設定が適用される。
 ただし、\nmitem{ATMOS_BOUNDARY_USE_VELZ} と \nmitem{ATMOS_BOUNDARY_USE_QHYD}の代わりに、
-\namelist{PARAM_COMM_CARTESC_NEST} の \nmitem{ONLINE_USE_VELZ} および \nmitem{ONLINE_BOUNDAYR_USE_QHYD} で指定する。
+\namelist{PARAM_COMM_CARTESC_NEST} の \nmitem{ONLINE_USE_VELZ} および \nmitem{ONLINE_BOUNDARY_USE_QHYD} で指定する。
 
 
 密度のナッジングは、側面境界値に対する計算領域での質量バイアスを軽減するために有用である。
@@ -487,7 +487,7 @@ $\tau$のデフォルトの値は、\nmitem{TIME_DT}の10倍である。
 親モデルと\scale の計算領域の間の全領域総質量の差が小さくなるように、側面境界質量フラックスが調整される。
 例えば、シミュレーションにおける全質量が親モデルの質量に比べて小さい場合は、西境界における $\rho u$ および南境界における $\rho v$ を増加、東境界における $\rho u$ および北境界における $\rho v$ を減少させることで、全質量収束を増加させる。
 側面質量フラックス調整は、境界の種類として\verb|REAL|を用いた場合およびオンライン・ネスティングの子領域においてのみ利用可能である。
-質量フラックス調整が有効な場合の密度ナッジングの時定数は \nmitem{ATMOS_BOUNDARY_DEN_ADJUST_TAU} で設定する。
+質量フラックス調整が有効な場合の密度ナッジングの時定数は \nmitem{ATMOS_BOUNDARY_DENS_ADJUST_tau} で設定する。
 負の値が設定された場合は、内部で境界値データの $1/6$ と設定される。
 密度ナッジングを弱めるためには、この時定数を \nmitem{ATMOS_BOUNDARY_TAUX} や \nmitem{ATMOS_BOUNDARY_TAUY} よりも大きな値に設定する。
 \scalerm における質量フラックス調整方法は、側面境界における質量フラックスによる全質量変化が、降水や地表面潜熱フラックス等の物理過程による質量変化に比べて十分大きいという仮定のもとで作られている。

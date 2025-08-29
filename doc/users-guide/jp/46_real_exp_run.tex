@@ -75,36 +75,36 @@
 \verb|/| \\
 }
 
-上記の設定に従って、下記の\nmitem{HISTOTRY_ITEM}に列挙した変数を出力する。
-必要があれば、\nmitem{HISTOTRY_ITEM}においてオプション変数を加えることで、変数毎に出力間隔を変更できる。
+上記の設定に従って、下記の\nmitem{HISTORY_ITEM}に列挙した変数を出力する。
+必要があれば、\nmitem{HISTORY_ITEM}においてオプション変数を加えることで、変数毎に出力間隔を変更できる。
 また、瞬間値の代わりに平均値を出力することも可能である。
 これらの詳細は、\ref{sec:output}を参照されたい。
 
 \editboxtwo{
-\verb|&HISTOTRY_ITEM name="MSLP" /| 　   　  & 海面更正気圧 \\
-\verb|&HISTOTRY_ITEM name="PREC" /| 　   　  & 降水強度 (2次元) \\
-\verb|&HISTOTRY_ITEM name="OLR"  /| 　    　 & 外向き赤外放射(2次元) \\
-\verb|&HISTOTRY_ITEM name="U10m" /|　     　 & 地表10mでの東西方向水平速度成分(2次元) \\
-\verb|&HISTOTRY_ITEM name="V10m" /|　     　 & 地表10mでの南北方向水平速度成分(2次元) \\
-\verb|&HISTOTRY_ITEM name="U10" / |　     　 & 地表10mでのX方向水平速度成分(2次元) \\
-\verb|&HISTOTRY_ITEM name="V10" / |　     　 & 地表10mでのY方向水平速度成分(2次元) \\
-\verb|&HISTOTRY_ITEM name="T2"  / |　     　 & 地表2mでの温度　(2次元) \\
-\verb|&HISTOTRY_ITEM name="Q2"  / |　     　 & 地表2mでの水蒸気比湿 (2次元) \\
-\verb|&HISTOTRY_ITEM name="SFC_PRES"   /| 　 & 地表気圧 (2次元) \\
-\verb|&HISTOTRY_ITEM name="SFC_TEMP"   /| 　 & バルクの地表面温度 (2次元) \\
-\verb|&HISTOTRY_ITEM name="DENS" /| 　  　   & 密度 (3次元) \\
-\verb|&HISTOTRY_ITEM name="QV"   /| 　  　   & 水蒸気比湿 (3次元) \\
-\verb|&HISTOTRY_ITEM name="QHYD" /| 　  　   & 全凝結物の全質量に対する比　(3次元) \\
-\verb|&HISTOTRY_ITEM name="PRES" /| 　  　   & 気圧 (3次元) \\
-\verb|&HISTOTRY_ITEM name="Umet" /| 　  　   & 東西方向水平速度成分 (3次元) \\
-\verb|&HISTOTRY_ITEM name="Vmet" /| 　  　   & 南北方向水平速度成分 (3次元) \\
-\verb|&HISTOTRY_ITEM name="U"    /| 　  　   & X方向水平速度成分 (3次元) \\
-\verb|&HISTOTRY_ITEM name="V"    /| 　  　   & Y方向水平速度成分 (3次元) \\
-\verb|&HISTOTRY_ITEM name="T"    /| 　  　   & 温度 (3次元) \\
-\verb|&HISTOTRY_ITEM name="W"    /| 　  　   & 鉛直方向速度成分 (3次元) \\
-\verb|&HISTOTRY_ITEM name="Uabs" /| 　  　   & 風速 (3次元) \\
-\verb|&HISTOTRY_ITEM name="PT"   /| 　  　   & 温位 (3次元) \\
-\verb|&HISTOTRY_ITEM name="RH"   /| 　   　  & 相対湿度 (3次元) \\
+\verb|&HISTORY_ITEM name="MSLP" /| 　   　  & 海面更正気圧 \\
+\verb|&HISTORY_ITEM name="PREC" /| 　   　  & 降水強度 (2次元) \\
+\verb|&HISTORY_ITEM name="OLR"  /| 　    　 & 外向き赤外放射(2次元) \\
+\verb|&HISTORY_ITEM name="U10m" /|　     　 & 地表10mでの東西方向水平速度成分(2次元) \\
+\verb|&HISTORY_ITEM name="V10m" /|　     　 & 地表10mでの南北方向水平速度成分(2次元) \\
+\verb|&HISTORY_ITEM name="U10" / |　     　 & 地表10mでのX方向水平速度成分(2次元) \\
+\verb|&HISTORY_ITEM name="V10" / |　     　 & 地表10mでのY方向水平速度成分(2次元) \\
+\verb|&HISTORY_ITEM name="T2"  / |　     　 & 地表2mでの温度　(2次元) \\
+\verb|&HISTORY_ITEM name="Q2"  / |　     　 & 地表2mでの水蒸気比湿 (2次元) \\
+\verb|&HISTORY_ITEM name="SFC_PRES"   /| 　 & 地表気圧 (2次元) \\
+\verb|&HISTORY_ITEM name="SFC_TEMP"   /| 　 & バルクの地表面温度 (2次元) \\
+\verb|&HISTORY_ITEM name="DENS" /| 　  　   & 密度 (3次元) \\
+\verb|&HISTORY_ITEM name="QV"   /| 　  　   & 水蒸気比湿 (3次元) \\
+\verb|&HISTORY_ITEM name="QHYD" /| 　  　   & 全凝結物の全質量に対する比　(3次元) \\
+\verb|&HISTORY_ITEM name="PRES" /| 　  　   & 気圧 (3次元) \\
+\verb|&HISTORY_ITEM name="Umet" /| 　  　   & 東西方向水平速度成分 (3次元) \\
+\verb|&HISTORY_ITEM name="Vmet" /| 　  　   & 南北方向水平速度成分 (3次元) \\
+\verb|&HISTORY_ITEM name="U"    /| 　  　   & X方向水平速度成分 (3次元) \\
+\verb|&HISTORY_ITEM name="V"    /| 　  　   & Y方向水平速度成分 (3次元) \\
+\verb|&HISTORY_ITEM name="T"    /| 　  　   & 温度 (3次元) \\
+\verb|&HISTORY_ITEM name="W"    /| 　  　   & 鉛直方向速度成分 (3次元) \\
+\verb|&HISTORY_ITEM name="Uabs" /| 　  　   & 風速 (3次元) \\
+\verb|&HISTORY_ITEM name="PT"   /| 　  　   & 温位 (3次元) \\
+\verb|&HISTORY_ITEM name="RH"   /| 　   　  & 相対湿度 (3次元) \\
 }
 
 力学過程や物理過程に対するスキームとして他のスキームを用いたい場合は、

@@ -57,9 +57,9 @@
  \verb|/|            & \\
 }
 
-\nmitem{ATMOS_PHY_SF_FLAG_MOM_FLUX} が 0 の場合は、運動量に対するバルク交換係数として固定値が使われる。
+\nmitem{ATMOS_PHY_SF_FLG_MOM_FLUX} が 0 の場合は、運動量に対するバルク交換係数として固定値が使われる。
 係数の値は \nmitem{ATMOS_PHY_SF_Const_Cm} で設定する。
-\nmitem{ATMOS_PHY_SF_FLAG_MOM_FLUX} が 1 の場合は、固定値の摩擦速度を用いて交換係数が計算される。
+\nmitem{ATMOS_PHY_SF_FLG_MOM_FLUX} が 1 の場合は、固定値の摩擦速度を用いて交換係数が計算される。
 摩擦速度の値は \\ \nmitem{ATMOS_PHY_SF_Const_Ustar} で設定する。
 摩擦速度固定の場合、計算される交換係数の下限値を \nmitem{ATMOS_PHY_SF_Cm_min} で設定する。
 両方の場合において、計算中に用いる最下層の絶対速度の下限値を \nmitem{ATMOS_PHY_SF_U_minM} で設定する。

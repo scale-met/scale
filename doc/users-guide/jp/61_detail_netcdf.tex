@@ -19,9 +19,9 @@
     \label{table:netcdf_global_attrs}
     \begin{tabularx}{150mm}{p{50mm}XX} \hline
       名前        & 説明                 & 備考 \\ \hline \hline
-      title       & データの簡潔な説明   & \namelist{PARAM_FILE_HISTORY}の\nmitem{FILE_History_TITLE}の値  \\
-      source      & ソフトウエア名 & ヒストリファイルに対しては\namelist{PARAM_FILE_HISTORY}の\nmitem{FILE_History_SOURCE}の値。他のファイルに対しては\namelist{PARAM_IO}の\nmitem{H_SOURCE}の値\\
-      institution & データ作成者               & ヒストリファイルに対しては\namelist{PARAM_FILE_HISTORY}の\nmitem{FILE_History_INSTITUTION}の値。他のファイルに対しては\namelist{PARAM_IO}の\nmitem{H_INSTITUTE}の値\\
+      title       & データの簡潔な説明   & \namelist{PARAM_FILE_HISTORY}の\nmitem{FILE_HISTORY_TITLE}の値  \\
+      source      & ソフトウエア名 & ヒストリファイルに対しては\namelist{PARAM_FILE_HISTORY}の\nmitem{FILE_HISTORY_SOURCE}の値。他のファイルに対しては\namelist{PARAM_IO}の\nmitem{H_SOURCE}の値\\
+      institution & データ作成者               & ヒストリファイルに対しては\namelist{PARAM_FILE_HISTORY}の\nmitem{FILE_HISTORY_INSTITUTION}の値。他のファイルに対しては\namelist{PARAM_IO}の\nmitem{H_INSTITUTE}の値\\
       rankid      & MPI プロセスのランク番号      & モデルの\verb|PRC_myrank| \\
       Conventions & CF 規約のバージョン       & ``CF-1.6'' for version 5.3 \\
       grid\_name  & 格子の種類                   & \scalerm では``cartesC''  \\
@@ -37,7 +37,7 @@
       Calendar    & 暦の種類                            & モデルでは~\nmitem{PARAM_CALENDAR} \\
       time\_units & 時間の単位 & \\
       time\_start & 開始時刻   & \\ \hline
-      \multicolumn{3}{l}{\nmitem{History_TITLE, History_SOURCE, History_INSTITUTION}は第\ref{sec:output}節を参照。} \\
+      \multicolumn{3}{l}{\nmitem{HISTORY_TITLE, HISTORY_SOURCE, HISTORY_INSTITUTION}は第\ref{sec:output}節を参照。} \\
       \multicolumn{3}{l}{\nmitem{PRC_NUM_X, PRC_NUM_Y, PRC_PERIODIC_X, PRC_PERIODIC_Y}、\nmitem{KMAX, IMAXG, JMAXG}は}  \\
       \multicolumn{3}{l}{第\ref{sec:domain}節を参照。\nmitem{PARAM_CALENDAR}は第\ref{subsec:calendar}節を参照。} \\ \hline
     \end{tabularx}

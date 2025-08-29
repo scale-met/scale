@@ -357,7 +357,7 @@ The following is the parameters in \namelist{PARAM_ATMOS_BOUNDARY}.
   \verb| ATMOS_BOUNDARY_LINEAR_H = .false.,    | & ; Profile type in the x- and y-direction. If \verb|.true.|, it is a linear profile, otherwise a exponential profile. \\
   \verb| ATMOS_BOUNDARY_EXP_H = 2.0D0,         | & ; Factor of the exponent of the exponential profile. \\
   \verb| ATMOS_BOUNDARY_DENS_ADJUST = .false., | & ; Switch of the mass flux adjustment. \\
-  \verb| ATMOS_BOUNDARY_DENS_ADJUST_TAU | \textbackslash \\
+  \verb| ATMOS_BOUNDARY_DENS_ADJUST_tau        | \textbackslash \\
   ~~\verb|     = -1.0D0,                       | & ; Time scale of the density nudging when the mass flux adjustment is enabled (in second). \\
 }
 
@@ -415,11 +415,11 @@ The density nudging is effective to reduce the bias of total mass in the simulat
 As a way to reduce the mass bias keeping the pressure gradient, the adjustment of the mass flux is available.
 By using the adjustment of the mass flux, the density nudging could be weakened.
 %
-If \nmitem{ATMOS_BOUNDARY_DENS_ADJUSTMENT} = \verb|.true.|,
+If \nmitem{ATMOS_BOUNDARY_DENS_ADJUST} = \verb|.true.|,
 the mass flux at the lateral boundaries is adjusted so that the difference in the total mass between the parent model and the simulation becomes small.
 For example, if the total mass in the simulation is less than that in the parent model, the $\rho u$ at the western boundary and the $\rho v$ at the southern boundary are increased, and the $\rho u$ at the eastern boundary and the $\rho v$ at the northern boundary are decreased to enlarge the total mass convergence.
 The mass flux adjustment is available only for the \verb|REAL| boundary type and child domain of the online nesting.
-When the mass flux adjustment is enabled, the time scale of the density nudging is specified by \nmitem{ATMOS_BOUNDARY_DENS_ADJUSTMENT_TAU}.
+When the mass flux adjustment is enabled, the time scale of the density nudging is specified by \nmitem{ATMOS_BOUNDARY_DENS_ADJUST_tau}.
 If the value is negative, the time scale is internally determined as 6 times smaller than the time interval of the boundary data.
 To weaken the density nudging, set the time scale larger than \nmitem{ATMOS_BOUNDARY_TAUX} and \nmitem{ATMOS_BOUNDARY_TAUY}.
 The adjustment method in \scalerm is constructed under the assumption that the total mass change due to convergence of the mass flux at the lateral boundaries is much larger than that due to the physical processes, such as precipitation and surface latent heat flux.

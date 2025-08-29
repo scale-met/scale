@@ -8,7 +8,7 @@
 \editboxtwo{
 \verb|&PARAM_MONITOR                      | & \\
 \verb| MONITOR_OUT_BASENAME  = "monitor", | & ; 出力ファイルのベース名 \\
-\verb| MONITOR_USEDEVATION   = .true.,    | & ; 最初のステップからの偏差を使うか? \\
+\verb| MONITOR_USEDEVIATION   = .true.,    | & ; 最初のステップからの偏差を使うか? \\
 \verb| MONITOR_GLOBAL_SUM    = .true.,    | & ; 全領域積算値を使うか? \\
 \verb| MONITOR_STEP_INTERVAL = 1,         | & ; モニター出力ステップ間隔 \\
 \verb|/                                   | & \\
@@ -33,7 +33,7 @@
 モニター出力の時間間隔は、時間刻み幅($\Delta t$)の倍数として\nmitem{MONITOR_STEP_INTERVAL}に指定する。\\
 
 
-例えば、 \nmitem{MONITOR_STEP_INTERVAL} \verb|= 10| および \nmitem{MONITOR_USEDEVATION}\verb|=.true.|と指定して、
+例えば、 \nmitem{MONITOR_STEP_INTERVAL} \verb|= 10| および \nmitem{MONITOR_USEDEVIATION}\verb|=.true.|と指定して、
 \namelist{MONITOR_ITEM}に以下の設定を付け加えたとする。
 %
 \editbox{

@@ -60,13 +60,13 @@ If you want to use restart files, the setting is like
   \textcolor{blue}{\verb| TIME_DT_LAND_RESTART       = 900.D0,|} & Time interval of restart data output\\
   \textcolor{blue}{\verb| TIME_DT_LAND_RESTART_UNIT  = "SEC",|} & \\
   \textcolor{blue}{\verb| TIME_DT_URBAN_RESTART      = 900.D0,|} & Time interval of restart data output\\
-  \textcolor{blue}{\verb| TIME_DT_URBASN_RESTART_UNIT = "SEC",|} & \\
+  \textcolor{blue}{\verb| TIME_DT_URBAN_RESTART_UNIT = "SEC",|} & \\
   \verb|/|& \\
 }
 For details of these parameters, see Section \ref{sec:restart}.
 
 
-All necessary variables for the generation of initial and boundary data for the child domain must be described in \namelist{FILE_HISTORY_ITEM} in the file \runconf.
+All necessary variables for the generation of initial and boundary data for the child domain must be described in \namelist{HISTORY_ITEM} in the file \runconf.
 The necessary variables for offline nesting depends on the setting of the simulation in the child domain, the following is variables in standard real atmospheric simulations.
 \begin{alltt}
   DENS, W (or MOMZ), Umet (or U, MOMX), Vmet (or V, MOMY), PT (or RHOT, T), PRES, QV

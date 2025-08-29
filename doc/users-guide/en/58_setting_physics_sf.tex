@@ -28,7 +28,7 @@ Using these models, the surface fluxes are individually calculated in these mode
 \end{table}
 
 
-The time step to call the surface flux scheme is configured in \nmitem{PARAM_DT_ATMOS_PHY_SF} and \nmitem{PARAM_DT_ATMOS_PHY_SF_UNIT} in \namelist{PARAM_TIME}.
+The time step to call the surface flux scheme is configured in \nmitem{TIME_DT_ATMOS_PHY_SF} and \nmitem{TIME_DT_ATMOS_PHY_SF_UNIT} in \namelist{PARAM_TIME}.
 Refer to Section \ref{sec:timeintiv} for the detailed configuration of the time step.
 
 
@@ -57,8 +57,8 @@ If \nmitem{ATMOS_PHY_SF_TYPE} is \verb|CONST|, the surface flux is determined as
  \verb|/|            & \\
 }
 
-If \nmitem{ATMOS_PHY_SF_FLAG_MOM_FLUX} is 0, a constant bulk coefficient is used to calculate the surface momentum flux; its value is specified by \nmitem{ATMOS_PHY_SF_Const_Cm}. \\
-If \nmitem{ATMOS_PHY_SF_FLAG_MOM_FLUX} is 1, a constant friction velocity is used to calculate the bulk coefficient; its value is specified by \nmitem{ATMOS_PHY_SF_Const_Ustar}.
+If \nmitem{ATMOS_PHY_SF_FLG_MOM_FLUX} is 0, a constant bulk coefficient is used to calculate the surface momentum flux; its value is specified by \nmitem{ATMOS_PHY_SF_Const_Cm}. \\
+If \nmitem{ATMOS_PHY_SF_FLG_MOM_FLUX} is 1, a constant friction velocity is used to calculate the bulk coefficient; its value is specified by \nmitem{ATMOS_PHY_SF_Const_Ustar}.
 In the constant friction velocity case, the lower limit of the coefficient is set by \nmitem{ATMOS_PHY_SF_Cm_min}.
 The lower limit of absolute velocity at the lowermost layer used in the calculation is set by \nmitem{ATMOS_PHY_SF_U_minM} in both cases.
 
