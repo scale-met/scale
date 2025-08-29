@@ -555,14 +555,16 @@ $\ast\ast$ &\verb|RH2|     & 2m 相対湿度 (Q2がある場合は省略可) & [
 $\ast\ast$ &\verb|Q2|      & 2m 比湿 (RH2がある場合は省略可)    & [kg/kg] & \verb|map| \\
     $\ast$ &\verb|TOPO|    & GCMの地形                         & [m]      & \verb|map| \\
     $\ast$ &\verb|lsmask|  & GCMの海陸分布                     & 0:海1:陸 & \verb|map| \\
-           &\verb|LAND_SFC_TEMP|, \verb|SFC_TEMP|, \verb|SKINT|   & 地表面温度                        & [K]      & \verb|map| \\
+           &\verb|LAND_SFC_TEMP| & 地表面温度                  & [K]      & \verb|map| \\
+           &\verb|SFC_TEMP|&                                   &          &   \\
+           &\verb|SKINT|   &                                   &          &   \\
            &\verb|llev|    & 土壌の深さ                        & [m]      & \verb|levels| \\
            &\verb|LAND_TEMP|, \verb|STEMP|   & 土壌温度                          & [K]      & \verb|map| \\
            &\verb|LAND_WATER|, \verb|SMOISVC| & 土壌水分(体積含水率)              & [-]      & \verb|map| \\
            &               & (SMOISDS がある場合は省略可)      &          &            \\
            &\verb|SMOISDS| & 土壌水分(飽和度)                  & [-]      & \verb|map| \\
            &               & (SMOISVC がある場合は省略可)      &          &            \\
-           &\verb|OCEAN_SFC_TEMP| or \verb|SST|     & 海面温度(SKINTがある場合は省略可) & [K]      & \verb|map| \\ \hline
+           &\verb|OCEAN_SFC_TEMP|, \verb|SST|     & 海面温度(SKINTがある場合は省略可) & [K]      & \verb|map| \\ \hline
 \end{tabularx}
 \end{center}
 \end{table}
