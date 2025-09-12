@@ -53,22 +53,22 @@
 空間内挿の種類およびそのレベルをそれぞれ \nmitem{CNVUSER_INTERP_TYPE} および \nmitem{CNVUSER_INTERP_LEVEL} で指定する。
 空間内挿についての詳細は \ref{sec:datainput_grads}節参照のこと。
 
-出力ファイル中のタイトル、変数名、変数の説明、変数の単位は、\nmitem{CNVUSE_OUT_TITLE}, \\
-\nmitem{CNVUSE_OUT_VARNAME}, \nmitem{CNVUSE_OUT_VARDESC}, \nmitem{CNVUSE_OUT_VARUNIT} でそれぞれ設定する。
-ユーザ定義データの種類が \verb|GrADS| の場合は, \nmitem{CNVUSE_OUT_VARNAME} が設定されていなければ \nmitem{CNVUSER_GrADS_VARNAME} が出力変数名として用いられる。
+出力ファイル中のタイトル、変数名、変数の説明、変数の単位は、\nmitem{CNVUSER_OUT_TITLE}, \\
+\nmitem{CNVUSER_OUT_VARNAME}, \nmitem{CNVUSER_OUT_VARDESC}, \nmitem{CNVUSER_OUT_VARUNIT} でそれぞれ設定する。
+ユーザ定義データの種類が \verb|GrADS| の場合は, \nmitem{CNVUSER_OUT_VARNAME} が設定されていなければ \nmitem{CNVUSER_GrADS_VARNAME} が出力変数名として用いられる。
 
 \nmitem{CNVUSER_OUT_DTYPE} が \verb|DEFAULT|の場合, シミュレーションにおけるデータタイプが使われる。
 シミュレーションのデータタイプのデフォルト値は \verb|REAL8| であり、\scalerm が \\
-環境変数 \verb|SCALE_USE_SINGLEFP = "T"| としてコンパイルされた場合 (\ref{sec:compile}章参照) は \verb|REAL4| となる。
+環境変数 \verb|SCALE_USE_SINGLEFP = "T"| としてコンパイルされた場合 (\ref{sec:compile}節参照) は \verb|REAL4| となる。
 
 
 ユーザ定義データの時間ステップ数は \nmitem{CNVUSER_NSTEPS} で指定する。
-出力ファイル中の時刻座標の初期値は \namelist{PARAM_TIME} の \nmitem{TIME_STARTDATE} (\ref{sec:timeintiv}章参照) で指定し、時間間隔は \nmitem{CNVUSER_OUT_DT} で秒単位で指定する。
+出力ファイル中の時刻座標の初期値は \namelist{PARAM_TIME} の \nmitem{TIME_STARTDATE} (\ref{sec:timeintiv}節参照) で指定し、時間間隔は \nmitem{CNVUSER_OUT_DT} で秒単位で指定する。
 
 
 \verb|GrADS| タイプでは、入力のデータ構造を記述したネームリストファイルが必要である。
 ネームリストファイルは \nmitem{USERFILE_GrADS_FILENAME} で指定する。
-ネームリストの詳細については \ref{sec:datainput_grads} 章を参照のこと。
+ネームリストの詳細については \ref{sec:datainput_grads} 節を参照のこと。
 デフォルトでは、緯度および経度の名前はそれぞれ \verb|lat| および \verb|lon| である。
 デフォルト値と異なる場合は、それぞれ \nmitem{CNVUSER_GrADS_LATNAME} および \nmitem{CNVUSER_GrADS_LONNAME} で指定する。
 \verb|GrADS| タイプのユーザ定義データの変換を行う2つのサンプルが \\
@@ -97,7 +97,7 @@
 \verb|TILE| タイプは、空間方向にタイル状に分割されたユーザ定義データを読み込む。
 個々のタイルデータは ダイレクトアクセスのバイナリデータでなければならない。
 バイナリデータの種類は \nmitem{CNVUSER_TILE_DTYPE} で指定する。
-データは、等間隔の緯度経度格子である必要があるり、それぞれの間隔は、\nmitem{CNVUSER_TILE_DLAT} および \nmitem{CNVUSER_TILE_DLON} で指定する。
+データは、等間隔の緯度経度格子である必要があり、それぞれの間隔は、\nmitem{CNVUSER_TILE_DLAT} および \nmitem{CNVUSER_TILE_DLON} で指定する。
 個々のタイルデータファイルの名前やカバーする領域の情報を記述したカタログファイルが必要となる。
 カタログファイルの名前は \nmitem{CNVUSER_TILE_CATALOGUE} で指定する。
 カタログファイルおよびタイルデータファイルは \nmitem{CNVUSER_TILE_DIR} で指定するディレクトリに配置する。

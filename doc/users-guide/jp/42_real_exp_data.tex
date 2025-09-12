@@ -14,7 +14,7 @@
     \multicolumn{3}{l}{\scalerm の地形と土地利用を作成するための元データ}\\ \hline
     & \multicolumn{2}{l}{\color{blue}{標高データ}}\\
     & \multicolumn{2}{l}{\color{blue}{土地利用区分データ}}\\ \hline
-    \multicolumn{3}{l}{\scalerm の初期値境界値を作成するための外部入力データ(一般的にはGCMデータ)}\\ \hline
+    \multicolumn{3}{l}{\scalerm の初期値/境界値を作成するための外部入力データ(一般的にはGCMデータ)}\\ \hline
     &  \multicolumn{2}{l}{\color{blue}{親モデルの緯度・経度情報}}\\
     &  \multicolumn{2}{l}{--- 3次元大気データ ---}\\
     & &  \multicolumn{1}{l}{\color{blue}{東西風速、南北風速、気温、比湿(相対湿度)、気圧、ジオポテンシャル高度}} \\
@@ -69,7 +69,7 @@ GLCCv2 の土地利用区分データを{\scalerm}では用意している。
 
 \subsubsection{大気・陸面・海面水温データ}
 初期値/境界値データは、4 byteバイナリ(\grads 形式。以降「binary」形式と表記)に変換すれば読み込める。
-上述したように「バイナリ」データはユーザーが用意する.
+上述したように「バイナリ」データはユーザーが用意する。
 ただし、本チュートリアルでは、この「バイナリ」データを準備するためのプログラムを
 ディレクトリ\verb|${Tutorial_DIR}/real/tools/|に用意してある。
 手順を以下で説明する。

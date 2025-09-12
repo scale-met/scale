@@ -41,7 +41,7 @@
 
 \nmitem{MAPPROJECTION_type}は地図投影法の種類を表しており、\verb|MER|はメルカトル図法を意味する。
 表\ref{tab:map_proj}は、\scalerm で現在選択できる地図投影法を示している。
-メルカトル図法の場合には、投射する円筒に接する基準緯線を\nmitem{MAPPROJECTION_M_lat}で設定する(単位は度)。
+メルカトル図法の場合には、投影する円筒に接する基準緯線を\nmitem{MAPPROJECTION_M_lat}で設定する(単位は度)。
 一般的に基準緯線は赤道にとることが多い。
 しかし、メルカトル図法は基準緯線に近いほど歪みが少なく正確であるので、
 \scalerm では、\nmitem{MAPPROJECTION_M_lat}を陽に指定しなければ
@@ -60,10 +60,10 @@
 \verb|/| \\
 }
 \scalerm では、2標準緯線型の投影方法を採用している。
-南側、北側の標準緯線はそれぞれ\nmitem{MAPROJECTION_LC_lat1, MAPROJECTION_LC_lat2}で指定する(単位は[度])。
+南側、北側の標準緯線はそれぞれ\nmitem{MAPPROJECTION_LC_lat1, MAPPROJECTION_LC_lat2}で指定する(単位は[度])。
 両標準緯線に挟まれた領域では、経線に対する緯線の長さの比が、地球の楕円体面上での長さの比と近くなるように調節される。
 
-さらに下記のように設定すれば、基準点(\nmitem{MAPROJECTION_basepoint_x, MAPROJECTION_basepoint_y})を、
+さらに下記のように設定すれば、基準点(\nmitem{MAPPROJECTION_basepoint_x, MAPPROJECTION_basepoint_y})を、
 デフォルト設定である計算領域の中心からずらすことができる。\\~\\
 \editbox{
 \verb|&PARAM_MAPPROJECTION| \\
@@ -78,7 +78,7 @@
 }
 
 地図投影の中心位置は、計算領域の南西端（左下角）からの距離によって指定する。つまり、\\
-\nmitem{MAPROJECTION_basepoint_x, MAPPROJECTION_basepoint_y}はそれぞれ、
+\nmitem{MAPPROJECTION_basepoint_x, MAPPROJECTION_basepoint_y}はそれぞれ、
 \XDIR や \YDIR に対する左下角と基準位置の間の距離である(単位は[m])。
 これらを指定しない場合は、地図投影の中心は計算領域の中心に設定される。
 図\ref{fig:map_lc}に、両方の場合における地図投影の中心と計算領域の関係を示す。

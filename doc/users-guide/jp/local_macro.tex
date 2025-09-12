@@ -1,4 +1,8 @@
-\newcommand{\namelist}[1]{{\color{magenta}\texttt{[\detokenize{#1}]}}}
+%\newcommand{\namelist}[1]{{\color{magenta}\texttt{[\detokenize{#1}]}}}
+\DeclareRobustCommand{\namelist}[1]{%
+  \leavevmode % 段落を確実に開始
+  {\ttfamily\color{magenta}[\detokenize{#1}]}%
+}
 \newcommand{\nmitem}[1]{{\color{magenta}\texttt{(\detokenize{#1})}}}
 %数式モード
 \newcommand{\nmitemeq}[1]{{\texttt{\detokenize{#1}}}}

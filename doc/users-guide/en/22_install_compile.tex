@@ -28,7 +28,7 @@ Several variations of the Makedef file corresponding to computer environment are
 Choose a Makedef file according to your environment.
 Table \ref{tab:makedef} shows environments that Makedef files have supported. If there is no file for your environment, create a Makedif file by modifying any existing one.
 For example,
-if you use Linux x86-64 OS, a GNU compiler and openMPI,
+if you use Linux x86-64 OS, a GNU compiler and OpenMPI,
 "Makedef.Linux64-gnu-ompi" is apropriate.
 An environment variable must also be specified as follows:
 \begin{verbatim}
@@ -41,9 +41,9 @@ If the environment is always the same, it is convenient to explicitly describe t
 \caption{Examples of environments and their corresponding Makedef files.}
 \begin{tabularx}{150mm}{|l|l|X|l|} \hline
  \rowcolor[gray]{0.9} OS/Computer & Compiler & MPI & Makedef file \\ \hline
-                 & gcc/gfortran & openMPI  & Makedef.Linux64-gnu-ompi \\ \cline{2-4}
- Linux OS x86-64 & icc/ifort    & intelMPI & Makedef.Linux64-intel-impi \\ \hline
- Mac OS          & gcc/gfortran & openMPI  & Makedef.MacOSX-gnu-ompi \\ \hline
+                 & gcc/gfortran & OpenMPI  & Makedef.Linux64-gnu-ompi \\ \cline{2-4}
+ Linux OS x86-64 & icc/ifort    & IntelMPI & Makedef.Linux64-intel-impi \\ \hline
+ Mac OS          & gcc/gfortran & OpenMPI  & Makedef.MacOSX-gnu-ompi \\ \hline
  Fujitsu FX700/FX1000 & fccpx/frtpx & mpiccpx/mpifrtpx & Makedef.FX700 \\ \hline
 \end{tabularx}
 \label{tab:makedef}

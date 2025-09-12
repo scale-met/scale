@@ -73,9 +73,9 @@
 \end{enumerate}
 
 \namelist{PARAM_TIME}内の\nmitem{TIME_DT_ATMOS_PHY_CP}で指定する、
-KF を呼び出す時間間隔もまたチューニングパラメータであり、降水量に影響を及す。
+KF を呼び出す時間間隔もまたチューニングパラメータであり、降水量に影響を及ぼす。
 \nmitem{TIME_DT_ATMOS_PHY_CP}の最初の設定として 300 秒を推奨する。
-\nmitem{PALAM_ATMOS_PHY_CP_kf_LOG}を\verb|true|にした場合は、
+\nmitem{PARAM_ATMOS_PHY_CP_kf_LOG}を\verb|true|にした場合は、
 上昇流の発生源となる層がモデルの上下端を超えた際に警告メッセージを出力する。
 上昇流の発生源となる層はしきい値(デフォルトでは 50 hPa)よりも厚い必要があるが、
 この条件を満たさなくても計算は止まらない。

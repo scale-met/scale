@@ -36,16 +36,16 @@
 \caption{環境例およびそれに対応する Makedefファイル}
 \begin{tabularx}{150mm}{|l|l|X|l|} \hline
  \rowcolor[gray]{0.9} OS/計算機 & コンパイラ & MPI & Makedefファイル \\ \hline
-                 & gcc/gfortran & openMPI & Makedef.Linux64-gnu-ompi \\ \cline{2-4}
- Linux OS x86-64 & icc/ifort & intelMPI & Makedef.Linux64-intel-impi \\ \hline
- macOS           & gcc/gfortran & openMPI & Makedef.MacOSX-gnu-ompi \\ \hline
+                 & gcc/gfortran & OpenMPI & Makedef.Linux64-gnu-ompi \\ \cline{2-4}
+ Linux OS x86-64 & icc/ifort & IntelMPI & Makedef.Linux64-intel-impi \\ \hline
+ macOS           & gcc/gfortran & OpenMPI & Makedef.MacOSX-gnu-ompi \\ \hline
  Fujitsu FX700/FX100 & fccpx/frtpx & mpiccpx/mpifrtpx & Makedef.FX700 \\ \hline
 \end{tabularx}
 \label{tab:makedef}
 \end{center}
 \end{table}
 %%
-例えば Linux x86-64 OS、GNUコンパイラ、openMPI を使用する場合には、
+例えば Linux x86-64 OS、GNUコンパイラ、OpenMPI を使用する場合には、
 該当する Makedef ファイルは「\verb|Makedef.Linux64-gnu-ompi|」である。
 このとき、環境変数は下記のように設定する必要がある。
 \begin{alltt}
