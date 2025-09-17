@@ -242,7 +242,7 @@ The namelist file is specified by \nmitem{NM_FILE} of \namelist{PARAM_MKINIT_REA
 \verb|/|\\
 }
 
-Definition of the magnitude of the water contents in the file is specified by \nmitem{MIXING_RATION}.
+Definition of the magnitude of the water contents in the file is specified by \nmitem{MIXING_RATIO}.
 It is ``\verb|.true.|'' when it is mixing ratio, that is ratio to the dry air mass, otherwise ratio to the total air mass.
 
 
@@ -275,7 +275,7 @@ The correspondence of the names of coordinates are specified by the \namelist{Ne
 The names for the staggered grid is required only for atmosphere.
 
 The correspondence of variable names are specified with the \namelist{NetCDF_ITEM}.
-The explanations of \namelist{NetCDF_ITEM} is described in Table \ref{tbl:namelist_netcdf_item}.
+The explanations of \namelist{NetCDF_ITEM} is described in Table \ref{tab:namelist_netcdf_item}.
 The list of the \nmitem{item} is in the table \ref{tab:netcdf_item}.
 Note that other item is available for tracer variables which depending on experimental configuration.
 
@@ -386,7 +386,6 @@ Item name \nmitem{item} & Explanation    & Note \\ \hline
 
 If the binary data is used as input files,
 you need to prepare data according to the format used in \grads.
-For the details, see \url{http://cola.gmu.edu/grads/gadoc/aboutgriddeddata.html#structure} .
 
 An example of configurations in \namelist{PARAM_MKINIT_REAL_(ATMOS|OCEAN|LAND)} for the binary format data is as follows:\editbox{
 \verb|&PARAM_MKINIT_REAL_ATMOS|\\
@@ -454,10 +453,10 @@ The following is an example of the namelist file \verb|namelist.grads_boundary*|
 \verb|&GrADS_ITEM  name='RH2',        dtype='map',     fname='FNLsfc', startrec=9,  totalrec=9   / |  \\
 \verb|&GrADS_ITEM  name='llev',       dtype='levels',  lnum=4, lvars=0.05,0.25,0.70,1.50, /        |  \\
 ~~~~~~~~\verb| missval=9.999e+20 /|  \\
-\verb|&GrADS_ITEM  name='LAND_TEMP',  dtype='map',     fname='FNLland', nz=4, startrec=1, totalrec=8,|\\
-~~~~~~~~\verb| missval=9.999e+20 /|  \\
-\verb|&GrADS_ITEM  name='LAND_WATER', dtype='map',     fname='FNLland', nz=4, startrec=5, totalrec=8,|\\
-~~~~~~~~\verb| missval=9.999e+20 /|  \\
+\verb|&GrADS_ITEM  name='LAND_TEMP',  dtype='map',     fname='FNLland', nz=4, startrec=1, |\\
+~~~~~~~~\verb| totalrec=8, missval=9.999e+20 /|  \\
+\verb|&GrADS_ITEM  name='LAND_WATER', dtype='map',     fname='FNLland', nz=4, startrec=5, |\\
+~~~~~~~~\verb| totalrec=8, missval=9.999e+20 /|  \\
 }
 
 The default value of the number of grids is specified as \verb|nx, ny, nz| in \namelist{GrADS_DIMS}.
@@ -546,7 +545,9 @@ $\ast\ast$ &\verb|Q2|      & 2m specific humidity             & [kg/kg]        &
            &               & (optional if RH2 is given)       &                &                    \\
     $\ast$ &\verb|TOPO|    & topography of GCM                & [m]            & \verb|map|         \\
     $\ast$ &\verb|lsmask|  & ocean--land distribution of GCM  & 0:ocean,1:land & \verb|map|         \\
-           &\verb|LAND_SFC_TEMP|, \verb|SFC_TEMP|, \verb|SKINT|   & surface temperature              & [K]            & \verb|map|         \\
+           &\verb|LAND_SFC_TEMP|  & surface temperature       & [K]            & \verb|map|         \\
+           &\verb|SFC_TEMP|&                                  &                &       \\
+           &\verb|SKINT|   &                                  &                &       \\
            &\verb|llev|    & soil depth                       & [m]            & \verb|levels|      \\
            &\verb|LAND_TEMP|, \verb|STEMP| & soil temperature                 & [K]            & \verb|map|         \\
            &\verb|LAND_WATER|, \verb|SMOISVC| & soil moisture (volume fraction)  & [-]            & \verb|map|         \\

@@ -21,9 +21,9 @@
     \rowcolor[gray]{0.9}  スキーム名 & スキームの説明\\ \hline
       \verb|NONE|         & 地表面フラックスを計算しない(海面・陸面・都市モデルを用いる場合はCOUPLEに変更される) \\
       \verb|OFF|          & 地表面フラックスを計算しない \\
-      \verb|CONST|   　　　& 地表面フラックスの計算に固定が使われる \\
-      \verb|BULK|    　　　& 地表面フラックスをバルクモデルで計算 \\
-      \verb|COUPLE|  　　　& 海面・陸面・都市モデルから表面フラックスを受け取る \\
+      \verb|CONST|        & 地表面フラックスの計算に固定が使われる \\
+      \verb|BULK|         & 地表面フラックスをバルクモデルで計算 \\
+      \verb|COUPLE|       & 海面・陸面・都市モデルから表面フラックスを受け取る \\
     \hline
   \end{tabularx}
 \end{center}
@@ -57,9 +57,9 @@
  \verb|/|            & \\
 }
 
-\nmitem{ATMOS_PHY_SF_FLAG_MOM_FLUX} が 0 の場合は、運動量に対するバルク交換係数として固定値が使われる。
+\nmitem{ATMOS_PHY_SF_FLG_MOM_FLUX} が 0 の場合は、運動量に対するバルク交換係数として固定値が使われる。
 係数の値は \nmitem{ATMOS_PHY_SF_Const_Cm} で設定する。
-\nmitem{ATMOS_PHY_SF_FLAG_MOM_FLUX} が 1 の場合は、固定値の摩擦速度を用いて交換係数が計算される。
+\nmitem{ATMOS_PHY_SF_FLG_MOM_FLUX} が 1 の場合は、固定値の摩擦速度を用いて交換係数が計算される。
 摩擦速度の値は \\ \nmitem{ATMOS_PHY_SF_Const_Ustar} で設定する。
 摩擦速度固定の場合、計算される交換係数の下限値を \nmitem{ATMOS_PHY_SF_Cm_min} で設定する。
 両方の場合において、計算中に用いる最下層の絶対速度の下限値を \nmitem{ATMOS_PHY_SF_U_minM} で設定する。
@@ -79,8 +79,19 @@ $\nmitemeq{ATMOS_PHY_SF_Const_SH} \times \sin(2\pi t/3600/\nmitemeq{ATMOS_PHY_SF
 %-------------------------------------------------------------------------------
 \nmitem{ATMOS_PHY_SF_TYPE} を \verb|BULK| とした場合は、
 地表面フラックスは表面温度・粗度・アルベドなどの与えた表面状態を用いてバルクモデルによって計算される。
-表面状態の値は初期値ファイルから読み込まれる。
-\verb|scale-rm_init| を用いた初期値作成時において、表面温度、粗度長、短波および長波に対するアルベドは、それぞれ \namelist{PARAM_ATMOS_PHY_SF_VARS} の \nmitem{ATMOS_PHY_SF_DEFAULT_SFC_TEMP}, \nmitem{ATMOS_PHY_SF_DEFAULT_ZSF_Z0}, \nmitem{ATMOS_PHY_SF_DEFAULT_SFC_ALBEDO_SW}, \\ \nmitem{ATMOS_PHY_SF_DEFAULT_SFC_ALBEDO_LW} で設定することができる。
+表面温度、粗度長、短波および長波に対するアルベドは、\verb|run.conf|の\namelist{PARAM_ATMOS_PHY_SF_VARS} で設定することができる。
+%
+\editboxtwo{
+\verb|&PARAM_ATMOS_PHY_SF_VARS                      | & \\
+\verb| ATMOS_PHY_SF_DEFAULT_SFC_TEMP      = 300.0,  | & ; 地表面温度 \\
+\verb| ATMOS_PHY_SF_DEFAULT_SFC_albedo_LW = 0.04,   | & ; 長波放射に対するアルベド \\
+\verb| ATMOS_PHY_SF_DEFAULT_SFC_albedo_SW = 0.10,   | & ; 短波放射に対するアルベド \\
+\verb| ATMOS_PHY_SF_DEFAULT_SFC_Z0M       = 1E-4,   | & ; 運動量粗度   \\
+\verb| ATMOS_PHY_SF_DEFAULT_SFC_Z0H       = 1E-5,   | & ; 熱の粗度     \\
+\verb| ATMOS_PHY_SF_DEFAULT_SFC_Z0E       = 1E-5,   | & ; 水蒸気の粗度 \\
+\verb|/                                             | & \\
+}
+
 
 潜熱フラックスの計算において、蒸発効率を 0 から 1 の範囲で任意に与えることができる。
 この柔軟性によって、海面だけでなく陸面を想定した理想実験を行うことができる。
@@ -103,14 +114,14 @@ $\nmitemeq{ATMOS_PHY_SF_Const_SH} \times \sin(2\pi t/3600/\nmitemeq{ATMOS_PHY_SF
 係数計算のためのパラメータは、以下のように \namelist{PARAM_BULKFLUX} で設定する。
 %
 \editboxtwo{
-\verb|&PARAM_BULKFLUX                      | & \\
-\verb| BULKFLUX_TYPE = "B91W01",           | & ; 表\ref{tab:nml_bulk}に示すバルク交換係数スキームから選択 \\
-\verb| BULKFLUX_Uabs_min = 1.0D-2,         | & ; 地表面フラックス計算における絶対風速の下限値 [m/s] \\
-\verb| BULKFLUX_surfdiag_neutral = .true., | & ; 地表面診断変数の計算において中立を仮定するかどうかのスイッチ \\
-\verb| BULKFLUX_WSCF = 1.2D0,              | & ; w$^{\ast}$ に対する経験係数 \citep{beljaars_1994} \\
-\verb| BULKFLUX_Wstar_min = 1.0E-4,        | & ; w$^{\ast}$ の下限値 [m/s] \\
-\verb| BULKFLUX_NK2018 = .true.,           | & ; \citet{nishizawa_2018} のスキームを使うかどうかのスイッチ \\
-\verb|/                                    | & \\
+\verb|&PARAM_BULKFLUX                        | & \\
+\verb| BULKFLUX_TYPE             = "B91W01", | & ; 表\ref{tab:nml_bulk}に示すバルク交換係数スキームから選択 \\
+\verb| BULKFLUX_Uabs_min         = 1.0D-2,   | & ; 地表面フラックス計算における絶対風速の下限値 [m/s] \\
+\verb| BULKFLUX_surfdiag_neutral = .true.,   | & ; 地表面診断変数の計算において中立を仮定するかどうかのスイッチ \\
+\verb| BULKFLUX_WSCF             = 1.2D0,    | & ; w$^{\ast}$ に対する経験係数 \citep{beljaars_1994} \\
+\verb| BULKFLUX_Wstar_min        = 1.0E-4,   | & ; w$^{\ast}$ の下限値 [m/s] \\
+\verb| BULKFLUX_NK2018           = .true.,   | & ; \citet{nishizawa_2018} のスキームを使うかどうかのスイッチ \\
+\verb|/                                      | & \\
 }
 
 \begin{table}[h]

@@ -19,9 +19,9 @@
     \label{table:netcdf_global_attrs}
     \begin{tabularx}{150mm}{p{50mm}XX} \hline
       名前        & 説明                 & 備考 \\ \hline \hline
-      title       & データの簡潔な説明   & \namelist{PARAM_FILE_HISTORY}の\nmitem{FILE_History_TITLE}の値  \\
-      source      & ソフトウエア名 & ヒストリファイルに対しては\namelist{PARAM_FILE_HISTORY}の\nmitem{FILE_History_SOURCE}の値。他のファイルに対しては\namelist{PARAM_IO}の\nmitem{H_SOURCE}の値\\
-      institution & データ作成者               & ヒストリファイルに対しては\namelist{PARAM_FILE_HISTORY}の\nmitem{FILE_History_INSTITUTION}の値。他のファイルに対しては\namelist{PARAM_IO}の\nmitem{H_INSTITUTE}の値\\
+      title       & データの簡潔な説明   & \namelist{PARAM_FILE_HISTORY}の\nmitem{FILE_HISTORY_TITLE}の値  \\
+      source      & ソフトウエア名 & ヒストリファイルに対しては\namelist{PARAM_FILE_HISTORY}の\nmitem{FILE_HISTORY_SOURCE}の値。他のファイルに対しては\namelist{PARAM_IO}の\nmitem{H_SOURCE}の値\\
+      institution & データ作成者               & ヒストリファイルに対しては\namelist{PARAM_FILE_HISTORY}の\nmitem{FILE_HISTORY_INSTITUTION}の値。他のファイルに対しては\namelist{PARAM_IO}の\nmitem{H_INSTITUTE}の値\\
       rankid      & MPI プロセスのランク番号      & モデルの\verb|PRC_myrank| \\
       Conventions & CF 規約のバージョン       & ``CF-1.6'' for version 5.3 \\
       grid\_name  & 格子の種類                   & \scalerm では``cartesC''  \\
@@ -37,7 +37,7 @@
       Calendar    & 暦の種類                            & モデルでは~\nmitem{PARAM_CALENDAR} \\
       time\_units & 時間の単位 & \\
       time\_start & 開始時刻   & \\ \hline
-      \multicolumn{3}{l}{\nmitem{History_TITLE, History_SOURCE, History_INSTITUTION}は第\ref{sec:output}節を参照。} \\
+      \multicolumn{3}{l}{\nmitem{HISTORY_TITLE, HISTORY_SOURCE, HISTORY_INSTITUTION}は第\ref{sec:output}節を参照。} \\
       \multicolumn{3}{l}{\nmitem{PRC_NUM_X, PRC_NUM_Y, PRC_PERIODIC_X, PRC_PERIODIC_Y}、\nmitem{KMAX, IMAXG, JMAXG}は}  \\
       \multicolumn{3}{l}{第\ref{sec:domain}節を参照。\nmitem{PARAM_CALENDAR}は第\ref{subsec:calendar}節を参照。} \\ \hline
     \end{tabularx}
@@ -56,7 +56,7 @@
 それ以外の場合、ハロ領域データは含まれない。
 
 一方で、ヒストリデータについては、側面境界条件が周期的でなく、
-かつ\namelist{PARAM_HIST}の\nmitem{HIST_BND}を\verb|.true.|とした場合にはハロ領域データが含まる。
+かつ\namelist{PARAM_HIST}の\nmitem{HIST_BND}を\verb|.true.|とした場合にはハロ領域データが含まれる。
 それ以外の場合、ハロ領域データは含まれない。
 詳細は第\ref{sec:output}節を参照されたい。
 
@@ -80,7 +80,7 @@
 格子の面積データや体積データもそれぞれ、「cell\_area**」と「cell\_volume**」としてファイルに格納されている。
 各変数の「cell\_measures」属性には、対応する面積や体積データを指定する。
 
-地図投影データは無次元変数として格納されおり、これらの名前は変数の属性「grid\_mapping」で指定する。
+地図投影データは無次元変数として格納されており、これらの名前は変数の属性「grid\_mapping」で指定する。
 
 スタッガード格子の位置関係に関する情報は、SGRID 規約(\url{https://github.com/sgrid/sgrid})に基づいて、
 属性や無次元変数として格納している。
@@ -202,7 +202,7 @@ height\_uvw & ヒストリファイル中の(zh,yh,xh) orリスタート/初期�
 \end{figure}
 \begin{figure}[tbh]
 \begin{center}
-  \includegraphics[width=1.0\hsize]{./../../figure/vertical_coordinate_final2.png}\\
+  \includegraphics[width=1.0\hsize]{./../../figure/vertical_coordinate_final3.png}\\
   \caption{{\scalenetcdf}ファイルにおける鉛直座標}
   \label{fig:netcdfverticalcoordinate}
 \end{center}
@@ -217,7 +217,7 @@ height\_uvw & ヒストリファイル中の(zh,yh,xh) orリスタート/初期�
 \subsection{単一ファイルの入出力} \label{subsec:single_io}
 デフォルトでは、全てのデータファイルは各プロセスごとに出力される。
 つまり、ファイルI/O は各プロセスで独立である。
-pnetCDF を使用するように \scalerm をコンパルした場合(環境変数を SCALE\_ENABLE\_PNETCDF=T と設定してコンパルした場合)は、全プロセスからのデータを単一ファイルにまとめることができる(第\ref{subsec:environment}節を参照)。
+pnetCDF を使用するように \scalerm をコンパイルした場合(環境変数を SCALE\_ENABLE\_PNETCDF=T と設定してコンパイルした場合)は、全プロセスからのデータを単一ファイルにまとめることができる(第\ref{subsec:environment}節を参照)。
 これを行うには、 \namelist{PARAM_FILE}の\nmitem{FILE_AGGREGATE}を\verb|.true.|に設定する必要がある。
 あるいは、ヒストリ、地形、土地利用区分ファイルといった個々のファイルの種類に対して、
 単一ファイルの入出力を切り替えることもできる。

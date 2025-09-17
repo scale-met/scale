@@ -155,7 +155,7 @@ module scale_comm_cartesC
      integer,     allocatable :: req_cnt (:)      !< request ID of each MPI send/recv
      integer,     allocatable :: preq_cnt (:)     !< request ID of each MPI PC
      integer,     allocatable :: packid(:)        !< ID of pack
-#if NO_MPI08
+#ifdef NO_MPI08
      integer,           allocatable :: req_list(:,:)  !< request ID set of each variables
      integer,           allocatable :: preq_list(:,:) !< request ID set of each variables for MPI PC
      integer,           allocatable :: win_packWE(:)  !< window ID for MPI onesided
@@ -179,7 +179,7 @@ module scale_comm_cartesC
   integer, private             :: COMM_gid
   type(ginfo_t), private       :: ginfo(COMM_gid_max)
 
-#if NO_MPI08
+#ifdef NO_MPI08
   integer,         private     :: group_packWE !< MPI_Group for pack
   integer,         private     :: group_packNS !< MPI_Group for vars
 #else
@@ -694,6 +694,10 @@ contains
              deallocate( ginfo(gid)%preq_list )
              deallocate( ginfo(gid)%packid )
              ginfo(gid)%vars_num = 0
+#ifdef _OPENACC
+             deallocate( ginfo(gid)%device_ptr )
+             deallocate( ginfo(gid)%device_alloc )
+#endif
 
           end if
 

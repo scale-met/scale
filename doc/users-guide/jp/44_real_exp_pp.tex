@@ -16,11 +16,11 @@ ppディレクトリの中には、\verb|pp.d01.conf|という名前の設定フ
 表\ref{tab:grids}に実験設定を示す。
 
 \verb|pp.d01.conf|のネームリストの中で、計算領域に関係する設定は \namelist{PARAM_PRC_CARTESC}、\\
-\namelist{PARAM_GRID_CARTESC_INDEX}、\namelist{PARAM_GRID_CARTESC}で行っている。
+\namelist{PARAM_ATMOS_GRID_CARTESC_INDEX}、\namelist{PARAM_ATMOS_GRID_CARTESC}で行っている。
 領域全体の総格子点数は、{\XDIR} 、{\YDIR}それぞれ \nmitem{IMAXG} = 90、\nmitem{JMAXG} = 90である。
 {\XDIR} 、{\YDIR}ともに領域は2分割されているので、
 各MPIプロセスが担当する格子数は、{\XDIR} 、{\YDIR}それぞれ 45 ($=90 / 2$) である。
-各方向の格子幅は\namelist{PARAM_GRID_CARTESC}の\nmitem{DX, DY}において 20,000 m（20 km）と指定されている。
+各方向の格子幅は\namelist{PARAM_ATMOS_GRID_CARTESC}の\nmitem{DX, DY}において 20,000 m（20 km）と指定されている。
 したがって、計算領域の一辺の長さは 90 $\times$ 20 km であるので、
 計算領域は 1800 km $\times$ 1800 km の正方領域である。
 
@@ -32,13 +32,13 @@ ppディレクトリの中には、\verb|pp.d01.conf|という名前の設定フ
 \verb| PRC_PERIODIC_Y = .false.,| \\
 \verb|/| \\
  \\
-\verb|&PARAM_INDEX_GRID_CARTESC_INDEX| \\
+\verb|&PARAM_ATMOS_GRID_CARTESC_INDEX| \\
 \verb| KMAX  = 36,| \\
 \verb| IMAXG = 90,| \\
 \verb| JMAXG = 90,| \\
 \verb|/| \\
  \\
-\verb|&PARAM_GRID_CARTESC| \\
+\verb|&PARAM_ATMOS_GRID_CARTESC| \\
 \verb| DX = 20000.0, |\\
 \verb| DY = 20000.0, |\\
 \verb| FZ(:) =    80.841,   248.821,   429.882,   625.045,   835.409,  1062.158,|\\
@@ -55,7 +55,7 @@ ppディレクトリの中には、\verb|pp.d01.conf|という名前の設定フ
 
 \verb|scale-rm_pp|専用のネームリストとして\namelist{PARAM_CONVERT}がある。
 \nmitem{CONVERT_TOPO}を\verb|.true.|にすると標高データが処理され、
-\nmitem{CONVERT_LANDUSE}を\verb|.true.|にすると土地利用区分データが処理がされる。
+\nmitem{CONVERT_LANDUSE}を\verb|.true.|にすると土地利用区分データが処理される。
 
 \editbox{
 \verb|&PARAM_CONVERT| \\

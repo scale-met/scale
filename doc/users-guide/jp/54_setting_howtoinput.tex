@@ -28,7 +28,7 @@ WRF データなど、他の NetCDF 形式のファイルにも対応してい�
 
 その他の形式のデータ（例えば、GRIB/GRIB2 データなど）は、バイナリ形式に変換することで {\scalerm} で読み込むことができる。
 {\scalelib}の最新版の出力ファイル形式は、バージョン5.3以前の形式とは異なる。
-そのため、バージョン5.3以前で作成された初期値/境界値ファイルは本バージョン（{\scalelib}{\version})では使用できない。
+そのため、バージョン5.3以前で作成された初期値/境界値ファイルは本バージョン({\scalelib}{\version})では使用できない。
 
 %%%---------------------------------------------------------------------------------%%%%
 \subsubsection{NetCDF形式とバイナリ形式で共通の設定} \label{sec:datainput_common_setting}
@@ -45,7 +45,7 @@ WRF データなど、他の NetCDF 形式のファイルにも対応してい�
 初期値ファイルを作成する場合には、\nmitem{RESTART_OUTPUT}に\verb|.true.|を設定する。
 初期値ファイルのベース名は\nmitem{RESTART_OUT_BASENAME}で設定する。
 例えば\ref{sec:tutorial_real_intro}節に記述したチュートリアルでは、\nmitem{RESTART_OUT_BASENAME} = ``\verb|init_d01|''を使用している。
-これらの設定は、\scalerm の実行時にリスタートファイルを出力する際にも指定する(詳細は第\ref{sec:restart}章を参照)。
+これらの設定は、\scalerm の実行時にリスタートファイルを出力する際にも指定する(詳細は第\ref{sec:restart}節を参照)。
 生成される初期値ファイルやリスタートファイルは、同じ構造を持つ。
 
 
@@ -160,7 +160,7 @@ NetCDF形式の場合はこの値は無視される。
 \nmitem{USE_SFC_DIAGNOSES}は親モデルの最下層高度よりも低い層における値の計算のためのスイッチである。
 \nmitem{USE_SFC_DIAGNOSES} = \verb|.true.|の場合、T2, RH2, U10, V10, PSFC といった地表面変数が使われる。
 そうでない場合には、等温位および静水圧平衡の仮定のもとで計算される。
-\nmitem{USE_DATA_UNDER_SFC}は、入力データ中の地表よりも低い層のデータを使うか無視するかを決めるのスイッチである。
+\nmitem{USE_DATA_UNDER_SFC}は、入力データ中の地表よりも低い層のデータを使うか無視するかを決めるスイッチである。
 %地表よりも低いデータは、高い山岳域において、高い気圧面で現れることがある。
 \\
 
@@ -252,7 +252,7 @@ NetCDF形式データの\namelist{PARAM_MKINIT_REAL_(ATMOS|OCEAN|LAND)}の設定
 \verb|/|\\
 }
 
-水物質量の定義を\nmitem{MIXING_RATION}で指定する。
+水物質量の定義を\nmitem{MIXING_RATIO}で指定する。
 混合比、つまり乾燥空気に対する質量比の場合は``\verb|.true.|''を指定し、例えば比湿のように全質量比の場合は''\verb|.false.|''とする。
 
 ネームリストの設定例は以下の通りである。
@@ -285,19 +285,19 @@ NetCDF形式データの\namelist{PARAM_MKINIT_REAL_(ATMOS|OCEAN|LAND)}の設定
 スタッガード格子の座標変数名は大気にのみ必要である。
 
 変数名の対応は\namelist{NetCDF_ITEM}で指定する。
-\namelist{NetCDF_ITEM}の説明を表\ref{tbl:namelist_netcdf_item}に示す。
-また、\nmitem{item}のリストを表\ref{tab:netcdf_item}に示す。
+\namelist{NetCDF_ITEM}の説明を表\ref{tab:namelist_netcdf_item}に示す。
+また、\nmitem{item}のリストを表\ref{tab:netcdf_item1},表\ref{tab:netcdf_item2}に示す。
 ここに示しているもの以外にも、実験設定に依存するトレーサー変数も指定可能である。
 
 {\small
 \begin{table}[tbh]
 \begin{center}
 \caption{\namelist{NetCDF_ITEM}のパラメタ}
-\label{tab:netcdf_item}
+\label{tab:namelist_netcdf_item}
 \begin{tabularx}{150mm}{llX} \hline
 \rowcolor[gray]{0.9}
 パラメタ名 & 説明    & 注釈 \\ \hline
-item     & 変数名 & 表\ref{tab:netcdf_item}から選択   \\ \hline
+item     & 変数名 & 表\ref{tab:netcdf_item1}と表\ref{tab:netcdf_item2}から選択   \\ \hline
 name     & NetCDFファイル中の変数名 & \\ \hline
 zstg     & z方向のスタッガード位置に定義されているかどうか & (optional) \\ \hline
 xstg     & x方向のスタッガード位置に定義されているかどうか & (optional) \\ \hline
@@ -313,8 +313,8 @@ factor   & ファクター値 & (optional) \\ \hline
 \begin{table}[tbh]
 \begin{center}
 \caption{\namelist{NetCDF_ITEM}の\nmitem{item}のリスト}
-\label{tab:netcdf_item}
-\begin{tabularx}{150mm}{llX} \hline
+\label{tab:netcdf_item1}
+\begin{tabularx}{150mm}{llp{80mm}} \hline
 \rowcolor[gray]{0.9}
 アイテム名 \nmitem{item} & 説明 & 注釈 \\ \hline
 \verb|lon|      & 経度 & \\ \hline
@@ -356,7 +356,7 @@ factor   & ファクター値 & (optional) \\ \hline
 \begin{table}[tbh]
 \begin{center}
 \caption{\namelist{NetCDF_ITEM}の\nmitem{item}のリスト。前頁からの続き。}
-\label{tab:netcdf_item}
+\label{tab:netcdf_item2}
 \begin{tabularx}{150mm}{llp{55mm}} \hline
 \rowcolor[gray]{0.9}
 アイテム名 \nmitem{item} & 説明 & 注釈 \\ \hline
@@ -395,7 +395,6 @@ factor   & ファクター値 & (optional) \\ \hline
 
 バイナリデータを入力ファイルとして用いる場合は、
 GrADSで使われる形式に従ってデータを用意しておく必要がある。
-GrADSのデータ形式は、\url{http://cola.gmu.edu/grads/gadoc/aboutgriddeddata.html#structure}を参照いただきたい。
 
 GrADS 形式データの\namelist{PARAM_MKINIT_REAL_(ATMOS|OCEAN|LAND)}の設定例は以下の通りである。
 \editbox{
@@ -466,10 +465,10 @@ GrADS 形式データの\namelist{PARAM_MKINIT_REAL_(ATMOS|OCEAN|LAND)}の設定
 \verb|&GrADS_ITEM  name='RH2',         dtype='map',     fname='FNLsfc', startrec=9,  totalrec=9   / |  \\
 \verb|&GrADS_ITEM  name='llev',        dtype='levels',  lnum=4, lvars=0.05,0.25,0.70,1.50, /        |  \\
 ~~~~~~~~\verb| missval=9.999e+20 /|  \\
-\verb|&GrADS_ITEM  name='LAND_TEMP',   dtype='map',     fname='FNLland', nz=4, startrec=1, totalrec=8,|\\
-~~~~~~~~\verb| missval=9.999e+20 /|  \\
-\verb|&GrADS_ITEM  name='LAND_WATERC', dtype='map',     fname='FNLland', nz=4, startrec=5, totalrec=8,|\\
-~~~~~~~~\verb| missval=9.999e+20 /|  \\
+\verb|&GrADS_ITEM  name='LAND_TEMP',   dtype='map',     fname='FNLland', nz=4, startrec=1, |\\
+~~~~~~~~\verb| totalrec=8, missval=9.999e+20 /|  \\
+\verb|&GrADS_ITEM  name='LAND_WATERC', dtype='map',     fname='FNLland', nz=4, startrec=5, |\\
+~~~~~~~~\verb| totalrec=8, missval=9.999e+20 /|  \\
 }
 
 
@@ -555,14 +554,16 @@ $\ast\ast$ &\verb|RH2|     & 2m 相対湿度 (Q2がある場合は省略可) & [
 $\ast\ast$ &\verb|Q2|      & 2m 比湿 (RH2がある場合は省略可)    & [kg/kg] & \verb|map| \\
     $\ast$ &\verb|TOPO|    & GCMの地形                         & [m]      & \verb|map| \\
     $\ast$ &\verb|lsmask|  & GCMの海陸分布                     & 0:海1:陸 & \verb|map| \\
-           &\verb|LAND_SFC_TEMP|, \verb|SFC_TEMP|, \verb|SKINT|   & 地表面温度                        & [K]      & \verb|map| \\
+           &\verb|LAND_SFC_TEMP| & 地表面温度                  & [K]      & \verb|map| \\
+           &\verb|SFC_TEMP|&                                   &          &   \\
+           &\verb|SKINT|   &                                   &          &   \\
            &\verb|llev|    & 土壌の深さ                        & [m]      & \verb|levels| \\
            &\verb|LAND_TEMP|, \verb|STEMP|   & 土壌温度                          & [K]      & \verb|map| \\
            &\verb|LAND_WATER|, \verb|SMOISVC| & 土壌水分(体積含水率)              & [-]      & \verb|map| \\
            &               & (SMOISDS がある場合は省略可)      &          &            \\
            &\verb|SMOISDS| & 土壌水分(飽和度)                  & [-]      & \verb|map| \\
            &               & (SMOISVC がある場合は省略可)      &          &            \\
-           &\verb|OCEAN_SFC_TEMP| or \verb|SST|     & 海面温度(SKINTがある場合は省略可) & [K]      & \verb|map| \\ \hline
+           &\verb|OCEAN_SFC_TEMP|, \verb|SST|     & 海面温度(SKINTがある場合は省略可) & [K]      & \verb|map| \\ \hline
 \end{tabularx}
 \end{center}
 \end{table}

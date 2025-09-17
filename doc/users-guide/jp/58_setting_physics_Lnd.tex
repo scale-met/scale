@@ -13,7 +13,7 @@
 %
 \editboxtwo{
 \verb|&PARAM_LAND                | & \\
-\verb| LAND_DYN_TYPE = "NONE",   | & ; 表\ref{tab:nml_land_dyn}に示す陸の力学から選択 \\
+\verb| LAND_DYN_TYPE = "NONE",   | & ; 表\ref{tab:nml_land_dyn}に示す陸面スキームから選択 \\
 \verb| LAND_SFC_TYPE = "SKIN",   | & ; (\verb|BUCKET|の場合) 表\ref{tab:nml_land_sfc}に示す陸面の種類から選択\\
 \verb|/                          | & \\
 }
@@ -70,7 +70,7 @@
 %-------------------------------------------------------------------------------
 \subsubsection{大気--陸面間のフラックス}
 %-------------------------------------------------------------------------------
-大気-陸間の表面フラックスは、\nmitem{LAND_SFC_TYPE}で選択したスキームによって計算される。
+大気-陸面間の表面フラックスは、\nmitem{LAND_SFC_TYPE}で選択したスキームによって計算される。
 この計算では、\namelist{PARAM_BULKFLUX}の\nmitem{BULKFLUX_TYPE}で指定したバルクスキーム
 (詳細は第\ref{sec:basic_usel_surface}節を参照)が用いられる。
 
@@ -144,7 +144,7 @@
 
 \nmitem{LAND_DYN_BUCKET_nudging_tau}が0である場合は,
 陸面温度の値は外部ファイルによって完全に置き換わる。
-\nmitem{LAND_DYN_BUCKET_nudging_step_fixed}が1以下であば、
+\nmitem{LAND_DYN_BUCKET_nudging_step_fixed}が1以下であれば、
 現時刻における値は外部データを時間内挿することで計算される。
 \nmitem{LAND_DYN_BUCKET_nudging_step_fixed}に特定のステップを指定した場合は、
 そのステップのデータが時間内挿することなく常に用いられる。

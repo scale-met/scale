@@ -50,7 +50,7 @@
 }
 
 
-外部標高データとして、\scalerm は U.S. Geological Survey が提供する GTOPO30 および 国土地理院が提供する GEM50M\footnote{DEM50Mは日本域のみ利用可能です。DEM50M を利用する場合、データ提供元からデータ（\url{https://net.jmc.or.jp/mapdata/map/jmc_mesh50.html}）の購入が必要です。また、SCALE入力フォーマットに変換するためのプログラムについては、開発者までご連絡ください。} をサポートしている。
+外部標高データとして、\scalerm は U.S. Geological Survey が提供する GTOPO30 および 国土地理院が提供する DEM50M\footnote{DEM50Mは日本域のみ利用可能です。DEM50M を利用する場合、データ提供元からデータ（\url{https://net.jmc.or.jp/mapdata/map/jmc_mesh50.html}）の購入が必要です。また、SCALE入力フォーマットに変換するためのプログラムについては、開発者までご連絡ください。} をサポートしている。
 また、ユーザ定義データもサポートしている (詳細は \ref{subsec:topo_userfile}節参照のこと)。
 
 利用する外部データの種類は \nmitem{CNVTOPO_(UseGTOPO30|UseDEM50M|UseUSERFILE)} もしくは \\ \nmitem{CNVTOPO_name} で設定する。
@@ -65,7 +65,7 @@
 
 \begin{table}[tbh]
 \begin{center}
-\caption{\nmitem{CNVTOPO_name} と \nmitem{CNVTOPO_(UseGTOPO30|UseDEM50M|UseUSERFILE)} の設定の関係。}
+\caption{\nmitem{CNVTOPO_name} と \nmitem{CNVTOPO_(UseGTOPO30|UseDEM50M|UseUSERFILE)} の設定の関係}
 \begin{tabularx}{150mm}{l|l|l|l} \hline
   \rowcolor[gray]{0.9} \verb|CNVTOPO_name|   & \verb|CNVTOPO_UseGTOPO30| & \verb|CNVTOPO_UseDEM50M| & \verb|CNVTOPO_UseUSERFILE| \\ \hline
                        \verb|NONE|           & $\ast$         & $\ast$         & $\ast$          \\ \hline
@@ -91,13 +91,13 @@
 GTOPO30 および DEM50M データの内挿には2次元線形補間が用いられ、ユーザ定義データには指定した補完法が用いられる (\ref{subsec:topo_userfile}節参照)。
 
 GTOPO30データを使うためには、データが配置されているディレクトリおよびカタログファイルのパスを \namelist{PARAM_CNVTOPO_GTOPO30} のそれぞれ \nmitem{GTOPO30_IN_DIR} および \nmitem{GTOPO30_IN_CATALOGUE} で指定する必要がある。
-GTOPO30データが \ref{sec:tutorial_real_data}章で説明されている通りに保存されている場合には、これらの値はそれぞれ \verb|$SCALE_DB/topo/GTOPO30/Products| および \\ \verb|$SCALE_DB/topo/GTOPO30/Products/GTOPO30_catalogue.txt| となる。
+GTOPO30データが \ref{sec:tutorial_real_data}節で説明されている通りに保存されている場合には、これらの値はそれぞれ \verb|$SCALE_DB/topo/GTOPO30/Products| および \\ \verb|$SCALE_DB/topo/GTOPO30/Products/GTOPO30_catalogue.txt| となる。
 ここで、\verb|$SCALE_DB| は実際のパスに展開すること。
 同様に、DEM50Mデータについては、\nmitem{DEM50M_IN_DIR} および \\ \nmitem{DEM50_IN_CATALOGUE} に設定し、それぞれ \verb|$SCALE_DB/topo/DEM50M/Products| および \\ \verb|$SCALE_DB/topo/DEM50M/Products/DEM50M_catalogue.txt| となる。
 ユーザ定義データの設定については \ref{subsec:topo_userfile}節で説明されている。
 
 
-\scale グリットに内挿後の地形データに含まれる急な傾斜を平滑化するためのフィルタとして、
+\scale グリッドに内挿後の地形データに含まれる急な傾斜を平滑化するためのフィルタとして、
 ラプラシアンフィルタとガウスシアンフィルタの2種類が用意されている。
 これは\nmitem{CNVTOPO_smooth_type}で選択することができ、
 デフォルトではラプラシアンフィルタが用いられる。
@@ -124,7 +124,7 @@ $\mathrm{RATIO}$ は \nmitem{CNVTOPO_smooth_maxslope_ratio} によって指定�
 
 平滑化や超粘性フィルターをかけると、海岸線がなまり、海岸線付近の海面高度が0より高くなる。
 \nmitem{CNVTOPO_smooth_trim_ocean} を \verb|.true.| に設定すると、フィルター操作のたびに海岸線に沿って地形が切り取られ、海岸線が固定される。
-この際には土壌の総量が保存しないことに注意が必要である。
+この際には土壌の総量が保存されないことに注意が必要である。
 
 \nmitem{CNVTOPO_copy_parent}は、ネスティング計算のための設定である。
 一般的に、子ドメインは親ドメインよりも空間解像度が高いため、子ドメインの方が地形がより細かく表現される。
@@ -162,8 +162,8 @@ $\mathrm{RATIO}$ は \nmitem{CNVTOPO_smooth_maxslope_ratio} によって指定�
 }
 
 
-読み込まれたデータは計算格子へ補完される。
-補完法は \nmitem{USERFILE_INTERP_TYPE} で指定する。
+読み込まれたデータは計算格子へ補間される。
+補間法は \nmitem{USERFILE_INTERP_TYPE} で指定する。
 サポートされているのは \verb|LINEAR| と \verb|DIST-WEIGHT| である。
 詳細については 第\ref{sec:datainput_grads}章を参照のこと。
 \verb|DIST-WEIGHT| を指定した場合に用いられる隣接点の数は \nmitem{USERFILE_INTERP_LEVEL} で指定する。
@@ -183,7 +183,7 @@ $\mathrm{RATIO}$ は \nmitem{CNVTOPO_smooth_maxslope_ratio} によって指定�
 \verb|$SCALE_DB/topo/GTOPO30/Products/GTOPO30_catalogue.txt| が参考になる。
 
 以下は``TILE'' データ用の \namelist{PARAM_CNVTOPO_USERFILE} の設定例である。
-この例では、\verb|catalogue.txt|という名前のカタログファイルが、ティレクトリ\verb|./input_topo|に存在し、
+この例では、\verb|catalogue.txt|という名前のカタログファイルが、ディレクトリ\verb|./input_topo|に存在し、
 データは2バイトの整数で格納されている。
 \editboxtwo{
 \verb|&PARAM_CNVTOPO_USERFILE                     | & \\

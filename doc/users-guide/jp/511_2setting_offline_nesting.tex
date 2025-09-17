@@ -59,12 +59,12 @@
   \textcolor{blue}{\verb| TIME_DT_LAND_RESTART       = 900.D0,|} & リスタートデータの出力時間間隔\\
   \textcolor{blue}{\verb| TIME_DT_LAND_RESTART_UNIT  = "SEC",|} & \\
   \textcolor{blue}{\verb| TIME_DT_URBAN_RESTART      = 900.D0,|} &リスタートデータの出力時間間隔 \\
-  \textcolor{blue}{\verb| TIME_DT_URBASN_RESTART_UNIT = "SEC",|} & \\
+  \textcolor{blue}{\verb| TIME_DT_URBAN_RESTART_UNIT = "SEC",|} & \\
   \verb|/|& \\
 }
 これらのパラメータの詳細は、第\ref{sec:restart}節を参照されたい。
 
-計算実行用の設定ファイル中の\namelist{FILE_HISTORY_ITEM}には、
+計算実行用の設定ファイル中の\namelist{HISTORY_ITEM}には、
 子領域の初期値/境界値データの作成に必要な変数を全て記述しなければならない。
 オフライン・ネスティングに必要な変数は子領域の計算設定に依存し、
 標準的な現実大気の計算における変数は以下である。

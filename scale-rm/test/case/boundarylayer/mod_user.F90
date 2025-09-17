@@ -66,6 +66,7 @@ module mod_user
   real(RP), private :: ALB_SW = 0.20_RP
   real(RP), private :: ALB_LW = 0.01_RP
   real(RP), private :: LSD  = -0.005_RP ! Large-scale synoptic divergence
+  real(RP), private :: LSD_START_TIME = 86400.0_RP ! start time of LSD [sec]
   logical,  private :: dry     = .false.
 
   real(RP), private, allocatable :: fluxf(:) ! large scale sinking (full level)
@@ -111,6 +112,7 @@ contains
          Ug, &
          Vg, &
          LSD, &
+         LSD_START_TIME, &
          dry
 
     integer :: ierr
@@ -361,68 +363,70 @@ contains
     do j = JS, JE
     do i = IS, IE
 
-       ! large scale divergence
+       if (NOWDAYSEC >= LSD_START_TIME) then
+          ! large scale divergence
 
-       !! full level
-       val(KS) = MOMZ(KS,i,j) / DENS(KS,i,j) * 0.5_RP
-       do k = KS+1, KE
-          val(k) = ( MOMZ(k,i,j) + MOMZ(k-1,i,j) ) / DENS(k,i,j) * 0.5_RP
-       end do
-       do k = KS, KE-1
-          MOMZ_tp(k,i,j) = MOMZ_tp(k,i,j) &
-               - ( fluxf(k+1)*val(k+1) - fluxf(k)*val(k) ) * RFDZ(k) &
-               + MOMZ(k,i,j) * divh(k) / ( DENS(k,i,j)*FDZ(k+1) + DENS(k+1,i,j)*FDZ(k) ) * ( FDZ(k+1) + FDZ(k) )
-       end do
+          !! full level
+          val(KS) = MOMZ(KS,i,j) / DENS(KS,i,j) * 0.5_RP
+          do k = KS+1, KE
+             val(k) = ( MOMZ(k,i,j) + MOMZ(k-1,i,j) ) / DENS(k,i,j) * 0.5_RP
+          end do
+          do k = KS, KE-1
+             MOMZ_tp(k,i,j) = MOMZ_tp(k,i,j) &
+                   - ( fluxf(k+1)*val(k+1) - fluxf(k)*val(k) ) * RFDZ(k) &
+                   + MOMZ(k,i,j) * divh(k) / ( DENS(k,i,j)*FDZ(k+1) + DENS(k+1,i,j)*FDZ(k) ) * ( FDZ(k+1) + FDZ(k) )
+          end do
 
-       !! half level
-       do k = KS, KE-1
-          val(k) = ( U(k,i,j)*FDZ(k+1) + U(k+1,i,j)*FDZ(k) ) &
-                 / ( FDZ(k+1) + FDZ(k) )
-       end do
-       val(KE) = U(KE,i,j)
-       do k = KS, KE
-          RHOU_tp(k,i,j) = RHOU_tp(k,i,j) &
-               - ( fluxh(k)*val(k) - fluxh(k-1)*val(k-1) ) * RCDZ(k) &
-               + U(k,i,j) * divf(k)
-       end do
-
-       !! half level
-       do k = KS, KE-1
-          val(k) = ( V(k,i,j)*FDZ(k+1) + V(k+1,i,j)*FDZ(k) ) &
-                 / ( FDZ(k+1) + FDZ(k) )
-       end do
-       val(KE) = V(KE,i,j)
-       do k = KS, KE
-          RHOV_tp(k,i,j) = RHOV_tp(k,i,j) &
-               - ( fluxh(k)*val(k) - fluxh(k-1)*val(k-1) ) * RCDZ(k) &
-               + V(k,i,j) * divf(k)
-       end do
-
-       !! half level
-       do k = KS, KE-1
-          val(k) = ( POTT(k,i,j)*FDZ(k+1) + POTT(k+1,i,j)*FDZ(k) ) &
-                 / ( FDZ(k+1) + FDZ(k) )
-       end do
-       val(KE) = POTT(KE,i,j)
-       do k = KS, KE
-          RHOT_tp(k,i,j) = RHOT_tp(k,i,j) &
-               - ( fluxh(k)*val(k) - fluxh(k-1)*val(k-1) ) * RCDZ(k) &
-               + POTT(k,i,j) * divf(k)
-       end do
-
-       do iq = 1, QA
           !! half level
           do k = KS, KE-1
-             val(k) = ( QTRC(k,i,j,iq)*FDZ(k+1) + QTRC(k+1,i,j,iq)*FDZ(k) ) &
-                    / ( FDZ(k+1) + FDZ(k) )
+             val(k) = ( U(k,i,j)*FDZ(k+1) + U(k+1,i,j)*FDZ(k) ) &
+                   / ( FDZ(k+1) + FDZ(k) )
           end do
-          val(KE) = QTRC(KE,i,j,iq)
+          val(KE) = U(KE,i,j)
           do k = KS, KE
-             RHOQ_tp(k,i,j,iq) = RHOQ_tp(k,i,j,iq) &
-                  - ( fluxh(k)*val(k) - fluxh(k-1)*val(k-1) ) * RCDZ(k) &
-                  + QTRC(k,i,j,iq) * divf(k)
+             RHOU_tp(k,i,j) = RHOU_tp(k,i,j) &
+                   - ( fluxh(k)*val(k) - fluxh(k-1)*val(k-1) ) * RCDZ(k) &
+                   + U(k,i,j) * divf(k)
           end do
-       end do
+
+          !! half level
+          do k = KS, KE-1
+             val(k) = ( V(k,i,j)*FDZ(k+1) + V(k+1,i,j)*FDZ(k) ) &
+                   / ( FDZ(k+1) + FDZ(k) )
+          end do
+          val(KE) = V(KE,i,j)
+          do k = KS, KE
+             RHOV_tp(k,i,j) = RHOV_tp(k,i,j) &
+                   - ( fluxh(k)*val(k) - fluxh(k-1)*val(k-1) ) * RCDZ(k) &
+                   + V(k,i,j) * divf(k)
+          end do
+
+          !! half level
+          do k = KS, KE-1
+             val(k) = ( POTT(k,i,j)*FDZ(k+1) + POTT(k+1,i,j)*FDZ(k) ) &
+                   / ( FDZ(k+1) + FDZ(k) )
+          end do
+          val(KE) = POTT(KE,i,j)
+          do k = KS, KE
+             RHOT_tp(k,i,j) = RHOT_tp(k,i,j) &
+                   - ( fluxh(k)*val(k) - fluxh(k-1)*val(k-1) ) * RCDZ(k) &
+                   + POTT(k,i,j) * divf(k)
+          end do
+
+          do iq = 1, QA
+             !! half level
+             do k = KS, KE-1
+                val(k) = ( QTRC(k,i,j,iq)*FDZ(k+1) + QTRC(k+1,i,j,iq)*FDZ(k) ) &
+                      / ( FDZ(k+1) + FDZ(k) )
+             end do
+             val(KE) = QTRC(KE,i,j,iq)
+             do k = KS, KE
+                RHOQ_tp(k,i,j,iq) = RHOQ_tp(k,i,j,iq) &
+                      - ( fluxh(k)*val(k) - fluxh(k-1)*val(k-1) ) * RCDZ(k) &
+                      + QTRC(k,i,j,iq) * divf(k)
+             end do
+          end do
+       end if
 
        ! geostrophic forcing
        do k = KS, KE

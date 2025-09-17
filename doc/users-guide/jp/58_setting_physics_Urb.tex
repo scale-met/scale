@@ -32,7 +32,7 @@ init.confとrun.conf中の\namelist{PARAM_URBAN}の\nmitem{URBAN_DYN_TYPE}で設
 \end{table}
 
 計算領域に都市の土地利用が含まれる場合は、
-\nmitem{URBAN_TYPE}に\verb|NONE|または\verb|OFF|を選択することはできない。
+\nmitem{URBAN_DYN_TYPE}に\verb|NONE|または\verb|OFF|を選択することはできない。
 もし\verb|NONE|や\verb|OFF|が選択された場合には、
 下記のメッセージをLOGファイルに出力して、実行は直ちに終了する。
 %
@@ -127,7 +127,7 @@ init.confとrun.conf中の\namelist{PARAM_URBAN}の\nmitem{URBAN_DYN_TYPE}で設
 \verb|scale_init|を使って変換することが可能である。\\
 
 
-\noindent\textbf{\underline{\small{\textgt{都市パラメータのためグリットデータの作成方法}}}}
+\noindent\textbf{\underline{\small{\textgt{都市パラメータのためグリッドデータの作成方法}}}}
 
 
 データの作成には、\verb|scale_init|を使用する。

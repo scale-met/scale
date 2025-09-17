@@ -1,9 +1,19 @@
 = Release History
 
+== 2025-09-17 (5.5.5)
+* Bug fixes:
+  * Restored the limiter for zeta in the MYNN scheme's Ls calculation to prevent instability
+  * Corrected forcing configuration in the GABLS2 test case by adding LSD_START_TIME
+  * Fixed the setup order in the GM driver so initialization runs correctly
+  * Corrected the NO_MPI08 preprocessor guard for MPI builds
+  * Added missing finalization and deallocation for communication and physics buffers, including OpenACC device data
+* Documentation:
+  * Updated the User guide
+
 == 2024-12-25 (5.5.4)
 * Bug fixes:
   * Fixed omissions in the OpenMP private directive clause
-* Changs
+* Changes:
   * Changed compile options for Intel compiler
 
 == 2024-09-11 (5.5.3)
@@ -18,22 +28,22 @@
   * Corrected time units in GrADS control file output by SNO
   * Fixed an error when the lsmask data is not given in the GrADS real input
   * Fixed an issue that time information output by the profiler was sometimes incorrect
-  * Fixed refernces to undefined value
+  * Fixed references to undefined value
   * Resolved a problem with overflow errors in integers when the input GrADS file size is large
-* Changes
+* Changes:
   * Added a new compile option for legacy MPI compilers: SCALE_COMPAT_MPI
 
 == 2024-04-10 (5.5.1)
 * Bug fixes:
   * Fixed the mkinit for the baroclinic wave test case
   * Fixed a compile error for some version of GNU compiler
-* Changes
+* Changes:
   * Change default setting for MPI for FUJITSU compiler
 * Updates:
   * Updated the user guide
 
 == 2024-03-21 (5.5.0)
-* Changes
+* Changes:
   * Unified NetCDF file input module for the real input
   * Default use of domain center as the standard latitude for Mercator and equidistant cylindrical projections
   * Eliminated need to give the latlon catalog file
@@ -43,7 +53,7 @@
   * Changed format of timer information in LOG file
   * Support newer version of GNU compiler
   * Addition and removal of several sysdef files
-* New features
+* New features:
   * Added several options to the Tomita08 scheme
   * Added several options to the SN14 scheme
   * Added several options to the MYNN scheme
@@ -58,7 +68,7 @@
   * Improved numerical stability for the MYNN level 3 scheme
   * Improved handling of thermodynamical quantities in the KF scheme
   * Improved momentum flux calculation in the Kusaka01 scheme
-  * Reduce memory usage in the real input
+  * Reduced memory usage in the real input
   * Optimization for the Fugaku supercomputer
   * Optimization of the SUZUKI10 scheme
 * Bug fixes:
@@ -101,7 +111,7 @@
   * Fix a bug in SNO
   * Fix a bug in the UD7 and CD8 flux schemes
   * Fix undefined references
-* Changes
+* Changes:
   * Change some options for the FUGAKU supercomputer
 
 == 2020-09-25 (5.4.0)
@@ -207,7 +217,7 @@
   * Enable to split external input files for the time dimension
 * Improvements:
   * Change for the better initial states especially near the surface
-  * Reduce memory usage in the initial process
+  * Reduced memory usage in the initial process
   * Change error message to more user friendly
 * Bug fixes:
   * Fix wrong check of domain size for the nest setting

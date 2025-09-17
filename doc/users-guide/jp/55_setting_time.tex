@@ -74,7 +74,7 @@ $\Delta t$はトレーサー移流に対する時間刻み幅であり、また�
 
 \subsection{CFL条件の確認} \label{subsec:cfl_check}
 
-移流対する時間刻み幅\nmitem{TIME_DT}は、格子幅を速度で割った値よりも小さくなければならない(すなわち、Courant-Friedrichs-Lewy (CFL) 条件)。
+移流に対する時間刻み幅\nmitem{TIME_DT}は、格子幅を速度で割った値よりも小さくなければならない(すなわち、Courant-Friedrichs-Lewy (CFL) 条件)。
 無次元数$U \Delta t/\Delta x$はクーラン数と呼ばれる。
 ここで、 $U$は速度, $\Delta x$は格子幅、 $\Delta t$は時間刻み幅である。
 CFL条件とは、クーラン数が1よりも小さくなければならないことである。
@@ -83,7 +83,7 @@ CFL条件とは、クーラン数が1よりも小さくなければならない�
 この機能を有効にするには、\namelist{PARAM_ATMOS_VARS}の\nmitem{ATMOS_VARS_CHECKCFL_SOFT}や\nmitem{ATMOS_VARS_CHECKCFL_HARD}を設定する。
 これらのデフォルト値はそれぞれ、1.0 と 2.0 である。
 シミュレーション中にクーラン数が\nmitem{ATMOS_VARS_CHECKCFL_SOFT}を超えれば、
-以下のメッセージをログファイルに出力される。
+以下のメッセージがログファイルに出力される。
 \msgbox{
 \verb|INFO [ATMOS_vars_monitor] Courant number = xxx exceeded the soft limit = yyy|
 }

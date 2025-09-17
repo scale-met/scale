@@ -1724,7 +1724,7 @@ contains
 
     integer :: k, it, nit
 
-            
+
     if ( ATMOS_PHY_BL_MYNN_similarity .or. initialize ) then
        call get_phi( zeta, phi_m, phi_h, & ! (out)
                      z(KS), RLmo, I_B_TYPE ) ! (in)
@@ -1923,7 +1923,7 @@ contains
        end do
 
        call get_smsh( &
-            KA, KS, KE_PBL, & 
+            KA, KS, KE_PBL, &
             i, j,                   & ! (in)
             q(:), ac(:),            & ! (in)
             l(:), n2_new(:),        & ! (in)
@@ -2343,8 +2343,8 @@ contains
        ! LS
        sw = sign(0.5_RP, zeta) + 0.5_RP ! 1 for zeta >= 0, 0 for zeta < 0
        ls = KARMAN * z(k) &
-          * ( sw / (1.0_RP + ATMOS_PHY_BL_MYNN_cns*zeta*sw ) &
-            + ( (1.0_RP - ATMOS_PHY_BL_MYNN_alpha4*zeta)*(1.0_RP-sw) )**0.2_RP )
+          * ( sw / (1.0_RP + ATMOS_PHY_BL_MYNN_cns * min(zeta, 1.0_RP) * sw ) &
+            + ( (1.0_RP - ATMOS_PHY_BL_MYNN_alpha4 * zeta) * (1.0_RP-sw) )**0.2_RP )
 
        ! LB
        sw  = sign(0.5_RP, n2(k)-EPS) + 0.5_RP ! 1 for dptdz >0, 0 for dptdz <= 0

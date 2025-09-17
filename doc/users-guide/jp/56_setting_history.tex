@@ -54,7 +54,7 @@
 同様に、\verb|"min"|, \verb|"max"| を設定した場合は、それぞれ期間における最小値および最大値を出力する。
 
 ヒストリ出力の時間間隔は、それと関係したスキームの時間間隔と等しいか倍数でなければならない。
-この整合性の確認を無効にしたい場合には、\nmitem{FILE_HISTORY_ERROR_PUTMISS}を\verb|.false.|に設定すれば良い.
+この整合性の確認を無効にしたい場合には、\nmitem{FILE_HISTORY_ERROR_PUTMISS}を\verb|.false.|に設定すれば良い。
 
 \nmitem{FILE_HISTORY_DEFAULT_POSTFIX_TIMELABEL}を\verb|.true.|に設定した場合は、
 時間に関するラベルが出力ファイル名に付加される。
@@ -99,13 +99,13 @@
 \verb| POSTFIX_TIMELABEL = .false.,    | &  (オプション) \verb|FILE_HISTORY_DEFAULT_POSTFIX_TIMELABEL|と同じ \\
 \verb| ZCOORD            = "model",    | &  (オプション) \verb|FILE_HISTORY_DEFAULT_ZCOORD|と同じ \\
 \verb| TINTERVAL         = 600.D0,     | &  (オプション) \verb|FILE_HISTORY_DEFAULT_TINTERVAL|と同じ \\
-\verb| TUNIT             = "SEC",      | &  (オプション) \verb|FILE_HISTORY_DEFAULT_TUNITS|と同じ \\
+\verb| TUNIT             = "SEC",      | &  (オプション) \verb|FILE_HISTORY_DEFAULT_TUNIT|と同じ \\
 \verb| TSTATS_OP         = "mean",     | &  (オプション) \verb|FILE_HISTORY_DEFAULT_TSTATS_OP|と同じ \\
 \verb| DATATYPE          = "REAL4",    | &  (オプション) \verb|FILE_HISTORY_DEFAULT_DATATYPE|と同じ \\
 \verb|/                                | & \\
 }
 
-\namelist{HISTORY_ITEM}で要求した変数がシミュレーションの時間スッテップ中に準備されていない場合は、
+\namelist{HISTORY_ITEM}で要求した変数がシミュレーションの時間ステップ中に準備されていない場合は、
 実行が停止し、エラーログがログファイルに書かれる。
 この状況は、\nmitem{NAME}にスペルミスがある場合や、要求した変数が選択したスキーム内で使用されていない場合に発生し得る。
 
